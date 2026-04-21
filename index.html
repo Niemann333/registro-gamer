@@ -240,7 +240,7 @@ var blogStartIndex = 1;
 var blogHasMore    = false;
 
 function fetchBlog(startIndex) {
-  var cb = 'blog_'+Date.now();
+  var cb = 'rgPost'+Date.now();
   var s  = document.createElement('script');
   s.onerror = function(){
     document.getElementById('blog-loading').style.display='none';
