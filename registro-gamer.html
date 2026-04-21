@@ -216,7 +216,7 @@ const STATUS_META  = {
 
 // State
 let allGames=[], platforms=[], selStatus=null, selPlatform=null, curPage=1;
-let blogPosts=[], blogToken=null, blogLoaded=false;
+let blogPosts=[], blogLoaded=false;
 let currentTab='blog';
 
 // ── TAB SWITCH ──────────────────────────────────────────────────────────────
@@ -236,44 +236,47 @@ function switchTab(tab) {
 }
 
 // ── BLOG FETCH ───────────────────────────────────────────────────────────────
-function fetchBlog(pageToken) {
+var blogStartIndex = 1;
+var blogHasMore    = false;
+
+function fetchBlog(startIndex) {
   var cb = 'blog_'+Date.now();
   var s  = document.createElement('script');
-  var url = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&callback='+cb;
-  if (pageToken) url += '&pageToken='+pageToken;
-  s.onerror = function(){ document.getElementById('blog-loading').style.display='none'; document.getElementById('blog-skeletons').style.display='none'; };
+  s.onerror = function(){
+    document.getElementById('blog-loading').style.display='none';
+    document.getElementById('blog-skeletons').style.display='none';
+  };
+  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&start-index='+startIndex+'&callback='+cb;
   window[cb] = function(data) {
     var entries = (data.feed && data.feed.entry) || [];
-    var next = null;
-    if (data.feed && data.feed.link) {
-      var nl = data.feed.link.find(function(l){ return l.rel==='next'; });
-      if (nl) { var m = nl.href.match(/pageToken=([^&]+)/); if(m) next=m[1]; }
-    }
-    blogToken = next;
     var parsed = entries
-      .filter(function(e){ return !((e.category||[]).some(function(c){ return c.term.indexOf('Status - ')===0; })); })
+      .filter(function(e){
+        return !((e.category||[]).some(function(c){ return c.term.indexOf('Status - ')===0; }));
+      })
       .map(function(e) {
         var thumb = extractImage(e);
         var content = (e.content && e.content.$t) || (e.summary && e.summary.$t) || '';
         var excerpt = content.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,120);
-        var url = (e.link||[]).find(function(l){ return l.rel==='alternate'; });
+        var link = (e.link||[]).find(function(l){ return l.rel==='alternate'; });
         var pub = e.published && e.published.$t;
         var date = pub ? new Date(pub).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        return { title:e.title.$t, thumb:thumb, excerpt:excerpt, url:url?url.href:'#', date:date };
+        return { title:e.title.$t, thumb:thumb, excerpt:excerpt, url:link?link.href:'#', date:date };
       });
     blogPosts = blogPosts.concat(parsed);
+    blogHasMore = entries.length === BLOG_PER_PAGE;
+    blogStartIndex = startIndex + BLOG_PER_PAGE;
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
-    document.getElementById('header-sub').textContent = blogPosts.length+' posts';
+    document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
     renderBlog();
-    document.getElementById('load-more-btn').classList.toggle('visible', !!next);
+    document.getElementById('load-more-btn').classList.toggle('visible', blogHasMore);
     delete window[cb]; s.remove();
   };
   document.head.appendChild(s);
 }
 
 function loadMoreBlog() {
-  if (blogToken) fetchBlog(blogToken);
+  if (blogHasMore) fetchBlog(blogStartIndex);
 }
 
 function renderBlog() {
@@ -442,7 +445,7 @@ function clearFilters(){selStatus=null;selPlatform=null;curPage=1;renderStatusCh
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-fetchBlog(null);
+fetchBlog(1);
 fetchShelf(1,[]);
 </script>
 </body>
