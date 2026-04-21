@@ -265,6 +265,12 @@ function fetchBlog(startIndex) {
     blogPosts = blogPosts.concat(parsed);
     blogHasMore = entries.length === BLOG_PER_PAGE;
     blogStartIndex = startIndex + BLOG_PER_PAGE;
+    // if we got entries but all were game posts, keep fetching automatically
+    if (blogPosts.length === 0 && blogHasMore) {
+      delete window[cb]; s.remove();
+      fetchBlog(blogStartIndex);
+      return;
+    }
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
     document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
