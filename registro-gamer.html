@@ -14,274 +14,118 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg:       #0D0D1A;
-    --bg2:      #12121f;
-    --border:   rgba(255,255,255,0.08);
-    --purple:   #9B59FF;
-    --teal:     #00E5A0;
-    --text:     #eeeeee;
-    --muted:    rgba(255,255,255,0.35);
-    --card-bg:  rgba(255,255,255,0.04);
+    --bg: #0D0D1A; --bg2: #12121f;
+    --border: rgba(255,255,255,0.08);
+    --purple: #9B59FF; --teal: #00E5A0;
+    --text: #eeeeee; --muted: rgba(255,255,255,0.35);
+    --card-bg: rgba(255,255,255,0.04);
   }
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Oxanium', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
-  }
-  ::-webkit-scrollbar { display: none; }
-  scrollbar-width: none;
+  html, body { background: var(--bg); color: var(--text); font-family: 'Oxanium', sans-serif; min-height: 100vh; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { display: none; } scrollbar-width: none;
 
-  /* ── LAYOUT ── */
-  #app {
-    max-width: 430px;
-    margin: 0 auto;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
+  #app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; position: relative; padding-bottom: 70px; }
 
-  /* ── BG blobs ── */
-  .blob {
-    position: fixed;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
-  }
+  .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
   .blob-1 { top:-80px; right:-80px; width:280px; height:280px; background:radial-gradient(circle,rgba(155,89,255,0.13) 0%,transparent 70%); }
   .blob-2 { bottom:80px; left:-60px; width:200px; height:200px; background:radial-gradient(circle,rgba(0,229,160,0.08) 0%,transparent 70%); }
 
-  /* ── HEADER ── */
-  #header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: linear-gradient(180deg, var(--bg) 75%, transparent 100%);
-    padding-bottom: 4px;
-  }
-  .header-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px 18px 10px;
-  }
-  .logo {
-    width: 38px; height: 38px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #9B59FF, #4DA6FF);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(155,89,255,0.4);
-  }
-  .header-title { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; line-height: 1.1; }
-  .header-sub {
-    font-size: 10px; color: rgba(155,89,255,0.85);
-    font-family: 'Space Mono', monospace;
-    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px;
-  }
-  #btn-clear {
-    display: none;
-    background: rgba(255,107,107,0.14);
-    border: 1px solid rgba(255,107,107,0.4);
-    border-radius: 8px; padding: 5px 10px;
-    color: #FF6B6B; font-size: 10px; font-weight: 700;
-    cursor: pointer; font-family: 'Space Mono', monospace; letter-spacing: 0.5px;
-  }
-  #btn-clear.visible { display: block; }
+  /* HEADER */
+  #header { position: sticky; top: 0; z-index: 100; background: linear-gradient(180deg, var(--bg) 75%, transparent 100%); padding-bottom: 4px; }
+  .header-row { display: flex; align-items: center; gap: 12px; padding: 18px 18px 10px; }
+  .logo { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#9B59FF,#4DA6FF); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; box-shadow:0 4px 16px rgba(155,89,255,0.4); }
+  .header-title { font-size:18px; font-weight:800; letter-spacing:0.5px; line-height:1.1; }
+  .header-sub { font-size:10px; color:rgba(155,89,255,0.85); font-family:'Space Mono',monospace; letter-spacing:1.5px; text-transform:uppercase; margin-top:1px; }
+  #btn-clear { display:none; background:rgba(255,107,107,0.14); border:1px solid rgba(255,107,107,0.4); border-radius:8px; padding:5px 10px; color:#FF6B6B; font-size:10px; font-weight:700; cursor:pointer; font-family:'Space Mono',monospace; letter-spacing:0.5px; }
+  #btn-clear.visible { display:block; }
 
-  /* ── CHIPS ROWS ── */
-  .chips-row {
-    display: flex; gap: 8px;
-    overflow-x: auto; padding: 2px 18px 8px;
-    scrollbar-width: none;
-  }
-  .chip {
-    flex-shrink: 0;
-    padding: 7px 14px; border-radius: 99px;
-    border: 1.5px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.04);
-    color: rgba(255,255,255,0.6);
-    font-size: 12px; font-weight: 500;
-    cursor: pointer; display: flex; align-items: center; gap: 6px;
-    transition: all 0.2s ease;
-    font-family: 'Oxanium', sans-serif; letter-spacing: 0.3px;
-    white-space: nowrap; outline: none;
-  }
-  .chip.active {
-    font-weight: 700;
-  }
-  .chip-count {
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.4);
-    border-radius: 99px; padding: 1px 6px;
-    font-size: 10px; font-weight: 700;
-    font-family: 'Space Mono', monospace;
-    min-width: 18px; text-align: center;
-    transition: all 0.2s;
-  }
-  .chip.active .chip-count {
-    color: #000;
-  }
-  .divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-    margin: 0 18px;
-  }
+  /* CHIPS */
+  .chips-row { display:flex; gap:8px; overflow-x:auto; padding:2px 18px 8px; scrollbar-width:none; }
+  .chip { flex-shrink:0; padding:7px 14px; border-radius:99px; border:1.5px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.6); font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease; font-family:'Oxanium',sans-serif; letter-spacing:0.3px; white-space:nowrap; outline:none; }
+  .chip.active { font-weight:700; }
+  .chip-count { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); border-radius:99px; padding:1px 6px; font-size:10px; font-weight:700; font-family:'Space Mono',monospace; min-width:18px; text-align:center; transition:all 0.2s; }
+  .chip.active .chip-count { color:#000; }
+  .divider { height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent); margin:0 18px; }
 
-  /* ── CONTENT ── */
-  #content { flex: 1; padding: 12px 18px 40px; }
+  /* BOTTOM NAV */
+  #bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; z-index:200; background:rgba(13,13,26,0.95); backdrop-filter:blur(20px); border-top:1px solid rgba(255,255,255,0.08); display:flex; }
+  .nav-btn { flex:1; padding:10px 0 14px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,0.35); font-family:'Oxanium',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.5px; transition:all 0.2s; outline:none; }
+  .nav-btn.active { color:#9B59FF; }
+  .nav-btn .nav-icon { font-size:20px; line-height:1; }
+  .nav-dot { width:4px; height:4px; border-radius:50%; background:#9B59FF; margin-top:2px; opacity:0; transition:opacity 0.2s; }
+  .nav-btn.active .nav-dot { opacity:1; }
 
-  /* ── RESULTS BAR ── */
-  #results-bar {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 14px;
-  }
-  #results-info {
-    font-size: 11px; color: var(--muted);
-    font-family: 'Space Mono', monospace;
-  }
-  #active-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-  .active-tag {
-    font-size: 10px; padding: 3px 8px; border-radius: 99px;
-    font-weight: 700; font-family: 'Space Mono', monospace;
-  }
+  /* PAGES */
+  .page { display:none; flex:1; padding:12px 18px 32px; }
+  .page.active { display:block; }
 
-  /* ── GRID ── */
-  #grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
+  /* BLOG POSTS */
+  .blog-card { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; text-decoration:none; color:inherit; }
+  .blog-card:last-child { border-bottom:none; }
+  .blog-thumb { width:80px; height:80px; border-radius:10px; overflow:hidden; flex-shrink:0; background:#1a1a2e; }
+  .blog-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .blog-thumb-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:24px; color:rgba(255,255,255,0.1); }
+  .blog-info { flex:1; min-width:0; }
+  .blog-date { font-size:9px; color:rgba(155,89,255,0.8); font-family:'Space Mono',monospace; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
+  .blog-title { font-size:13px; font-weight:700; line-height:1.35; color:#eee; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:5px; }
+  .blog-excerpt { font-size:11px; color:rgba(255,255,255,0.4); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .blog-arrow { color:rgba(255,255,255,0.2); font-size:16px; align-self:center; flex-shrink:0; margin-left:4px; }
 
-  /* ── CARD ── */
-  .card {
-    border-radius: 16px; overflow: hidden;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    animation: fadeUp 0.35s ease both;
-    position: relative;
-  }
-  .card-bar { display: flex; height: 3px; }
-  .card-bar span { flex: 1; }
-  .card-cover {
-    aspect-ratio: 3/4; overflow: hidden;
-    background: #111; position: relative;
-  }
-  .card-cover img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-    transition: transform 0.4s ease;
-  }
-  .card:active .card-cover img { transform: scale(1.04); }
-  .card-cover-fallback {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    font-size: 32px; color: rgba(255,255,255,0.1);
-  }
-  .card-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(13,13,26,0.95) 0%, rgba(13,13,26,0.3) 50%, transparent 100%);
-    pointer-events: none;
-  }
-  .card-info { padding: 10px 10px 12px; }
-  .card-title {
-    font-size: 12px; font-weight: 700; line-height: 1.3;
-    color: #eee; letter-spacing: 0.2px;
-    display: -webkit-box; -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .card-platform {
-    margin-top: 6px; font-size: 9px; font-weight: 600;
-    color: rgba(155,89,255,0.9); letter-spacing: 0.8px;
-    text-transform: uppercase; font-family: 'Space Mono', monospace;
-  }
-  .card-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-  .card-tag {
-    font-size: 9px; padding: 2px 6px; border-radius: 20px;
-    font-weight: 700; font-family: 'Space Mono', monospace; letter-spacing: 0.5px;
-  }
+  /* GRID */
+  #grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-  /* ── PAGINATION ── */
-  #pagination {
-    display: none;
-    justify-content: center; align-items: center;
-    gap: 8px; margin-top: 24px;
-  }
-  #pagination.visible { display: flex; }
-  .page-btn {
-    width: 40px; height: 40px; border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    color: rgba(255,255,255,0.4);
-    font-size: 13px; font-weight: 400; cursor: pointer;
-    font-family: 'Space Mono', monospace;
-    transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-  }
-  .page-btn:active { transform: scale(0.92); }
-  .page-btn.active {
-    background: linear-gradient(135deg, rgba(155,89,255,0.3), rgba(77,166,255,0.2));
-    border-color: rgba(155,89,255,0.6);
-    color: #fff; font-weight: 700;
-  }
-  .page-btn.nav {
-    background: rgba(155,89,255,0.12);
-    color: var(--purple); font-size: 18px;
-  }
-  .page-btn.nav:disabled {
-    background: rgba(255,255,255,0.03);
-    color: rgba(255,255,255,0.15); cursor: default;
-  }
+  /* GAME CARD */
+  .card { border-radius:16px; overflow:hidden; background:var(--card-bg); border:1px solid var(--border); animation:fadeUp 0.35s ease both; position:relative; }
+  .card-bar { display:flex; height:3px; }
+  .card-bar span { flex:1; }
+  .card-cover { aspect-ratio:3/4; overflow:hidden; background:#111; position:relative; }
+  .card-cover img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.4s ease; }
+  .card:active .card-cover img { transform:scale(1.04); }
+  .card-cover-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#1a1a2e,#16213e); font-size:32px; color:rgba(255,255,255,0.1); }
+  .card-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(13,13,26,0.95) 0%,rgba(13,13,26,0.3) 50%,transparent 100%); pointer-events:none; }
+  .card-info { padding:10px 10px 12px; }
+  .card-title { font-size:12px; font-weight:700; line-height:1.3; color:#eee; letter-spacing:0.2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card-platform { margin-top:6px; font-size:9px; font-weight:600; color:rgba(155,89,255,0.9); letter-spacing:0.8px; text-transform:uppercase; font-family:'Space Mono',monospace; }
+  .card-tags { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+  .card-tag { font-size:9px; padding:2px 6px; border-radius:20px; font-weight:700; font-family:'Space Mono',monospace; letter-spacing:0.5px; }
 
-  /* ── STATES ── */
-  #loading {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 18px; color: var(--muted);
-    font-size: 11px; font-family: 'Space Mono', monospace;
-  }
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid rgba(155,89,255,0.3);
-    border-top-color: var(--purple);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  .skeleton-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .skeleton {
-    border-radius: 16px; overflow: hidden;
-    background: rgba(255,255,255,0.04); aspect-ratio: 2/3;
-  }
-  .skeleton-inner {
-    width: 100%; height: 100%;
-    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease infinite;
-  }
-  #empty, #error {
-    display: none; margin-top: 40px; text-align: center;
-    border-radius: 20px; padding: 32px 24px;
-  }
-  #empty.visible, #error.visible { display: block; }
-  #error {
-    background: rgba(255,107,107,0.07);
-    border: 1px solid rgba(255,107,107,0.2);
-  }
-  .state-icon { font-size: 44px; margin-bottom: 14px; }
-  .state-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-  .state-sub { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  /* RESULTS BAR */
+  #results-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  #results-info { font-size:11px; color:var(--muted); font-family:'Space Mono',monospace; }
+  #active-tags { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .active-tag { font-size:10px; padding:3px 8px; border-radius:99px; font-weight:700; font-family:'Space Mono',monospace; }
 
-  /* ── ANIMATIONS ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes shimmer {
-    0%   { background-position: -200% center; }
-    100% { background-position:  200% center; }
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  /* PAGINATION */
+  #pagination { display:none; justify-content:center; align-items:center; gap:8px; margin-top:24px; }
+  #pagination.visible { display:flex; }
+  .page-btn { width:40px; height:40px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.4); font-size:13px; font-weight:400; cursor:pointer; font-family:'Space Mono',monospace; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+  .page-btn:active { transform:scale(0.92); }
+  .page-btn.active { background:linear-gradient(135deg,rgba(155,89,255,0.3),rgba(77,166,255,0.2)); border-color:rgba(155,89,255,0.6); color:#fff; font-weight:700; }
+  .page-btn.nav { background:rgba(155,89,255,0.12); color:var(--purple); font-size:18px; }
+  .page-btn.nav:disabled { background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.15); cursor:default; }
+
+  /* STATES */
+  #loading, #blog-loading { display:flex; align-items:center; gap:10px; margin-bottom:18px; color:var(--muted); font-size:11px; font-family:'Space Mono',monospace; }
+  .spinner { width:14px; height:14px; border:2px solid rgba(155,89,255,0.3); border-top-color:var(--purple); border-radius:50%; animation:spin 0.8s linear infinite; }
+  .skeleton-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .skeleton { border-radius:16px; overflow:hidden; background:rgba(255,255,255,0.04); aspect-ratio:2/3; }
+  .skeleton-inner { width:100%; height:100%; background:linear-gradient(90deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 100%); background-size:200% 100%; animation:shimmer 1.4s ease infinite; }
+  .blog-skeleton { height:92px; border-radius:12px; background:rgba(255,255,255,0.04); margin-bottom:2px; }
+  .blog-skeleton .skeleton-inner { border-radius:12px; }
+  #empty, #blog-empty, #error { display:none; margin-top:40px; text-align:center; border-radius:20px; padding:32px 24px; }
+  #empty.visible, #blog-empty.visible, #error.visible { display:block; }
+  #error { background:rgba(255,107,107,0.07); border:1px solid rgba(255,107,107,0.2); }
+  .state-icon { font-size:44px; margin-bottom:14px; }
+  .state-title { font-size:15px; font-weight:700; margin-bottom:8px; }
+  .state-sub { font-size:12px; color:var(--muted); line-height:1.7; }
+
+  /* LOAD MORE */
+  #load-more-btn { display:none; width:100%; padding:12px; margin-top:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); font-family:'Oxanium',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  #load-more-btn:active { transform:scale(0.98); }
+  #load-more-btn.visible { display:block; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes shimmer { 0%{background-position:-200% center;} 100%{background-position:200% center;} }
+  @keyframes spin { to{transform:rotate(360deg);} }
 </style>
 </head>
 <body>
@@ -299,22 +143,30 @@
       </div>
       <button id="btn-clear" onclick="clearFilters()">LIMPAR</button>
     </div>
-
-    <!-- Status chips -->
-    <div class="chips-row" id="status-chips"></div>
-
-    <!-- Platform chips -->
-    <div class="chips-row" id="platform-chips"></div>
-
+    <div id="shelf-filters" style="display:none">
+      <div class="chips-row" id="status-chips"></div>
+      <div class="chips-row" id="platform-chips"></div>
+    </div>
     <div class="divider"></div>
   </div>
 
-  <!-- CONTENT -->
-  <div id="content">
-    <div id="loading">
-      <div class="spinner"></div>
-      BUSCANDO JOGOS...
+  <!-- BLOG PAGE -->
+  <div class="page active" id="page-blog">
+    <div id="blog-loading"><div class="spinner"></div>CARREGANDO POSTS...</div>
+    <div id="blog-skeletons">
+      <div class="blog-skeleton"><div class="skeleton-inner"></div></div>
+      <div class="blog-skeleton" style="margin-top:12px"><div class="skeleton-inner"></div></div>
+      <div class="blog-skeleton" style="margin-top:12px"><div class="skeleton-inner"></div></div>
+      <div class="blog-skeleton" style="margin-top:12px"><div class="skeleton-inner"></div></div>
     </div>
+    <div id="blog-list"></div>
+    <div id="blog-empty"><div class="state-icon">📭</div><div class="state-title">Sem posts</div></div>
+    <button id="load-more-btn" onclick="loadMoreBlog()">Carregar mais posts</button>
+  </div>
+
+  <!-- SHELF PAGE -->
+  <div class="page" id="page-shelf">
+    <div id="loading"><div class="spinner"></div>BUSCANDO JOGOS...</div>
     <div class="skeleton-grid" id="skeletons">
       <div class="skeleton"><div class="skeleton-inner"></div></div>
       <div class="skeleton"><div class="skeleton-inner"></div></div>
@@ -323,350 +175,275 @@
       <div class="skeleton"><div class="skeleton-inner"></div></div>
       <div class="skeleton"><div class="skeleton-inner"></div></div>
     </div>
-
     <div id="results-bar" style="display:none">
       <div id="results-info"></div>
       <div id="active-tags"></div>
     </div>
-
     <div id="grid"></div>
-
-    <div id="empty">
-      <div class="state-icon">🔍</div>
-      <div class="state-title">Nenhum jogo encontrado</div>
-      <div class="state-sub">Tente outro filtro</div>
-    </div>
-
-    <div id="error">
-      <div class="state-icon">⚠️</div>
-      <div class="state-title" style="color:#FF6B6B">Erro ao carregar</div>
-      <div class="state-sub">Verifique se o blog é público e recarregue a página.</div>
-    </div>
-
+    <div id="empty"><div class="state-icon">🔍</div><div class="state-title">Nenhum jogo encontrado</div><div class="state-sub">Tente outro filtro</div></div>
+    <div id="error"><div class="state-icon">⚠️</div><div class="state-title" style="color:#FF6B6B">Erro ao carregar</div><div class="state-sub">Verifique se o blog é público.</div></div>
     <div id="pagination"></div>
   </div>
 </div>
 
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <button class="nav-btn active" id="nav-blog" onclick="switchTab('blog')">
+    <span class="nav-icon">📰</span>
+    <span>Blog</span>
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" id="nav-shelf" onclick="switchTab('shelf')">
+    <span class="nav-icon">🎮</span>
+    <span>Estante</span>
+    <div class="nav-dot"></div>
+  </button>
+</div>
+
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
 const BLOG_URL       = 'lucniemanngames.blogspot.com';
 const CARDS_PER_PAGE = 20;
+const BLOG_PER_PAGE  = 10;
 
-// ─── STATUS ──────────────────────────────────────────────────────────────────
 const STATUS_ORDER = ['Favorito','Tenho','Quero','Jogado','Finalizado'];
 const STATUS_META  = {
-  Favorito:  { color:'#FFD700', icon:'★' },
-  Tenho:     { color:'#00E5A0', icon:'✦' },
-  Quero:     { color:'#4DA6FF', icon:'◎' },
-  Jogado:    { color:'#FF7F50', icon:'▶' },
-  Finalizado:{ color:'#C084FC', icon:'✓' },
+  Favorito:  {color:'#FFD700',icon:'★'},
+  Tenho:     {color:'#00E5A0',icon:'✦'},
+  Quero:     {color:'#4DA6FF',icon:'◎'},
+  Jogado:    {color:'#FF7F50',icon:'▶'},
+  Finalizado:{color:'#C084FC',icon:'✓'},
 };
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-let allGames    = [];
-let platforms   = [];
-let selStatus   = null;
-let selPlatform = null;
-let curPage     = 1;
+// State
+let allGames=[], platforms=[], selStatus=null, selPlatform=null, curPage=1;
+let blogPosts=[], blogToken=null, blogLoaded=false;
+let currentTab='blog';
 
-// ─── FETCH ───────────────────────────────────────────────────────────────────
-function extractImage(entry) {
-  const thumb = entry.media$thumbnail && entry.media$thumbnail.url;
-  if (thumb) {
-    return thumb
-      .replace(/\/s\d+-c\//,  '/s400/')
-      .replace(/=s\d+-c$/,    '=s400')
-      .replace(/\/s\d+\//,    '/s400/');
+// ── TAB SWITCH ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  document.getElementById('shelf-filters').style.display = tab==='shelf' ? 'block' : 'none';
+  document.getElementById('btn-clear').classList.toggle('visible', tab==='shelf' && !!(selStatus||selPlatform));
+  if (tab==='shelf') {
+    document.getElementById('header-sub').textContent = allGames.length ? allGames.length+' jogos' : 'carregando...';
+  } else {
+    document.getElementById('header-sub').textContent = blogPosts.length ? blogPosts.length+' posts' : 'carregando...';
   }
-  const html = (entry.content && entry.content.$t) || (entry.summary && entry.summary.$t) || '';
-  const m = html.match(/<img[^>]+src=["']([^"']+)/i);
-  return m ? m[1] : null;
 }
 
-function fetchAll(startIndex, acc) {
-  const cb = 'rg_' + Date.now() + '_' + startIndex;
-  const s  = document.createElement('script');
-  s.onerror = function() { showError(); };
-  s.src = 'https://' + BLOG_URL + '/feeds/posts/default?alt=json-in-script&max-results=500&start-index=' + startIndex + '&orderby=updated&callback=' + cb;
-
+// ── BLOG FETCH ───────────────────────────────────────────────────────────────
+function fetchBlog(pageToken) {
+  var cb = 'blog_'+Date.now();
+  var s  = document.createElement('script');
+  var url = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&callback='+cb;
+  if (pageToken) url += '&pageToken='+pageToken;
+  s.onerror = function(){ document.getElementById('blog-loading').style.display='none'; document.getElementById('blog-skeletons').style.display='none'; };
   window[cb] = function(data) {
-    const entries = (data.feed && data.feed.entry) || [];
-    const parsed  = entries
-      .map(function(e) {
-        return {
-          title:    e.title.$t,
-          statuses: (e.category||[]).filter(function(c){ return c.term.indexOf('Status - ')===0; }).map(function(c){ return c.term.replace('Status - ',''); }),
-          platform: (function(){ var p=(e.category||[]).find(function(c){ return c.term.indexOf('Plataforma - ')===0; }); return p?p.term.replace('Plataforma - ',''):''; })(),
-          thumb:    extractImage(e),
-        };
-      })
-      .filter(function(g){ return g.statuses.length > 0; });
-
-    var all = acc.concat(parsed);
-    if (entries.length === 500) {
-      fetchAll(startIndex + 500, all);
-    } else {
-      all.sort(function(a,b){ return a.title.localeCompare(b.title,'pt-BR'); });
-      allGames  = all;
-      platforms = [];
-      var seen  = {};
-      all.forEach(function(g){ if(g.platform && !seen[g.platform]){ seen[g.platform]=1; platforms.push(g.platform); } });
-      platforms.sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
-      finishLoad();
+    var entries = (data.feed && data.feed.entry) || [];
+    var next = null;
+    if (data.feed && data.feed.link) {
+      var nl = data.feed.link.find(function(l){ return l.rel==='next'; });
+      if (nl) { var m = nl.href.match(/pageToken=([^&]+)/); if(m) next=m[1]; }
     }
-    delete window[cb];
-    s.remove();
+    blogToken = next;
+    var parsed = entries
+      .filter(function(e){ return !((e.category||[]).some(function(c){ return c.term.indexOf('Status - ')===0; })); })
+      .map(function(e) {
+        var thumb = extractImage(e);
+        var content = (e.content && e.content.$t) || (e.summary && e.summary.$t) || '';
+        var excerpt = content.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,120);
+        var url = (e.link||[]).find(function(l){ return l.rel==='alternate'; });
+        var pub = e.published && e.published.$t;
+        var date = pub ? new Date(pub).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        return { title:e.title.$t, thumb:thumb, excerpt:excerpt, url:url?url.href:'#', date:date };
+      });
+    blogPosts = blogPosts.concat(parsed);
+    document.getElementById('blog-loading').style.display='none';
+    document.getElementById('blog-skeletons').style.display='none';
+    document.getElementById('header-sub').textContent = blogPosts.length+' posts';
+    renderBlog();
+    document.getElementById('load-more-btn').classList.toggle('visible', !!next);
+    delete window[cb]; s.remove();
   };
-
   document.head.appendChild(s);
 }
 
-// ─── RENDER ──────────────────────────────────────────────────────────────────
-function finishLoad() {
-  document.getElementById('loading').style.display   = 'none';
-  document.getElementById('skeletons').style.display = 'none';
-  document.getElementById('header-sub').textContent  = allGames.length + ' jogos';
-  renderStatusChips();
-  renderPlatformChips();
-  renderGrid();
+function loadMoreBlog() {
+  if (blogToken) fetchBlog(blogToken);
 }
 
-function showError() {
-  document.getElementById('loading').style.display   = 'none';
-  document.getElementById('skeletons').style.display = 'none';
-  document.getElementById('error').classList.add('visible');
-}
-
-function getFiltered() {
-  return allGames.filter(function(g){
-    return (!selStatus   || g.statuses.indexOf(selStatus)   !== -1) &&
-           (!selPlatform || g.platform === selPlatform);
+function renderBlog() {
+  var list = document.getElementById('blog-list');
+  list.innerHTML = '';
+  if (blogPosts.length===0) { document.getElementById('blog-empty').classList.add('visible'); return; }
+  document.getElementById('blog-empty').classList.remove('visible');
+  blogPosts.forEach(function(post) {
+    var a = document.createElement('a');
+    a.className = 'blog-card';
+    a.href = post.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    var thumbHtml = post.thumb
+      ? '<img src="'+escHtml(post.thumb)+'" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=\\'blog-thumb-fallback\\'>📝</div>\'">'
+      : '<div class="blog-thumb-fallback">📝</div>';
+    a.innerHTML = '<div class="blog-thumb">'+thumbHtml+'</div>'
+      +'<div class="blog-info">'
+        +'<div class="blog-date">'+escHtml(post.date)+'</div>'
+        +'<div class="blog-title">'+escHtml(post.title)+'</div>'
+        +'<div class="blog-excerpt">'+escHtml(post.excerpt)+'</div>'
+      +'</div>'
+      +'<div class="blog-arrow">›</div>';
+    list.appendChild(a);
   });
 }
 
+// ── SHELF FETCH ───────────────────────────────────────────────────────────────
+function extractImage(entry) {
+  var thumb = entry.media$thumbnail && entry.media$thumbnail.url;
+  if (thumb) return thumb.replace(/\/s\d+-c\//,'/s400/').replace(/=s\d+-c$/,'=s400').replace(/\/s\d+\//,'/s400/');
+  var html = (entry.content&&entry.content.$t)||(entry.summary&&entry.summary.$t)||'';
+  var m = html.match(/<img[^>]+src=["']([^"']+)/i);
+  return m ? m[1] : null;
+}
+
+function fetchShelf(startIndex, acc) {
+  var cb = 'shelf_'+Date.now()+'_'+startIndex;
+  var s  = document.createElement('script');
+  s.onerror = function(){ document.getElementById('loading').style.display='none'; document.getElementById('skeletons').style.display='none'; document.getElementById('error').classList.add('visible'); };
+  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results=500&start-index='+startIndex+'&orderby=updated&callback='+cb;
+  window[cb] = function(data) {
+    var entries = (data.feed&&data.feed.entry)||[];
+    var parsed = entries
+      .map(function(e){
+        return {
+          title: e.title.$t,
+          statuses: (e.category||[]).filter(function(c){return c.term.indexOf('Status - ')===0;}).map(function(c){return c.term.replace('Status - ','');}),
+          platform: (function(){ var p=(e.category||[]).find(function(c){return c.term.indexOf('Plataforma - ')===0;}); return p?p.term.replace('Plataforma - ',''):''; })(),
+          thumb: extractImage(e),
+        };
+      })
+      .filter(function(g){ return g.statuses.length>0; });
+    var all = acc.concat(parsed);
+    if (entries.length===500) { fetchShelf(startIndex+500, all); return; }
+    all.sort(function(a,b){ return a.title.localeCompare(b.title,'pt-BR'); });
+    allGames = all;
+    var seen={};
+    platforms=[];
+    all.forEach(function(g){ if(g.platform&&!seen[g.platform]){seen[g.platform]=1;platforms.push(g.platform);} });
+    platforms.sort(function(a,b){return a.localeCompare(b,'pt-BR');});
+    document.getElementById('loading').style.display='none';
+    document.getElementById('skeletons').style.display='none';
+    if(currentTab==='shelf') document.getElementById('header-sub').textContent=allGames.length+' jogos';
+    renderStatusChips(); renderPlatformChips(); renderGrid();
+    delete window[cb]; s.remove();
+  };
+  document.head.appendChild(s);
+}
+
+// ── SHELF RENDER ──────────────────────────────────────────────────────────────
 function renderStatusChips() {
-  var row = document.getElementById('status-chips');
-  row.innerHTML = '';
-  STATUS_ORDER.forEach(function(s) {
-    var count = allGames.filter(function(g){
-      return g.statuses.indexOf(s) !== -1 && (!selPlatform || g.platform === selPlatform);
-    }).length;
-    var active = selStatus === s;
-    var m      = STATUS_META[s];
-    var btn    = document.createElement('button');
-    btn.className = 'chip' + (active ? ' active' : '');
-    btn.style.cssText = active
-      ? '--chip-color:'+m.color+';border-color:'+m.color+';color:'+m.color+';background:color-mix(in srgb,'+m.color+' 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px '+m.color+',0 0 24px color-mix(in srgb,'+m.color+' 30%,transparent)'
-      : '';
-    btn.innerHTML = s + '<span class="chip-count" style="' + (active ? 'background:'+m.color+';' : '') + '">' + count + '</span>';
-    btn.onclick = function(){ toggleStatus(s); };
+  var row=document.getElementById('status-chips'); row.innerHTML='';
+  STATUS_ORDER.forEach(function(s){
+    var count=allGames.filter(function(g){return g.statuses.indexOf(s)!==-1&&(!selPlatform||g.platform===selPlatform);}).length;
+    var active=selStatus===s, m=STATUS_META[s];
+    var btn=document.createElement('button');
+    btn.className='chip'+(active?' active':'');
+    if(active) btn.style.cssText='border-color:'+m.color+';color:'+m.color+';background:color-mix(in srgb,'+m.color+' 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px '+m.color;
+    btn.innerHTML=s+'<span class="chip-count"'+(active?' style="background:'+m.color+'"':'')+'>'+count+'</span>';
+    btn.onclick=function(){toggleStatus(s);};
     row.appendChild(btn);
   });
 }
 
 function renderPlatformChips() {
-  var row = document.getElementById('platform-chips');
-  row.innerHTML = '';
-
-  // "Todas"
-  var allActive = !selPlatform;
-  var allBtn    = document.createElement('button');
-  allBtn.className = 'chip' + (allActive ? ' active' : '');
-  allBtn.style.cssText = allActive
-    ? 'border-color:#00E5A0;color:#00E5A0;background:color-mix(in srgb,#00E5A0 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px #00E5A0'
-    : '';
-  allBtn.textContent = 'Todas';
-  allBtn.onclick = function(){ selPlatform=null; curPage=1; renderStatusChips(); renderPlatformChips(); renderGrid(); };
+  var row=document.getElementById('platform-chips'); row.innerHTML='';
+  var allActive=!selPlatform;
+  var allBtn=document.createElement('button');
+  allBtn.className='chip'+(allActive?' active':'');
+  if(allActive) allBtn.style.cssText='border-color:#00E5A0;color:#00E5A0;background:color-mix(in srgb,#00E5A0 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px #00E5A0';
+  allBtn.textContent='Todas';
+  allBtn.onclick=function(){selPlatform=null;curPage=1;renderStatusChips();renderPlatformChips();renderGrid();};
   row.appendChild(allBtn);
-
-  platforms.forEach(function(p) {
-    var count  = allGames.filter(function(g){ return g.platform===p && (!selStatus||g.statuses.indexOf(selStatus)!==-1); }).length;
-    var active = selPlatform === p;
-    var btn    = document.createElement('button');
-    btn.className = 'chip' + (active ? ' active' : '');
-    btn.style.cssText = active
-      ? 'border-color:#00E5A0;color:#00E5A0;background:color-mix(in srgb,#00E5A0 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px #00E5A0'
-      : '';
-    btn.innerHTML = p + '<span class="chip-count" style="' + (active ? 'background:#00E5A0;color:#000;' : '') + '">' + count + '</span>';
-    btn.onclick = function(){ togglePlatform(p); };
+  platforms.forEach(function(p){
+    var count=allGames.filter(function(g){return g.platform===p&&(!selStatus||g.statuses.indexOf(selStatus)!==-1);}).length;
+    var active=selPlatform===p;
+    var btn=document.createElement('button');
+    btn.className='chip'+(active?' active':'');
+    if(active) btn.style.cssText='border-color:#00E5A0;color:#00E5A0;background:color-mix(in srgb,#00E5A0 18%,rgba(13,13,26,0.9));box-shadow:0 0 12px #00E5A0';
+    btn.innerHTML=p+'<span class="chip-count"'+(active?' style="background:#00E5A0;color:#000"':'')+'>'+count+'</span>';
+    btn.onclick=function(){togglePlatform(p);};
     row.appendChild(btn);
   });
 }
 
-function renderGrid() {
-  var filtered   = getFiltered();
-  var totalPages = Math.ceil(filtered.length / CARDS_PER_PAGE);
-  if (curPage > totalPages && totalPages > 0) curPage = 1;
-  var slice = filtered.slice((curPage-1)*CARDS_PER_PAGE, curPage*CARDS_PER_PAGE);
-
-  // results bar
-  var bar = document.getElementById('results-bar');
-  bar.style.display = filtered.length > 0 ? 'flex' : 'none';
-  document.getElementById('results-info').textContent =
-    filtered.length + (filtered.length===1?' jogo':' jogos') +
-    (totalPages > 1 ? ' · pág. '+curPage+'/'+totalPages : '');
-
-  // active tags
-  var tagsEl = document.getElementById('active-tags');
-  tagsEl.innerHTML = '';
-  if (selStatus) {
-    var t = document.createElement('span');
-    t.className = 'active-tag';
-    t.style.cssText = 'background:color-mix(in srgb,'+STATUS_META[selStatus].color+' 15%,transparent);color:'+STATUS_META[selStatus].color;
-    t.textContent = selStatus;
-    tagsEl.appendChild(t);
-  }
-  if (selPlatform) {
-    var t2 = document.createElement('span');
-    t2.className = 'active-tag';
-    t2.style.cssText = 'background:rgba(0,229,160,0.12);color:#00E5A0';
-    t2.textContent = selPlatform;
-    tagsEl.appendChild(t2);
-  }
-
-  // clear button
-  document.getElementById('btn-clear').classList.toggle('visible', !!(selStatus||selPlatform));
-
-  // grid
-  var grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  document.getElementById('empty').classList.toggle('visible', slice.length===0 && allGames.length>0);
-
-  slice.forEach(function(game, i) {
-    grid.appendChild(makeCard(game, i));
+function getFiltered(){
+  return allGames.filter(function(g){
+    return (!selStatus||g.statuses.indexOf(selStatus)!==-1)&&(!selPlatform||g.platform===selPlatform);
   });
-
-  // pagination
-  renderPagination(totalPages);
-
-  // scroll top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function makeCard(game, index) {
-  var statusColors = game.statuses.map(function(s){ return STATUS_META[s] && STATUS_META[s].color; }).filter(Boolean);
-  var card = document.createElement('div');
-  card.className = 'card';
-  card.style.animationDelay = (index * 0.03) + 's';
+function renderGrid(){
+  var filtered=getFiltered(), totalPages=Math.ceil(filtered.length/CARDS_PER_PAGE);
+  if(curPage>totalPages&&totalPages>0) curPage=1;
+  var slice=filtered.slice((curPage-1)*CARDS_PER_PAGE,curPage*CARDS_PER_PAGE);
+  var bar=document.getElementById('results-bar');
+  bar.style.display=filtered.length>0?'flex':'none';
+  document.getElementById('results-info').textContent=filtered.length+(filtered.length===1?' jogo':' jogos')+(totalPages>1?' · pág. '+curPage+'/'+totalPages:'');
+  var tagsEl=document.getElementById('active-tags'); tagsEl.innerHTML='';
+  if(selStatus){var t=document.createElement('span');t.className='active-tag';t.style.cssText='background:color-mix(in srgb,'+STATUS_META[selStatus].color+' 15%,transparent);color:'+STATUS_META[selStatus].color;t.textContent=selStatus;tagsEl.appendChild(t);}
+  if(selPlatform){var t2=document.createElement('span');t2.className='active-tag';t2.style.cssText='background:rgba(0,229,160,0.12);color:#00E5A0';t2.textContent=selPlatform;tagsEl.appendChild(t2);}
+  document.getElementById('btn-clear').classList.toggle('visible',!!(selStatus||selPlatform));
+  var grid=document.getElementById('grid'); grid.innerHTML='';
+  document.getElementById('empty').classList.toggle('visible',slice.length===0&&allGames.length>0);
+  slice.forEach(function(game,i){grid.appendChild(makeCard(game,i));});
+  renderPagination(totalPages);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 
-  // bar
-  var bar = document.createElement('div');
-  bar.className = 'card-bar';
-  statusColors.forEach(function(c){
-    var sp = document.createElement('span');
-    sp.style.background = c;
-    bar.appendChild(sp);
-  });
+function makeCard(game,index){
+  var statusColors=game.statuses.map(function(s){return STATUS_META[s]&&STATUS_META[s].color;}).filter(Boolean);
+  var card=document.createElement('div');
+  card.className='card';
+  card.style.animationDelay=(index*0.03)+'s';
+  var bar=document.createElement('div'); bar.className='card-bar';
+  statusColors.forEach(function(c){var sp=document.createElement('span');sp.style.background=c;bar.appendChild(sp);});
   card.appendChild(bar);
-
-  // cover
-  var cover = document.createElement('div');
-  cover.className = 'card-cover';
-  if (game.thumb) {
-    var img = document.createElement('img');
-    img.src = game.thumb;
-    img.alt = game.title;
-    img.loading = 'lazy';
-    img.onerror = function(){
-      cover.innerHTML = '<div class="card-cover-fallback">🎮</div><div class="card-overlay"></div>';
-    };
-    cover.appendChild(img);
-  } else {
-    cover.innerHTML = '<div class="card-cover-fallback">🎮</div>';
-  }
-  var overlay = document.createElement('div');
-  overlay.className = 'card-overlay';
-  cover.appendChild(overlay);
+  var cover=document.createElement('div'); cover.className='card-cover';
+  if(game.thumb){var img=document.createElement('img');img.src=game.thumb;img.alt=game.title;img.loading='lazy';img.onerror=function(){cover.innerHTML='<div class="card-cover-fallback">🎮</div><div class="card-overlay"></div>';};cover.appendChild(img);}
+  else{cover.innerHTML='<div class="card-cover-fallback">🎮</div>';}
+  var ov=document.createElement('div');ov.className='card-overlay';cover.appendChild(ov);
   card.appendChild(cover);
-
-  // info
-  var info = document.createElement('div');
-  info.className = 'card-info';
-  info.innerHTML = '<div class="card-title">' + escHtml(game.title) + '</div>' +
-    (game.platform ? '<div class="card-platform">' + escHtml(game.platform) + '</div>' : '');
-
-  var tags = document.createElement('div');
-  tags.className = 'card-tags';
-  game.statuses.forEach(function(s){
-    var m = STATUS_META[s];
-    if (!m) return;
-    var tag = document.createElement('span');
-    tag.className = 'card-tag';
-    tag.style.cssText = 'background:color-mix(in srgb,'+m.color+' 15%,transparent);border:1px solid color-mix(in srgb,'+m.color+' 40%,transparent);color:'+m.color;
-    tag.textContent = m.icon + ' ' + s;
-    tags.appendChild(tag);
-  });
-  info.appendChild(tags);
-  card.appendChild(info);
-
+  var info=document.createElement('div');info.className='card-info';
+  info.innerHTML='<div class="card-title">'+escHtml(game.title)+'</div>'+(game.platform?'<div class="card-platform">'+escHtml(game.platform)+'</div>':'');
+  var tags=document.createElement('div');tags.className='card-tags';
+  game.statuses.forEach(function(s){var m=STATUS_META[s];if(!m)return;var tag=document.createElement('span');tag.className='card-tag';tag.style.cssText='background:color-mix(in srgb,'+m.color+' 15%,transparent);border:1px solid color-mix(in srgb,'+m.color+' 40%,transparent);color:'+m.color;tag.textContent=m.icon+' '+s;tags.appendChild(tag);});
+  info.appendChild(tags);card.appendChild(info);
   return card;
 }
 
-function renderPagination(totalPages) {
-  var pag = document.getElementById('pagination');
-  pag.innerHTML = '';
-  if (totalPages <= 1) { pag.classList.remove('visible'); return; }
+function renderPagination(totalPages){
+  var pag=document.getElementById('pagination');pag.innerHTML='';
+  if(totalPages<=1){pag.classList.remove('visible');return;}
   pag.classList.add('visible');
-
-  // prev
-  var prev = document.createElement('button');
-  prev.className = 'page-btn nav';
-  prev.textContent = '‹';
-  prev.disabled = curPage === 1;
-  prev.onclick = function(){ if(curPage>1){ curPage--; renderGrid(); } };
-  pag.appendChild(prev);
-
-  // page numbers
-  var start = 1, end = totalPages;
-  if (totalPages > 5) {
-    if (curPage <= 3)             { start=1; end=5; }
-    else if (curPage >= totalPages-2) { start=totalPages-4; end=totalPages; }
-    else { start=curPage-2; end=curPage+2; }
-  }
-  for (var p = start; p <= end; p++) {
-    (function(pg){
-      var btn = document.createElement('button');
-      btn.className = 'page-btn' + (pg===curPage ? ' active' : '');
-      btn.textContent = pg;
-      btn.onclick = function(){ curPage=pg; renderGrid(); };
-      pag.appendChild(btn);
-    })(p);
-  }
-
-  // next
-  var next = document.createElement('button');
-  next.className = 'page-btn nav';
-  next.textContent = '›';
-  next.disabled = curPage === totalPages;
-  next.onclick = function(){ if(curPage<totalPages){ curPage++; renderGrid(); } };
-  pag.appendChild(next);
+  var prev=document.createElement('button');prev.className='page-btn nav';prev.textContent='‹';prev.disabled=curPage===1;prev.onclick=function(){if(curPage>1){curPage--;renderGrid();}};pag.appendChild(prev);
+  var start=1,end=totalPages;
+  if(totalPages>5){if(curPage<=3){start=1;end=5;}else if(curPage>=totalPages-2){start=totalPages-4;end=totalPages;}else{start=curPage-2;end=curPage+2;}}
+  for(var p=start;p<=end;p++){(function(pg){var btn=document.createElement('button');btn.className='page-btn'+(pg===curPage?' active':'');btn.textContent=pg;btn.onclick=function(){curPage=pg;renderGrid();};pag.appendChild(btn);})(p);}
+  var next=document.createElement('button');next.className='page-btn nav';next.textContent='›';next.disabled=curPage===totalPages;next.onclick=function(){if(curPage<totalPages){curPage++;renderGrid();}};pag.appendChild(next);
 }
 
-// ─── INTERACTIONS ─────────────────────────────────────────────────────────────
-function toggleStatus(s) {
-  selStatus = selStatus === s ? null : s;
-  curPage   = 1;
-  renderStatusChips();
-  renderPlatformChips();
-  renderGrid();
-}
-function togglePlatform(p) {
-  selPlatform = selPlatform === p ? null : p;
-  curPage     = 1;
-  renderStatusChips();
-  renderPlatformChips();
-  renderGrid();
-}
-function clearFilters() {
-  selStatus = null; selPlatform = null; curPage = 1;
-  renderStatusChips(); renderPlatformChips(); renderGrid();
-}
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function toggleStatus(s){selStatus=selStatus===s?null:s;curPage=1;renderStatusChips();renderPlatformChips();renderGrid();}
+function togglePlatform(p){selPlatform=selPlatform===p?null:p;curPage=1;renderStatusChips();renderPlatformChips();renderGrid();}
+function clearFilters(){selStatus=null;selPlatform=null;curPage=1;renderStatusChips();renderPlatformChips();renderGrid();}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-fetchAll(1, []);
+// ── INIT ──────────────────────────────────────────────────────────────────────
+fetchBlog(null);
+fetchShelf(1,[]);
 </script>
 </body>
 </html>
