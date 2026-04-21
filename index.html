@@ -240,28 +240,12 @@ var blogStartIndex = 1;
 var blogHasMore    = false;
 
 function fetchBlog(startIndex) {
-  var cb = 'rgPost'+Date.now();
-  var s  = document.createElement('script');
-  var timer = setTimeout(function(){
-    document.getElementById('blog-loading').style.display='none';
-    document.getElementById('blog-skeletons').style.display='none';
-    document.getElementById('blog-empty').classList.add('visible');
-    document.getElementById('blog-empty').innerHTML = '<div style="font-size:36px;margin-bottom:10px">⚠️</div><div>Erro ao carregar posts</div><div style="font-size:10px;margin-top:8px;opacity:0.5">timeout - tente recarregar</div>';
-    delete window[cb]; s.remove();
-  }, 10000);
-  s.onerror = function(){
-    clearTimeout(timer);
-    document.getElementById('blog-loading').style.display='none';
-    document.getElementById('blog-skeletons').style.display='none';
-    document.getElementById('blog-empty').classList.add('visible');
-    delete window[cb]; s.remove();
-  };
-  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results=10&start-index='+startIndex+'&orderby=updated&callback='+cb;
-  window[cb] = function(data) {
-    clearTimeout(timer);
-    var entries = (data.feed && data.feed.entry) || [];
-    var parsed = entries
-      .map(function(e) {
+  var url = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json&max-results=10&start-index='+startIndex+'&orderby=updated';
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var entries = (data.feed && data.feed.entry) || [];
+      var parsed = entries.map(function(e) {
         var thumb = extractImage(e);
         var content = (e.content && e.content.$t) || (e.summary && e.summary.$t) || '';
         var excerpt = content.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,120);
@@ -270,17 +254,21 @@ function fetchBlog(startIndex) {
         var date = pub ? new Date(pub).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
         return { title:e.title.$t, thumb:thumb, excerpt:excerpt, url:link?link.href:'#', date:date };
       });
-    blogPosts = blogPosts.concat(parsed);
-    blogHasMore = entries.length === 10;
-    blogStartIndex = startIndex + 10;
-    document.getElementById('blog-loading').style.display='none';
-    document.getElementById('blog-skeletons').style.display='none';
-    document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
-    renderBlog();
-    document.getElementById('load-more-btn').classList.toggle('visible', blogHasMore);
-    delete window[cb]; s.remove();
-  };
-  document.head.appendChild(s);
+      blogPosts = blogPosts.concat(parsed);
+      blogHasMore = entries.length === 10;
+      blogStartIndex = startIndex + 10;
+      document.getElementById('blog-loading').style.display='none';
+      document.getElementById('blog-skeletons').style.display='none';
+      document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
+      renderBlog();
+      document.getElementById('load-more-btn').classList.toggle('visible', blogHasMore);
+    })
+    .catch(function(){
+      document.getElementById('blog-loading').style.display='none';
+      document.getElementById('blog-skeletons').style.display='none';
+      document.getElementById('blog-empty').classList.add('visible');
+      document.getElementById('blog-empty').innerHTML='<div style="font-size:36px;margin-bottom:10px">⚠️</div><div>Erro ao carregar posts</div>';
+    });
 }
 
 function loadMoreBlog() {
