@@ -246,7 +246,7 @@ function fetchBlog(startIndex) {
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
   };
-  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&start-index='+startIndex+'&callback='+cb;
+  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&start-index='+startIndex+'&orderby=updated&callback='+cb;
   window[cb] = function(data) {
     var entries = (data.feed && data.feed.entry) || [];
     var parsed = entries
