@@ -246,7 +246,7 @@ function fetchBlog(startIndex) {
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
   };
-  s.src = 'https://'+BLOG_URL+'/feeds/posts/default?alt=json-in-script&max-results='+BLOG_PER_PAGE+'&start-index='+startIndex+'&orderby=updated&callback='+cb;
+  s.src = 'https://'+BLOG_URL+'/feeds/posts/summary?alt=json-in-script&max-results=10&start-index='+startIndex+'&orderby=updated&callback='+cb;
   window[cb] = function(data) {
     var entries = (data.feed && data.feed.entry) || [];
     var parsed = entries
@@ -260,8 +260,8 @@ function fetchBlog(startIndex) {
         return { title:e.title.$t, thumb:thumb, excerpt:excerpt, url:link?link.href:'#', date:date };
       });
     blogPosts = blogPosts.concat(parsed);
-    blogHasMore = entries.length === BLOG_PER_PAGE;
-    blogStartIndex = startIndex + BLOG_PER_PAGE;
+    blogHasMore = entries.length === 10;
+    blogStartIndex = startIndex + 10;
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
     document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
