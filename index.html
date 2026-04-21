@@ -250,9 +250,6 @@ function fetchBlog(startIndex) {
   window[cb] = function(data) {
     var entries = (data.feed && data.feed.entry) || [];
     var parsed = entries
-      .filter(function(e){
-        return !((e.category||[]).some(function(c){ return c.term.indexOf('Status - ')===0; }));
-      })
       .map(function(e) {
         var thumb = extractImage(e);
         var content = (e.content && e.content.$t) || (e.summary && e.summary.$t) || '';
@@ -265,12 +262,6 @@ function fetchBlog(startIndex) {
     blogPosts = blogPosts.concat(parsed);
     blogHasMore = entries.length === BLOG_PER_PAGE;
     blogStartIndex = startIndex + BLOG_PER_PAGE;
-    // if we got entries but all were game posts, keep fetching automatically
-    if (blogPosts.length === 0 && blogHasMore) {
-      delete window[cb]; s.remove();
-      fetchBlog(blogStartIndex);
-      return;
-    }
     document.getElementById('blog-loading').style.display='none';
     document.getElementById('blog-skeletons').style.display='none';
     document.getElementById('header-sub').textContent = blogPosts.length+(blogHasMore?'+':'')+' posts';
