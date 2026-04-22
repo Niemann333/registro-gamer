@@ -315,7 +315,14 @@ function drawBPag(){
   p.style.flexWrap = 'wrap';
   p.style.gap = '6px';
 
-  function go(n){ bcurpg=n; drawBlog(); window.scrollTo({top:0,behavior:'smooth'}); }
+  var WIN = 10; // pages shown at a time
+  // window start: keep current page visible, centered-ish
+  var winStart = Math.max(1, bcurpg - Math.floor(WIN/2));
+  var winEnd   = Math.min(totalPages, winStart + WIN - 1);
+  // shift window left if we're near the end
+  if(winEnd - winStart < WIN - 1) winStart = Math.max(1, winEnd - WIN + 1);
+
+  function go(n){ bcurpg=n; drawBlog(); drawBPag(); window.scrollTo({top:0,behavior:'smooth'}); }
 
   function mkbtn(label, disabled, onclick, active, wide){
     var b = document.createElement('button');
@@ -326,10 +333,27 @@ function drawBPag(){
     return b;
   }
 
+  // « Início — jump to page 1
   p.appendChild(mkbtn('&#171; In&iacute;cio', bcurpg===1, function(){go(1);}, false, true));
-  for(var n=1; n<=totalPages; n++){
+
+  // ... if window doesn't start at 1
+  if(winStart > 1){
+    var d=document.createElement('span');d.textContent='...';d.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';
+    p.appendChild(d);
+  }
+
+  // numbered window
+  for(var n=winStart; n<=winEnd; n++){
     (function(nn){ p.appendChild(mkbtn(nn, false, function(){go(nn);}, nn===bcurpg, false)); })(n);
   }
+
+  // ... if window doesn't reach the end
+  if(winEnd < totalPages){
+    var d2=document.createElement('span');d2.textContent='...';d2.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';
+    p.appendChild(d2);
+  }
+
+  // Fim » — jump to last page
   p.appendChild(mkbtn('Fim &#187;', bcurpg===totalPages, function(){go(totalPages);}, false, true));
 }
 
