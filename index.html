@@ -221,12 +221,31 @@ function goTab(t){
   g('page-'+t).classList.add('show');
   g('nb-'+t).classList.add('on');
   g('shelf-filters').style.display=t==='shelf'?'block':'none';
-  var subs={blog:bposts.length?(bposts.length+(bmore?'+':'')+' posts'):'carregando...',
+  var totalBlog=Math.ceil(btotal/BPGSZ)||0;
+  var subs={
+    blog:btotal?(btotal+' posts'):'carregando...',
     shelf:games.length?(games.length+' jogos'):'carregando...',
-    archive:'Arquivo',tags:'Tags'};
+    archive:'Arquivo',tags:'Tags'
+  };
   g('hsub').textContent=subs[t]||'';
   if(t==='archive'&&!archiveLoaded) loadArchive(1,[]);
-  if(t==='tags'&&allTags.length) drawTags();
+  if(t==='tags'){
+    if(allTags.length) drawTags();
+    else {
+      // tags not loaded yet, load them now
+      var cb='taginit_'+Date.now();
+      var s=document.createElement('script');
+      s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=0&callback='+cb;
+      window[cb]=function(d){
+        if(d.feed&&d.feed.category){
+          allTags=d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
+          drawTags();
+        }
+        delete window[cb];s.remove();
+      };
+      document.head.appendChild(s);
+    }
+  }
 }
 
 // ── POST READER ──
@@ -272,123 +291,100 @@ function ximg(e){
 }
 
 // ── BLOG ──
-function loadBlog(si, acc){
-  acc = acc || [];
-  var BATCH = 100; // smaller batch = guaranteed to work
-  var cb = 'rgb_'+Date.now()+'_'+si;
-  var s = document.createElement('script');
-  s.src = 'https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results='+BATCH+'&start-index='+si+'&callback='+cb;
-  window[cb] = function(d){
-    if(si===1 && d.feed && d.feed.category){
-      allTags = d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
+function initBlog(){
+  // Step 1: fetch max-results=0 to get total count instantly
+  var cb='rbgc_'+Date.now();
+  var s=document.createElement('script');
+  s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=0&callback='+cb;
+  window[cb]=function(d){
+    if(d.feed&&d.feed.category){
+      allTags=d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
       if(curtab==='tags') drawTags();
     }
-    var en = (d.feed && d.feed.entry) || [];
-    var pr = en
-      .filter(function(e){
-        return !((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));
-      })
-      .map(function(e){
-        var th = ximg(e);
-        var summ = (e.summary && e.summary.$t) || '';
-        var ex = summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
-        var dt = e.published && e.published.$t;
-        var d2 = dt ? new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        var rawId = (e.id && e.id.$t) || '';
-        var postId = rawId.split('post-')[1] || '';
-        return {title:e.title.$t, thumb:th, ex:ex, date:d2, postId:postId, html:null};
-      });
-    var all = acc.concat(pr);
-
-    // update subtitle while loading
-    if(curtab==='blog') g('hsub').textContent = 'carregando... ('+all.length+')';
-
-    if(en.length === BATCH){
-      // more posts exist, fetch next batch
-      delete window[cb]; s.remove();
-      loadBlog(si + BATCH, all);
-      return;
-    }
-
-    // all done
-    bposts = all;
-    bcurpg = 1;
-    g('bld').style.display = 'none';
-    if(curtab==='blog') g('hsub').textContent = bposts.length + ' posts';
-    drawBlog(); drawBPag();
-    delete window[cb]; s.remove();
+    btotal=parseInt((d.feed&&d.feed.openSearch$totalResults&&d.feed.openSearch$totalResults.$t)||0);
+    g('bld').style.display='none';
+    if(curtab==='blog') g('hsub').textContent=btotal+' posts';
+    drawBPag();
+    loadBlogPage(1); // load first page
+    delete window[cb];s.remove();
   };
-  s.onerror = function(){ g('bld').style.display='none'; delete window[cb]; s.remove(); };
+  document.head.appendChild(s);
+}
+
+function loadBlogPage(pg){
+  if(bpages[pg]!==undefined){bcurpg=pg;drawBlog();drawBPag();window.scrollTo({top:0,behavior:'smooth'});return;}
+  var si=(pg-1)*BPGSZ+1;
+  var cb='rbgp_'+Date.now()+'_'+pg;
+  var s=document.createElement('script');
+  g('bld').style.display='block';
+  s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results='+BPGSZ+'&start-index='+si+'&callback='+cb;
+  window[cb]=function(d){
+    var en=(d.feed&&d.feed.entry)||[];
+    var pr=en
+      .filter(function(e){return!((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
+      .map(function(e){
+        var summ=(e.summary&&e.summary.$t)||'';
+        var ex=summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
+        var dt=e.published&&e.published.$t;
+        var d2=dt?new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
+        var rawId=(e.id&&e.id.$t)||'';
+        var postId=rawId.split('post-')[1]||'';
+        return{title:e.title.$t,thumb:ximg(e),ex:ex,date:d2,postId:postId,html:null};
+      });
+    bpages[pg]=pr;
+    bcurpg=pg;
+    g('bld').style.display='none';
+    drawBlog();drawBPag();
+    delete window[cb];s.remove();
+  };
+  s.onerror=function(){g('bld').style.display='none';delete window[cb];s.remove();};
   document.head.appendChild(s);
 }
 
 
 function drawBlog(){
-  var l = g('blist'); l.innerHTML = '';
-  if(!bposts.length){ g('bmsg').style.display='block'; return; }
-  g('bmsg').style.display = 'none';
-  var start = (bcurpg-1)*BPGSZ;
-  var slice = bposts.slice(start, start+BPGSZ);
-  slice.forEach(function(p){
-    var div = document.createElement('div'); div.className = 'bcard';
-    var th = p.thumb ? '<img src="'+esc(p.thumb)+'" loading="lazy">' : '&#128195;';
-    div.innerHTML = '<div class="bthumb">'+th+'</div>'
+  var l=g('blist');l.innerHTML='';
+  var posts=bpages[bcurpg]||[];
+  if(!posts.length&&!btotal){g('bmsg').style.display='block';return;}
+  g('bmsg').style.display='none';
+  posts.forEach(function(p){
+    var div=document.createElement('div');div.className='bcard';
+    var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
+    div.innerHTML='<div class="bthumb">'+th+'</div>'
       +'<div class="binfo"><div class="bdate">'+esc(p.date)+'</div><div class="btitle">'+esc(p.title)+'</div><div class="bex">'+esc(p.ex)+'</div></div>'
       +'<div class="barr">&#8250;</div>';
-    (function(post){ div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);}); })(p);
+    (function(post){div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
     l.appendChild(div);
   });
 }
 
 
 function drawBPag(){
-  var p = g('bpag'); p.innerHTML = '';
-  var totalPages = Math.ceil(bposts.length/BPGSZ);
-  if(totalPages <= 1){ p.style.display='none'; return; }
-  p.style.display = 'flex';
-  p.style.flexWrap = 'wrap';
-  p.style.gap = '6px';
+  var p=g('bpag');p.innerHTML='';
+  var totalPages=Math.ceil(btotal/BPGSZ);
+  if(totalPages<=1){p.style.display='none';return;}
+  p.style.display='flex';p.style.flexWrap='wrap';p.style.gap='6px';
 
-  var WIN = 10; // pages shown at a time
-  // window start: keep current page visible, centered-ish
-  var winStart = Math.max(1, bcurpg - Math.floor(WIN/2));
-  var winEnd   = Math.min(totalPages, winStart + WIN - 1);
-  // shift window left if we're near the end
-  if(winEnd - winStart < WIN - 1) winStart = Math.max(1, winEnd - WIN + 1);
+  var WIN=10;
+  var winStart=Math.max(1,bcurpg-Math.floor(WIN/2));
+  var winEnd=Math.min(totalPages,winStart+WIN-1);
+  if(winEnd-winStart<WIN-1)winStart=Math.max(1,winEnd-WIN+1);
 
-  function go(n){ bcurpg=n; drawBlog(); drawBPag(); window.scrollTo({top:0,behavior:'smooth'}); }
-
-  function mkbtn(label, disabled, onclick, active, wide){
-    var b = document.createElement('button');
-    b.className = 'pb' + (active?' on':'');
-    if(wide) b.style.cssText = 'padding:0 10px;width:auto;font-size:11px;font-family:Oxanium,sans-serif;';
-    b.innerHTML = label; b.disabled = disabled;
-    if(!disabled && onclick) b.onclick = onclick;
+  function go(n){loadBlogPage(n);window.scrollTo({top:0,behavior:'smooth'});}
+  function mkbtn(label,disabled,onclick,active,wide){
+    var b=document.createElement('button');
+    b.className='pb'+(active?' on':'');
+    if(wide)b.style.cssText='padding:0 10px;width:auto;font-size:11px;font-family:Oxanium,sans-serif;';
+    b.innerHTML=label;b.disabled=disabled;
+    if(!disabled&&onclick)b.onclick=onclick;
     return b;
   }
 
-  // « Início — jump to page 1
-  p.appendChild(mkbtn('&#171; In&iacute;cio', bcurpg===1, function(){go(1);}, false, true));
-
-  // ... if window doesn't start at 1
-  if(winStart > 1){
-    var d=document.createElement('span');d.textContent='...';d.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';
-    p.appendChild(d);
-  }
-
-  // numbered window
-  for(var n=winStart; n<=winEnd; n++){
-    (function(nn){ p.appendChild(mkbtn(nn, false, function(){go(nn);}, nn===bcurpg, false)); })(n);
-  }
-
-  // ... if window doesn't reach the end
-  if(winEnd < totalPages){
-    var d2=document.createElement('span');d2.textContent='...';d2.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';
-    p.appendChild(d2);
-  }
-
-  // Fim » — jump to last page
-  p.appendChild(mkbtn('Fim &#187;', bcurpg===totalPages, function(){go(totalPages);}, false, true));
+  p.appendChild(mkbtn('&#171; In&iacute;cio',bcurpg===1,function(){go(1);},false,true));
+  if(winStart>1){var d=document.createElement('span');d.textContent='...';d.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';p.appendChild(d);}
+  for(var n=winStart;n<=winEnd;n++){(function(nn){p.appendChild(mkbtn(nn,false,function(){go(nn);},nn===bcurpg,false));})(n);}
+  if(winEnd<totalPages){var d2=document.createElement('span');d2.textContent='...';d2.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';p.appendChild(d2);}
+  p.appendChild(mkbtn('Fim &#187;',bcurpg===totalPages,function(){go(totalPages);},false,true));
 }
 
 
@@ -589,7 +585,7 @@ function drawSPag(tp){
   var nx=document.createElement('button');nx.className='pb nav';nx.innerHTML='&#8250;';nx.disabled=spg===tp;nx.onclick=function(){if(spg<tp){spg++;drawShelf();}};p.appendChild(nx);
 }
 
-loadBlog(1);
+initBlog();
 loadShelf(1,[]);
 </script>
 </body>
