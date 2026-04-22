@@ -256,7 +256,7 @@ function loadBlog(si, acc){
   acc = acc || [];
   var cb = 'rgb_'+Date.now()+'_'+si;
   var s = document.createElement('script');
-  s.src = 'https://'+BLOG+'/feeds/posts/default?alt=json-in-script&max-results=500&start-index='+si+'&callback='+cb;
+  s.src = 'https://'+BLOG+'/feeds/posts/default?alt=json-in-script&max-results=500&start-index='+si+'&orderby=updated&callback='+cb;
   window[cb] = function(d){
     if(si===1 && d.feed && d.feed.category){
       allTags = d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
