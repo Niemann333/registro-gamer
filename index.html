@@ -24,14 +24,12 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 #shelf-filters{display:none}
 .page{display:none;padding:12px 16px 32px}
 .page.show{display:block}
-/* NAV */
 #nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,13,26,0.97);border-top:1px solid rgba(255,255,255,0.08);display:flex;z-index:20}
 .nb{flex:1;padding:8px 0 12px;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:transparent;color:rgba(255,255,255,0.35);font-family:Oxanium,sans-serif;font-size:8px;font-weight:600;letter-spacing:0.4px;cursor:pointer;outline:none}
 .nb.on{color:#9B59FF}
 .ni{font-size:18px;line-height:1}
 .nd{width:3px;height:3px;border-radius:50%;background:#9B59FF;opacity:0}
 .nb.on .nd{opacity:1}
-/* BLOG LIST */
 .bcard{display:flex;gap:11px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;user-select:none}
 .bcard:last-child{border-bottom:none}
 .bthumb{width:76px;height:76px;border-radius:9px;overflow:hidden;flex-shrink:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:22px;color:rgba(255,255,255,0.1)}
@@ -41,13 +39,11 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 .btitle{font-size:12px;font-weight:700;line-height:1.3;color:#eee;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
 .bex{font-size:10px;color:rgba(255,255,255,0.4);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .barr{color:rgba(255,255,255,0.2);font-size:15px;align-self:center;flex-shrink:0;pointer-events:none}
-/* PAGINATION */
 .pgbar{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:20px}
 .pb{width:38px;height:38px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .pb.on{background:linear-gradient(135deg,rgba(155,89,255,.3),rgba(77,166,255,.2));border-color:rgba(155,89,255,.6);color:#fff;font-weight:700}
 .pb.nav{background:rgba(155,89,255,.12);color:#9B59FF;font-size:18px}
 .pb.nav:disabled{background:rgba(255,255,255,.03);color:rgba(255,255,255,.15);cursor:default}
-/* POST READER */
 #post-view{position:fixed;inset:0;z-index:50;background:#0D0D1A;overflow-y:auto;display:none;padding-bottom:40px}
 #post-view.show{display:block}
 #post-hdr{position:sticky;top:0;background:#0D0D1A;border-bottom:1px solid rgba(255,255,255,0.07);padding:12px 16px;display:flex;align-items:center;gap:12px}
@@ -62,7 +58,6 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 #post-body iframe{max-width:100%;border-radius:8px;margin:10px 0;display:block}
 #post-body .separator{text-align:center!important}
 #post-body span{font-size:inherit!important}
-/* ARCHIVE */
 .arch-year{margin-bottom:8px;border-radius:12px;overflow:hidden;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)}
 .arch-year-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;user-select:none}
 .arch-year-title{font-size:14px;font-weight:800;color:#fff}
@@ -82,13 +77,9 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 .arch-post:active{background:rgba(255,255,255,0.04)}
 .arch-post-title{font-size:12px;color:rgba(255,255,255,0.8);flex:1;line-height:1.3}
 .arch-post-arrow{color:rgba(255,255,255,0.2);font-size:13px;flex-shrink:0}
-/* TAGS */
 .tags-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
 .tag-btn{padding:7px 14px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:Oxanium,sans-serif;outline:none;transition:all 0.15s}
 .tag-btn:active,.tag-btn.on{border-color:#9B59FF;color:#9B59FF;background:rgba(155,89,255,0.1)}
-.tag-section{margin-bottom:20px}
-.tag-section-title{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px}
-/* SHELF */
 #grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 #rbar{display:none;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:10px;color:rgba(255,255,255,0.35)}
 .card{border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);animation:fu .3s ease both}
@@ -128,7 +119,6 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
   </div>
 </div>
 
-<!-- POST READER -->
 <div id="post-view">
   <div id="post-hdr">
     <button id="post-back" onclick="closePost()">&#8592; Voltar</button>
@@ -138,7 +128,6 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
   <div id="post-body"></div>
 </div>
 
-<!-- BLOG -->
 <div class="page show" id="page-blog">
   <div class="ldtxt" id="bld">CARREGANDO POSTS...</div>
   <div id="blist"></div>
@@ -149,7 +138,6 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
   <div id="bpag" class="pgbar" style="display:none"></div>
 </div>
 
-<!-- ESTANTE -->
 <div class="page" id="page-shelf">
   <div id="rbar"><span id="rinfo"></span></div>
   <div id="grid"></div>
@@ -157,13 +145,11 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
   <div id="spag"></div>
 </div>
 
-<!-- ARQUIVO -->
 <div class="page" id="page-archive">
   <div class="ldtxt" id="ald" style="display:none">CARREGANDO ARQUIVO...</div>
   <div id="arch-list"></div>
 </div>
 
-<!-- TAGS -->
 <div class="page" id="page-tags">
   <div id="tags-list"></div>
   <div id="tag-results" style="display:none">
@@ -193,21 +179,20 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 </div>
 
 <script>
-var BLOG = 'lucniemanngames.blogspot.com';
-var SO = ['Favorito','Tenho','Quero','Jogado','Finalizado'];
-var SM = {
+var BLOG='lucniemanngames.blogspot.com';
+var SO=['Favorito','Tenho','Quero','Jogado','Finalizado'];
+var SM={
   Favorito:{c:'#FFD700',i:'&#9733;'},Tenho:{c:'#00E5A0',i:'&#10022;'},
   Quero:{c:'#4DA6FF',i:'&#9678;'},Jogado:{c:'#FF7F50',i:'&#9654;'},
   Finalizado:{c:'#C084FC',i:'&#10003;'}
 };
-var CP=20, BPGSZ=10;
+var CP=20,BPGSZ=10;
 var games=[],plats=[],sS=null,sP=null,spg=1;
-var bpages={},btotal=0,bcurpg=1;
+var bpages={},btotal=0,btotalBlog=0,bcurpg=1;
 var allTags=[];
 var archivePosts=[],archiveLoaded=false;
-var tagPosts=[],tagLoading=false,tagName='';
+var tagSI=1,tagHasMore=false,tagName='',tagPosts=[];
 var curtab='blog';
-var MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var MNF=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function g(id){return document.getElementById(id);}
@@ -221,9 +206,8 @@ function goTab(t){
   g('page-'+t).classList.add('show');
   g('nb-'+t).classList.add('on');
   g('shelf-filters').style.display=t==='shelf'?'block':'none';
-  var totalBlog=Math.ceil(btotal/BPGSZ)||0;
   var subs={
-    blog:btotal?(btotal+' posts'):'carregando...',
+    blog:btotalBlog?(btotalBlog+' posts'):'carregando...',
     shelf:games.length?(games.length+' jogos'):'carregando...',
     archive:'Arquivo',tags:'Tags'
   };
@@ -232,7 +216,6 @@ function goTab(t){
   if(t==='tags'){
     if(allTags.length) drawTags();
     else {
-      // tags not loaded yet, load them now
       var cb='taginit_'+Date.now();
       var s=document.createElement('script');
       s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=0&callback='+cb;
@@ -250,30 +233,25 @@ function goTab(t){
 
 // ── POST READER ──
 function openPost(p){
-  g('post-ttl').textContent = p.title;
-  g('post-date').textContent = p.date;
-  g('nav').style.display = 'none';
+  g('post-ttl').textContent=p.title;
+  g('post-date').textContent=p.date;
+  g('nav').style.display='none';
   g('post-view').classList.add('show');
   g('post-view').scrollTo({top:0});
-  if(p.html){
-    g('post-body').innerHTML = p.html;
-    return;
-  }
-  g('post-body').innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;padding:40px 0;font-size:12px;letter-spacing:1px">CARREGANDO...</div>';
-  // fetch full post content by postId
-  var cb = 'rpost_'+Date.now();
-  var s = document.createElement('script');
-  s.src = 'https://'+BLOG+'/feeds/posts/default/'+p.postId+'?alt=json-in-script&callback='+cb;
-  window[cb] = function(d){
-    var entry = d.entry;
-    var html = (entry && entry.content && entry.content.$t) || '';
-    p.html = html; // cache it
-    g('post-body').innerHTML = html;
-    delete window[cb]; s.remove();
+  if(p.html){g('post-body').innerHTML=p.html;return;}
+  g('post-body').innerHTML='<div style="color:rgba(255,255,255,0.3);text-align:center;padding:40px 0;font-size:12px;letter-spacing:1px">CARREGANDO...</div>';
+  var cb='rpost_'+Date.now();
+  var s=document.createElement('script');
+  s.src='https://'+BLOG+'/feeds/posts/default/'+p.postId+'?alt=json-in-script&callback='+cb;
+  window[cb]=function(d){
+    var html=(d.entry&&d.entry.content&&d.entry.content.$t)||'';
+    p.html=html;
+    g('post-body').innerHTML=html;
+    delete window[cb];s.remove();
   };
-  s.onerror = function(){
-    g('post-body').innerHTML = '<div style="color:rgba(255,107,107,0.7);text-align:center;padding:40px 0">Erro ao carregar post</div>';
-    delete window[cb]; s.remove();
+  s.onerror=function(){
+    g('post-body').innerHTML='<div style="color:rgba(255,107,107,0.7);text-align:center;padding:40px 0">Erro ao carregar post</div>';
+    delete window[cb];s.remove();
   };
   document.head.appendChild(s);
 }
@@ -282,7 +260,7 @@ function closePost(){
   g('nav').style.display='flex';
 }
 
-// ── IMAGE EXTRACT ──
+// ── IMAGE ──
 function ximg(e){
   var t=e.media$thumbnail&&e.media$thumbnail.url;
   if(t)return t.replace(/\/s\d+-c\//,'/s400/').replace(/=s\d+-c$/,'=s400').replace(/\/s\d+\//,'/s400/');
@@ -292,7 +270,6 @@ function ximg(e){
 
 // ── BLOG ──
 function initBlog(){
-  // Step 1: fetch max-results=0 to get total count instantly
   var cb='rbgc_'+Date.now();
   var s=document.createElement('script');
   s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=0&callback='+cb;
@@ -302,10 +279,13 @@ function initBlog(){
       if(curtab==='tags') drawTags();
     }
     btotal=parseInt((d.feed&&d.feed.openSearch$totalResults&&d.feed.openSearch$totalResults.$t)||0);
+    // btotalBlog will be set once shelf loads (btotal - games.length)
+    // for now estimate it
+    btotalBlog=btotal;
     g('bld').style.display='none';
-    if(curtab==='blog') g('hsub').textContent=btotal+' posts';
+    if(curtab==='blog') g('hsub').textContent=btotalBlog+' posts';
     drawBPag();
-    loadBlogPage(1); // load first page
+    loadBlogPage(1);
     delete window[cb];s.remove();
   };
   document.head.appendChild(s);
@@ -332,8 +312,16 @@ function loadBlogPage(pg){
         return{title:e.title.$t,thumb:ximg(e),ex:ex,date:d2,postId:postId,html:null};
       });
     bpages[pg]=pr;
-    bcurpg=pg;
     g('bld').style.display='none';
+    // skip page if all entries were game posts
+    if(pr.length===0&&en.length>0){
+      delete window[cb];s.remove();
+      var tp=Math.ceil(btotalBlog/BPGSZ);
+      var next=pg+(pg>bcurpg?1:-1);
+      if(next>=1&&next<=tp){loadBlogPage(next);}
+      return;
+    }
+    bcurpg=pg;
     drawBlog();drawBPag();
     delete window[cb];s.remove();
   };
@@ -341,11 +329,10 @@ function loadBlogPage(pg){
   document.head.appendChild(s);
 }
 
-
 function drawBlog(){
   var l=g('blist');l.innerHTML='';
   var posts=bpages[bcurpg]||[];
-  if(!posts.length&&!btotal){g('bmsg').style.display='block';return;}
+  if(!posts.length&&!btotalBlog){g('bmsg').style.display='block';return;}
   g('bmsg').style.display='none';
   posts.forEach(function(p){
     var div=document.createElement('div');div.className='bcard';
@@ -358,19 +345,16 @@ function drawBlog(){
   });
 }
 
-
 function drawBPag(){
   var p=g('bpag');p.innerHTML='';
-  var totalPages=Math.ceil(btotal/BPGSZ);
+  var totalPages=Math.ceil(btotalBlog/BPGSZ);
   if(totalPages<=1){p.style.display='none';return;}
   p.style.display='flex';p.style.flexWrap='wrap';p.style.gap='6px';
-
   var WIN=10;
   var winStart=Math.max(1,bcurpg-Math.floor(WIN/2));
   var winEnd=Math.min(totalPages,winStart+WIN-1);
   if(winEnd-winStart<WIN-1)winStart=Math.max(1,winEnd-WIN+1);
-
-  function go(n){loadBlogPage(n);window.scrollTo({top:0,behavior:'smooth'});}
+  function go(n){loadBlogPage(n);}
   function mkbtn(label,disabled,onclick,active,wide){
     var b=document.createElement('button');
     b.className='pb'+(active?' on':'');
@@ -379,16 +363,12 @@ function drawBPag(){
     if(!disabled&&onclick)b.onclick=onclick;
     return b;
   }
-
   p.appendChild(mkbtn('&#171; In&iacute;cio',bcurpg===1,function(){go(1);},false,true));
   if(winStart>1){var d=document.createElement('span');d.textContent='...';d.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';p.appendChild(d);}
   for(var n=winStart;n<=winEnd;n++){(function(nn){p.appendChild(mkbtn(nn,false,function(){go(nn);},nn===bcurpg,false));})(n);}
   if(winEnd<totalPages){var d2=document.createElement('span');d2.textContent='...';d2.style.cssText='color:rgba(255,255,255,0.3);align-self:center;font-size:11px;padding:0 2px';p.appendChild(d2);}
   p.appendChild(mkbtn('Fim &#187;',bcurpg===totalPages,function(){go(totalPages);},false,true));
 }
-
-
-function loadTagMore(){if(tagHasMore)fetchTagPosts(tagName,tagSI);}
 
 // ── ARCHIVE ──
 function loadArchive(si,acc){
@@ -402,7 +382,8 @@ function loadArchive(si,acc){
         var dt=e.published&&e.published.$t;var dateObj=dt?new Date(dt):null;
         var d2=dateObj?dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
         var rawId=(e.id&&e.id.$t)||'';var postId=rawId.split('post-')[1]||'';
-        return{title:e.title.$t,date:d2,thumb:ximg(e),postId:postId,html:null,year:dateObj?dateObj.getFullYear():0,month:dateObj?dateObj.getMonth():0};
+        return{title:e.title.$t,date:d2,thumb:ximg(e),postId:postId,html:null,
+          year:dateObj?dateObj.getFullYear():0,month:dateObj?dateObj.getMonth():0};
       });
     var all=acc.concat(pr);
     if(en.length===BATCH){delete window[cb];s.remove();loadArchive(si+BATCH,all);return;}
@@ -414,7 +395,6 @@ function loadArchive(si,acc){
 }
 function drawArchive(){
   var l=g('arch-list');l.innerHTML='';
-  var MNF=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var byYear={};
   archivePosts.forEach(function(p){if(!p.year)return;if(!byYear[p.year])byYear[p.year]=[];byYear[p.year].push(p);});
   Object.keys(byYear).map(Number).sort(function(a,b){return b-a;}).forEach(function(yr,yi){
@@ -458,7 +438,6 @@ function drawTags(){
   });
   l.appendChild(wrap);
 }
-var tagSI=1,tagHasMore=false,tagName='',tagPosts=[];
 function openTagResults(tag){
   tagName=tag;tagPosts=[];tagSI=1;tagHasMore=false;
   g('tags-list').style.display='none';g('tag-results').style.display='block';
@@ -488,6 +467,7 @@ function fetchTagPosts(tag,si){
   s.onerror=function(){g('tag-ld').style.display='none';delete window[cb];s.remove();};
   document.head.appendChild(s);
 }
+function loadTagMore(){if(tagHasMore)fetchTagPosts(tagName,tagSI);}
 function drawTagPosts(){
   var l=g('tag-post-list');l.innerHTML='';
   tagPosts.forEach(function(p){
@@ -518,6 +498,12 @@ function loadShelf(si,acc){
     games=all;var seen={};plats=[];
     all.forEach(function(x){if(x.pl&&!seen[x.pl]){seen[x.pl]=1;plats.push(x.pl);}});
     plats.sort(function(a,b){return a.localeCompare(b,'pt-BR');});
+    // ── KEY FIX: now we know exact game count, recalculate blog pages ──
+    if(btotal>0){
+      btotalBlog=btotal-games.length;
+      if(curtab==='blog') g('hsub').textContent=btotalBlog+' posts';
+      drawBPag();
+    }
     if(curtab==='shelf') g('hsub').textContent=games.length+' jogos';
     drawSC();drawPC();drawShelf();
     delete window[cb];s.remove();
