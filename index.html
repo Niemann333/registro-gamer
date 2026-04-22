@@ -308,43 +308,37 @@ function drawBPag(){
   var total=Math.ceil(bposts.length/BPGSZ);
 
   function go(n){bcurpg=n;drawBlog();window.scrollTo({top:0,behavior:'smooth'});}
-  function btn(label,disabled,onclick,active){
+
+  function mkbtn(label,disabled,onclick,active,isText){
     var b=document.createElement('button');
-    b.className='pb'+(active?' on':'')+(label==='&#8249;'||label==='&#8250;'||label==='&#8810;'||label==='&#8811;'?' nav':'');
-    b.innerHTML=label;b.disabled=disabled;if(!disabled)b.onclick=onclick;
+    b.className='pb'+(active?' on':'')+(isText?'':' nav');
+    if(isText){b.style.cssText='padding:0 10px;width:auto;font-size:11px;font-family:Oxanium,sans-serif;';}
+    b.innerHTML=label;b.disabled=disabled;
+    if(!disabled&&onclick)b.onclick=onclick;
     return b;
   }
 
-  // |< first
-  p.appendChild(btn('&#8810;',bcurpg===1,function(){go(1);}));
-  // < prev
-  p.appendChild(btn('&#8249;',bcurpg===1,function(){go(bcurpg-1);}));
+  // « Início
+  p.appendChild(mkbtn('&#171; In&iacute;cio', bcurpg===1, function(){go(1);}, false, true));
 
-  // numbered pages
-  var s=1,e=total;
-  if(total>5){
-    if(bcurpg<=3){s=1;e=5;}
-    else if(bcurpg>=total-2){s=total-4;e=total;}
-    else{s=bcurpg-2;e=bcurpg+2;}
+  // all known page numbers
+  for(var n=1;n<=total;n++){
+    (function(nn){p.appendChild(mkbtn(nn,false,function(){go(nn);},nn===bcurpg,false));})(n);
   }
-  for(var n=s;n<=e;n++){
-    (function(nn){p.appendChild(btn(nn,false,function(){go(nn);},nn===bcurpg));})(n);
-  }
-  // if more pages can be loaded, show ...
+  // ... if more can still load
   if(bmore){
-    var dots=document.createElement('button');dots.className='pb';dots.textContent='...';dots.style.cursor='default';dots.disabled=true;
+    var dots=document.createElement('button');dots.className='pb';dots.textContent='...';
+    dots.style.cursor='pointer';
+    dots.title='Carregar mais';
+    dots.onclick=function(){loadBlog(bsi);};
     p.appendChild(dots);
   }
 
-  // > next
-  var nxDisabled=bcurpg>=total&&!bmore;
-  p.appendChild(btn('&#8250;',nxDisabled,function(){
-    if(bcurpg<total){go(bcurpg+1);}
-    else if(bmore){loadBlog(bsi);}
-  }));
-  // >| last (only if we know total)
+  // Fim »
   if(!bmore){
-    p.appendChild(btn('&#8811;',bcurpg===total,function(){go(total);}));
+    p.appendChild(mkbtn('Fim &#187;', bcurpg===total, function(){go(total);}, false, true));
+  } else {
+    p.appendChild(mkbtn('Fim &#187;', true, null, false, true));
   }
 }
 
