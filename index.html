@@ -274,11 +274,10 @@ function ximg(e){
 // ── BLOG ──
 function loadBlog(si, acc){
   acc = acc || [];
+  var BATCH = 100; // smaller batch = guaranteed to work
   var cb = 'rgb_'+Date.now()+'_'+si;
   var s = document.createElement('script');
-  // use /summary instead of /default — returns titles+dates+thumbnails only, no full HTML
-  // much smaller response = can load all posts
-  s.src = 'https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=500&start-index='+si+'&callback='+cb;
+  s.src = 'https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results='+BATCH+'&start-index='+si+'&callback='+cb;
   window[cb] = function(d){
     if(si===1 && d.feed && d.feed.category){
       allTags = d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
@@ -286,20 +285,32 @@ function loadBlog(si, acc){
     }
     var en = (d.feed && d.feed.entry) || [];
     var pr = en
-      .filter(function(e){return !((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
+      .filter(function(e){
+        return !((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));
+      })
       .map(function(e){
         var th = ximg(e);
         var summ = (e.summary && e.summary.$t) || '';
         var ex = summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
         var dt = e.published && e.published.$t;
         var d2 = dt ? new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        // extract post id for fetching full content later
         var rawId = (e.id && e.id.$t) || '';
         var postId = rawId.split('post-')[1] || '';
         return {title:e.title.$t, thumb:th, ex:ex, date:d2, postId:postId, html:null};
       });
     var all = acc.concat(pr);
-    if(en.length === 500){ loadBlog(si+500, all); return; }
+
+    // update subtitle while loading
+    if(curtab==='blog') g('hsub').textContent = 'carregando... ('+all.length+')';
+
+    if(en.length === BATCH){
+      // more posts exist, fetch next batch
+      delete window[cb]; s.remove();
+      loadBlog(si + BATCH, all);
+      return;
+    }
+
+    // all done
     bposts = all;
     bcurpg = 1;
     g('bld').style.display = 'none';
@@ -307,7 +318,7 @@ function loadBlog(si, acc){
     drawBlog(); drawBPag();
     delete window[cb]; s.remove();
   };
-  g('bld').style.display = 'block';
+  s.onerror = function(){ g('bld').style.display='none'; delete window[cb]; s.remove(); };
   document.head.appendChild(s);
 }
 
