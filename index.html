@@ -202,7 +202,7 @@ var SM = {
 };
 var CP=20, BPGSZ=10;
 var games=[],plats=[],sS=null,sP=null,spg=1;
-var bposts=[],bcurpg=1;
+var bposts=[],bcurpg=1,bloadingPost=false;
 var allTags=[];
 var archivePosts=[],archiveLoaded=false;
 var tagPosts=[],tagLoading=false,tagName='';
@@ -231,12 +231,32 @@ function goTab(t){
 
 // ── POST READER ──
 function openPost(p){
-  g('post-ttl').textContent=p.title;
-  g('post-date').textContent=p.date;
-  g('post-body').innerHTML=p.html;
+  g('post-ttl').textContent = p.title;
+  g('post-date').textContent = p.date;
+  g('nav').style.display = 'none';
   g('post-view').classList.add('show');
   g('post-view').scrollTo({top:0});
-  g('nav').style.display='none';
+  if(p.html){
+    g('post-body').innerHTML = p.html;
+    return;
+  }
+  g('post-body').innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;padding:40px 0;font-size:12px;letter-spacing:1px">CARREGANDO...</div>';
+  // fetch full post content by postId
+  var cb = 'rpost_'+Date.now();
+  var s = document.createElement('script');
+  s.src = 'https://'+BLOG+'/feeds/posts/default/'+p.postId+'?alt=json-in-script&callback='+cb;
+  window[cb] = function(d){
+    var entry = d.entry;
+    var html = (entry && entry.content && entry.content.$t) || '';
+    p.html = html; // cache it
+    g('post-body').innerHTML = html;
+    delete window[cb]; s.remove();
+  };
+  s.onerror = function(){
+    g('post-body').innerHTML = '<div style="color:rgba(255,107,107,0.7);text-align:center;padding:40px 0">Erro ao carregar post</div>';
+    delete window[cb]; s.remove();
+  };
+  document.head.appendChild(s);
 }
 function closePost(){
   g('post-view').classList.remove('show');
@@ -256,7 +276,9 @@ function loadBlog(si, acc){
   acc = acc || [];
   var cb = 'rgb_'+Date.now()+'_'+si;
   var s = document.createElement('script');
-  s.src = 'https://'+BLOG+'/feeds/posts/default?alt=json-in-script&max-results=500&start-index='+si+'&orderby=updated&callback='+cb;
+  // use /summary instead of /default — returns titles+dates+thumbnails only, no full HTML
+  // much smaller response = can load all posts
+  s.src = 'https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=500&start-index='+si+'&callback='+cb;
   window[cb] = function(d){
     if(si===1 && d.feed && d.feed.category){
       allTags = d.feed.category.map(function(cc){return cc.term;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});
@@ -267,17 +289,17 @@ function loadBlog(si, acc){
       .filter(function(e){return !((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
       .map(function(e){
         var th = ximg(e);
-        var html = (e.content && e.content.$t) || '';
-        var ex = html.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
+        var summ = (e.summary && e.summary.$t) || '';
+        var ex = summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
         var dt = e.published && e.published.$t;
         var d2 = dt ? new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        return {title:e.title.$t, thumb:th, ex:ex, html:html, date:d2};
+        // extract post id for fetching full content later
+        var rawId = (e.id && e.id.$t) || '';
+        var postId = rawId.split('post-')[1] || '';
+        return {title:e.title.$t, thumb:th, ex:ex, date:d2, postId:postId, html:null};
       });
     var all = acc.concat(pr);
-    if(en.length === 500){
-      loadBlog(si+500, all);
-      return;
-    }
+    if(en.length === 500){ loadBlog(si+500, all); return; }
     bposts = all;
     bcurpg = 1;
     g('bld').style.display = 'none';
@@ -285,6 +307,7 @@ function loadBlog(si, acc){
     drawBlog(); drawBPag();
     delete window[cb]; s.remove();
   };
+  g('bld').style.display = 'block';
   document.head.appendChild(s);
 }
 
