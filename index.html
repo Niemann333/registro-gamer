@@ -156,13 +156,13 @@ function loadBlog(si){
     document.getElementById('bmsg-text').textContent='Erro ao carregar posts';
     delete window[cb];s.remove();
   };
-  s.src='https://'+BLOG+'/feeds/posts/default?alt=json-in-script&max-results=10&start-index='+si+'&orderby=updated&callback='+cb;
+  s.src='https://'+BLOG+'/feeds/posts/default?alt=json-in-script&max-results=10&start-index='+si+'&callback='+cb;
   window[cb]=function(d){
     var en=(d.feed&&d.feed.entry)||[];
-    var pr=en.map(function(e){
+    var pr=en.filter(function(e){return!((e.category||[]).some(function(c){return c.term.indexOf('Status - ')===0;}));}).map(function(e){
       var th=ximg(e);
       var ct=(e.content&&e.content.$t)||(e.summary&&e.summary.$t)||'';
-      var ex=ct.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,110);
+      var ex=ct.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
       var lk=(e.link||[]).find(function(l){return l.rel==='alternate';});
       var dt=e.published&&e.published.$t;
       var d2=dt?new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
