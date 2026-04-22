@@ -166,6 +166,15 @@ body{background:#0D0D1A;color:#eee;font-family:Oxanium,sans-serif;min-height:100
 <!-- TAGS -->
 <div class="page" id="page-tags">
   <div id="tags-list"></div>
+  <div id="tag-results" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <button onclick="closeTagResults()" style="background:rgba(255,255,255,0.07);border:none;border-radius:8px;padding:7px 12px;color:#eee;font-family:Oxanium,sans-serif;font-size:12px;cursor:pointer">&#8592; Tags</button>
+      <div id="tag-result-name" style="font-size:13px;font-weight:700;color:#9B59FF"></div>
+    </div>
+    <div id="tag-post-list"></div>
+    <div id="tag-ld" class="ldtxt" style="display:none">CARREGANDO...</div>
+    <div id="tag-more-btn" style="display:none;width:100%;padding:11px;margin-top:14px;border-radius:11px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-family:Oxanium,sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center" onclick="loadTagMore()">Carregar mais</div>
+  </div>
 </div>
 
 <div id="nav">
@@ -196,6 +205,7 @@ var games=[],plats=[],sS=null,sP=null,spg=1;
 var bposts=[],bsi=1,bmore=false,bcurpg=1;
 var allTags=[];
 var archivePosts=[],archiveLoaded=false;
+var tagPosts=[],tagLoading=false,tagName='';
 var curtab='blog';
 var MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var MNF=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -293,16 +303,49 @@ function drawBPag(){
   var p=g('bpag');p.innerHTML='';
   if(bposts.length<=BPGSZ&&!bmore){p.style.display='none';return;}
   p.style.display='flex';
+  p.style.flexWrap='wrap';
+  p.style.gap='6px';
   var total=Math.ceil(bposts.length/BPGSZ);
-  var pv=document.createElement('button');pv.className='pb nav';pv.innerHTML='&#8249;';pv.disabled=bcurpg===1;
-  pv.onclick=function(){if(bcurpg>1){bcurpg--;drawBlog();window.scrollTo({top:0,behavior:'smooth'});}};p.appendChild(pv);
-  var cur=document.createElement('button');cur.className='pb on';cur.textContent=bcurpg;p.appendChild(cur);
-  var nx=document.createElement('button');nx.className='pb nav';nx.innerHTML='&#8250;';
-  nx.disabled=bcurpg>=total&&!bmore;
-  nx.onclick=function(){
-    if(bcurpg<total){bcurpg++;drawBlog();window.scrollTo({top:0,behavior:'smooth'});}
+
+  function go(n){bcurpg=n;drawBlog();window.scrollTo({top:0,behavior:'smooth'});}
+  function btn(label,disabled,onclick,active){
+    var b=document.createElement('button');
+    b.className='pb'+(active?' on':'')+(label==='&#8249;'||label==='&#8250;'||label==='&#8810;'||label==='&#8811;'?' nav':'');
+    b.innerHTML=label;b.disabled=disabled;if(!disabled)b.onclick=onclick;
+    return b;
+  }
+
+  // |< first
+  p.appendChild(btn('&#8810;',bcurpg===1,function(){go(1);}));
+  // < prev
+  p.appendChild(btn('&#8249;',bcurpg===1,function(){go(bcurpg-1);}));
+
+  // numbered pages
+  var s=1,e=total;
+  if(total>5){
+    if(bcurpg<=3){s=1;e=5;}
+    else if(bcurpg>=total-2){s=total-4;e=total;}
+    else{s=bcurpg-2;e=bcurpg+2;}
+  }
+  for(var n=s;n<=e;n++){
+    (function(nn){p.appendChild(btn(nn,false,function(){go(nn);},nn===bcurpg));})(n);
+  }
+  // if more pages can be loaded, show ...
+  if(bmore){
+    var dots=document.createElement('button');dots.className='pb';dots.textContent='...';dots.style.cursor='default';dots.disabled=true;
+    p.appendChild(dots);
+  }
+
+  // > next
+  var nxDisabled=bcurpg>=total&&!bmore;
+  p.appendChild(btn('&#8250;',nxDisabled,function(){
+    if(bcurpg<total){go(bcurpg+1);}
     else if(bmore){loadBlog(bsi);}
-  };p.appendChild(nx);
+  }));
+  // >| last (only if we know total)
+  if(!bmore){
+    p.appendChild(btn('&#8811;',bcurpg===total,function(){go(total);}));
+  }
 }
 
 // ── ARCHIVE ──
@@ -387,31 +430,70 @@ function drawArchive(){
 function drawTags(){
   var l=g('tags-list');l.innerHTML='';
   if(!allTags.length){l.innerHTML='<div style="color:rgba(255,255,255,0.3);text-align:center;margin-top:30px">Carregando tags...</div>';return;}
-  // separate status, platform, and other tags
-  var statusTags=allTags.filter(function(t){return t.indexOf('Status - ')===0;});
-  var platTags=allTags.filter(function(t){return t.indexOf('Plataforma - ')===0;});
   var otherTags=allTags.filter(function(t){return t.indexOf('Status - ')!==0&&t.indexOf('Plataforma - ')!==0;});
-  function makeSection(title, tags, prefix){
-    if(!tags.length)return;
-    var sec=document.createElement('div');sec.className='tag-section';
-    sec.innerHTML='<div class="tag-section-title">'+title+'</div>';
-    var wrap=document.createElement('div');wrap.className='tags-wrap';
-    tags.forEach(function(t){
-      var btn=document.createElement('button');btn.className='tag-btn';
-      btn.textContent=prefix?t.replace(prefix,''):t;
-      btn.onclick=function(){
-        // open blog filtered by this tag - navigate to blogger label page
-        var url='https://'+BLOG+'/search/label/'+encodeURIComponent(t);
-        window.open(url,'_blank');
-      };
-      wrap.appendChild(btn);
-    });
-    sec.appendChild(wrap);l.appendChild(sec);
-  }
-  makeSection('STATUS',statusTags,'Status - ');
-  makeSection('PLATAFORMAS',platTags,'Plataforma - ');
-  makeSection('OUTRAS TAGS',otherTags,'');
+  if(!otherTags.length)return;
+  var wrap=document.createElement('div');wrap.className='tags-wrap';
+  otherTags.forEach(function(t){
+    var btn=document.createElement('button');btn.className='tag-btn';
+    btn.textContent=t;
+    btn.onclick=function(){openTagResults(t);};
+    wrap.appendChild(btn);
+  });
+  l.appendChild(wrap);
 }
+
+var tagSI=1, tagHasMore=false;
+function openTagResults(tag){
+  tagName=tag;tagPosts=[];tagSI=1;tagHasMore=false;
+  g('tags-list').style.display='none';
+  g('tag-results').style.display='block';
+  g('tag-result-name').textContent=tag;
+  g('tag-post-list').innerHTML='';
+  g('tag-more-btn').style.display='none';
+  fetchTagPosts(tag,1);
+}
+function closeTagResults(){
+  g('tag-results').style.display='none';
+  g('tags-list').style.display='block';
+}
+function fetchTagPosts(tag,si){
+  g('tag-ld').style.display='block';
+  var cb='tg_'+Date.now()+'_'+si;
+  var s=document.createElement('script');
+  s.src='https://'+BLOG+'/feeds/posts/default/-/'+encodeURIComponent(tag)+'?alt=json-in-script&max-results=10&start-index='+si+'&callback='+cb;
+  window[cb]=function(d){
+    var en=(d.feed&&d.feed.entry)||[];
+    var pr=en.map(function(e){
+      var html=(e.content&&e.content.$t)||'';
+      var th=ximg(e);
+      var ex=html.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
+      var dt=e.published&&e.published.$t;
+      var d2=dt?new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
+      return{title:e.title.$t,thumb:th,ex:ex,html:html,date:d2};
+    });
+    tagPosts=tagPosts.concat(pr);
+    tagHasMore=en.length===10;
+    tagSI=si+10;
+    g('tag-ld').style.display='none';
+    drawTagPosts();
+    g('tag-more-btn').style.display=tagHasMore?'block':'none';
+    delete window[cb];s.remove();
+  };
+  document.head.appendChild(s);
+}
+function drawTagPosts(){
+  var l=g('tag-post-list');l.innerHTML='';
+  tagPosts.forEach(function(p){
+    var div=document.createElement('div');div.className='bcard';
+    var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
+    div.innerHTML='<div class="bthumb">'+th+'</div>'
+      +'<div class="binfo"><div class="bdate">'+esc(p.date)+'</div><div class="btitle">'+esc(p.title)+'</div><div class="bex">'+esc(p.ex)+'</div></div>'
+      +'<div class="barr">&#8250;</div>';
+    (function(post){div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
+    l.appendChild(div);
+  });
+}
+function loadTagMore(){if(tagHasMore)fetchTagPosts(tagName,tagSI);}
 
 // ── SHELF ──
 function loadShelf(si,acc){
