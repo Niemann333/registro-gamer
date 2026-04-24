@@ -75,7 +75,11 @@ body{background-color:#121212;background-image:repeating-linear-gradient(135deg,
 .arch-post{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04)}
 .arch-post:last-child{border-bottom:none}
 .arch-post:active{background:rgba(255,255,255,0.04)}
-.arch-post-title{font-size:14px;color:rgba(255,255,255,0.8);flex:1;line-height:1.3}
+.arch-post-thumb{width:52px;height:52px;border-radius:7px;overflow:hidden;flex-shrink:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.1)}
+.arch-post-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.arch-post-info{flex:1;min-width:0}
+.arch-post-title{font-size:13px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:3px}
+.arch-post-ex{font-size:11px;color:rgba(255,255,255,0.35);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .arch-post-arrow{color:rgba(255,255,255,0.2);font-size:13px;flex-shrink:0}
 .tags-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
 .tag-btn{padding:7px 14px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:Oxanium,sans-serif;outline:none;transition:all 0.15s}
@@ -391,7 +395,9 @@ function loadArchive(si,acc){
         var dt=e.published&&e.published.$t;var dateObj=dt?new Date(dt):null;
         var d2=dateObj?dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
         var rawId=(e.id&&e.id.$t)||'';var postId=rawId.split('post-')[1]||'';
-        return{title:e.title.$t,date:d2,thumb:ximg(e),postId:postId,html:null,
+        var summ=(e.summary&&e.summary.$t)||'';
+        var ex=summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,90);
+        return{title:e.title.$t,date:d2,thumb:ximg(e),ex:ex,postId:postId,html:null,
           year:dateObj?dateObj.getFullYear():0,month:dateObj?dateObj.getMonth():0};
       });
     var all=acc.concat(pr);
@@ -425,7 +431,10 @@ function drawArchive(){
       mhdr.onclick=function(){mbody.classList.toggle('open');};
       moPosts.forEach(function(p){
         var pdiv=document.createElement('div');pdiv.className='arch-post';
-        pdiv.innerHTML='<span class="arch-post-title">'+esc(p.title)+'</span><span class="arch-post-arrow">&#8250;</span>';
+        var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
+        pdiv.innerHTML='<div class="arch-post-thumb">'+th+'</div>'
+          +'<div class="arch-post-info"><div class="arch-post-title">'+esc(p.title)+'</div>'+(p.ex?'<div class="arch-post-ex">'+esc(p.ex)+'</div>':'')+'</div>'
+          +'<span class="arch-post-arrow">&#8250;</span>';
         (function(post){pdiv.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
         mbody.appendChild(pdiv);
       });
