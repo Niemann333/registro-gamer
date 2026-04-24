@@ -16,7 +16,7 @@ body{background-color:#121212;background-image:repeating-linear-gradient(135deg,
 .hrow{display:flex;align-items:center;gap:10px}
 .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#9B59FF,#4DA6FF);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 .htitle{font-size:16px;font-weight:800;color:#fff}
-.hsub{font-size:9px;color:rgba(155,89,255,0.85);letter-spacing:1.2px;text-transform:uppercase;margin-top:1px}
+.hsub{font-size:14px;letter-spacing:0.2px;text-transform:none;color:rgba(255,255,255,0.45);margin-top:3px;line-height:1.4;white-space:normal}
 .chips{display:flex;gap:7px;overflow-x:auto;padding:10px 0 2px}
 .chip{flex-shrink:0;padding:6px 12px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:Oxanium,sans-serif;white-space:nowrap;outline:none;font-weight:500}
 .chip.on{font-weight:700}
@@ -110,12 +110,12 @@ body{background-color:#121212;background-image:repeating-linear-gradient(135deg,
     <div class="logo">🎮</div>
     <div style="flex:1;min-width:0">
       <div class="htitle">Registro Gamer - Luc Niemann</div>
-      <div class="hsub" style="font-size:14px;letter-spacing:0.2px;text-transform:none;color:rgba(255,255,255,0.45);margin-top:3px;line-height:1.4;white-space:normal">Blog criado no intuito de registrar as jogatinas eletrônicas. Posso até postar coisas aleatórias, mas o foco, é o registro.</div>
+      <div class="hsub" id="hsub">Blog criado no intuito de registrar as jogatinas eletrônicas. Posso até postar coisas aleatórias, mas o foco, é o registro.</div>
     </div>
     <div style="flex-shrink:0;margin-left:8px">
       <div style="display:flex;align-items:center;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:5px 10px;gap:6px">
         <span style="color:rgba(255,255,255,0.4);font-size:13px">&#128269;</span>
-        <input id="search-input" type="text" placeholder="Buscar..." onkeyup="doSearch(this.value)" style="background:transparent;border:none;outline:none;color:#eee;font-family:Oxanium,sans-serif;font-size:11px;width:90px"/>
+        <input id="search-input" type="text" placeholder="Buscar..." oninput="doSearch(this.value)" style="background:transparent;border:none;outline:none;color:#eee;font-family:Oxanium,sans-serif;font-size:11px;width:90px"/>
       </div>
     </div>
   </div>
@@ -200,6 +200,8 @@ var archivePosts=[],archiveLoaded=false;
 var tagSI=1,tagHasMore=false,tagName='',tagPosts=[];
 var curtab='blog';
 var MNF=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+// FIX: flags to coordinate btotalBlog calculation
+var btotalReady=false,gamesReady=false;
 
 function g(id){return document.getElementById(id);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -212,16 +214,11 @@ function goTab(t){
   g('page-'+t).classList.add('show');
   g('nb-'+t).classList.add('on');
   g('shelf-filters').style.display=t==='shelf'?'block':'none';
-  var subs={
-    blog:btotalBlog?(btotalBlog+' posts'):'carregando...',
-    shelf:games.length?(games.length+' jogos'):'carregando...',
-    archive:'Arquivo',tags:'Tags'
-  };
-  
+
   if(t==='archive'&&!archiveLoaded) loadArchive(1,[]);
   if(t==='tags'){
     if(allTags.length) drawTags();
-    else {
+    else{
       var cb='taginit_'+Date.now();
       var s=document.createElement('script');
       s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=0&callback='+cb;
@@ -274,6 +271,13 @@ function ximg(e){
   var m=h.match(/<img[^>]+src=["']([^"']+)/i);return m?m[1]:null;
 }
 
+// FIX: centralized function called when both btotal and games are ready
+function onCountsReady(){
+  if(!btotalReady||!gamesReady) return;
+  btotalBlog=btotal-games.length;
+  drawBPag();
+}
+
 // ── BLOG ──
 function initBlog(){
   var cb='rbgc_'+Date.now();
@@ -285,12 +289,10 @@ function initBlog(){
       if(curtab==='tags') drawTags();
     }
     btotal=parseInt((d.feed&&d.feed.openSearch$totalResults&&d.feed.openSearch$totalResults.$t)||0);
-    // btotalBlog will be set once shelf loads (btotal - games.length)
-    // for now estimate it
-    btotalBlog=btotal;
+    btotalReady=true;
+    // FIX: only draw pagination after both counts are ready
+    onCountsReady();
     g('bld').style.display='none';
-    
-    drawBPag();
     loadBlogPage(1);
     delete window[cb];s.remove();
   };
@@ -306,6 +308,7 @@ function loadBlogPage(pg){
   s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results='+BPGSZ+'&start-index='+si+'&callback='+cb;
   window[cb]=function(d){
     var en=(d.feed&&d.feed.entry)||[];
+    // FIX: filter out game/shelf posts (those with "Status - " category)
     var pr=en
       .filter(function(e){return!((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
       .map(function(e){
@@ -319,16 +322,9 @@ function loadBlogPage(pg){
       });
     bpages[pg]=pr;
     g('bld').style.display='none';
-    // skip page if all entries were game posts
-    if(pr.length===0&&en.length>0){
-      delete window[cb];s.remove();
-      var tp=Math.ceil(btotalBlog/BPGSZ);
-      var next=pg+(pg>bcurpg?1:-1);
-      if(next>=1&&next<=tp){loadBlogPage(next);}
-      return;
-    }
     bcurpg=pg;
-    drawBlog();drawBPag();
+    drawBlog();
+    drawBPag();
     delete window[cb];s.remove();
   };
   s.onerror=function(){g('bld').style.display='none';delete window[cb];s.remove();};
@@ -338,7 +334,11 @@ function loadBlogPage(pg){
 function drawBlog(){
   var l=g('blist');l.innerHTML='';
   var posts=bpages[bcurpg]||[];
-  if(!posts.length&&!btotalBlog){g('bmsg').style.display='block';return;}
+  if(!posts.length){
+    g('bmsg').style.display='block';
+    g('bmsg-txt').textContent='Sem posts nesta página';
+    return;
+  }
   g('bmsg').style.display='none';
   posts.forEach(function(p){
     var div=document.createElement('div');div.className='bcard';
@@ -353,6 +353,8 @@ function drawBlog(){
 
 function drawBPag(){
   var p=g('bpag');p.innerHTML='';
+  // FIX: only show pagination when btotalBlog is correctly set
+  if(!btotalBlog){p.style.display='none';return;}
   var totalPages=Math.ceil(btotalBlog/BPGSZ);
   if(totalPages<=1){p.style.display='none';return;}
   p.style.display='flex';p.style.flexWrap='wrap';p.style.gap='6px';
@@ -383,6 +385,7 @@ function loadArchive(si,acc){
   s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results='+BATCH+'&start-index='+si+'&callback='+cb;
   window[cb]=function(d){
     var en=(d.feed&&d.feed.entry)||[];
+    // FIX: filter out shelf/game posts in archive too
     var pr=en.filter(function(e){return!((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
       .map(function(e){
         var dt=e.published&&e.published.$t;var dateObj=dt?new Date(dt):null;
@@ -436,6 +439,7 @@ function drawArchive(){
 function drawTags(){
   var l=g('tags-list');l.innerHTML='';
   if(!allTags.length){l.innerHTML='<div style="color:rgba(255,255,255,0.3);text-align:center;margin-top:30px">Carregando tags...</div>';return;}
+  // FIX: also exclude Platform tags from the tag cloud
   var otherTags=allTags.filter(function(t){return t.indexOf('Status - ')!==0&&t.indexOf('Plataforma - ')!==0;});
   var wrap=document.createElement('div');wrap.className='tags-wrap';
   otherTags.forEach(function(t){
@@ -504,13 +508,9 @@ function loadShelf(si,acc){
     games=all;var seen={};plats=[];
     all.forEach(function(x){if(x.pl&&!seen[x.pl]){seen[x.pl]=1;plats.push(x.pl);}});
     plats.sort(function(a,b){return a.localeCompare(b,'pt-BR');});
-    // ── KEY FIX: now we know exact game count, recalculate blog pages ──
-    if(btotal>0){
-      btotalBlog=btotal-games.length;
-      
-      drawBPag();
-    }
-    
+    // FIX: set flag and recalculate blog total properly
+    gamesReady=true;
+    onCountsReady();
     drawSC();drawPC();drawShelf();
     delete window[cb];s.remove();
   };
@@ -577,10 +577,13 @@ function drawSPag(tp){
   var nx=document.createElement('button');nx.className='pb nav';nx.innerHTML='&#8250;';nx.disabled=spg===tp;nx.onclick=function(){if(spg<tp){spg++;drawShelf();}};p.appendChild(nx);
 }
 
+// ── SEARCH ──
+// FIX: search uses Blogger API with ?q= to search all posts, not just loaded pages
+var searchTimer=null;
 function doSearch(q){
-  q = q.trim().toLowerCase();
+  q=q.trim();
 
-  // Empty search - restore blog
+  // Empty search: restore blog tab normally
   if(!q){
     document.querySelectorAll('.page').forEach(function(p){p.classList.remove('show');});
     document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
@@ -588,61 +591,85 @@ function doSearch(q){
     g('nb-blog').classList.add('on');
     g('shelf-filters').style.display='none';
     g('bld').style.display='none';
-    g('bpag').style.display='flex';
+    g('bpag').style.display= btotalBlog > BPGSZ ? 'flex' : 'none';
     drawBlog();
     drawBPag();
-    g('hsub').textContent=btotalBlog+' posts';
+    g('hsub').textContent='Blog criado no intuito de registrar as jogatinas eletrônicas. Posso até postar coisas aleatórias, mas o foco, é o registro.';
     return;
   }
 
-  // Search in all loaded pages
-  var results = [];
-  Object.keys(bpages).forEach(function(pg){
-    (bpages[pg]||[]).forEach(function(p){
-      if(p.title.toLowerCase().indexOf(q) !== -1 || p.ex.toLowerCase().indexOf(q) !== -1){
-        results.push(p);
-      }
-    });
-  });
-
-  // Switch to blog page and show results
+  // Switch to blog tab to show results
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('show');});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
   g('page-blog').classList.add('show');
   g('nb-blog').classList.add('on');
   g('shelf-filters').style.display='none';
-  g('bld').style.display='none';
   g('bpag').style.display='none';
-  g('hsub').textContent = results.length + ' resultado' + (results.length !== 1 ? 's' : '');
+  g('bld').style.display='block';
+  g('bld').textContent='BUSCANDO...';
+  g('blist').innerHTML='';
+  g('bmsg').style.display='none';
+  g('hsub').textContent='Buscando por "'+q+'"...';
 
-  var l = g('blist');
-  l.innerHTML = '';
+  // Debounce
+  if(searchTimer) clearTimeout(searchTimer);
+  searchTimer=setTimeout(function(){
+    var cb='srch_'+Date.now();
+    var s=document.createElement('script');
+    s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=25&q='+encodeURIComponent(q)+'&callback='+cb;
+    window[cb]=function(d){
+      g('bld').style.display='none';
+      g('bld').textContent='CARREGANDO POSTS...';
+      var en=(d.feed&&d.feed.entry)||[];
+      // Filter out shelf/game posts from search results
+      var results=en
+        .filter(function(e){return!((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
+        .map(function(e){
+          var summ=(e.summary&&e.summary.$t)||'';
+          var ex=summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
+          var dt=e.published&&e.published.$t;
+          var d2=dt?new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
+          var rawId=(e.id&&e.id.$t)||'';
+          var postId=rawId.split('post-')[1]||'';
+          return{title:e.title.$t,thumb:ximg(e),ex:ex,date:d2,postId:postId,html:null};
+        });
 
-  if(!results.length){
-    l.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:30px;font-size:13px">Nenhum resultado para "' + esc(q) + '"</div>';
-    return;
-  }
+      g('hsub').textContent=results.length+' resultado'+(results.length!==1?'s':'')+' para "'+q+'"';
+      var l=g('blist');l.innerHTML='';
 
-  results.forEach(function(p){
-    var div = document.createElement('div');
-    div.className = 'bcard';
-    var th = p.thumb ? '<img src="' + esc(p.thumb) + '" loading="lazy">' : '&#128195;';
-    div.innerHTML = '<div class="bthumb">' + th + '</div>'
-      + '<div class="binfo"><div class="bdate">' + esc(p.date) + '</div><div class="btitle">' + esc(p.title) + '</div><div class="bex">' + esc(p.ex) + '</div></div>'
-      + '<div class="barr">&#8250;</div>';
-    (function(post){
-      div.addEventListener('click', function(e){
-        e.preventDefault(); e.stopPropagation(); openPost(post);
+      if(!results.length){
+        g('bmsg').style.display='block';
+        g('bmsg-txt').textContent='Nenhum resultado para "'+q+'"';
+        delete window[cb];s.remove();
+        return;
+      }
+
+      results.forEach(function(p){
+        var div=document.createElement('div');div.className='bcard';
+        var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
+        div.innerHTML='<div class="bthumb">'+th+'</div>'
+          +'<div class="binfo"><div class="bdate">'+esc(p.date)+'</div><div class="btitle">'+esc(p.title)+'</div><div class="bex">'+esc(p.ex)+'</div></div>'
+          +'<div class="barr">&#8250;</div>';
+        (function(post){div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
+        l.appendChild(div);
       });
-    })(p);
-    l.appendChild(div);
-  });
+
+      delete window[cb];s.remove();
+    };
+    s.onerror=function(){
+      g('bld').style.display='none';
+      g('bld').textContent='CARREGANDO POSTS...';
+      g('hsub').textContent='Erro ao buscar';
+      delete window[cb];s.remove();
+    };
+    document.head.appendChild(s);
+  },400);
 }
 
-
+// ── INIT ──
 initBlog();
 loadShelf(1,[]);
-loadAllBlog(1,[]);
+// FIX: removed undefined loadAllBlog() call that was crashing the entire script
 </script>
 </body>
 </html>
