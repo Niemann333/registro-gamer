@@ -615,6 +615,15 @@ function doSearch(q){
     g('hsub').textContent=btotalBlog+' posts';
     return;
   }
+  // switch to blog page to show results
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('show');});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
+  g('page-blog').classList.add('show');
+  g('nb-blog').classList.add('on');
+  g('shelf-filters').style.display='none';
+  g('bld').style.display='none';
+  g('bpag').style.display='none';
+
   if(!allBlogLoaded){
     g('blist').innerHTML='<div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:30px;font-size:13px">Aguarde, carregando posts para busca...</div>';
     return;
@@ -623,13 +632,6 @@ function doSearch(q){
     return p.title.toLowerCase().indexOf(q)!==-1||p.ex.toLowerCase().indexOf(q)!==-1;
   });
 
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('show');});
-  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
-  g('page-blog').classList.add('show');
-  g('nb-blog').classList.add('on');
-  g('shelf-filters').style.display='none';
-  g('bld').style.display='none';
-  g('bpag').style.display='none';
   g('hsub').textContent=results.length+' resultado'+(results.length!==1?'s':'');
 
   var l=g('blist');l.innerHTML='';
