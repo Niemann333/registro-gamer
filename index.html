@@ -577,52 +577,77 @@ function drawSPag(tp){
   var nx=document.createElement('button');nx.className='pb nav';nx.innerHTML='&#8250;';nx.disabled=spg===tp;nx.onclick=function(){if(spg<tp){spg++;drawShelf();}};p.appendChild(nx);
 }
 
+var searchTimer=null;
 function doSearch(q){
-  q=q.trim().toLowerCase();
+  q=q.trim();
   if(!q){
-    // restore previous tab state
-    g('bld').style.display='none';
     g('bpag').style.display='flex';
     drawBlog();
     drawBPag();
     g('hsub').textContent=btotalBlog+' posts';
     return;
   }
+  // debounce - wait 500ms after user stops typing
+  if(searchTimer) clearTimeout(searchTimer);
+  searchTimer=setTimeout(function(){
+    execSearch(q);
+  },500);
+}
 
-  // search only in blog posts (all loaded pages)
-  var results=[];
-  Object.keys(bpages).forEach(function(pg){
-    (bpages[pg]||[]).forEach(function(p){
-      if(p.title.toLowerCase().indexOf(q)!==-1||p.ex.toLowerCase().indexOf(q)!==-1){
-        results.push(p);
-      }
-    });
-  });
-
-  // show results
+function execSearch(q){
+  // show loading state
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('show');});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
   g('page-blog').classList.add('show');
   g('nb-blog').classList.add('on');
   g('shelf-filters').style.display='none';
-  g('bld').style.display='none';
   g('bpag').style.display='none';
-  g('hsub').textContent=results.length+' resultado'+(results.length!==1?'s':'');
+  g('bld').style.display='block';
+  g('bld').textContent='BUSCANDO...';
+  g('blist').innerHTML='';
+  g('hsub').textContent='buscando...';
 
-  var l=g('blist');l.innerHTML='';
-  if(!results.length){
-    l.innerHTML='<div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:30px;font-size:13px">Nenhum resultado para "'+esc(q)+'"</div>';
-    return;
-  }
-  results.forEach(function(p){
-    var div=document.createElement('div');div.className='bcard';
-    var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
-    div.innerHTML='<div class="bthumb">'+th+'</div>'
-      +'<div class="binfo"><div class="bdate">'+esc(p.date)+'</div><div class="btitle">'+esc(p.title)+'</div><div class="bex">'+esc(p.ex)+'</div></div>'
-      +'<div class="barr">&#8250;</div>';
-    (function(post){div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
-    l.appendChild(div);
-  });
+  var cb='srch_'+Date.now();
+  var s=document.createElement('script');
+  s.src='https://'+BLOG+'/feeds/posts/summary?alt=json-in-script&max-results=20&q='+encodeURIComponent(q)+'&callback='+cb;
+  window[cb]=function(d){
+    var en=(d.feed&&d.feed.entry)||[];
+    var results=en
+      .filter(function(e){return!((e.category||[]).some(function(cc){return cc.term.indexOf('Status - ')===0;}));})
+      .map(function(e){
+        var summ=(e.summary&&e.summary.$t)||'';
+        var ex=summ.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,110);
+        var dt=e.published&&e.published.$t;
+        var d2=dt?new Date(dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
+        var rawId=(e.id&&e.id.$t)||'';
+        var postId=rawId.split('post-')[1]||'';
+        return{title:e.title.$t,thumb:ximg(e),ex:ex,date:d2,postId:postId,html:null};
+      });
+
+    g('bld').style.display='none';
+    g('hsub').textContent=results.length+' resultado'+(results.length!==1?'s':'');
+    var l=g('blist');l.innerHTML='';
+    if(!results.length){
+      l.innerHTML='<div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:30px;font-size:13px">Nenhum resultado para "'+esc(q)+'"</div>';
+      delete window[cb];s.remove();return;
+    }
+    results.forEach(function(p){
+      var div=document.createElement('div');div.className='bcard';
+      var th=p.thumb?'<img src="'+esc(p.thumb)+'" loading="lazy">':'&#128195;';
+      div.innerHTML='<div class="bthumb">'+th+'</div>'
+        +'<div class="binfo"><div class="bdate">'+esc(p.date)+'</div><div class="btitle">'+esc(p.title)+'</div><div class="bex">'+esc(p.ex)+'</div></div>'
+        +'<div class="barr">&#8250;</div>';
+      (function(post){div.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPost(post);});})(p);
+      l.appendChild(div);
+    });
+    delete window[cb];s.remove();
+  };
+  s.onerror=function(){
+    g('bld').style.display='none';
+    g('blist').innerHTML='<div style="text-align:center;color:rgba(255,107,107,0.7);margin-top:30px;font-size:13px">Erro ao buscar</div>';
+    delete window[cb];s.remove();
+  };
+  document.head.appendChild(s);
 }
 
 
