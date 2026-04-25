@@ -576,7 +576,7 @@ function mkCard(gm,i){
   var inf=document.createElement('div');inf.className='cinfo';
   inf.innerHTML='<div class="ctitle">'+esc(gm.title)+'</div>'+(gm.pl?'<div class="cplat">'+esc(gm.pl)+'</div>':'');
   var tg=document.createElement('div');tg.className='ctags';
-  gm.ss.forEach(function(s){var m=SM[s];if(!m)return;var t=document.createElement('span');t.className='ctag';t.style.cssText='background:rgba(0,0,0,.5);border:1px solid '+m.c+';color:'+m.c;t.textContent=m.i+' '+s;tg.appendChild(t);});
+  gm.ss.forEach(function(s){var m=SM[s];if(!m)return;var t=document.createElement('span');t.className='ctag';t.style.cssText='background:rgba(0,0,0,.5);border:1px solid '+m.c+';color:'+m.c;t.innerHTML=m.i+' '+esc(s);tg.appendChild(t);});
   inf.appendChild(tg);c.appendChild(inf);return c;
 }
 function drawSPag(tp){
