@@ -1,0 +1,62 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Street Fighter
+System:              Arcade Machine
+Music hardware:      YM2151
+
+Music author:        Yoshihiro Sakaguchi
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1987-08-30
+
+Package created by:  2ch-H
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Game Start (Credit)              0:03   -
+02 Stage Select                     0:36   0:36
+03 VS.                              0:06   -
+04 Round                            0:02   -
+05 Retsu (Japan, Shaolin Temple)    0:43   0:43
+06 Geki (Japan, Ninja)              0:43   0:26
+07 Stage Clear                      0:07   -
+08 Joe (USA, Kickboxer)             0:19   0:19
+09 Mike (USA, Boxer)                0:14   0:14
+10 Bonus Stage (Breaking Bricks)    0:18   0:14
+11 Birdie (England, Mohawk)         0:36   0:32
+12 Eagle (England, Ancient Castle)  0:22   0:15
+13 Breaking In                      0:04   -
+14 Lee (China, Great Wall)          0:24   0:20
+15 Gen (China, Town)                0:20   0:13
+16 Bonus Stage (Breaking Boards)    0:23   0:23
+17 Adon (Thailand, Sunset)          0:22   0:18
+18 Sagat (Thailand, Final Match)    0:24   0:18
+19 Final Demo                       0:36   -
+20 Credits Roll                     0:27   -
+21 Name Entry                       1:36   -
+22 Ranking Display                  0:02   -
+23 Continue                         0:11   -
+
+Total Length                        8:57  13:48
+
+
+Notes:
+Track Names are used in Capcom Game Music Vol.2
+
+
+This pack was made using M1 VGM mod v0.7.9a1.
+
+
+Size reduction (vgm_cmp):
+    4.04 MB -> 284 KB (6.8 %)
+
+
+Package history:
+1.00 2012-05-01 2ch-H: Initial release.
+1.01 2014-05-11 The Green Herring: Fixed errors
+ in and faulty translations of track titles
+ inherited from the BridgeM1 track list.
