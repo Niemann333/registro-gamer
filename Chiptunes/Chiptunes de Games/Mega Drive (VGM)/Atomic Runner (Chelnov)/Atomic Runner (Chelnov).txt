@@ -1,0 +1,45 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Atomic Runner / Chelnov
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Masaaki Iwasaki, 
+                     Azusa Hara,
+                     Tatsuya Kiuchi,
+                     Hiroaki Yoshida
+Publisher:           Data East
+Package created by:  DJ Squarewave
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme, Stage Clear            0:06   -
+Game Start                          0:01   -
+Introduction                        0:34   0:33
+Chelnov Theme (Stage 1)             1:20   1:20
+Boss Theme                          0:39   0:32
+Let's Go Go                         0:21   0:16
+Stage 2                             0:55   0:54
+Stage 3                             1:17   1:09
+Stage 4                             1:05   1:01
+Stage 5                             1:11   1:10
+Stage 6                             1:24   1:23
+Keep Running (Stage 7)              1:55   1:29
+Ribigal                             0:41   0:32
+Ending Theme                        0:18   -
+Extra Life                          0:01   -
+Game Over                           0:21   0:17
+Unknown (Sound Test 10)             0:35   0:32
+Unknown (Sound Test 11)             0:38   0:37
+
+Notes:
+1.00: Added the rest of the stage BGM IDs.
+Thanks Ed!
+
+1.05: Corrected author tag.
