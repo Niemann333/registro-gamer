@@ -1,0 +1,120 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Pokémon Red Version /
+                     Pokémon Blue Version (W)
+                     / Pocket Monsters Red
+                     Version / Pocket
+                     Monsters Green Version (J)
+System:              Nintendo Game Boy
+Music hardware:      Game Boy DMG (LR35902)
+
+Music author:        Junichi Masuda
+Game developer:      Game Freak
+Game publisher:      Nintendo
+
+Game release date:   1996-02-27 (J) /
+                     1998-09-28 (U) /
+                     1998-10-23 (AU) /
+                     1999-10-05 (E)
+Package created by:  Gnome
+Package version:     1.05
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title Screen (part 1)            0:12   -
+02 Title Screen (part 2)            0:52   0:43
+03 Pallet Town Theme                0:34   0:32
+04 Professor Oak                    0:35   0:23
+05 Professor Oak's Laboratory       0:17   0:14
+06 A Rival Appears                  0:19   0:14
+07 Road to Viridian City: Leaving
+   Pallet Town                      0:27   0:23
+08 Battle! (Wild Pokémon)           0:49   0:31
+09 Victory! (Wild Pokémon)          0:14   0:11
+10 Pewter City Theme                1:08   0:58
+11 Pokémon Center                   0:31   0:29
+12 Pokémon Healed                   0:04   -
+13 Viridian Forest                  1:43   1:41
+14 Guide                            0:18   0:06
+15 Trainer Appears (Girl Version)   0:09   0:06
+16 Battle! (Trainer Battle)         1:39   1:23
+17 Victory! (Trainer Battle)        0:14   0:11
+18 Caves of Mt. Moon                1:48   1:23
+19 Road to Cerulean City: Leaving
+   Mt. Moon                         0:28   0:22
+20 Cerulean City Theme              0:32   0:30
+21 Pokémon Gym                      0:33   0:28
+22 To Bill: Leaving Cerulean City   0:23   0:19
+23 Jigglypuff's Song                0:08   -
+24 Vermilion City Theme             0:24   0:24
+25 The S.S. Anne                    0:33   0:32
+26 Road to Lavender Town: Leaving
+   Vermilion City                   0:38   0:30
+27 The Poké Flute                   0:07   -
+28 A Trainer Appears (Boy Version)  0:13   0:06
+29 Battle! (Gym Leader Battle)      1:08   0:44
+30 Victory! (Gym Leader Battle)     0:42   0:34
+31 Cycling                          0:37   0:34
+32 Lavender Town Theme              0:47   0:38
+33 Pokémon Tower                    1:04   1:01
+34 Celadon City Theme               0:32   0:29
+35 Rocket Game Corner               0:45   0:36
+36 A Trainer Appears (Bad Guy
+   Version)                         0:09   0:06
+37 Rocket Hideout                   1:24   1:07
+38 Silph Co.                        1:09   0:59
+39 The Sea                          0:31   0:24
+40 Cinnabar Island Theme            0:24   0:22
+41 Pokémon Mansion                  2:03   1:05
+42 Evolution                        0:10   0:07
+43 The Final Road                   0:33   0:27
+44 Final Battle! (Rival)            1:29   1:00
+45 Hall of Fame                     0:24   0:23
+46 Ending Theme                     1:39   -
+47 Item Obtained                    0:02   -
+48 Evolution Fanfare                0:04   -
+49 Pokémon Captured Fanfare         0:04   -
+50 Key Item Obtained                0:03   -
+51 Level Up Fanfare                 0:04   -
+52 Pokédex Evaluation Fanfare       0:04   -
+
+Total Length                       31:41  54:57
+
+
+Notes:
+Surprise, an actual Pokemon pack! I've been
+meaning to start working on this way back
+in 2017, but with studies getting in the
+way, I unfortunately had to indefinetely
+postpone it. Now that the whole world
+is on quarantine, I found some time
+to do it.
+
+There was a game called "Pocket Monsters
+Blue Version" that was released in Japan,
+however it was mostly a patch that 
+fixed various bugs present in the
+original games. The canonical names
+are still considered "Red" and "Green",
+so I just included a screenshot of it
+for the sake of having a full pack.
+
+This pack includes a jingle from the
+soundtrack called "The Poke Flute"
+which you can't find in the most
+common .GBS rip, so I had to
+log it using MAME.
+
+Japanese track names are taken
+from "Pokémon Red·Green Super 
+Music Collection (OVCP-0006)".
+English track names are taken
+from the Pokémon Jukebox.
+
+
+Package history:
+1.00 2020-03-23 Gnome: Initial release.
+1.05 2020-10-24 Gnome: Fixed swapped tracks.
