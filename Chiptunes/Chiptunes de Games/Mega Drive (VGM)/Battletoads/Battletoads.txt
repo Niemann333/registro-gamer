@@ -1,0 +1,70 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Battletoads
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     David Wise
+Publisher:           Rare Ltd. / Sega
+Package created by:  LucasVB (DukeNukem)
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Theme                               1:38   -
+Intermission                        0:03   0:03
+Ragnarok's Canyon                   1:10   1:06
+Boss                                0:10   0:07
+Level Complete                      0:03   -
+Wookie Hole                         1:47   1:47
+Turbo Tunnel                        0:08   0:08
+Turbo Tunnel Race                   1:26   1:16
+Arctic Caverns                      0:55   0:55
+Surf City                           0:59   0:59
+Karnath's Lair                      1:07   1:02
+Volkmire's Inferno                  0:24   0:24
+Volkmire's Inferno Race             0:54   0:43
+Intruder Excluder & Terra Tubes     0:44   0:44
+Rat Race                            1:15   0:38
+Clinger Winger                      0:14   0:07
+The Revolution                      1:05   1:05
+Continue                            0:19   0:05
+
+                                    
+Notes:
+This game is awesome! Challenge at its goddamn
+best.
+
+On real hardware, I've only beat this game once.
+I never owned it, but it took me and my brother
+quite a few rents before we could actually play
+this right. It's pretty much impossible to beat
+it with two players though. Ugh. Hard.
+
+Anyway, great music here, same as the NES
+version, but better. The NES one does has its
+own charms, though... My favourite here is
+"Ragnarok's Canyon." This is definitely a song
+some band should cover, but without ruining the
+feeling and everything, like bands usually do.
+
+By the way, I had to hack the game with Kega to
+rip this right. I've made a simple pause hack
+that freezed the gameplay when the level
+started. This is how I've got songs to play
+without any SFX, and that means the sound on
+the beginning of some of these tracks are truly
+part of the song.
+
+And to be perfectly honest, I've also hacked
+lives and the life bar. No way I'd play this
+fair again. Hell no. +__+
+
+Anyway, enjoy!
+
+- Duke

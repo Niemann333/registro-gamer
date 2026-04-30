@@ -1,0 +1,33 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Batman Forever
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Tim Follin, Andy Brock
+Publisher:           Probe / Acclaim
+Package created by:  2ch-H
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening Theme ~Batman Forever~      1:37   1:37
+Title Theme ~Criminal Activity~     0:48   0:46
+Stages 1 & 6 ~Arkham Asylum~        2:07   2:02
+Stages 2 & 5
+            ~Second Bank of Gotham~ 1:56   1:55
+Stage 3 ~Hippodrome Circus~         2:08   2:06
+Stages 4 & 8
+          ~Warehouse - Claw Island~ 2:54   2:18
+Stage 7 ~Ruins of the Batcave~      2:14   2:10
+Stage Clear                         0:09   -
+Ending Theme                        1:19   -
+Game Over                           0:05   -
+
+Notes:
+Packed by DJSW.
