@@ -1,0 +1,43 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net                      *
+***********************************************
+Game name:           Altered Beast
+System:              Sega System 16B
+Music hardware:      YM2151
+
+Music author:        Tohru Nakabayashi
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1988
+
+Package created by:  Sonic of 8!
+Package version:     1.02
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Rise From Your Grave
+    (Round 1, 4)                    2:08   1:45
+02 Altered Beast (Power Up)         1:23   1:17
+03 Gaum-Hermer (Boss Theme)         1:05   1:01
+04 Crystal's Theme (Round Clear)    0:10   -
+05 Closed In Upon Me (Round 2, 5)   1:14   1:04
+06 I'll Be Back (Round 3)           1:33   1:20
+07 Who's Afraid of the Big Bad
+    Wolf? (Ending)                  2:26   -
+08 Game Over ~ Name Entry           0:40   -
+
+Total Length                       10:40  17:08
+
+
+Notes:
+Happy New Year!
+
+
+Package history:
+1.00 2012-01-02 Sonic of 8!: Initial release.
+1.01 2012-02-17 Valley Bell: Added composer
+ (thanks to dissident93), added song usage.
+1.02 2012-02-22 Valley Bell: Fixed desciption
+ file.

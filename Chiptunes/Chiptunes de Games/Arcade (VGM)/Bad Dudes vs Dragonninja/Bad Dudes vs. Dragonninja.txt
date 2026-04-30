@@ -1,0 +1,42 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Bad Dudes vs. Dragonninja
+                                          (U) /
+                     Dragonninja (J)
+System:              Data East
+Music hardware:      YM2203, YM3812
+
+Music author:        Azusa Hara,
+                     Hiroaki Yoshida
+Game developer:      Data East Corp.
+Game publisher:      Data East USA, Inc. (U) /
+                     Data East Corp. (J)
+Game release date:   1988
+
+Package created by:  RichterEX2
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 [SFX] Credit Inserted            0:03   -
+02 Fist of Fury (Main BGM 1)        1:25   1:16
+03 Ninja Karnov (Boss Stage)        0:24   0:15
+04 Clear                            0:06   -
+05 Greased Lightning (Main BGM 2)   1:11   1:05
+06 Dragon Ninja (Boss)              0:24   0:15
+07 Ending Theme (US Version)        1:35   -
+08 Ending Theme (Japan Version)     1:23   1:09
+09 Game Over                        0:05   -
+
+Total Length                        6:36  10:37
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-05-06 RichterEX2: Initial release.
