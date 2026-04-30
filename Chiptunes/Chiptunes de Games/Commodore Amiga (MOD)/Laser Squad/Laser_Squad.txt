@@ -1,0 +1,29 @@
+composer 1
+Matt Furniss
+composer 1 comment
+
+format
+Protracker
+source type
+Game
+source title
+Laser Squad
+alternative titles
+
+year
+1989
+team
+Teque Software / Blade Software
+publisher
+MicroIllusions
+box scan
+l/LaserSquad
+hol id
+835
+lemon id
+1318
+ripped by
+Zeg,Mnemotron,XtC
+rip type
+Disk
+comments
