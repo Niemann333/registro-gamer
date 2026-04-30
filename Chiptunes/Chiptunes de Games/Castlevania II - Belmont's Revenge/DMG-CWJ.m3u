@@ -1,0 +1,42 @@
+# @TITLE       Castlevania II: Belmont's Revenge
+# @ARTIST      Konami
+# @COMPOSER    Hidehiro Funauchi
+# @DATE        1991-07-12
+# @RIPPER      Scott Worley
+# @TAGGER      Knurek, Electric Keet
+
+DMG-CWJ.gbs::GBS,19,Opening [Opening],1:09,,1
+DMG-CWJ.gbs::GBS,0,Start [Start SFX],0:03,,1
+DMG-CWJ.gbs::GBS,16,Castle [Password],0:35,,10
+DMG-CWJ.gbs::GBS,2,Journey to Chaos [Select],1:06,,10
+DMG-CWJ.gbs::GBS,8,New Messiah [Glass Castle],2:56,,10
+DMG-CWJ.gbs::GBS,12,Road of Enemy #1 [Before Boss],1:08,,10
+DMG-CWJ.gbs::GBS,5,Evil Gods [Boss],1:06,,10
+DMG-CWJ.gbs::GBS,7,Stage Clear [Stage Clear],0:03,,1
+DMG-CWJ.gbs::GBS,6,Game Over [Game Over],0:04,,1
+DMG-CWJ.gbs::GBS,3,Ripe Seeds [Plant Castle],2:25,,10
+DMG-CWJ.gbs::GBS,13,Psycho Warrior [Rock Castle],3:07,,10
+DMG-CWJ.gbs::GBS,9,Praying Hands [Cloud Castle],2:51,,10
+DMG-CWJ.gbs::GBS,14,Castle #2 [Stage Map],0:24,,10
+DMG-CWJ.gbs::GBS,15,Original Sin [Dracula's Castle -First Half-],2:18,,10
+DMG-CWJ.gbs::GBS,10,Passpied [Dracula's Castle -Second Half-],0:45,,10
+DMG-CWJ.gbs::GBS,24,Soleiyu's Room [Soleiyu's Room],0:36,,10
+DMG-CWJ.gbs::GBS,18,Faith [Soleiyu Demo],0:13,,5
+DMG-CWJ.gbs::GBS,17,Chromatische Phantasie [Soleiyu Boss],2:00,,10
+DMG-CWJ.gbs::GBS,20,Road of Enemy #2 [Before the Final Boss],0:54,,10
+DMG-CWJ.gbs::GBS,23,Sons of Satan [Final Boss],1:24,,10
+DMG-CWJ.gbs::GBS,1,All Clear [All Stage Clear],0:06,,1
+DMG-CWJ.gbs::GBS,21,Union [Ending],2:25,,10
+DMG-CWJ.gbs::GBS,22,The End of the Day [Staff Roll],2:24,,10
+
+
+# JP
+# TITLE       ドラキュラ伝説II [Dracula Densetsu II]
+# DATE        1991-07-12
+
+
+# Tag source (13~35)
+# Demon Castle Dracula Best 2 (悪魔城ドラキュラ・ベスト２)
+# King Records, KICA-7507, 1991-12-05
+
+# track 11 corrected from "Phyco Warror" to "Psycho Warrior"
