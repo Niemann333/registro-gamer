@@ -1,0 +1,75 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Teenage Mutant Ninja
+                     Turtles - Turtles in
+                     Time (U) / Teenage Mutant
+                     Hero Turtles - Turtles in
+                     Time (E) 
+System:              Konami Sunset Riders
+Music hardware:      YM2151, K053260
+
+Music author:        Mutsuhiko Izumi
+Game developer:      Konami
+Game publisher:      Konami
+Game release date:   1991-09-18
+
+Package created by:  RichterEX2
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Theme from "Pizza Power"         0:32   -
+02 Character Bios                   0:07   0:05
+03 Select Your Turtle               0:08   0:07
+04 Bad News                         0:19   -
+05 Turtle Swing (Scene 1)           0:57   0:46
+06 Battle (Boss)                    1:39   1:31
+07 Clear                            0:05   -
+08 Alleycat Blues (Scene 2)         0:46   0:41
+09 Sewer Surfin' (Scene 3)          0:55   0:37
+10 Demonstration                    0:16   -
+11 Prehistoric Turtlesaurus
+   (B.C. 250000000)                 0:59   0:44
+12 Warp                             0:08   -
+13 Skull and Crossbones (A.D. 1539) 1:09   0:59
+14 Bury My Shell at Wounded Knee
+   (A.D. 1885)                      0:50   0:43
+15 Night Riders (A.D. 2020)         0:46   0:36
+16 Star Base (A.D. 2100)            0:54   0:44
+17 Final Shell Shock (A.D. 1991 -
+   Technodrome) - Intro             0:07   0:04
+18 Final Shell Shock (A.D. 1991 -
+   Technodrome)                     0:55   0:31
+19 Good News                        0:10   -
+20 Credits                          0:54   0:50
+21 Continue                         0:11   0:07
+22 Game Over                        0:06   -
+23 Name Entry                       0:33   0:23
+24 Sound Test                       0:09   -
+
+Total Length                       13:34  23:04
+
+
+Notes:
+"Pizza Power" 
+  Composed by: Bob Bejan and Godfrey Nelson
+  Performed by: Roger Kachel, Gregory Garrison,
+  Ronn K. Smith, and David Shatraw
+
+[Sources]
+  Konami All Stars 1993
+  King Records  KICA-9016-9018  Dec 21, 1992
+
+  SNES T.M.N.T: Turtles in Time
+  Sound Test Mode
+
+
+Package history:
+1.00 2012-10-07 RichterEX2: Initial release.
+1.01 2012-10-08 RichterEX2: Identified "unused"
+ tune.
+ Thanks to JFD62780 for pointing it out!
+Ç

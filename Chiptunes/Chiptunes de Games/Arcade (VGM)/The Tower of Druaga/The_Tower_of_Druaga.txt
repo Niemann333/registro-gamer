@@ -1,0 +1,57 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           The Tower of Druaga
+System:              Namco Super Pacman / Other
+Music hardware:      Namco 15XX / Namco C352
+
+Music author:        Junko Ozawa
+Game developer:      Namco
+Game publisher:      Namco
+Game release date:   1984-06
+
+Package created by:  gRg
+Package version:     1.00
+
+Song list:                          Total  Loop
+01 Start Music                      0:06   -
+02 Clear Music                      0:04   -
+03 Ending Fanfare                   0:09   -
+04 Zap                              0:04   -
+05 The Theme of Ishtar              0:18   0:18
+06 In-Game Music                    0:27   0:27
+07 The Theme of Quox                0:25   0:25
+08 The Theme of Druaga              0:19   0:19
+09 Chime Sound                      0:00   -
+10 Slime: Move                      0:00   -
+11 Sorcerer Spell: Cast             0:01   -
+12 Fire Element: Lighting           0:01   -
+13 Wall: Destruction                0:00   -
+14 Quox: Flame-breathing            0:00   -
+15 Sword: Drawing                   0:00   -
+16 Sword: Swinging                  0:00   -
+17 Sword: Attacking                 0:00   -
+18 Sword: Sheathing                 0:00   -
+19 Sword: Cutting                   0:00   -
+20 Unused Sound  #1                 0:00   -
+21 Spell: Reflection                0:00   -
+22 Door: Open                       0:00   -
+23 Treasure Box: Get #1             0:00   -
+24 Treasure Box: Get #2             0:01   -
+25 Unused Sound  #2                 0:04   -
+26 Gil: Walk                        0:00   -
+27 Credit Sound, Ending             0:01   -
+28 Miss                             0:02   -
+29 Game Over                        0:04   -
+30 Name Entry                       0:25   -
+31 Extend Sound                     0:02   -
+32 Credit Sound                     0:01   -
+
+Total Length                        2:36   4:07
+
+Notes:
+Written for the Namco 15XX 8-voice Wavetable 
+Sound Generator (WSG). Converted to C352 by 
+gRg. Song titles adopted from 
+https://vgmdb.net/album/16869.

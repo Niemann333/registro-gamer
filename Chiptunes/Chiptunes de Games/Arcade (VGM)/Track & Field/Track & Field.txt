@@ -1,0 +1,41 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Track & Field (U) /
+                     Hyper Olympic (J)
+System:              Arcade Machine
+Music hardware:      SN76496
+
+Music author:        Shigeru Fukutake
+Game developer:      Konami
+Game publisher:      Konami
+Game release date:   1983-10
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Coin                             0:01   -
+02 Game Start                       0:05   -
+03 Name Entry                       0:07   0:07
+04 Event Start                      0:03   -
+05 Best of 4 Players                0:04   -
+06 World Record                     0:04   -
+07 Ranking                          0:16   0:15
+08 Game Over                        0:03   -
+
+Total Length                        0:43   1:05
+
+
+Notes:
+Tracks 2 and 7 was missing some muisc notes, 
+due to a DAC chip is playing these notes. And, 
+our currently VGM format didn't support this 
+DAC chip.
+
+
+Package history:
+1.00 2012-12-27 Sonic of 8!: Initial release.
