@@ -1,0 +1,83 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net                      *
+***********************************************
+Game name:           Street Fighter II:
+                     The World Warrior
+System:              CP System
+Music hardware:      YM2151, OKIM6295
+
+Music author:        Yoko Shimomura, Isao Abe
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1991-03
+
+Package created by:  2ch-H
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:26   -
+02 Credit                           0:02   -
+03 Player Select                    0:17   0:14
+04 VS.                              0:04   -
+05 Japan (Ryu) I                    0:54   0:47
+06 Japan (Ryu) II                   0:26   0:25
+07 Stage End                        0:06   -
+08 Brazil (Blanka) I                0:58   0:51
+09 Brazil (Blanka) II               0:23   0:23
+10 U.S.A. (Guile) I                 1:11   1:05
+11 U.S.A. (Guile) II                0:49   0:49
+12 China (Chun Li) I                0:56   0:52
+13 China (Chun Li) II               0:25   0:25
+14 Bonus Stage                      0:32   0:09
+15 Here Comes A New Challenger      0:03   -
+16 Japan (E. Honda) I               1:08   0:58
+17 Japan (E. Honda) II              0:27   0:27
+18 U.S.A. (Ken) I                   1:07   0:56
+19 U.S.A. (Ken) II                  0:35   0:35
+20 U.S.S.R. (Zangief) I             1:01   0:47
+21 U.S.S.R. (Zangief) II            0:25   0:25
+22 India (Dhalsim) I                0:51   0:38
+23 India (Dhalsim) II               0:46   0:45
+24 U.S.A. (Balrog) I                0:54   0:50
+25 U.S.A. (Balrog) II               0:24   0:24
+26 Spain (Vega) I                   0:57   0:50
+27 Spain (Vega) II                  0:44   0:43
+28 Thailand (Sagat) I               0:39   0:39
+29 Thailand (Sagat) II              0:21   0:21
+30 Thailand (M. Bison) I            1:02   1:02
+31 Thailand (M. Bison) II           0:51   0:49
+32 Ending (Ryu)                     0:59   -
+33 Ending (Blanka)                  0:19   0:12
+34 Ending (Guile)                   0:28   0:21
+35 Ending (Chun Li) I               0:11   0:07
+36 Ending (Chun Li) II              1:00   0:32
+37 Ending (E. Honda)                0:30   0:20
+38 Ending (Ken) I                   0:17   0:11
+39 Ending (Ken) II                  1:12   0:28
+40 Ending (Zangief)                 0:12   0:11
+41 Ending (Dhalsim)                 0:33   -
+42 Continue                         0:13   0:10
+43 Game Over                        0:02   -
+44 Ranking Display                  0:03   -
+45 Unused                           0:04   -
+
+Total Length                       25:48  45:30
+
+
+Notes:
+Track Names are used in Bridge M1 list files
+
+This pack was made using M1 VGM mod v0.7.9a1.
+
+
+Size reduction:
+1. vgm_sro: 52.2 MB -> 7.76 MB (14.8 %)
+2. vgm_cmp: 7.76 MB -> 1.66 MB (21.3 %)
+Total: 52.2 MB -> 1.66 MB (3.1 %)
+
+
+Package history:
+1.00 2012-04-29 2ch-H: Initial release.
