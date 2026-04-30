@@ -1,0 +1,73 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Turrican II: The Final
+                     Fight
+System:              Atari ST
+Music hardware:      YM2149
+
+Music author:        Chris Hülsbeck,
+                     Jochen Hippel
+Game developer:      Factor 5
+Game publisher:      Rainbow Arts
+Game release date:   1991
+
+Package created by:  GTheGuardian
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 The Final Fight                  6:45   6:45
+02 Loader                           0:52   0:52
+03 The Desert Rocks                 3:23   3:23
+04 Hi GI Joe!                       0:31   0:31
+05 Traps                            3:34   3:34
+06 Space Patrol                     0:41   0:41
+07 Warhead                          0:23   0:23
+08 Level Complete 1 A               0:03   -
+09 Level Complete 1 B               0:03   -
+10 Secret Dungeons                  3:17   3:16
+11 The Great Bath                   3:06   3:06
+12 Check The Gripper                0:50   0:50
+13 Metal Stars                      0:54   0:54
+14 Quickdrive To Hell               0:10   0:10
+15 Rock N Roll Balance              0:23   0:23
+16 Level Complete 2 A               0:04   -
+17 Level Complete 2 B               0:07   -
+18 Concerto For Laser And Enemies   2:10   2:10
+19 Take A Look                      0:31   0:31
+20 Unidirectional Fight             1:52   1:52
+21 Go For The Gunhed                0:29   0:29
+22 Powerslide                       0:35   0:35
+23 Hypercycle Drive                 0:39   0:39
+24 Level Complete 3 A               0:03   -
+25 Level Complete 3 B               0:03   -
+26 The Wall                         3:31   3:31
+27 Dragonfight                      0:50   0:48
+28 Mr. Walker And His Factory       2:04   2:04
+29 Level Complete 4 A               0:04   -
+30 Level Complete 4 B               0:04   -
+31 Danger Ahead                     1:50   1:50
+32 The Final Challenge              5:26   5:14
+33 Go For The Nuke!                 0:57   0:57
+34 Yeeaah, Done It!                 0:22   -
+35 Level Complete 5 A               0:03   -
+36 Level Complete 5 B               0:03   -
+37 Freedom                          3:34   3:33
+38 The Hero                         4:50   4:50
+
+Total Length                      55:07 1:48:58
+
+
+Notes:
+Track names are from
+"Turrican Soundtrack Anthology -
+Original Sound Version"
+
+This pack was made using MAME 0.222 VGM mod.
+
+
+Package history:
+1.00 2021-07-10 GTheGuardian: Initial release.

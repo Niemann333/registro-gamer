@@ -1,0 +1,41 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Lethal Xcess:
+                     Wings of Death II
+System:              Atari ST
+Music hardware:      YM2149
+
+Music author:        Jochen Hippel
+Game developer:      X-Troll
+Game publisher:      Eclipse
+Game release date:   1991
+
+Package created by:  GTheGuardian
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title Theme                      6:37   6:37
+02 Menu                             2:23   2:23
+03 Stage 1: Ruins of Methallycha    5:03   5:03
+04 Stage 2: Desert of No Return     6:13   6:09
+05 Stage 3: The Evil Garden         5:27   5:27
+06 Stage 4: Vulcanic Plateaus       3:38   3:38
+07 Stage 5: Fortress of Methallycha 4:07   4:03
+08 Ending                           2:30   2:30
+
+Total Length                      35:58 1:11:47
+
+
+Notes:
+This pack was made using Hatari 2.3.1 VGM mod.
+
+Size reduction (vgm_cmp):
+    122 MB -> 55.2 MB (45.2 %)
+
+
+Package history:
+1.00 2022-01-25 GTheGuardian: Initial release.
