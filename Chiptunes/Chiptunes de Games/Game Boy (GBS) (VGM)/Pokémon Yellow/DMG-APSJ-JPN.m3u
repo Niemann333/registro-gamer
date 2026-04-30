@@ -1,0 +1,103 @@
+# @TITLE       Pokemon Yellow
+# @ARTIST      Game Freak, Nintendo
+# @COMPOSER    Junichi Masuda
+# @DATE        1998-09-12
+# @RIPPER      Kingshriek, 2ch Community, ugetab
+# @TAGGER      Warpstar
+
+DMG-APSJ-JPN.gbs::GBS,0,Opening (part 1),0:21,,1
+DMG-APSJ-JPN.gbs::GBS,1,Opening (part 2),1:31,,10
+DMG-APSJ-JPN.gbs::GBS,3,Pallet Town's Theme,1:04,,10
+DMG-APSJ-JPN.gbs::GBS,13,Professor Oak,0:35,,10
+DMG-APSJ-JPN.gbs::GBS,31,Oak Research Lab,0:29,,10
+DMG-APSJ-JPN.gbs::GBS,14,Rival Appears,0:31,,10
+DMG-APSJ-JPN.gbs::GBS,18,The Road to Viridian City ~ from Pallet,0:46,,10
+DMG-APSJ-JPN.gbs::GBS,24,Battle (VS Wild Pokemon),1:15,,10
+DMG-APSJ-JPN.gbs::GBS,27,Victory (VS Wild Pokemon),0:24,,10
+DMG-APSJ-JPN.gbs::GBS,6,Pewter City's Theme,1:55,,10
+DMG-APSJ-JPN.gbs::GBS,4,Pokemon Center,0:58,,10
+DMG-APSJ-JPN.gbs::GBS,17,Pokemon Recovery,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,37,Viridian Forest,3:23,,10
+DMG-APSJ-JPN.gbs::GBS,15,Guide,0:23,,10
+DMG-APSJ-JPN.gbs::GBS,43,Trainer Appears (Girl Version),0:14,,5
+DMG-APSJ-JPN.gbs::GBS,23,Battle (VS Trainer),3:00,,10
+DMG-APSJ-JPN.gbs::GBS,26,Victory (VS Trainer),0:24,,10
+DMG-APSJ-JPN.gbs::GBS,38,Mt. Moon Cave,2:47,,10
+DMG-APSJ-JPN.gbs::GBS,19,The Road to Cerulean ~ from Mt. Moon,0:50,,10
+DMG-APSJ-JPN.gbs::GBS,7,Cerulean City's Theme,1:02,,10
+DMG-APSJ-JPN.gbs::GBS,5,Pokemon Gym,1:13,,10
+DMG-APSJ-JPN.gbs::GBS,2,To Bill's Origin ~ From Cerulean,0:38,,10
+DMG-APSJ-JPN.gbs::GBS,32,Jigglypuff's Song,0:07,,1
+DMG-APSJ-JPN.gbs::GBS,10,Vermilion City's Theme,0:47,,10
+DMG-APSJ-JPN.gbs::GBS,12,St. Anne,1:04,,10
+DMG-APSJ-JPN.gbs::GBS,20,The Road to Lavender Town ~ from Vermilion,1:03,,10
+DMG-APSJ-JPN.gbs::GBS,44,Trainer Appears (Boy Version),0:14,,5
+DMG-APSJ-JPN.gbs::GBS,22,Battle (VS Gym Leader),1:42,,10
+DMG-APSJ-JPN.gbs::GBS,28,Victory (VS Gym Leader),1:10,,10
+DMG-APSJ-JPN.gbs::GBS,33,Cycling,1:09,,10
+DMG-APSJ-JPN.gbs::GBS,11,Lavender Town's Theme,1:24,,10
+DMG-APSJ-JPN.gbs::GBS,40,Pokemon Tower,2:06,,10
+DMG-APSJ-JPN.gbs::GBS,8,Celadon City's Theme,1:00,,10
+DMG-APSJ-JPN.gbs::GBS,35,Casino,1:15,,10
+DMG-APSJ-JPN.gbs::GBS,42,Trainer Appears (Bad Guy Version),0:14,,5
+DMG-APSJ-JPN.gbs::GBS,36,Team Rocket Hideout,2:12,,10
+DMG-APSJ-JPN.gbs::GBS,41,Sylph Company,2:08,,10
+DMG-APSJ-JPN.gbs::GBS,34,Ocean,1:14,,10
+DMG-APSJ-JPN.gbs::GBS,9,Cinnabar Island's Theme,0:43,,10
+DMG-APSJ-JPN.gbs::GBS,39,Pokemon Mansion,2:10,,10
+DMG-APSJ-JPN.gbs::GBS,16,Evolution,0:14,,5
+DMG-APSJ-JPN.gbs::GBS,21,The Last Road,0:56,,10
+DMG-APSJ-JPN.gbs::GBS,25,Last Battle (VS Rival),2:15,,10
+DMG-APSJ-JPN.gbs::GBS,30,Into the Hall,0:45,,10
+DMG-APSJ-JPN.gbs::GBS,29,Ending,1:38,,1
+DMG-APSJ-JPN.gbs::GBS,46,Pikachu's Beach,0:56,,10
+DMG-APSJ-JPN.gbs::GBS,47,Musashi and Kojiro Theme,0:32,,10
+DMG-APSJ-JPN.gbs::GBS,48,Unknown Song,0:49,,10
+DMG-APSJ-JPN.gbs::GBS,50,Item Fanfare,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,51,Pokemon Received Fanfare,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,52,Level Up Fanfare,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,53,Pokemon Capture Fanfare,0:03,,1
+DMG-APSJ-JPN.gbs::GBS,54,Pokedex Fanfare 1,0:03,,1
+DMG-APSJ-JPN.gbs::GBS,55,Pokedex Fanfare 2,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,56,Pikachu Voice 1,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,57,Pikachu Voice 2,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,58,Pikachu Voice 3,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,59,Pikachu Voice 4,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,60,Pikachu Voice 5,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,61,Pikachu Voice 6,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,62,Pikachu Voice 7,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,63,Pikachu Voice 8,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,64,Pikachu Voice 9,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,65,Pikachu Voice 10,0:03,,1
+DMG-APSJ-JPN.gbs::GBS,66,Pikachu Voice 11,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,67,Pikachu Voice 12,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,68,Pikachu Voice 13,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,69,Pikachu Voice 14,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,70,Pikachu Voice 15,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,71,Pikachu Voice 16,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,72,Pikachu Voice 17,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,73,Pikachu Voice 18,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,74,Pikachu Voice 19,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,75,Pikachu Voice 20,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,76,Pikachu Voice 21,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,77,Pikachu Voice 22,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,78,Pikachu Voice 23,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,79,Pikachu Voice 24,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,80,Pikachu Voice 25,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,81,Pikachu Voice 26,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,82,Pikachu Voice 27,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,83,Pikachu Voice 28,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,84,Pikachu Voice 29,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,85,Pikachu Voice 30,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,86,Pikachu Voice 31,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,87,Pikachu Voice 32,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,88,Pikachu Voice 33,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,89,Pikachu Voice 34,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,90,Pikachu Voice 35,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,91,Pikachu Voice 36,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,92,Pikachu Voice 37,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,93,Pikachu Voice 38,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,94,Pikachu Voice 39,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,95,Pikachu Voice 40,0:01,,1
+DMG-APSJ-JPN.gbs::GBS,96,Pikachu Voice 41,0:02,,1
+DMG-APSJ-JPN.gbs::GBS,97,Pikachu Voice 42,0:02,,1
