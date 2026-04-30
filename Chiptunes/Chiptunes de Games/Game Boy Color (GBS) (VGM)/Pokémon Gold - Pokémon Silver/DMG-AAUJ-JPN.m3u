@@ -1,0 +1,99 @@
+# @TITLE       Pokemon Gold
+# @ARTIST      Game Freak, Nintendo
+# @COMPOSER    Junichi Masuda, Go Ichinose
+# @DATE        1999-11-21
+# @RIPPER      ugetab
+# @TAGGER      Warpstar
+
+DMG-AAUJ-JPN.gbs::GBS,81,Pokemon GS Intro 1,0:32,,1
+DMG-AAUJ-JPN.gbs::GBS,82,Pokemon GS Intro 2,0:10,,1
+DMG-AAUJ-JPN.gbs::GBS,0,Pokemon GS Main Theme,1:24,,1
+DMG-AAUJ-JPN.gbs::GBS,83,Main Menu,0:17,,5
+DMG-AAUJ-JPN.gbs::GBS,59,New Bark Town's Theme,1:15,,10
+DMG-AAUJ-JPN.gbs::GBS,77,Mom's Theme,0:08,,5
+DMG-AAUJ-JPN.gbs::GBS,49,Elm Research Institute,1:11,,10
+DMG-AAUJ-JPN.gbs::GBS,51,Road to Cherrygrove City ~ from New Bark Town,1:02,,10
+DMG-AAUJ-JPN.gbs::GBS,40,Battle vs Wild Pokemon,1:26,,10
+DMG-AAUJ-JPN.gbs::GBS,73,Battle vs Wild Pokemon (alt),1:29,,10
+DMG-AAUJ-JPN.gbs::GBS,23,Victory vs Wild Pokemon,0:27,,10
+DMG-AAUJ-JPN.gbs::GBS,33,Evolution,0:41,,10
+DMG-AAUJ-JPN.gbs::GBS,37,Cherrygrove City's Theme,0:47,,10
+DMG-AAUJ-JPN.gbs::GBS,8,Pokemon Center,1:01,,10
+DMG-AAUJ-JPN.gbs::GBS,12,Pokemon Recovery,0:02,,1
+DMG-AAUJ-JPN.gbs::GBS,16,Guide,0:47,,10
+DMG-AAUJ-JPN.gbs::GBS,42,Road to Violet City ~ from Cherrygrove City,1:01,,10
+DMG-AAUJ-JPN.gbs::GBS,29,Prof. Oak's Theme,0:39,,10
+DMG-AAUJ-JPN.gbs::GBS,30,Rival's Theme,0:50,,10
+DMG-AAUJ-JPN.gbs::GBS,47,Battle vs Rival,2:00,,10
+DMG-AAUJ-JPN.gbs::GBS,31,Rival's Theme 2,0:46,,10
+DMG-AAUJ-JPN.gbs::GBS,75,Captured Wild Pokemon,0:25,,10
+DMG-AAUJ-JPN.gbs::GBS,54,Trainer Intro (Boy),0:15,,5
+DMG-AAUJ-JPN.gbs::GBS,41,Battle vs Trainer,3:26,,10
+DMG-AAUJ-JPN.gbs::GBS,22,Victory vs Trainer,0:25,,10
+DMG-AAUJ-JPN.gbs::GBS,50,Dark Cave,2:34,,10
+DMG-AAUJ-JPN.gbs::GBS,44,Violet City's Theme,1:16,,10
+DMG-AAUJ-JPN.gbs::GBS,65,Sprout Tower,0:44,,10
+DMG-AAUJ-JPN.gbs::GBS,58,Trainer Intro (Sage),0:22,,10
+DMG-AAUJ-JPN.gbs::GBS,26,Pokemon Gym,1:10,,10
+DMG-AAUJ-JPN.gbs::GBS,45,Battle vs Gym Leader,2:12,,10
+DMG-AAUJ-JPN.gbs::GBS,24,Victory vs Gym Leader,1:13,,10
+DMG-AAUJ-JPN.gbs::GBS,84,Ruins of Alph,0:10,,5
+DMG-AAUJ-JPN.gbs::GBS,74,Unown Frequency,0:28,,10
+DMG-AAUJ-JPN.gbs::GBS,10,Trainer Intro (Girl),0:15,,5
+DMG-AAUJ-JPN.gbs::GBS,9,Trainer Intro (Man),0:15,,5
+DMG-AAUJ-JPN.gbs::GBS,39,Union Cave,1:53,,10
+DMG-AAUJ-JPN.gbs::GBS,36,Azalea Town's Theme,1:40,,10
+DMG-AAUJ-JPN.gbs::GBS,56,Trainer Intro (Rocket),0:26,,10
+DMG-AAUJ-JPN.gbs::GBS,48,Battle vs Rocket,1:59,,10
+DMG-AAUJ-JPN.gbs::GBS,52,Road to Goldenrod City ~ from Azalea Town,1:16,,10
+DMG-AAUJ-JPN.gbs::GBS,11,Trainer Intro (Officer),0:14,,5
+DMG-AAUJ-JPN.gbs::GBS,60,Goldenrod City's Theme,1:20,,10
+DMG-AAUJ-JPN.gbs::GBS,17,Game Corner,1:59,,10
+DMG-AAUJ-JPN.gbs::GBS,62,Pokemon Channel,0:06,,1
+DMG-AAUJ-JPN.gbs::GBS,79,Pokemon Lullaby,0:56,,10
+DMG-AAUJ-JPN.gbs::GBS,80,Pokemon March,0:45,,10
+DMG-AAUJ-JPN.gbs::GBS,57,Trainer Intro (Maniac),0:44,,10
+DMG-AAUJ-JPN.gbs::GBS,18,Bicycle,0:59,,10
+DMG-AAUJ-JPN.gbs::GBS,34,National Park,2:34,,10
+DMG-AAUJ-JPN.gbs::GBS,87,Bug Catching Contest Begins,0:14,,5
+DMG-AAUJ-JPN.gbs::GBS,88,Bug Catching Contest,0:51,,10
+DMG-AAUJ-JPN.gbs::GBS,43,Ecruteak City's Theme,2:14,,10
+DMG-AAUJ-JPN.gbs::GBS,86,Ecruteak Dance Theater,0:42,,10
+DMG-AAUJ-JPN.gbs::GBS,38,Trainer Intro (Kimono Girls),0:19,,5
+DMG-AAUJ-JPN.gbs::GBS,66,Burned Tower,0:53,,10
+DMG-AAUJ-JPN.gbs::GBS,64,Tin Tower,1:23,,10
+DMG-AAUJ-JPN.gbs::GBS,70,Road to Olivine City ~ from Ecruteak City,1:08,,10
+DMG-AAUJ-JPN.gbs::GBS,55,Trainer Intro (Woman),0:29,,10
+DMG-AAUJ-JPN.gbs::GBS,67,Olivine Lighthouse,0:58,,10
+DMG-AAUJ-JPN.gbs::GBS,32,Surfing,1:50,,10
+DMG-AAUJ-JPN.gbs::GBS,90,Game Boy Printer,1:49,,10
+DMG-AAUJ-JPN.gbs::GBS,68,Road to Mahogany Town ~ from Ecruteak City,0:50,,10
+DMG-AAUJ-JPN.gbs::GBS,89,Mysterious Waves,0:08,,5
+DMG-AAUJ-JPN.gbs::GBS,71,Rocket Hideout,1:27,,10
+DMG-AAUJ-JPN.gbs::GBS,85,Team Rocket's Theme,1:20,,10
+DMG-AAUJ-JPN.gbs::GBS,72,Dragon's Den,1:55,,10
+DMG-AAUJ-JPN.gbs::GBS,76,Road to Indigo Plateau ~ from Tohjo Falls,1:05,,10
+DMG-AAUJ-JPN.gbs::GBS,78,Victory Road,0:36,,10
+DMG-AAUJ-JPN.gbs::GBS,69,Indigo Plateau -GS ver.-,0:58,,10
+DMG-AAUJ-JPN.gbs::GBS,46,Battle vs Champion,1:46,,10
+DMG-AAUJ-JPN.gbs::GBS,19,Entering the Hall of Fame,0:51,,10
+DMG-AAUJ-JPN.gbs::GBS,35,Staff Roll,1:53,,1
+DMG-AAUJ-JPN.gbs::GBS,91,The End,0:56,,10
+DMG-AAUJ-JPN.gbs::GBS,53,Fast Ship S.S. Aqua,1:46,,10
+DMG-AAUJ-JPN.gbs::GBS,61,Vermilion City's Theme -GS ver.-,1:19,,10
+DMG-AAUJ-JPN.gbs::GBS,6,Battle vs Kanto Trainer,1:39,,10
+DMG-AAUJ-JPN.gbs::GBS,5,Battle vs Kanto Gym Leader,1:11,,10
+DMG-AAUJ-JPN.gbs::GBS,2,Road to Cerulean City ~ from Mt. Moon -GS ver.-,0:53,,10
+DMG-AAUJ-JPN.gbs::GBS,7,Battle vs Kanto Wild Pokemon,2:06,,10
+DMG-AAUJ-JPN.gbs::GBS,20,Pewter City's Theme -GS ver.-,2:14,,10
+DMG-AAUJ-JPN.gbs::GBS,21,Celadon City's Theme -GS ver.-,1:04,,10
+DMG-AAUJ-JPN.gbs::GBS,13,Lavender Town's Theme -GS ver.-,1:44,,10
+DMG-AAUJ-JPN.gbs::GBS,4,Magnet Train,0:07,,1
+DMG-AAUJ-JPN.gbs::GBS,63,PokeFlute,0:42,,10
+DMG-AAUJ-JPN.gbs::GBS,3,Road to Fuchsia City ~ from Lavender Town -GS ver.-,1:03,,10
+DMG-AAUJ-JPN.gbs::GBS,15,Mt. Moon Cave -GS ver.-,0:42,,10
+DMG-AAUJ-JPN.gbs::GBS,25,Mt. Moon,0:22,,10
+DMG-AAUJ-JPN.gbs::GBS,14,Viridian Forest -GS ver.-,1:23,,10
+DMG-AAUJ-JPN.gbs::GBS,1,Road to Viridian City ~ from Pallet Town -GS ver.-,1:05,,10
+DMG-AAUJ-JPN.gbs::GBS,27,Pallet Town -GS Ver.-,1:16,,10
+DMG-AAUJ-JPN.gbs::GBS,28,Oak Research Institute,0:35,,10
