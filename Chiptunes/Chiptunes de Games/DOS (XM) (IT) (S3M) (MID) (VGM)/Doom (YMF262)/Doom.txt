@@ -1,0 +1,76 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Doom
+System:              IBM PC/AT
+OS:                  DOS
+Music hardware:      Sound Blaster Pro 2
+                     (YMF262)
+
+Music author:        Robert Prince
+Game developer:      id Software
+Game publisher:      id Software
+Game release date:   1993-12-10
+
+Package created by:  NewRisingSun
+Package version:     2.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title Screen                     0:07   -
+02 At Doom's Gate                   1:37   1:37
+03 The Imp's Song                   2:38   2:38
+04 Dark Halls                       4:32   4:32
+05 Kitchen Ace (and Taking Names)   2:53   2:53
+06 Suspense                         2:53   2:45
+07 On the Hunt                      1:26   1:26
+08 Demons on the Prey               2:31   2:31
+09 Sign of Evil                     2:33   2:33
+10 Hiding the Secrets               2:21   2:21
+11 I Sawed the Demons               2:35   2:35
+12 The Demons from Adrian's Pen     2:36   2:36
+13 They're Going to Get You         4:13   4:13
+14 Sinister                         2:58   2:58
+15 Waltz of the Demons              1:46   1:46
+16 Nobody Told Me About id          2:58   2:58
+17 Untitled                         1:37   1:37
+18 Donna to the Rescue              1:59   1:59
+19 Deep into the Code               2:02   2:02
+20 Facing the Spider                1:36   1:36
+21 Intermission from Doom           3:23   3:23
+22 The End of Doom                  3:12   3:12
+23 Sweet Little Dead Bunny          1:02   -
+
+Total Length                      55:26 1:49:34
+
+
+Notes:
+It's believed that the music to this game was
+inspired by various metal bands. Particularly
+Pantera, Alice in Chains, and Soundgarden.
+
+On June 17, 2007, John Romero released a
+collection of Doom music created by Bobby
+Prince that was not used in the final game.
+
+Stereo panning anomalies as heard in the game
+itself, in particular in track 6.
+
+The previous version of the pack included both
+the General MIDI and AdLib versions of Track 1.
+Since the game never plays the General MIDI
+version with the AdLib or Sound Blaster
+setup selection, requiring renaming of file
+names to hear it, I have removed it from the
+pack.
+
+
+Package history:
+1.00 2012-05-27 RichterEX2: Initial release.
+2.00 2017-06-23 NewRisingSun: Relogged using
+ DMXOPTION=-phase -opl3. Added screenshot
+ from "The Ultimate Doom".
+2.01 2017-07-09 Valley Bell: Re-added locations
+ from RichterEX2's rip to VGM tags.
