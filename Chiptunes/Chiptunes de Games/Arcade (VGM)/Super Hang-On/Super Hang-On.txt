@@ -1,0 +1,46 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net                      *
+***********************************************
+Game name:           Super Hang-On
+System:              Arcade Machine
+Music hardware:      YM2151, SegaPCM
+
+Music author:        Katsuhiro Hayashi, Koichi
+                      Namiki, Shigeru Ohwada
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1987
+
+Package created by:  Sonic of 8!
+Package version:     1.10
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Opening                          0:11   0:08
+02 Hard Road                        2:55   2:54
+03 Outride A Crisis                 2:37   2:24
+04 Sprinter                         2:23   2:23
+05 Winning Run                      3:10   2:57
+06 Goal                             0:16   0:15
+07 Name Entry                       0:38   -
+
+Total Length                       12:11  23:13
+
+
+Notes:
+These are my biggest rip! Decompress all files
+and there was a surprise: 2/3 MB VGM files!
+
+
+The beginning of Name Entry is correct. The
+first 2 seconds really have no drums.
+-Valley Bell
+
+
+Package history:
+1.00 2011-04-06 Sonic of 8!: Initial release.
+1.10 2012-02-23 Valley Bell: Added Per-track
+ composers thanks to dissident93, vgm_cmp'ed
+ tracks again (now with SegaPCM support).

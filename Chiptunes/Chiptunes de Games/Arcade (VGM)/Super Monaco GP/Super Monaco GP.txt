@@ -1,0 +1,39 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Super Monaco GP
+System:              Sega X
+Music hardware:      YM2151, SegaPCM
+
+Music author:        Koichi Namiki
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1989
+
+Package created by:  Sonic of 8!
+Package version:     1.02
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 F1 Grand Prix                    0:13   -
+02 Extreme Tension                  0:12   0:11
+03 Qualify                          0:08   -
+04 The Checker Flag                 0:05   -
+05 A Break                          0:05   -
+06 Super License                    0:09   -
+07 The Heat Waves                   0:35   0:32
+08 At a Loss                        0:05   -
+
+Total Length                        1:32   2:15
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2011/04/05 Sonic of 8!: Initial release.
+1.01 2011/07/01 Valley Bell: Fixed System name.
+1.02 2012/05/17 Tom: minor maintenance fixes.

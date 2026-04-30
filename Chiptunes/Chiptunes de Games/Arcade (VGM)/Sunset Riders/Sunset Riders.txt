@@ -1,0 +1,69 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Sunset Riders
+System:              Konami Sunset Riders
+Music hardware:      YM2151, K053260
+
+Music author:        Motoaki Furukawa,
+                     Kenichiro Fukui (SFX)
+Game developer:      Konami
+Game publisher:      Konami
+Game release date:   1991-09-04
+
+Package created by:  RichterEX2
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 The Magnificent Four
+   (Attract Mode)                   0:58   -
+02 [SFX] Shot                       0:01   -
+03 [Voice] Yeah-Hey!                0:01   -
+04 Time to Set Off (Player Select)  0:16   0:13
+05 Wanted! (Boss Introduction)      0:07   -
+06 Gunfight at the Sunset Corral
+   (Stage 1, 5, 8)                  2:05   1:33
+07 Butch Cassidy and Sunset Riders
+   (Stage 2, 7)                     0:28   0:24
+08 Face with Courage (Stage 3)      0:45   0:44
+09 The Rosy Setting Sun (Stage 6)   0:37   0:32
+10 It's Time to Pay! (Stage 1 Boss) 0:30   0:26
+11 Draw, Pilgrim! (Stage 2 Boss)    0:30   0:26
+12 You and He, Big Trouble!
+   (Stage 3 Boss)                   0:19   0:16
+13 We're Gonna Blow You Away!
+   (Stage 4 Boss)                   0:28   0:24
+14 Adios, Amigo! (Stage 5 Boss)     0:22   0:19
+15 Me Ready for Pow-wow!
+   (Stage 6 Boss)                   0:21   0:14
+16 Ay, Chihuahua! (Stage 7 Boss)    0:25   0:22
+17 The Great Petal (Stage 8 Boss)   0:31   0:28
+18 Quick Draw (Bonus Stage)         0:26   0:25
+19 Please Help My Friends
+   (Stage 3 Demo)                   0:14   -
+20 Dance Over Night (Cancan Dance)  0:34   0:15
+21 Escape (Stage 7 Demo)            0:10   -
+22 Yuppie! (Stage Clear)            0:08   -
+23 Continue of Sorrow (Continue)    0:10   0:08
+24 Hic Jacet (Game Over)            0:07   -
+25 Looking Up at the Stars
+   (Ranking)                        0:11   0:08
+26 The Big Win (Ending)             0:54   -
+
+Total Length                       11:39  18:57
+
+
+Notes:
+[Source]
+  Konami Game Music Collection Vol.5
+  King Records  KICA-7605  Sep 26, 1992
+
+Still uncertain of the accuracy of the track
+titles.
+
+
+Package history:
+1.00 2012-10-07 RichterEX2: Initial release.
