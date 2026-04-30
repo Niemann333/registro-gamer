@@ -1,0 +1,88 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Out Run
+System:              Arcade Machine
+Music hardware:      YM2151, SegaPCM
+
+Music author:        Hiroshi Kawaguchi
+Game developer:      Sega-AM2
+Game publisher:      Sega
+Game release date:   1986
+
+Package created by:  Valley Bell
+Package version:     3.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Magical Sound Shower             5:58   1:01
+02 Passing Breeze                   5:20   0:31
+03 Splash Wave                      5:41   0:06
+04 Last Wave                        1:33   -
+05 Magical Sound Shower (Extended)  5:44   4:29
+06 Passing Breeze (Extended)        5:51   5:30
+07 Splash Wave (Extended)           5:47   5:47
+08 Last Wave (with Seashore SFX)    1:33   -
+09 Seashore SFX                     1:24   -
+
+Total Length                       18:32  19:21
+Total Length (extended)            18:55  34:41
+Total Length (all tracks)          38:51  55:26
+
+
+Notes:
+This was the first VGM v1.51 pack ever.
+The first rip was made using MAME VGM 0.134.
+
+I reripped all tracks in October 2011 with M1,
+because a fix in MAME's SegaPCM emulation broke
+this pack. The fixed SegaPCM core is present in
+VGMPlay but disabled since then to not break
+this pack.
+Eventually I trimmed the tracks in January 2013
+(yes, more then a year later), redid the
+extended loop versions and recorded the tracks
+that include SFX.
+I kept the edited screenshot for historic
+purposes. (It was made to fit the SMSPower.org
+screenshot rules.)
+
+Last Wave (with SFX) was made using MAME 0.144,
+all other tracks with M1 0.7.9a1.
+
+
+In order to record Last Wave (with Seashore
+SFX) from the Highscore screen, I had to slow
+the main cpu down to 10%. Else it would cut the
+song.
+
+
+The extended versions of the songs are exactly
+the same songs as normal, but with a longer
+loop. The original loops got on my nerves.
+Note: I hacked the VGM Passing Breeze
+(Extended) a bit to make the loop more fluid.
+
+
+These VGMs use a fixed opr-10188.71 sound ROM.
+Thanks to muteKI telling me about it and to
+reassembler for posting it on this website.
+
+
+Size reduction:
+1. vgm_sro: 57.4 MB -> 54.2 MB (94.5 %)
+2. vgm_cmp: 54.2 MB -> 1.78 MB (3.29 %)
+Total: 57.4 MB -> 1.78 MB (3.11 %)
+
+
+Package history:
+1.00 2010-01-01 Valley Bell: Initial release.
+2.00 2010-03-03 Valley Bell: Size reduction
+ (uncompressed: 9.79 MB -> 870 KB) and extended
+ versions of the looped songs added.
+2.01 2010/10/27 Valley Bell: Fixed Passing
+ Breeze and Splash Wave (both versions). The
+ SegaPCM clock was wrong.
+3.00 2013-05-05 Valley Bell: Complete rerip.

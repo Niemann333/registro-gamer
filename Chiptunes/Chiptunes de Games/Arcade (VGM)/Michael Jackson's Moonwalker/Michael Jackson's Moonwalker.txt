@@ -1,0 +1,63 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/music               *
+***********************************************
+Game name:           Michael Jackson's
+                                     Moonwalker
+System:              Sega System 18
+Music hardware:      YM3438 (2x), RF5c68
+
+Music author:        Michael Jackson,
+                      Unknown
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1989
+
+Package created by:  Sonic of 8!, Valley Bell
+Package version:     1.50
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:15   -
+02 Voice: Wohoou (Credit Inserted)  0:01   -
+03 Bad (Round 1 & 5)                3:35   3:34
+04 Smooth Criminal (Round 2)        2:11   2:07
+05 Round 2 Boss                     1:02   0:49
+06 Beat It (Round 3)                1:03   0:48
+07 Another Part of Me (Round 4)     1:00   0:44
+08 Round 4 Boss                     1:32   1:31
+09 Round 5 Boss                     1:33   1:15
+10 Billie Jean (Ending)             2:51   2:38
+11 Game Over                        0:04   -
+12 Unused Jingle                    0:03   -
+13 Bad (Intro 1)                    0:02   -
+14 Bad (Intro 2)                    0:02   -
+15 Dance Magic 1                    0:06   -
+16 Dance Magic 1 (Short Version)    0:04   -
+17 Dance Magic 2                    0:08   -
+18 Dance Magic 2 (Short Version)    0:04   -
+19 Dance Magic 3                    0:06   -
+20 Dance Magic 3 (Short Version)    0:04   -
+21 Dance Magic 4                    0:06   -
+22 Dance Magic 4 (Short Version)    0:04   -
+
+Total Length                       15:58  29:24
+
+
+Notes:
+The game was not too much hard to rip
+than Clutch Hitter is. But I don't 
+have any System 18 games (same apply 
+for the System 24).
+
+Original musics that is not composed by 
+Michael Jackson, was the Artist Name blank on
+GD3 tags.
+
+
+Package history:
+1.00 28/6/2011 Sonic of 8!: Initial release.
+1.50 29/6/2011 Valley Bell: Added all the short
+ tracks (jingles, dance music, ...), added
+ round number to the BGM's tags.
