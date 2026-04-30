@@ -1,0 +1,42 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Columns
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Tokuhiko Uwabo
+Publisher:           Sega
+Package created by:  www.sega.co.jp
+Package version:     1.11
+
+Files, in sound test order:
+
+Name                                Length:
+                                    Total  Loop
+Filthy (Select)                     0:19   -
+Quagmire (Start)                    0:06   -
+Clotho (BGM 1)                      1:28   1:28             
+Lathesis (BGM 2)                    1:18   1:18
+Atropos (BGM 3)                     1:19   1:19
+Concilation (Game Over)             0:37   -            
+Boy Wonder (Name Entry)             0:05   -
+
+Notes:
+My first VGM rip, all tracks sound like they
+should. I did have trouble getting Lathesis to
+sound correct when it loops, but with some
+tinkering with the start/loop point, I
+eventually got the song to loop correctly. A
+small rip for a simple game (thank god it
+wasn't any bigger!).
+
+Updates:
+1.10 - Got the correct composer, Tokuhiko Uwabo
+this time. I also redid Lathesis from scratch 
+and then proceede to quadruple check to ensure 
+it sounds perfect now.
+
+1.11 - Other track names from the OST.
