@@ -1,0 +1,31 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/Music               *
+***********************************************
+
+Game name:           Spider-Man: Return of the Sinister Six
+System:              Sega Master System/Sega Game Gear
+FM module:           No
+
+Music author:        David Whittaker
+Game developer:      B.I.T.S.
+Game publisher:      Flying Edge
+Game release date:   1992/10 (Master System)/1993 (Game Gear)
+
+Package created by:  MattheRabbit
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+Main Theme                          1:25   1:25
+Level Theme 1	                    1:35   1:35
+Level Theme 2	                    1:41   1:41
+Level Complete	                    0:02    -
+Spidey Loses		            0:02    -
+
+Notes:
+-
+
+Package history:
+1.00 (2013/07/24)(MattheRabbit): Initial release.
