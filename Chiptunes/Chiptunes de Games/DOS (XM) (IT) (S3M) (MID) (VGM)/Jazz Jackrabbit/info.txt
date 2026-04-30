@@ -1,0 +1,60 @@
+Archive created by -=MIRSOFT=-
+Look for game MODs at http://go.to/gamemods
+
+*** Archive info ***
+Archiver: Mirsoft, DarkGlider, Telcontar ##507
+Type: Game rip
+Format: S3M
+Original Composer: Robert Allen, Joshua Jensen
+Tracker: Robert Allen, Joshua Jensen
+Num of tunes: 33
+Complete: 100%
+
+*** Game info ***
+Name: Jazz Jackrabbit
+Platform: PC
+Year: 1994
+Genre: Jump'n'run
+Publisher: Epic Megagames
+Developer: Epic Megagames
+
+*** Additional info *** 
+The folder contains tunes from 3.5" floppy registered version (thanks for Dark Glider who provided the tunes
+this version). This version has these tunes:
+
+Battleships.s3m
+Boss.s3m
+Chrysilis.s3m
+Diamondus.s3m
+dirlist
+Dreempipes.s3m
+Ending.s3m
+EndLevel.s3m
+Fanolint.s3m
+Jungrock.s3m
+Letni.s3m
+Marbelara.s3m
+Medivo.s3m
+Megairbase.s3m
+Menu.s3m
+Nippius.s3m
+Orbitus.s3m
+Pezrock.s3m
+Scraparap.s3m
+Sluggion.s3m
+Technoir.s3m
+Tubelectric.S3M
+Turtemple.s3m
+
+The rest of tunes in root folder (not listed above) are from other versions of the game (maybe CD version etc.), but
+I unfortunately don't have any exact information, from which ones. However the archive should be
+complete.
+
+Note: If you downloaded the this archive before, maybe you noticed that I removed the tunes from folder CD-Version.
+It was because there tunes were all worse duplicated versions of the tunes in the root folder.
+
+Thanks also to Telcontar who re-ripped and fixed the "Lagunicus.s3m" tune, which was originally a bit corrupted.
+
+Info from Telcontar regardin the BONUS.S3M tune:
+Replacement copy of BONUS.S3M, taken from the CD version and converted to S3M by Chronos Module Converter.
+This was also in the basic shareware version; it's not specific to the CD release.

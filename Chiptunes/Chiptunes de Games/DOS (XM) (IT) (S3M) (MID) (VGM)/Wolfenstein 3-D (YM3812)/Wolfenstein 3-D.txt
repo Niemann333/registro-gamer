@@ -1,0 +1,63 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Wolfenstein 3-D
+System:              IBM PC/AT
+OS:                  MS-DOS
+Music hardware:      AdLib (YM3812)
+
+Music author:        Robert Prince
+Game developer:      iD Software
+Game publisher:      Apogee Software
+Game release date:   1992-05-05
+
+Package created by:  RichterEX2, NewRisingSun
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Horst-Wessel-Lied                0:58   0:58
+02 Wondering About My Loved Ones    1:11   1:11
+03 Get Them Before They Get You     1:20   1:20
+04 Searching For the Enemy          1:06   1:06
+05 P.O.W.                           1:05   1:05
+06 Suspense                         1:55   1:55
+07 The March to War                 1:08   1:08
+08 Enemy Around the Corner          1:01   1:01
+09 Nazi Anthem                      0:58   0:58
+10 Lurking...                       1:12   1:12
+11 Going After Hitler               1:20   1:20
+12 Pounding Headache                1:00   1:00
+13 Into the Dungeons                1:06   1:06
+14 Kill the S.O.B.                  1:22   1:22
+15 The Nazi Rap                     1:22   1:22
+16 Twelfth Hour                     1:55   1:55
+17 Zero Hour                        1:09   1:09
+18 The Ultimate Challenge           1:20   1:20
+19 Wolf Pac                         1:26   1:26
+20 Funk You!                        0:55   0:55
+21 End of Level                     0:20   0:20
+22 U R A Hero                       0:20   0:20
+23 Roster                           0:19   0:19
+24 Hitler Waltz                     1:06   1:05
+25 Salute                           0:11   0:11
+26 Victors                          1:05   1:05
+27 Victory March                    1:06   1:06
+
+Total Length                       29:16  58:31
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2013-03-17 RichterEX2: Initial release.
+1.01 2016-10-15 NewRisingSun: Corrected tempo
+ (very slightly). Improved loops. Fixed
+ flubbed snare drum in tracks 7/8/10/11/18/26.
+ Added Waveform Select Enable write to all
+ tracks, necessary for track 19.
+ Added volume modifier.

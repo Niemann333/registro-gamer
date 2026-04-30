@@ -1,0 +1,30 @@
+Archive created by DEATH ADDER
+http://www.superfighter.com
+
+*** Archive info ***
+Archiver: Death Adder ##5, jagossel
+Type: Game rip
+Format: S3M
+Original Composer: Robert Allen
+Tracker: Robert Allen
+Num of tunes: 16
+Complete: 100%
+
+*** Game info ***
+Name: Epic Pinball
+Platform: PC
+Year: 1994
+Genre: Pinball
+Publisher: Epic Megagames
+Developer: James Schmalz
+
+*** Additional info ***
+Thanks to Death Adder who sent me this great archive and also to Jagossel who
+sent me additional Android song and Credits song from the shareware version
+(files SONG1a.S3M and SONG00.S3M).
+
+It seems that different versions of the game use different songs e.g. at the
+Android table (seems that V2.1 uses SONG1.S3M, where V2.0 uses SONG1a.S3M)
+- however, I cannot confirm it; so if someone has complete knowledge about this
+and can rename the files correctly to reflect versions of the game, it would
+be great if he could submit this info ;)
