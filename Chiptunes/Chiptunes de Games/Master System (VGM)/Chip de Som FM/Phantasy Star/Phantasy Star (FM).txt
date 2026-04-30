@@ -1,0 +1,77 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/music               *
+***********************************************
+Game name:           Phantasy Star
+System:              Sega Master System
+Complete music dump: Yes
+FM module:           Yes
+
+Music author:        Tokuhiko "Bo" Uwabo
+Game developer:      Sega RD4
+Game publisher:      Sega
+Game release date:   1987/12/20
+
+Package created by:  Valley Bell
+Package version:     1.10
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+Title Screen                        0:27   0:27
+Intro                               0:51   0:51
+Town                                0:39   0:38
+Shop                                0:13   0:13
+Palma                               0:38   0:38
+Battle                              0:26   0:26
+Cave                                0:40   0:38
+Church                              0:19   0:19
+Vehicle                             0:38   0:38
+Story / Conversations               0:13   0:13
+Motavia                             0:53   0:53
+Final Dungeon                       0:26   0:26
+Village                             0:19   0:19
+Dezoris                             0:33   0:32
+Tower                               0:51   0:51
+La Shiec                            0:26   0:26
+Dark Falz                           0:26   0:26
+Ending                              1:06   -
+Game Over                           0:05   -
+Vehicle (with Airplane SFX)         0:44   0:38
+Airplane SFX                        0:06   -
+
+Total Length (Playlist)            10:08  19:02
+Total Length (all Tracks)          10:58  20:30
+
+Notes:
+All songs were ripped using Kega Fusion 3.63 and
+the "Memory Trigger Hack".
+RAM Address:  C004      Savesate Address:  40C0
+Logging Date: 2010/07/05
+Thanks to my VGM Trimming Helper it took only
+4 hours to rip and trim all the songs.
+
+There are 2 Playlist files included. The usual
+one plays all tunes in game order (see list
+above). The "Sound Collection" playlist plays
+all tunes in order of the "Phantasy Star Sound
+Collection". Interestingly it's order matches
+the Sound IDs exactly.
+
+Battle has a small looping bug: You can't hear
+the first note. But that's a bug caused by the
+game itself.
+
+Version 1.10 Note Fix:
+The game sends incorrect notes on delayed
+channels (4, 5, 6) at the beginning of most
+songs (maybe due to uninitialized data).
+In "Town" that was easy to hear.
+I fixed them by setting the note-on-bit to
+zero.
+
+Package history:
+1.00 2010/07/08 Valley Bell: Initial release.
+1.10 2010/07/14 Valley Bell: Note Fix (see
+ above), converted sample accurate to frame
+ accurate - 247 KB -> 177 KB

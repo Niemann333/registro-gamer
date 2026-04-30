@@ -1,0 +1,40 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/music               *
+***********************************************
+
+Game name:           Double Dragon
+System:              Sega Master System
+FM module:           Yes
+Complete music dump: Yes
+
+
+Music author:        Kazunaka Yamane
+                    
+Game developer:      Arc System Works
+Game publisher:      Sega
+Game release date:   1988/10/01
+
+Package created by:  sherpa
+Package version:     1.00
+
+Song list, in approximate game order:
+Name                                Length:
+                                    Total  Loop
+01 Title                            0:17   -
+02 Mission 1                        1:43   1:42
+03 Mission 2                        0:42   0:42
+04 Mission 3                        0:47   0:47
+05 Mission 4                        1:20   1:18
+06 Boss                             0:27   0:26
+07 Last Boss                        0:52   0:51
+08 Mission Complete                 0:04   -
+09 Ending                           1:12   -
+
+
+Notes:
+-
+
+
+Package history:
+16/02/23 1.00 sherpa: -Initial Release
