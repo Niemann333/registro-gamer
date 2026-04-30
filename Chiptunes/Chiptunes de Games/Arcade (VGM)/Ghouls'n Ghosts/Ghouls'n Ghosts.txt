@@ -1,0 +1,61 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Ghouls'n Ghosts (UE) / 
+                     Daimakaimura (J)
+System:              CP System
+Music hardware:      YM2151
+
+Music author:        Tamayo Kawamoto
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1988-12
+
+Package created by:  RichterEX2
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Credit                           0:03   -
+02 Opening                          0:13   -
+03 Stage 1: The Haunted Graveyard   1:24   1:12
+04 Stage 1 Boss: Shielder           0:30   0:24
+05 Stage Clear                      0:05   -
+06 The Map                          0:05   -
+07 Stage 2: The Village of Decay    0:55   0:55
+08 Stage 2 Boss: Cerberus           0:32   0:11
+09 Stage 3: Baron Rankle's Tower    1:20   1:19
+10 Stage 3 Boss: Gassuto            0:43   0:42
+11 Stage 4: The Crystal Forest      1:17   1:15
+12 Stage 4 Boss: Ohma               0:39   0:27
+13 Stage 5: Lucifer's Castle        1:26   0:43
+14 Stage 5 Boss: Beelzebub          0:25   0:24
+15 Ending (1st Round)               0:26   -
+16 Zap                              0:12   -
+17 Final Boss: Lucifer              2:01   1:19
+18 Ending                           4:10   -
+19 Name Register (1st Place)        1:50   -
+20 Name Register Finished 
+   (1st Place)                      0:09   -
+21 Name Register 
+   (2nd Place or Below)             1:27   -
+22 Name Register Finished 
+   (2nd Place)                      0:08   -
+23 Time-Out Warning                 0:22   0:14
+24 Player Out                       0:04   -
+25 Game Over                        0:07   -
+26 Continue                         0:12   -
+
+Total Length                       20:44  29:49
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-05-30 RichterEX2: Initial release.
+1.01 2012-05-30 Valley Bell: Stripped unused
+ OKIM6295 chip.

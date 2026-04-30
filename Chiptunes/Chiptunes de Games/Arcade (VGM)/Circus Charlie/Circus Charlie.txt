@@ -1,0 +1,37 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Circus Charlie
+System:              Arcade Machine
+Music hardware:      2xSN76496
+
+Music author:        Unknown
+Game developer:      Konami
+Game publisher:      Konami (W) / Centuri (U)
+Game release date:   1984-04 (W) / 1984-02 (U)
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Coin                             0:02   -
+02 Washington and Lee Swing         0:17   -
+03 Jump Through the Wheel of Fire ~ 1:18   0:37
+   Get on the Bend                  0:35   0:35
+04 Ropewalking ~ Jump on the Jewel  0:29   0:28
+05 Aerial Bar                       0:33   0:32
+06 Trombonanza                      0:04   -
+07 Miss                             
+
+Total length                        3:18   5:29
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-07-19 Sonic of 8!: Initial release.

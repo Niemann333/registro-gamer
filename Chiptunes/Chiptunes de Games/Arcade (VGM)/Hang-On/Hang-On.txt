@@ -1,0 +1,33 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Hang-On
+System:              Hang-On
+Music hardware:      YM2203, SegaPCM
+
+Music author:        Hiroshi Kawaguchi
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1985-07
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:09   0:09
+02 Main Theme                       1:24   1:02
+03 Goal Music                       0:15   0:14
+04 Name Entry                       0:50   0:26
+
+Total length                        2:37   4:27
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-04-24 Sonic of 8!: Initial release.

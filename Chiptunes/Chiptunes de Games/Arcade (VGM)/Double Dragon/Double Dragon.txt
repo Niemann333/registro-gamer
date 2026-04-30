@@ -1,0 +1,48 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Double Dragon
+System:              Arcade Machine
+Music hardware:      YM2151
+
+Music author:        Yamane Kazunaka
+Game developer:      Technos
+Game publisher:      Taito
+Game release date:   1987
+
+Package created by:  Duchemole
+Package version:     1.03
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Double Dragon (Opening Theme)    0:50   0:49
+02 Slums
+   (Arrival of the Black Warriors)  1:27   1:26
+03 The Entrance of Abobo the Giant  0:25   0:25
+04 Mission Complete                 0:04   -
+05 Departure (Intermission)         0:43   0:43
+06 Industrial Area (Riot)           0:58   0:44
+07 Woods                            1:29   1:20
+08 Enemy Headquarters
+   (Old Nemesis Willy)              0:38   0:37
+09 Reunion with Marian
+   (Ending Theme)                   1:06   -
+10 After the Battle                 0:41   0:40
+11 unused 1                         0:18   -
+12 unused 2                         0:08   -
+
+Total Length                        8:47  15:33
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2013-06-01 Duchemole: Initial release.
+1.01 2013-06-01 Duchemole: some tag fixes
+ (thanks to 2ch-H for his help)
+1.02 2013-06-09 Duchemole: fixed tag layout
+1.03 2013-06-10 Duchemole: Fixed volume

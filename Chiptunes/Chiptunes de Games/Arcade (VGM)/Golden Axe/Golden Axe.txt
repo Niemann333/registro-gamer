@@ -1,0 +1,47 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net                      *
+***********************************************
+Game name:           Golden Axe
+System:              Sega System 16B
+Music hardware:      YM2151
+
+Music author:        Tohru "Master" Nakabayashi
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1989-06
+
+Package created by:  Sonic of 8!
+Package version:     1.10
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Coin                             0:01   -
+02 The Battle (Player Select)       0:34   0:26
+03 Wilderness (Round 1)             2:28   2:28
+04 Battle Field (Boss 1)            2:14   2:14
+05 Theme of Thief (Bonus)           0:51   0:42
+06 Old Map (Map)                    0:38   0:19
+07 Turtle Village 1 (Round 2)       2:11   2:04
+08 The Road of Dead (Round 3)       0:41   0:41
+09 Turtle Village 2 (Round 4)       2:40   2:02
+10 Death Adder the Old Enemy
+    (Boss 2)                        2:34   2:28
+11 Windup (Ending)                  0:20   -
+12 Beat It! (Credits Roll)          0:33   0:32
+13 Battle Axe March (Ranking)       1:07   -
+14 Game Over                        0:03   -
+
+Total Length                       16:56  30:52
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-02-26 Sonic of 8!: Initial release.
+1.10 2012-02-29 Valley Bell: Japanese tags and
+ locations added, added composer thanks to
+ dissident93.
