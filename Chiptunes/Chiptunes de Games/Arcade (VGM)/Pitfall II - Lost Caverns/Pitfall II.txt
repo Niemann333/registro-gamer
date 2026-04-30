@@ -1,0 +1,58 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Pitfall II: Lost Caverns
+System:              Sega System 1
+Music hardware:      2xSN76489A
+
+Music author:        unknown
+Game developer:      Activision / Sega
+Game publisher:      Sega
+Game release date:   1985-02
+
+Package created by:  Sonic of 8!, Wayder
+Package version:     2.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Credit                           0:04   -
+02 Scene 1 (Forest)                 0:19   0:19
+03 Scene 2 (Ice)                    0:27   0:27
+04 Balloon BGM                      0:10   0:10
+05 Scene 3 (Digging Underground)    0:14   0:14
+06 Scene 3 (Trocco)                 0:20   0:20
+07 Scene 4 (The Last Stage)         0:14   0:14
+08 Congratulations                  0:06   -
+09 Miss 1 (Enemy)                   0:03   -
+10 Miss 2 (Trap)                    0:04   -
+11 Game Over                        0:04   -
+12 Name Register                    0:10   0:10
+
+Total Length                        2:15   4:09
+
+
+Notes:
+Juventino Rosas composed the track 3 of Pack, 
+the track is Over the Waves.
+
+
+The arcade game version is the only one which
+says "Pitfall II ~The Lost Caverns~".
+The word "the" is missing in all other releases
+of the game.
+-Valley Bell
+
+Origin of the track names:
+"SEGA Arcade 80's Vol. 2"
+
+
+Package history:
+1.00 2012-01-25 Sonic of 8!: Initial release.
+1.01 2012-02-07 Valley Bell: Corrected game
+ name to include "Lost Caverns".
+2.00 2014-05-15 Wayder: Fixed sound clock on
+ all SN76489A data, added "01 Credit",
+ remade track 03, 08, 09, 10, 11, replace title
+ tags and rename all tracks.

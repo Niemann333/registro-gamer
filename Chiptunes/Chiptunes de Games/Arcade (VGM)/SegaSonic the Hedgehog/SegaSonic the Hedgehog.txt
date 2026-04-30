@@ -1,0 +1,87 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net                      *
+***********************************************
+Game name:           SegaSonic the Hedgehog
+System:              Sega System 32
+Music hardware:      2xYM3438, RF5C68
+
+Music author:        Hiroshi Kawaguchi,
+                      Keitaro Hanada,
+                      Naoki Tokiwa
+Game developer:      Sonic Team, Hitmaker
+Game publisher:      Sega
+Game release date:   1993-06
+
+Package created by:  Valley Bell
+Package version:     1.05
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Quick! Escape!                   0:30   0:29
+02 Run Run Run!                     1:04   0:39
+03 Trap Tower                       1:10   0:49
+04 I'll Get You Yet!                0:34   0:33
+05 Ice & Water                      1:38   1:23
+06 Hot Pursuit                      2:16   1:49
+07 Eggman's Tower                   1:33   1:31
+08 Bomb!                            0:14   -
+09a Level Clear                     0:04   -
+09b Level Clear (with SFX)          0:04   -
+10 All Over - Credits               2:22   -
+
+Total Length                       11:24  18:37
+Total Length (Walkthrough)         13:03  21:39
+
+
+Notes:
+I got the song titles from the SegaSonic the
+Hedgehog OSV on Sonic Retro.
+It misses Eggman's Tower, because it isn't
+accessable in the Service Mode Sound Test.
+I added the game to my m1.xml file in order to
+log the songs.
+
+
+This game was the reason why I added the RF5C68
+chip to the vgm format.
+The YM3438 is actually the same as a YM2612 and
+the RF5C68 is equal to the RF5C164 in Sega CD.
+
+
+Most songs were logged with M1 0.7.9a1 VGM mod
+and each one with MAME 0.136 and 0.140.
+Trap Tower is the oldest one, ripped in July
+2010, all others were ripped in Februrary 2011.
+
+Size reduction:
+1. optvgmrf: 191.91 MB -> 14.40 MB (7.50 %)
+2. vgm_cmp: 14.40 MB -> 3.77 MB (26.16 %)
+Total: 191.91 MB -> 3.77 MB (1.96 %)
+
+By the way: My intial logs had about 334 MB.
+
+
+I never trimmed any pack that was as hard to
+trim as this one.
+That's because the game uses some dynamic
+channel allocation, so the notes are played on
+different channels each loop. And it does this
+for both the FM and PCM chips.
+Sometimes when I've found a good loop point for
+the FM chip, the PCM chip sounded buggy and
+when the PCM chip loop was good, the FM chips
+cut some notes. Very annoying.
+I was glad about the few tracks with a slight
+gap before the loop, because that were the only
+ones that were easy to trim.
+
+Now enjoy listening!
+
+
+Package history:
+1.00 2011-04-04 Valley Bell: Initial release.
+1.01 2012-02-22 Valley Bell: Completed composer
+ names and added Japanese tags.
+1.05 2012-5-16 dissident93: Changed Miyauchi to Kawaguchi (his current name.)
