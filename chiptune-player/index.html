@@ -5,20 +5,13 @@
   <title>Chiptune Player</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #070d07;
-      font-family: monospace;
-      overflow: hidden;
-    }
+    body { background: #070d07; overflow: hidden; }
     #status {
-      font-size: 10px;
-      color: #2a5a2a;
+      font-family: monospace;
+      font-size: 10px; color: #2a5a2a;
       padding: 4px 8px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      letter-spacing: 0.5px;
-      height: 22px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      height: 22px; line-height: 14px;
     }
     #status.playing { color: #39ff14; }
     #status.error   { color: #ff4444; }
@@ -30,10 +23,22 @@
   <div id="status">Inicializando...</div>
 
   <script>
+    // ── Intercepta AudioContext ANTES do bundle ──
+    // Isso nos dá controle de pause/resume sem depender de API interna
+    var _capturedCtx = null;
+    var _OrigAC = window.AudioContext || window.webkitAudioContext;
+    if (_OrigAC) {
+      var _PatchedAC = function() {
+        var ctx = new _OrigAC();
+        _capturedCtx = ctx;
+        return ctx;
+      };
+      _PatchedAC.prototype = _OrigAC.prototype;
+      window.AudioContext = window.webkitAudioContext = _PatchedAC;
+    }
+
     var songUrl     = null;
     var playerReady = false;
-    var paused      = false;
-    var posTimer    = null;
 
     // Lê ?url=
     var params = new URLSearchParams(window.location.search);
@@ -47,7 +52,7 @@
       } catch(e){}
     }
 
-    function stripExt(name) { return name.replace(/\.[^.]+$/, ''); }
+    function stripExt(s) { return s.replace(/\.[^.]+$/, ''); }
 
     function setStatus(msg, cls) {
       var el = document.getElementById('status');
@@ -59,50 +64,6 @@
       return window.ChipPlayer && window.ChipPlayer.sequencer;
     }
 
-    // Tenta vários nomes de API (compatibilidade)
-    function getPos() {
-      var s = seq(); if (!s) return 0;
-      try {
-        if (typeof s.getPositionMs === 'function') return s.getPositionMs();
-        if (typeof s.getPosition   === 'function') return s.getPosition() * 1000;
-      } catch(e){}
-      return 0;
-    }
-
-    function getDur() {
-      var s = seq(); if (!s) return 0;
-      try {
-        if (typeof s.getDurationMs === 'function') return s.getDurationMs();
-        if (typeof s.getDuration   === 'function') return s.getDuration() * 1000;
-      } catch(e){}
-      return 0;
-    }
-
-    function doSeek(ms) {
-      var s = seq(); if (!s) return;
-      try {
-        if (typeof s.seekMs  === 'function') { s.seekMs(ms); return; }
-        if (typeof s.seek    === 'function') { s.seek(ms / 1000); return; }
-      } catch(e){}
-    }
-
-    function doPause() {
-      var s = seq(); if (!s) return;
-      try {
-        if (typeof s.pause       === 'function') s.pause();
-        else if (typeof s.togglePause === 'function') s.togglePause();
-      } catch(e){}
-    }
-
-    function doResume() {
-      var s = seq(); if (!s) return;
-      try {
-        if (typeof s.resume      === 'function') s.resume();
-        else if (typeof s.togglePause === 'function') s.togglePause();
-        else if (typeof s.play   === 'function') s.play();
-      } catch(e){}
-    }
-
     // Recebe comandos do gadget
     window.addEventListener('message', function(e) {
       if (!e.data) return;
@@ -110,70 +71,33 @@
 
       if (d.type === 'play' && d.url) {
         songUrl = d.url;
-        paused = false;
         if (playerReady) startPlay();
       }
       if (d.type === 'pause') {
-        paused = true; doPause();
-        setStatus('Pausado', '');
+        if (_capturedCtx && _capturedCtx.state === 'running') {
+          _capturedCtx.suspend();
+          setStatus('⏸ Pausado', '');
+        }
       }
       if (d.type === 'resume') {
-        paused = false; doResume();
-        setStatus('Tocando...', 'playing');
-      }
-      if (d.type === 'seek' && typeof d.ms === 'number') {
-        doSeek(d.ms);
-      }
-      if (d.type === 'getPosition') {
-        var pos = getPos(), dur = getDur();
-        try {
-          window.parent.postMessage({ type: 'position', pos: pos, dur: dur }, '*');
-        } catch(ex){}
+        if (_capturedCtx && _capturedCtx.state === 'suspended') {
+          _capturedCtx.resume();
+          var name = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
+          setStatus('♪ ' + name, 'playing');
+        }
       }
     });
 
-    // Polling de posição + detecção de fim
-    var lastPos = -1;
-    var endedSent = false;
-
-    function startPoller() {
-      if (posTimer) clearInterval(posTimer);
-      endedSent = false; lastPos = -1;
-      posTimer = setInterval(function() {
-        if (paused || !playerReady) return;
-        var pos = getPos(), dur = getDur();
-        // Envia posição pro gadget
-        try {
-          window.parent.postMessage({ type: 'position', pos: pos, dur: dur }, '*');
-        } catch(ex){}
-        // Detecta fim: posição parou de avançar perto do fim
-        if (dur > 3000 && pos > 0) {
-          if (pos === lastPos && pos > dur * 0.9 && !endedSent) {
-            endedSent = true;
-            setTimeout(function() {
-              try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(ex){}
-            }, 800);
-          }
-          // Segunda estratégia: percentual
-          if (!endedSent && pos >= dur - 600 && dur > 3000) {
-            endedSent = true;
-            setTimeout(function() {
-              try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(ex){}
-            }, 800);
-          }
-        }
-        lastPos = pos;
-      }, 500);
-    }
-
     function startPlay() {
       if (!songUrl || !seq()) return;
+      // Garante que o AudioContext está rodando
+      if (_capturedCtx && _capturedCtx.state === 'suspended') {
+        _capturedCtx.resume();
+      }
       var name = stripExt(decodeURIComponent(songUrl.split('/').pop()));
       setStatus('♪ ' + name, 'playing');
-      paused = false; endedSent = false;
       try {
         seq().playSonglist([songUrl]);
-        startPoller();
       } catch(ex) {
         setStatus('Erro: ' + ex.message, 'error');
       }
