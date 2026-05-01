@@ -136,10 +136,15 @@ function initSequencer(cb){
   if(sequencer){ cb(); return; }
   dbg('Carregando main.js (mesmo dominio)...');
 
+  // Força o webpack a usar o caminho correto do repositório
+  // antes de carregar o main.js
+  window.__webpack_public_path__ = '/registro-gamer/static/js/';
+
   var s = document.createElement('script');
-  // main.0a47.js está na raiz do repositório = raiz do GitHub Pages
   s.src = '/registro-gamer/static/js/main.0a47.js';
   s.onload = function(){
+    // Corrige o publicPath dentro do bundle após carregar
+    if(window.__webpack_require__) window.__webpack_require__.p = '/registro-gamer/static/js/';
     dbg('main.js carregado! Aguardando ChipPlayer...');
     var tries=0;
     function check(){
