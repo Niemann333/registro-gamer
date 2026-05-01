@@ -1,4 +1,4 @@
-// Service Worker — redireciona /static/ para /Chiptune-Player/static/
+// Service Worker — redireciona /static/ para /registro-gamer/chiptune-player/static/
 // Necessário porque o bundle tem publicPath baked-in como /static/js/
 
 self.addEventListener('install', function(event) {
@@ -12,14 +12,11 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
-  // Intercepta chunks do webpack buscando no path errado
   if (url.match(/niemann333\.github\.io\/static\//)) {
     var newUrl = url.replace(
       'niemann333.github.io/static/',
-      'niemann333.github.io/Chiptune-Player/static/'
+      'niemann333.github.io/registro-gamer/chiptune-player/static/'
     );
     event.respondWith(fetch(newUrl));
   }
-  // Soundfont e demais recursos: deixa passar normalmente
-  // VGZ não precisa de soundfont — erro de soundfont é não-bloqueante
 });
