@@ -1,0 +1,32 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           After Burner II
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Hiroshi Kawaguchi,
+                               Noriyuki Iwadare
+Publisher:           Sega / Denpa Shinbunsha
+Package created by:  2ch-H
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Maximum Power                       0:13   0:10
+Final Take Off                      3:42   3:15
+Red Out                             1:38   1:34
+Super Stripe                        0:58   0:42
+After Burner                        5:02   4:56
+City 202                            0:24   0:22
+Final Take Off (No Loop)            3:53   -
+After Burner (No Loop)              5:02   0:05
+
+Notes:
+1.01: Full looping on "Final Take Off" and
+"After Burner". Added arranger credit (Iwadare)
+Packed by DJSW.

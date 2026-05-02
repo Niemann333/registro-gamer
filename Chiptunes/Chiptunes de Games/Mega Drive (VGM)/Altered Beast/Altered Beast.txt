@@ -1,0 +1,34 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Altered Beast / Juuouki
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     <unknown>
+Publisher:           Sega
+Package created by:  2ch-H
+Package version:     0.95
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Rise from Your Grave (Round 1)      2:08   1:45
+Altered Beast (Transformation)      1:18   1:17
+Gaum-Hermer (Boss Theme)            0:45   0:38
+Crystal's Theme (Round Clear)       0:11   -
+Closed in Upon Me (Round 2)         1:17   1:04
+I'll be Back (Round 3)              1:34   1:20
+Ending Theme                        2:24   -
+Game Over, Name Entry               0:39   -
+Voice: Rise From Your Grave         0:02   -
+Voice: Power Up!                    0:01   -
+Voice: Wolf                         0:03   -
+Voice: Welcome to Your Doom         0:02   -
+Voice: Hahahahaha                   0:02   -
+
+Notes:
+-none-
