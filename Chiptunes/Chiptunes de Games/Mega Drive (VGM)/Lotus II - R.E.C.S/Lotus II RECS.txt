@@ -1,0 +1,36 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Lotus II: R.E.C.S.
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Patrick Phelan, Sound Images
+Publisher:           Electronic Arts / Gremlin
+Package created by:  2ch-N
+Package version:     1.10
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Main Theme                          2:39   -
+Breathless (BGM 1)                  2:51   2:43
+BGM 2                               2:55   2:49
+Shamrip (BGM 3)                     2:13   2:12
+Results                             0:37   -
+Game Over                           0:07   -
+Miami Ice (Unused)                  3:21   2:48
+
+
+Notes:
+
+Tagged and packed by DJSW.
+
+Updates:
+
+1.10: Added the name of the original composer and
+identified the tracks based on the Amiga version.
+- Yawackhary
