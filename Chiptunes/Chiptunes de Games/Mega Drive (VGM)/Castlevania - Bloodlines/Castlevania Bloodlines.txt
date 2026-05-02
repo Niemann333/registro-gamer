@@ -1,0 +1,68 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Castlevania: Bloodlines /
+                               Vampire Killer /
+                Castlevania: The New Generation
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Michiru Yamane
+Publisher:           Konami
+Package created by:  DJ Squarewave
+Package version:     1.02
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Konami Logo                         0:04   -
+The Beating in the Darkness
+                      (Title Theme) 0:12   -
+A Vision of Dark Secrets
+                    (Opening Theme) 0:30   0:24
+Bonds of Brave Men
+              (Character Selection) 0:17   0:16
+Arduous Journey (Map Theme)         0:11   -
+Reincarnated Soul,
+              Part 1 (Introduction) 0:13   -
+Reincarnated Soul, Part 2 (Stage 1) 0:57   0:47
+The Sinking Old Sanctuary (Stage 2) 1:04   0:48
+The Discolored Wall (Stage 3)       1:04   0:53
+Beginning (Classic Tune 1)          0:50   0:48
+Bloody Tears (Classic Tune 2)       0:32   0:31
+Vampire Killer (Classic Tune 3)     0:33   0:29
+After the Good Fight (Game Over)    0:06   -
+Mysterious Curse (Password)         0:29   0:28
+Iron-Blue Intention (Stage 4)       1:02   0:47
+The Prayer of a Tragic Queen
+                          (Stage 5) 0:51   0:44
+Calling From Heaven (Stage 6)       1:17   1:05
+Pressure (Invincibility)            0:13   0:11
+Messenger From Devil
+                  (Area Boss Theme) 0:16   0:13
+Nothing to Lose (Stage 1D)          0:33   0:32
+The Six Servants of the Devil
+                 (Stage Boss Theme) 0:40   0:26
+Theme of Simon (Classic Tune 4)     1:13   0:58
+The Vampire's Stomach
+                 (Final Boss Theme) 0:37   0:31
+Stage Clear                         0:09   -
+Orb                                 0:02   -
+Energy Orb                          0:01   0:01
+Dracula Orb                         0:02   -
+All Clear                           0:09   -
+Together Forever (Ending Theme)     0:58   0:57
+Requiem for the Nameless Victims
+                       (Staff Roll) 2:29   -
+Death                               0:03   -
+
+Notes:
+1.02: General cleanups.
+
+Tags cobbled together from the GYM set and the
+official OST album. Supah-props to Dark Pulse
+for sourcing the OST for me -- I KNEW these
+tunes had to have names. :) Enjoy!

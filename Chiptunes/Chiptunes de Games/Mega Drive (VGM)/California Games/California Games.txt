@@ -1,0 +1,29 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           California Games
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     <unknown>
+Publisher:           Epyx / Novotrade / Sega
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         1:17   1:17
+Half Pipe                           1:35   1:35
+Foot Bag                            1:18   1:18
+Surfing                             1:15   1:15
+Skating                             1:41   1:41
+BMX                                 1:33   1:33
+High Score                          0:28   0:28
+Crashing                            0:24   0:24
+
+Notes:
+-none-

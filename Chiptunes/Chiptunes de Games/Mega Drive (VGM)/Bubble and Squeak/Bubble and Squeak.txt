@@ -1,0 +1,32 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Bubble and Squeak
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Allister Brimble
+Publisher:           Sunsoft
+Package created by:  2ch-N
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening & Ending Theme              0:52   0:38
+The Stardust Caverns                1:35   1:23
+The Neverglades                     1:56   1:30
+The Diamond Foundry                 2:09   1:42
+The Sandcastle Desert               1:36   1:10
+Neon City                           1:56   1:52
+Lagoon                              1:37   1:26
+Bonus Level                         0:24   0:20
+
+Notes:
+Composer name taken from the Amiga version.
+
+Updates:
+1.00 - Added composer name.
