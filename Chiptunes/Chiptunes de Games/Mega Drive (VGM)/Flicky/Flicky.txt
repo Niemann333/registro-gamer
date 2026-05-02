@@ -1,0 +1,38 @@
+***********************************************
+* Mega Drive VGM music package                *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Flicky
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     T's Music
+Publisher:           Sega
+Package created by:  DJ Squarewave
+                     Kyu Sawamura / Jun Nagai
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         0:14   -
+Main BGM                            0:18   0:13
+Round Clear                         0:03   -
+Bonus Round                         0:06   0:06
+Player Down                         0:02   -
+Staff Roll                          0:44   0:42
+Game Over                           0:02   -
+
+Total Length                        1:29   2:31
+
+Notes:
+-none-
+
+Updates
+1.01: Added Staff Roll music
+-kyusawamura/jun-n
+
+1.00: Added music author (T's Music)
+-dissident93
