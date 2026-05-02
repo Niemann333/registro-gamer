@@ -1,0 +1,39 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Cool Spot
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Tommy Tallarico
+Publisher:           Virgin Interactive
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Wipeout Tune                        0:34   0:34
+Beach Music                         1:22   1:21
+Jazzy Tune                          0:59   0:58
+Wall Tune                           1:26   1:25
+Groovie Tune                        1:00   1:00
+Play da Blues                       0:47   0:46
+Western Tune                        1:25   1:25
+Parade Tune                         1:03   1:03
+Rave Dancetune                      1:19   0:57
+7 Cool Points                       0:01   -
+Replenish                           0:02   -
+1-Up                                0:03   -
+Getting Letter                      0:03   -
+Flag Rising                         0:03   -
+Spot Fall Over                      0:04   -
+Game Over Tune                      0:05   -
+
+Notes:
+1.01: General cleanups.
+
+Track titles lifted from the sound test.

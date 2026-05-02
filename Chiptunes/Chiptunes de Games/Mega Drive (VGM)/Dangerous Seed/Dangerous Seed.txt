@@ -1,0 +1,47 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Dangerous Seed
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Yoshiki Nishimura,
+                     Akihito Hayashi,
+                     Yoko Shimokawa, 
+                     Totsukurzwell
+Publisher:           Namcot
+Package created by:  DJ Squarewave
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Departure                           0:13   -
+Stage Intro                         0:49   0:49
+Stage 1: 1st Tube                   0:49   0:49
+Stage 1 Boss: Triple Eye            0:38   0:29
+Stage 2: 2nd Tube                   0:33   0:33
+Stage 2 Boss: Strike Ants           0:21   0:20
+Stage 3: 3rd Tube                   0:37   0:37
+Stage 3 Boss: Roller Snail          0:53   0:22
+Stage 4: 4th Tube                   0:27   0:27
+Stage 4 Boss: Hunter Moth           0:27   0:26
+Stage 5: Mars                       0:33   0:33
+Stage 5 Boss: Multi-Squid           0:49   0:47
+Stage 6: Jupiter                    0:37   0:30
+Stage 6 Boss: Shark Mouth           0:21   0:20
+Stage 7: Uranus                     0:25   0:24
+Stage 7 Boss: Twin Claw             0:27   0:25
+Ending Theme                        0:40   0:40
+Count Down                          0:17   0:16
+Game Over                           0:03   -
+
+Notes:
+Anyone know the composer's real name?
+
+Updates
+1.05: Slight composer tag edits
+(Totsukurzwell is still unknown) - dissident93

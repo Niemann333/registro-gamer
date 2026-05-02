@@ -1,0 +1,53 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Comix Zone
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Howard Drossin
+Publisher:           Sega
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Sega Logo                           0:12   -
+Title Screen                        0:19   -
+Options (Into the Zone)             1:40   1:24
+Introduction                        0:37   -
+Episode 1, Page 1-1                 1:59   1:58
+Episode 1, Page 1-2 (Seen it for Days)
+                                    2:05   2:04
+Episode 1, Page 2-1 (Feed My Disease)
+                                    1:23   1:23
+Episode 1, Page 2-2                 1:25   1:23
+Episode 2, Page 1-1                 1:39   1:39
+Episode 2, Page 1-2                 0:51   0:37
+Episode 2, Page 1-3 (Last to Follow)
+                                    1:14   1:06
+Episode 2, Page 2-1                 1:33   1:33
+Episode 2, Page 2-2 (10,000 Knives) 1:06   1:00
+Episode 3, Page 1-1                 1:06   1:02
+Episode 3, Page 1-2                 1:01   0:57
+Episode 3, Page 1-3                 1:29   1:29
+Episode 3, Page 2-1                 2:20   2:19
+Episode 3, Page 2-2                 2:22   2:19
+Episode 3, Page 2-3                 1:13   0:28
+Boss Theme (Woe is the World)       0:35   0:35
+Battle With Mortus                  1:40   1:37
+Ending Theme                        0:42   0:28
+Results                             0:47   0:46
+Staff Roll                          1:30   -
+Game Over                           0:07   -
+
+Notes:
+A few of the songs took some ROM hacking to get
+to play fully -- enjoy it, everyone!
+
+"Seen it for Days" is also used during the
+"burning page" segment in Episode 2, Page 2.
