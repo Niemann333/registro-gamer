@@ -1,0 +1,32 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Top Gear 2
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:    Ashley Bennet, Paul Bennet,
+                    Neil Biggin, Patrick Phelan
+Publisher:          Vic Tokai / Kemco / Gremlin
+Package created by:  2ch-N
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         0:52   0:44
+Canterbury Plains                   2:05   1:59
+Ayers Rock                          2:34   2:31
+Auckland                            3:18   -
+
+Notes:
+Tagged and packed by DJSW.
+
+Ashley Bennet, Paul Bennet, and Patrick Phelan
+did the origianl SNES music. Neil Biggin did
+the MD conversion of the tunes. The title theme
+is not present in the SNES version so is
+credited to only Biggin.

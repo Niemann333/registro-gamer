@@ -1,0 +1,35 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           ToeJam & Earl
+System:              Sega Mega Drive
+Music hardware:      YM2612
+Complete music dump: Yes
+
+Music author:        John Baker
+Game developer:      Johnson Voorsanger Productions
+Game publisher:      Sega
+Game release date:   1992-03-13 (J) / 1991 (W)
+
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+ToeJam Jammin'                      2:00   2:00
+Big Earl Bump                       1:56   1:55
+Rapmaster Rocket Racket             1:51   1:51
+Funkotronic Beat                    1:43   1:43
+Alien Break Down                    1:51   1:51
+ToeJam Slowjam                      2:03   2:03
+Elevator Beats                      0:18   0:18
+
+Notes:
+-
+
+Package history:
+1.01 2022-01-01 andlabs: Fixed txt file for
+ vgmrips.
