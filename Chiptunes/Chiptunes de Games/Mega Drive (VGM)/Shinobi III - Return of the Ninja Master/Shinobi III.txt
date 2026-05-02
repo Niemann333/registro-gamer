@@ -1,0 +1,148 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Shinobi III: Return of the
+                     Ninja Master /
+                     The Super Shinobi II
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Morihiko Akiyama,
+                     Hirofumi Murasaki,
+                     Masayuki Nagao
+Publisher:           Sega
+Package created by:  CRV
+Package version:     1.02
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+01 He Runs                          2:33   2:28
+02 Ninja Soul                       2:11   2:07
+03 Shadows                          1:13   1:04
+04 Hassou!                          0:44   0:41
+05 Inner Darkside                   2:27   2:21
+06 Shinobi Walk                     1:41   1:36
+07 Rush and Beat                    1:19   1:10
+08 Storm Wind                       0:10   -
+09 Round Clear                      0:05   -
+10 Wabi                             0:05   -
+11 Sabi                             0:05   -
+12 Shinobi                          0:55   -
+13 Getufu                           0:09   0:09
+14 Sakura                           1:27   -
+15 Idaten                           1:18   1:10
+16 Game Over                        0:05   -
+17 Japonesque                       1:13   1:04
+18 Solitary                         0:50   0:49
+19 Izayoi                           1:37   1:23
+20 My Dear D                        0:56   0:50
+21 Stage Clear                      0:03   -
+22 Trap Boogie                      1:01   1:00
+23 Mandara                          1:05   0:55
+24 Shadow Master                    1:04   1:00
+25 Ground Zero                      1:31   0:40
+26 Whirlwind                        0:57   0:45
+27 Hassou! (Beta)                   0:44   0:41
+28 Sakura (Beta)                    2:07   -
+29 Mandara (Beta)                   1:15   0:55
+30 Ground Zero (Beta)               1:36   0:38
+31 Ogiman Z (Beta)                  0:56   0:45
+
+Total Length                       33:20  57:29
+
+Notes:
+1.02: Added songs from beta version.
+Here you will find the songs from the final
+version, as well as a few from the last beta
+version, from 1992.
+
+The beta version of the game featured poorly
+translated intro text, as well as a different
+song list. There are a lot of translation
+improvements between the two versions of the
+game.
+
+The following notes refer to the beta version,
+ripped by vampirefrog:
+
+I used Fusion 3.64 for logging, vgmlpfnd to
+find the loops, and on many of the songs the
+loops found were 5x longer, so I divided the
+number of samples in the loop length by 5 and
+got the proper loop length.
+
+Here are the corresponding songs in the sound
+test:
+
+1992 Beta             Final
+-----------------------------------------------
+01: He Runs           He Runs
+02: Ninja Soul        Ninja Soul
+03: Shadow's          Shadows
+04: Hassou!           Hassou!
+05: Inner Darkside    Inner Darkside
+07: Shinobi Walk      Shinobi Walk
+08: Rush & Beat'em    Rush And Beat
+09: Before Storm      Storm Wind
+10: Round Clear       Round Clear
+11: Wabi              Wabi
+12: Sabi              Sabi
+13: Getsufu           Shinobi
+14: Ju Goya           Getufu
+15: Sakura            Sakura
+16: Idaten            Idaten
+17: Game Over         Game Over
+18: Japonesque        Japonesque
+19: Solitaly          Solitary
+20: Izayoi            Izayoi
+21: My Dear D         My Dear D
+22: Stage Clear       Stage Clear
+23: Trap Boggie       Trap Boogie
+24: Uma               (not ripped)
+25: Mandara           Mandara
+26: Jommar Mutado     Shadow Master
+27: Ground Zero       Ground Zero
+28: Ogiman Z          Whirlwind
+
+Here is a transcription of the intro text,
+typos and all:
+
+THE NINJA WHO EXISTS ONLY IN THE
+SHADOW AS THE SECRET AGENCY.
+FOR LONG CENTURY  WORLD WAS BROKEN
+APART BY THE TWO BIG NINJA PARTIES.
+ONE WAS THE EVIL NINJA AND ANOTHER
+WAS THE OBORO NINJA STRUGGLE TO SAVE
+THE WORLD AGAINST THAT.
+
+TWO YEARS AGO JOE MUSASHI OF OBORO
+PARTY KILLED MASKED NINJA THE
+COMMANDER OF THE HUGE DARK PARTY
+NEO ZEED.
+EVERYBODY THOUGHT THE WORLD WAS NOW
+IN PEACE. BUT IT WAS NOT A TRUTH.
+MUSKED NINJA WAS AN ONLY DUMMY AND
+THE REAL BEHIND-THE-SCENE MANIPURAT
+-OR WAS THE SHADOW MASTER!
+
+The sound test also had a sound calld 'Uma',
+but that's just the sound of horse feet, so
+I removed that.
+
+There are small differences between a few of
+the songs, between versions. Thanks to
+ValleyBell for pointing the songs out.
+
+External links:
+Tomoyuki Ito interview:
+	http://goo.gl/zhBVqy
+16 Bit Shinobi Shrine:
+	http://goo.gl/RkKBUe
+-vampirefrog
+
+1.01: Added some song credits based on what
+Nagao himself told me. -dissident93
