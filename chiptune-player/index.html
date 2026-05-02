@@ -20,24 +20,78 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    // ── Intercepta AudioContext ANTES do bundle ──
-    var _ctx = null;
-    var _ctxStartTime = 0; // audioCtx.currentTime no momento que começou a tocar
+    var _ctx      = null;
+    var _analyser = null;
+    var _analyserPatched = false;
+    var _ctxStartTime    = 0;
+    var _endedSent       = false;
+    var _silenceCount    = 0;
+    var _SILENCE_NEEDED  = 4;   // 4 × 500ms = 2s de silêncio → fim da música
+    var _SILENCE_RMS     = 0.0005; // limiar de amplitude
+
+    // ── 1. Intercepta AudioContext ──
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Patched = function() {
         _ctx = new _OrigAC();
+        // Cria AnalyserNode imediatamente após o contexto existir
+        _setupAnalyser();
         return _ctx;
       };
       _Patched.prototype = _OrigAC.prototype;
       window.AudioContext = window.webkitAudioContext = _Patched;
     }
 
+    function _setupAnalyser() {
+      if (!_ctx || _analyser) return;
+      _analyser = _ctx.createAnalyser();
+      _analyser.fftSize = 2048;
+
+      // ── 2. Intercepta connect() para rotear TUDO pelo AnalyserNode ──
+      if (!_analyserPatched) {
+        _analyserPatched = true;
+        var _OrigConnect = AudioNode.prototype.connect;
+        // Conecta o analyser ao destino final (só uma vez)
+        var _analyserToDestinationDone = false;
+
+        AudioNode.prototype.connect = function(dest, outIdx, inIdx) {
+          // Se alguém tenta conectar ao destino final do contexto
+          if (_ctx && dest === _ctx.destination) {
+            // Roteia pelo analyser primeiro
+            if (!_analyserToDestinationDone) {
+              _analyserToDestinationDone = true;
+              _OrigConnect.call(_analyser, _ctx.destination);
+            }
+            // Conecta este nó ao analyser em vez do destino direto
+            return _OrigConnect.call(this, _analyser, outIdx, inIdx);
+          }
+          return _OrigConnect.apply(this, arguments);
+        };
+      }
+    }
+
+    // ── 3. Detecção de silêncio via AnalyserNode ──
+    function checkSilence() {
+      if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
+      var data = new Float32Array(_analyser.fftSize);
+      _analyser.getFloatTimeDomainData(data);
+      var rms = 0;
+      for (var i = 0; i < data.length; i++) rms += data[i] * data[i];
+      rms = Math.sqrt(rms / data.length);
+      if (rms < _SILENCE_RMS) {
+        _silenceCount++;
+        if (_silenceCount >= _SILENCE_NEEDED) {
+          _endedSent = true;
+          try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e){}
+        }
+      } else {
+        _silenceCount = 0;
+      }
+    }
+
     var songUrl     = null;
     var playerReady = false;
     var posTimer    = null;
-    var lastCtxTime = -1;
-    var stoppedTicks = 0;
 
     // Lê ?url=
     var params = new URLSearchParams(window.location.search);
@@ -58,45 +112,28 @@
     }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
-    // Poller: usa audioCtx.currentTime (para quando suspend(), retoma no resume())
+    // ── Polling: posição + detecção de silêncio ──
     function startPoller() {
       if (posTimer) clearInterval(posTimer);
       _ctxStartTime = _ctx ? _ctx.currentTime : 0;
-      lastCtxTime = -1;
-      stoppedTicks = 0;
+      _endedSent    = false;
+      _silenceCount = 0;
 
       posTimer = setInterval(function() {
         if (!_ctx) return;
-        var pos = _ctx.currentTime - _ctxStartTime; // segundos desde que tocou
-        if (pos < 0) pos = 0;
-
-        // Envia posição pro gadget
+        var pos = Math.max(0, _ctx.currentTime - _ctxStartTime);
         try {
           window.parent.postMessage({
             type: 'position',
             posSec: pos,
-            state: _ctx.state  // 'running' | 'suspended'
+            state: _ctx.state
           }, '*');
         } catch(e){}
-
-        // Detecta parada natural do engine (song acabou sem loop)
-        // audioCtx.currentTime para de avançar quando o engine para
-        if (_ctx.state === 'running') {
-          if (_ctx.currentTime === lastCtxTime) {
-            stoppedTicks++;
-            if (stoppedTicks >= 4) { // ~2s parado
-              clearInterval(posTimer);
-              try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e){}
-            }
-          } else {
-            stoppedTicks = 0;
-          }
-          lastCtxTime = _ctx.currentTime;
-        }
+        checkSilence();
       }, 500);
     }
 
-    // Recebe comandos do gadget
+    // ── Recebe comandos do gadget ──
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
@@ -118,18 +155,19 @@
     function startPlay() {
       if (!songUrl || !seq()) return;
       if (_ctx && _ctx.state === 'suspended') _ctx.resume();
+      _endedSent = false;
+      _silenceCount = 0;
       var name = stripExt(decodeURIComponent(songUrl.split('/').pop()));
       setStatus('♪ ' + name, 'playing');
       try {
         seq().playSonglist([songUrl]);
-        // Dá um tick pro engine iniciar antes de capturar o currentTime
-        setTimeout(startPoller, 200);
+        setTimeout(startPoller, 300);
       } catch(ex) {
         setStatus('Erro: ' + ex.message, 'error');
       }
     }
 
-    // SW + bundle
+    // ── SW + bundle ──
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
@@ -147,8 +185,7 @@
 
     function loadBundle() {
       var s = document.createElement('script');
-      var base = location.pathname.replace(/\/[^/]*$/, '');
-      s.src = base + '/static/js/main.0a47.js';
+      s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.0a47.js';
       s.onload = function() {
         var tries = 0;
         var iv = setInterval(function() {
@@ -156,7 +193,7 @@
           if (seq()) {
             clearInterval(iv);
             playerReady = true;
-            try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(ex){}
+            try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e){}
             if (songUrl) startPlay();
             else setStatus('Pronto.', '');
           } else if (tries > 100) {
