@@ -1,0 +1,62 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           Ghouls'n Ghosts (W) /
+                     Daimakaimura (J)
+System:              Sega Mega Drive
+Music hardware:      YM2612, SEGA VDP PSG
+Complete music dump: Yes
+
+Music author:        Tamayo Kawamoto
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1989-08-03 (J) / 1989 (W)
+
+Package created by:  LucasVB (DukeNukem)
+Package version:     1.01
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+Main Theme                          0:12   -
+Menu                                0:01   -
+Options                             1:46   -
+Level Start                         0:03   -
+Level 1, The Hill of Torture        1:35   1:20
+Level 1 Boss (Shielder)             0:32   0:27
+Level 2, The Village of Decay       0:57   0:56
+                    and Destruction
+Level 2 Boss (Cerberus)             0:47   0:20
+Level 3, Baron Rankle's Tower       1:16   1:16
+Level 3 Boss (Gassuto)              0:44   0:44
+Level 4, The Crystal Forest         2:01   1:13
+Level 4 Boss (Ohme)                 0:27   0:27
+Level 5, The Castle                 0:59   0:42
+Level 5 Boss (Beelzebub)            0:27   0:27
+Arthur Must Return                  0:26   -
+Final Boss (Loki)                   1:41   1:25
+Ending                              4:08   -
+Time Running Out                    0:38   0:31
+Death                               0:02   -
+Continue                            0:12   -
+Game Over                           0:05   -
+Unused (Name Entry, 2nd or Below)   1:22   -
+Unused (Name Entry Complete, 1st)   0:05   -
+Unused (Name Entry Complete,
+                      2nd or Below) 0:05   -
+
+Notes:
+Level names from the European manual. Thanks to
+Bock from smspower.org.
+
+All tracks from the arcade version are present,
+but several are unused. The Options theme is
+actually the 1st place name entry tune.
+
+- Duke
+
+Package history:
+1.01 2022-01-01 andlabs: Fixed txt file for
+ vgmrips.

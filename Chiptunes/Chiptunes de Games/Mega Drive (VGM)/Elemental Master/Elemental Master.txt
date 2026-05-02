@@ -1,0 +1,55 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Elemental Master
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Toshiharu Yamanishi
+Publisher:           Tecnosoft / Renovation
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Great Spirit Overture
+                    (Opening Theme) 0:32   -
+Cursed Destiny (Visual Scene 1)     2:01   -
+Temptation of the Devil
+                     (Stage Select) 0:33   0:33
+Dance of Flame (Stage 1)            1:09   0:53
+Avatar of Flame (Stage 1 Boss)      0:42   0:41
+Spirit of Light (Visual Scene 2)    0:19   0:19
+Like the Wind (Stage 2)             2:16   2:04
+Roar of the Monster (Stage 2 Boss)  0:30   0:24
+Until the End of the Earth
+                          (Stage 3) 2:10   1:49
+Evil Beat (Stage 3 Boss)            0:37   0:37
+Blood-Stained Lake (Stage 4)        1:23   1:22
+Specter Living in the Water
+                     (Stage 4 Boss) 0:33   0:33
+Terror of the Glacier (Stage 5)     1:06   0:42
+Calling on the Dark Dragon King
+                     (Stage 5 Boss) 0:53   0:52
+Ring of Light (Visual Scene 3)      0:22   0:22
+Den of Evil (Stage 6)               0:31   0:31
+Suspicious Beauty (Stage 6 Boss)    0:42   0:24
+Shudder of Darkness (Stage 7)       0:29   0:28
+Fate (Stage 7 Boss)                 0:54   0:48
+King Garia's Revival (Final Boss)   0:50   0:50
+Sorrowful Requiem (Ending Theme)    1:15   -
+Setting Out (Staff Roll)            3:53   -
+Ghost Story of Hell (Continue)      0:20   -
+Like a Nightmare (Game Over)        0:05   -
+
+Notes:
+1.01: Track numbers, Japanese titles, full
+release date.
+
+Tecnosoft produced some of the most amazing
+soundtracks on the MD, and this is a great
+example of that. Good stuff here. :) -DJSW
