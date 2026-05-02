@@ -1,0 +1,41 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Vapor Trail / Kuuga
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Hiroaki Yoshida,
+                     Tatsuya Kiuchi
+Publisher:           Data East / Riot
+                                   / Renovation
+Package created by:  2ch-H
+Package version:     1.06
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Nightmare ~Lagnarok~                0:28   0:14
+Voice: Vapor Trail                  0:02   -
+Take Off                            0:29   -
+Vapor Trail                         1:35   1:19
+In the Dark                         0:53   0:51
+Mission Accomplished                0:13   -
+Bloody Road                         2:03   1:34
+Threat of Under Sea                 0:25   0:20
+A Long Way Ahead                    0:13   -
+Death of a Hero                     0:07   -
+Freedom Fighter                     0:54   0:26
+The Glory Dreamt Of                 0:30   -
+Staff Roll                          1:45   -
+
+Notes:
+Packed by DJSW.
+
+Updates
+1.06: Freedom Fighter looped too soon. Fixed. - 2ch-H
+
+1.05: Updated composer tags. - dissident93

@@ -1,0 +1,53 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Wiz 'n' Liz
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Matt Furniss
+Publisher:           Psygnosis
+Package created by:  2ch-N
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         1:08   0:58
+Stage Select                        0:04   -
+Home                                1:30   1:13
+Lunar Land                          1:50   1:23
+Grass Land                          1:11   0:54
+Desert Land                         1:38   1:30
+Wood Land                           1:07   1:04
+Mine Land                           1:07   1:04
+Temple Land                         1:26   1:17
+Snow Land                           1:10   1:04
+Dead Land                           0:46   0:41
+Stage Clear                         0:03   -
+Time Up                             0:04   -
+Player Down                         0:04   -
+Color of Magic                      0:32   0:15
+The Freaky Flower                   0:35   0:26
+Snake Eyes                          0:27   0:26
+The Creepy Clock                    0:40   0:26
+The Savage Pumpkin                  0:29   0:20
+The Evil Oak                        0:31   0:15
+The Gate Keeper                     0:40   0:38
+The Deadly Dragon                   0:46   0:31
+Boss Clear 1                        0:08   -
+Boss Clear 2                        1:01   0:31
+Ending                              1:54   1:44
+Name Entry                          2:17   1:46
+Unknown Track 1                     0:05   -
+Unknown Track 2                     0:05   -
+Unknown Track 3                     0:07   -
+
+Notes:
+Tagged and packed by DJSW.
+
+Updates
+1.05: Updated composer tags. - dissident93

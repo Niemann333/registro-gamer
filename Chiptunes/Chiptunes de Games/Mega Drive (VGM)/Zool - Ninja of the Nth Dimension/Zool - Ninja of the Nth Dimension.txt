@@ -1,0 +1,40 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:   Zool: Ninja of the "Nth" Dimension
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Matt Furniss
+Publisher:           Gremin / Electronic Arts
+                                      / Gametek
+Package created by:  DJ Squarewave
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         2:10   2:08
+Level Start                         0:40   -
+Let's Go                            0:02   -
+Worlds 1, 5, & 7
+           (Sweets ~ Toys ~ Island) 1:06   1:06
+Boss Theme                          0:45   0:38
+Level Complete                      0:03   -
+Worlds 2 & 6 (Music ~ Carnival)     3:20   3:04
+World 3 (Fruits and Vegetables)
+                       - Staff Roll 1:38   1:32
+World 4 (Tools)                     1:30   1:24
+Game Over                           0:03   -
+Unknown (Sound Code 74)             2:01   1:55
+
+Notes:
+Tagged once again by MisterHarlequin.
+
+Updates
+1.05: Matt Furniss composed everything sans the
+Title Theme which was adapted from the Amiga 
+version by Patrick Phelan. -dissident93

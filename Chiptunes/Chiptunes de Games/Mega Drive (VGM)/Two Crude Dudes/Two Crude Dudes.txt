@@ -1,0 +1,43 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Two Crude Dudes /
+                                   Crude Buster
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Azusa Hara, (org.)
+                     Tatsuya Kinouchi, (org.)
+                     Hiroaki Yoshida, (org.)
+                     Hitoshi Sakimoto (arr.)
+Publisher:           Data East
+Package created by:  CRV
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Intro                               1:09   -
+Crude Buster -Lifeline of New York- 0:54   0:35
+Funky Monsters                      0:42   0:31
+Defeated Guys                       0:06   -
+Take a Break                        0:10   0:10
+Like a Hurricane                    1:17   1:17
+Fallout of Christmas                0:36   0:33
+The Wild Desire                     1:19   1:19
+Kids in Battle                      0:43   0:42
+Justice Has Won                     0:56   0:33
+The Crude is Down                   0:06   -
+
+Notes:
+1.01: Added song names from the OST.
+
+Azusa Hara, Tatsuya Kinouchi, and Hiroaki
+Yoshida composed the original arcade version.
+Hitoshi Sakimoto did the arrangement, sound
+effects, and the sound driver for the Mega
+Drive/Genesis version. ISCO developed the
+Mega Drive/Genesis port for Data East.
