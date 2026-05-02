@@ -1,0 +1,37 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:       Tom Mason's Dinosaurs for Hire
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Paul Gadbois, David Delia
+Publisher:           Sega interActive / Sega
+Package created by:  DJ Squarewave
+Package version:     0.99
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         1:11   0:58
+Stage BGM 1                         1:44   1:44
+Boss Theme                          1:27   1:19
+Victory                             0:12   -
+Interlude                           0:26   0:25
+Stage BGM 2                         1:18   1:17
+Game Over                           0:11   -
+Unknown (Sound Test 02)             1:18   1:17
+Unknown (Sound Test 03)             1:28   1:28
+Unknown (Sound Test 08)             1:37   1:36
+Unknown (Sound Test 09)             1:07   1:07
+
+Notes:
+Tagged by MisterHarlequin -- what's there,
+anyway. -DJSW
+
+Updates
+0.99: Added David Delia as co-composer
+-dissident93
