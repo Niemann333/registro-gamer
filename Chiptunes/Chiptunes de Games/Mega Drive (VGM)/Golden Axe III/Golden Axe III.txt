@@ -1,0 +1,54 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Golden Axe III
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Naofumi Hataya,
+                     Tatsuyuki Maeda
+                     Haruyo Oguro
+                     Tomonori Sawada
+Publisher:           Sega
+Package created by:  DJ Squarewave
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening Theme ~ Title               0:47   0:15
+Character Select                    0:29   0:14
+The Vast Field (Stage 1)            1:10   1:06
+Boss Theme                          1:27   1:26
+Campsite                            0:41   0:31
+Map Screen                          0:28   0:28
+Ancient Mound (Stage 2A)            1:17   1:17
+Tender Hamlet (Stage 2B)            1:20   1:19
+Dim Jungle (Stage 3A)               0:59   0:58
+Cave of Crystal (Stage 3B)          1:04   1:03
+The Scorching Sand (Stage 4A)       1:17   1:17
+Bloody Street (Stage 4B)            0:46   0:46
+Death Mountain (Stage 5A)           1:01   0:48
+A Voyage to Castle (Stage 5B)       0:56   0:54
+Fight with Adversary                0:42   0:38
+Ride the Whirlwind (Stage 6A)       1:07   1:04
+Cursed City (Stage 6B)              1:00   0:51
+The Gate of Fate (Stage 7)          0:54   0:54
+Castle (Stage 8)                    0:58   0:54
+Final Boss                          1:00   0:59
+Victory                             0:16   -
+Is the Battle Won?                  0:27   -
+Ending ~ Staff Roll                 1:31   1:23
+Game Over                           0:03   -
+VS Mode Victory                     0:05   -
+Title Theme (Skip)                  0:15   0:15
+
+Notes:
+1.01: Stage names.
+
+1.05: Added additional composers.
+
+Tagged by MisterHarlequin.
