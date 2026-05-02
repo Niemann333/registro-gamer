@@ -1,0 +1,38 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           M.U.S.H.A. / Musha Aleste
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Toshiaki Sakoda
+Publisher:          Compile / Seismic / Toaplan
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Theme of Musha Aleste               1:19   1:08
+Fullmetal Fighter                   1:19   1:06
+Galvanic Gear                       1:28   1:26
+Armed Armor                         1:37   1:25
+Divine Devise                       1:30   1:29
+Noh Specter                         1:59   1:49
+Offensive Overdrive                 0:46   0:45
+Aggressive Attack                   1:48   1:29
+Alpha Wave                          0:50   0:30
+Round Clear                         0:10   -
+Game Over                           0:06   -
+For the Love of...                  1:43   1:29
+Vanish Into the Night               0:19   0:15
+Phase of the Phantom                0:42   0:07
+Stratospheric Struggle              1:02   0:45
+Pressure Power                      0:24   0:07
+Puyo Puyo Bonus SE                  0:02   -
+
+Notes:
+-none-
