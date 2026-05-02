@@ -1,0 +1,36 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Mick & Mack as the Global Gladiators
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Tommy Tallarico
+Publisher:           Virgin Games
+Package created by:  LucasVB (DukeNukem)
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Virgin                              0:01   -
+Story Line                          0:27   0:24
+Mc Rock Part 1                      2:16   2:03
+Mc Rock Part 2                      2:03   2:03
+Techno Tune                         0:52   0:52
+Toxitown Blues                      0:44   0:37
+Ice Boss Tune                       1:39   1:39
+Duelin-Dance                        2:06   0:59
+Dance Tune                          2:34   1:29
+Dan Da Dant Da                      0:05   -
+Fall Over Tune                      0:05   -
+Game Over                           0:10   -
+                                    
+Notes:
+I'm not completely sure about the order, and I
+can't be bothered to play the game again.
+
+So deal with it. :P
