@@ -1,0 +1,41 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Ayrton Senna's
+                             Super Monaco GP II
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     <unknown>
+Publisher:           Sega
+Package created by:  DJ Squarewave
+Package version:     0.90
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         1:12   1:09
+Menu Theme                          0:33   0:33
+Senna GP                            1:13   1:13
+Starting Grid                       1:29   1:06
+Race Results                        0:42   0:27
+World Championship                  1:32   1:31
+Free Practice                       0:29   0:27
+Unknown (Sound Test 06)             0:17   0:16
+Unknown (Sound Test 07)             0:16   0:15
+Unknown (Sound Test 09)             0:57   0:56
+Unknown (Sound Test 10)             0:31   0:31
+Unknown (Sound Test 11)             0:53   0:52
+Unknown (Sound Test 12)             0:28   0:27
+Unknown (Sound Test 13)             0:31   0:31
+Unknown (Sound Test 14)             1:22   0:22
+
+Notes:
+Let it never be said I don't rip the bad along
+with the good...this one hurts my ears. -DJSW
+
+"Race Results" is not VGM 1.50 because it
+crashes the current version of optvgm.
