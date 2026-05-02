@@ -1,0 +1,45 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:        Teenage Mutant Ninja Turtles:
+                            Tournament Fighters
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Miki Higashino
+Publisher:           Konami
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Konami Logo                         0:04   -
+Title Theme                         0:19   -
+Prologue                            0:11   -
+Introduction                        0:42   -
+Character Select                    0:36   0:35
+Leonardo's Stage                    1:30   1:28
+Donatello's Stage                   0:52   0:49
+Raphael's Stage                     1:17   1:09
+Michaelangelo's Stage               1:33   1:25
+Casey Jones' Stage                  1:20   1:08
+Ray Fillet's Stage                  1:19   1:03
+April O'Neil's Stage                1:32   1:09
+Sisyphus' Stage                     1:39   1:24
+Triceraton's Stage                  1:34   1:11
+Krang's Stage 1                     1:27   1:02
+Krang's Stage 2                     1:11   1:04
+Kirai 1                             1:37   1:23
+Kirai 2                             0:49   0:49
+Ending Theme                        1:04   0:47
+Continue                            0:28   0:27
+Heroes in a Half Shell              0:03   -
+Story Sequence A                    0:17   -
+Story Sequence B                    0:37   0:27
+
+Notes:
+-none-

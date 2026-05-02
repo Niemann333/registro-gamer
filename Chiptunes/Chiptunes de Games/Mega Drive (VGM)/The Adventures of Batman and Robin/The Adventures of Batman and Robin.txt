@@ -1,0 +1,88 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org                      *
+***********************************************
+
+Game name:           The Adventures of Batman
+                     and Robin
+System:              Sega Genesis
+Complete music dump: Yes
+
+Original author:     Jesper Kyd
+Publisher:           Clockwork Tortoise
+Package created by:  Dark Pulse
+Package version:     1.51
+
+Files, in rough sequential order:
+
+Name                                Length:
+                                    Total  Loop
+Main Title                          9:13   9:13
+Gotham by Night                     6:38   6:38
+Big Boss                            3:46   3:46
+Moving Trucks                       2:38   2:38
+Joker's Theme                       2:15   2:15
+Two-Face's Theme                    3:33   3:33
+Not Much Time                       3:42   3:27
+Flying Over The City                5:45   5:45
+Moving Boss                         2:42   2:42
+Extreme Boss                        3:45   3:42
+Dark Studio??                       6:36   6:36
+Animal Boss                         3:12   3:08
+Psycho Section                      5:27   5:27
+Space Boss                          4:24   4:01
+The Lab                             5:45   5:45
+Big Machines                        2:10   2:06
+Final Boss                          3:51   3:44
+Ending                              5:05   1:17
+Continue?                           0:04   0:04
+
+
+Updates:
+
+1.51 - Re-Ripped "Main Title" - my version
+was woefully underriped - to the point where I
+axed off nearly 8 minutes of the song. Sorry!
+Thanks to simpleuser on the forums for bringing
+this to my attention.
+
+1.50 - Added official Track Names - these were
+found on a fansite, but Jesper Kyd himself has
+linked to them on his official site, making
+these names official in my eyes. (Though if 
+he'd find out about our site and link to those 
+too, that'd be nifty. ;)) Also corrected the
+Length of "Gotham By Night" - Previously,
+about 2 minutes of the song was missing. Thanks
+to Rapidkirby3k on the forums for bringing this
+to my attention.
+
+
+Notes:
+This is the first set tested under in_vgm 0.32.
+Now it reports song lengths in mm:ss format,
+making my job of writing these readmes much,
+much easier.
+
+This soundtrack utterly kicks ass. I personally
+hold Jesper Kyd up there as a Squarewave God
+along with Tim and Geoff Follin. Unlike those
+two, however, his tunes are exceptionally
+lengthy - and he's still around. If you've
+played a Hitman game, the music was done by
+Jesper Kyd. The upcoming Unreal Engine 3 games,
+UT2007 (UT being my favorite FPS to obsessively
+play) and Gears of War will also be done by him.
+Awesome stuff through and through. Be sure to
+give each song a full playthrough!
+
+The set sounds like ass with Overdrive on - it
+clips like hell. Sorry kids! You'll have to 
+turn up your speakers. :(
+
+Odd enough, Two-Face's Theme is exactly 3:33.3
+seconds. Just a little fun fact worth nothing.
+
+
+I'm the Goddamned Batman.
+-DP

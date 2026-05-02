@@ -1,0 +1,63 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           The Revenge of Shinobi (W) /
+                     The Super Shinobi (J)
+System:              Sega Mega Drive
+Music hardware:      YM2612, SEGA VDP PSG
+Complete music dump: Yes
+
+Music author:        Yuzo Koshiro
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1989-12-02 (J) / 1989 (W)
+
+Package created by:  Matthew Dickinson
+Package version:     1.06
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+Opening                             0:19   -
+Long Distance                       0:20   0:19
+The Shinobi                         0:51   0:51
+Terrible Beat                       0:22   0:19
+Round Clear                         0:02   -
+Sunrise Blvd.                       1:47   1:42
+Make Me Dance                       0:58   0:53
+Like a Wind                         0:45   0:37
+Run or Die                          0:28   0:26
+Ninja Step                          1:01   0:38
+The Dark City                       0:34   0:29
+China Town                          1:15   1:15
+Over the Bay                        0:45   0:45
+Labyrinth                           0:12   0:12
+The Ninja Master                    1:06   0:33
+Failure                             0:03   -
+My Lover                            1:03   1:03
+Silence Night                       0:43   -
+Game Over                           0:07   -
+
+Notes:
+One of Koshiro's most popular works, this was
+the first and best Shinobi game to appear on
+the Mega Drive (Genesis). He got his name
+featured on the title screen as composer, which
+I believe was was a first for a game musician.
+
+Favorite songs include The Shinobi (which
+Koshiro said was the first he wrote, and used
+as the basis for the rest), China Town, Sunrise
+Blvd., Long Distance, Make Me Dance, My Lover,
+and Ninja Step. Like a Wind is also a good one,
+however it needs more cowbell.
+
+Package history:
+1.00 2005-12-06 Matthew Dickinson: Initial
+ release.
+1.05 2021-12-10 The789Guy: Fixed txt file for
+ vgmrips.
+1.06 2022-01-01 andlabs: Further fixed txt file
+ for vgmrips.
