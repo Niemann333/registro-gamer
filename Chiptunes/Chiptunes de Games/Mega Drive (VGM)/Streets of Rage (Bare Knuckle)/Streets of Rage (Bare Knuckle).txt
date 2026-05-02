@@ -1,0 +1,71 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           Streets of Rage (W) /
+                     Bare Knuckle:
+                     Ikari no Tekken (J)
+System:              Sega Genesis
+Music hardware:      YM2612, SEGA VDP PSG
+Complete music dump: Yes
+
+Music author:        Yuzo Koshiro
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1991-08-02 (J) / 1991 (W)
+
+Package created by:  Dark Pulse
+Package version:     1.06
+
+Song list, in Title Screen/Level Music/Other Music order:
+Song name                           Length:
+                                    Total  Loop
+The Street of Rage (Title Screen)   1:38   -
+Player Select                       0:21   0:19
+Fighting in the Street (Stage 1)    2:22   2:21
+Dilapidated Town (Stage 2)          1:40   1:36
+Moon Beach (Stage 3)                2:38   2:14
+Keep the Groovin' (Stage 4)         1:51   1:16
+Beatnik on the Ship (Stage 5)       2:07   2:03
+Stealthy Steps (Stage 6)            1:27   1:25
+Violent Breathing (Stage 7)         0:53   0:52
+The Last Soul (Stage 8)             1:36   1:36
+Level Clear                         0:07   -
+Attack the Barbarian (Boss)         1:37   1:22
+Big Boss (Guess!)                   0:59   0:29
+Game Over                           0:04   -
+You Became the Bad Guy!             2:11   1:16
+Good Ending                         2:00   0:04
+
+Notes:
+The Hi-Hat type stuff sounds off, but it isn't,
+this is due to the sounds being recorded at 22
+KHz and being played back at 44.1 KHz. As a
+result, they sound "Sped Up" and so you'll
+just have to deal with it.
+
+That said, this game had a lot of good music.
+Some of it got remixed into later versions of
+SOR (The Title Screen for example) but some
+pretty good songs (Dilapadated Town for
+example) got the axe entirely.
+
+The short loop on Good Ending is the Waves
+that are crashing onshore during the end.
+This isn't white noise and is thus intended.
+
+
+Stage 7: Throw everyone off the side. It rules.
+-DP
+
+Release notes from project2612; names/dates lost:
+1.01 Dark Pulse: Seems Stage Six has a
+name after all -  Added that and
+corrected the names of two other songs.
+1.05 dissident93: Corrected the release
+date.
+
+Package history:
+1.06 2022-01-04 andlabs: Fixed txt file for
+ vgmrips.

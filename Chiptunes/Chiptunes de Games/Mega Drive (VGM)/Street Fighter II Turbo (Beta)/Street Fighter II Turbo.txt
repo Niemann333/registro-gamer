@@ -1,0 +1,71 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Street Fighter II Turbo
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Alph-Lyra
+Publisher:           Capcom
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Capcom Logo                         0:04   -
+Title Theme                         0:27   -
+Player Select                       0:17   0:13
+VS Screen                           0:04   -
+Ryu's Stage                         0:55   0:47
+Ryu's Stage ~ Critical              0:26   0:26
+Stage End                           0:05   -
+E. Honda's Stage                    1:03   1:00
+E. Honda's Stage ~ Critical         0:26   0:26
+Blanka's Stage                      0:58   0:51
+Blanka's Stage ~ Critical           0:26   0:26
+Guile's Stage                       2:11   1:05
+Guile's Stage ~ Critical            0:26   0:26
+Bonus Stage                         0:34   0:10
+A New Challenger                    0:02   -
+Ken's Stage                         1:07   0:56
+Ken's Stage ~ Critical              0:35   0:34
+Chun Li's Stage                     0:58   0:54
+Chun Li's Stage ~ Critical          0:26   0:26
+Zangief's Stage                     0:55   0:48
+Zangief's Stage ~ Critical          0:26   0:26
+Dhalsim's Stage                     0:39   0:38
+Dhalsim's Stage ~ Critical          0:43   0:43
+Balrog's Stage                      0:54   0:51
+Balrog's Stage ~ Critical           0:26   0:26
+Vega's Stage                        0:56   0:54
+Vega's Stage ~ Critical             0:52   0:51
+Sagat's Stage                       0:42   0:42
+Sagat's Stage ~ Critical            0:21   0:21
+M. Bison's Stage                    1:04   1:04
+M. Bison's Stage ~ Critical         0:52   0:51
+Ryu's Ending                        0:52   -
+E. Honda's Ending                   0:30   0:20
+Blanka's Ending                     0:20   0:13
+Guile's Ending                      0:29   0:21
+Ken's Ending 1                      0:17   0:11
+Ken's Ending 2                      1:16   0:30
+Chun Li's Ending 1                  0:11   0:07
+Chun Li's Ending 2                  1:15   0:33
+Zangief's Ending                    0:12   0:11
+Dhalsim's Ending                    0:35   -
+Boss Character's Ending             0:29   0:21
+Staff Roll                          1:36   0:52
+Continue                            0:12   0:10
+Game Over                           0:01   -
+Rankings                            0:01   -
+
+Notes:
+1.01: Fixed track order.
+
+Where'd this one come from? Might not even be
+from Capcom, I suspect, but it's still
+interesting nonetheless. -DJSW
