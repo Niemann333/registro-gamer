@@ -1,0 +1,63 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Michael Jackson's
+                                     Moonwalker
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Michael Jackson,
+                                 Hiroshi Kubota
+Publisher:           Sega
+Package created by:  2ch-N
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Screen                        0:10   -
+Round 1 Start                       0:13   -
+Smooth Criminal                     1:16   1:12
+Round Clear                         0:04   -
+Round 2 Start                       0:06   -
+Beat It                             1:07   0:47
+Boss Theme                          0:26   0:13
+Round 3 Start                       0:05   -
+Another Part of Me                  1:00   0:53
+Round 4 Start                       0:10   -
+Billie Jean                         1:36   1:20
+Round 5 Start                       0:10   -
+Bad                                 0:58   0:56
+Final Boss Demo                     0:06   -
+Mr. Big                             0:55   0:45
+Dance Attack 1                      0:08   -
+Dance Attack 2                      0:08   -
+Dance Attack 3                      0:08   -
+Dance Attack 4                      0:07   -
+Dance Attack 5                      0:08   -
+Dance Attack 6                      0:08   -
+Dance Attack 7                      0:09   -
+Dance Attack 8                      0:09   -
+Dance Attack 9                      0:09   -
+Dance Attack 10                     0:08   -
+Dance Attack 11                     0:09   -
+Dance Attack 12                     0:09   -
+Game Over                           0:03   -
+Dance Attack 1 (with voice)         0:11   -
+Dance Attack 2 (with voice)         0:10   -
+Dance Attack 3 (with voice)         0:10   -
+Dance Attack 4 (with voice)         0:09   -
+Dance Attack 5 (with voice)         0:09   -
+Dance Attack 6 (with voice)         0:09   -
+Dance Attack 7 (with voice)         0:10   -
+Dance Attack 8 (with voice)         0:10   -
+Dance Attack 9 (with voice)         0:10   -
+Dance Attack 10 (with voice)        0:10   -
+Dance Attack 11 (with voice)        0:10   -
+Dance Attack 12 (with voice)        0:10   -
+
+Notes:
+Tagged and packed by DJSW.
