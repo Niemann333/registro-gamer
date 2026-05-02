@@ -1,0 +1,73 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Super Street Fighter II:
+                            The New Challengers
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Alph-Lyra
+Publisher:           Capcom
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Capcom Logo                         0:04   -
+Opening Theme                       0:24   -
+Main Theme ~ Options                0:29   -
+Player Select                       0:18   0:14
+Tournament                          0:02   -
+VS Screen                           0:04   -
+Ryu's Theme                         0:57   0:49
+E. Honda's Theme                    1:09   1:02
+Blanka's Theme                      1:03   0:56
+Guile's Theme                       1:24   1:10
+Bonus Stage                         0:15   0:12
+Ken's Theme                         1:10   0:59
+Chun Li's Theme                     0:58   0:54
+Zangief's Theme                     0:59   0:50
+Dhalsim's Theme                     0:54   0:53
+Stage End                           0:04   -
+A New Challenger                    0:02   -
+Fei Long's Theme                    0:41   0:38
+Cammy's Theme                       0:58   0:58
+Dee Jay's Theme                     0:43   0:41
+T. Hawk's Theme                     0:40   0:39
+Balrog's Theme                      0:58   0:54
+Vega's Theme                        1:03   0:57
+Sagat's Theme                       0:48   0:41
+M. Bison's Theme                    1:06   1:05
+Congratulations                     0:28   0:16
+Ryu's Ending                        1:02   -
+E. Honda's Ending                   0:32   0:21
+Blanka's Ending                     0:20   0:13
+Guile's Ending                      1:05   0:56
+Ken's Ending 1                      0:19   0:12
+Ken's Ending 2                      1:25   -
+Chun Li's Ending 1                  0:26   0:25
+Chun Li's Ending 2                  0:22   0:19
+Chun Li's Ending 3                  0:22   0:21
+Zangief's Ending                    0:11   0:11
+Dhalsim's Ending                    0:40   -
+Fei Long's Ending                   0:37   0:21
+Cammy's Ending                      1:06   0:54
+Dee Jay's Ending                    0:26   0:26
+T. Hawk's Ending                    1:17   -
+Balrog's Ending                     0:40   0:17
+Vega's Ending                       0:35   0:23
+Sagat's Ending                      0:17   0:17
+M. Bison's Ending                   0:17   0:17
+Staff Roll                          1:42   1:15
+Continue                            0:10   0:10
+Game Over                           0:02   -
+Ranking Display                     0:03   -
+
+Notes:
+How is it that the Street Fighter soundtracks
+on the MD got pregressively worse? Compare this
+to Champion Edition and see... -DJSW

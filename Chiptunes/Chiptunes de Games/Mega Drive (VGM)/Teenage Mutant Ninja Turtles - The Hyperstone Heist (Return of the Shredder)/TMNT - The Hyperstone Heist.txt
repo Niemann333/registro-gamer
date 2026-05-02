@@ -1,0 +1,52 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:        Teenage Mutant Ninja Turtles:
+                         The Hyperstone Heist / 
+                         Return of the Shredder
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Masahiro Ikariko
+Publisher:           Konami
+Package created by:  DJ Squarewave
+Package version:     1.02
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Konami Logo                         0:03   -
+Opening Theme                       0:20   -
+Select Your Turtle!                 0:08   0:07
+Bad News                            0:46   -
+Turtle Swing                        0:55   0:47
+Alleycat Blues                      0:42   0:42
+Back in the Sewers                  0:42   0:40
+Sewers Surfin'                      0:45   0:36
+Skull and Crossbones                1:04   1:00
+Prehistoric Turtlesaurus            0:46   0:44
+Outside Shredder's Hideout          0:32   0:25
+Inside Shredder's Hideout           0:27   0:23
+The Gauntlet                        0:54   0:43
+Technodrome Appears!                0:32   -
+Star Base                           0:46   0:44
+Down the Elevator                   0:33   0:31
+Boss Battle                         0:30   0:29
+Encountering the Shredder           0:03   0:01
+Final Shell Shock                   0:40   0:29
+Stage Clear                         0:03   -
+The Turtles Save the Day            0:31   -
+Ending (Hard Mode)                  0:45   0:38
+Pizza Power!                        0:30   0:26
+Continue                            0:11   0:07
+Game Over                           0:05   -
+High Score Display                  0:25   0:23
+
+
+Updates:
+
+1.01: Fixed track order, thanks blindpainkiller
+1.02: Tagged the Unused track, c/o The Coop.

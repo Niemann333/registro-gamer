@@ -1,0 +1,43 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Superman
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Kenji Yamazaki,
+                     Junichi Ueda,
+                     Hiroshi Tsukamoto
+Publisher:           Sunsoft
+Package created by:  2ch-N
+Package version:     1.05
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title                               0:44   0:34
+Round Start BGM 1                   0:37   0:19
+Round 1                             1:55   1:27
+Boss BGM 1                          0:58   0:50
+Round Clear                         0:29   0:14
+Round 2                             1:31   1:16
+Round 3                             1:48   1:19
+Continue                            0:28   0:12
+Game Over                           0:08   -
+Round Start BGM 2                   0:43   0:14
+Round 4                             1:27   1:12
+Boss BGM 2                          1:02   0:25
+Round Start BGM 3                   0:43   0:22
+Round 5                             2:12   1:57
+Boss BGM 3                          1:02   0:49
+Ending 1                            0:56   0:42
+Ending 2                            1:17   0:46
+
+Notes:
+Tagged and packed by DJSW.
+
+Updates
+1.05: Corrected composer tags. - dissident93
