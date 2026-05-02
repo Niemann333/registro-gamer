@@ -20,42 +20,32 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx            = null;
-    var _analyser       = null;
-    var _analyserLinked = false;
-    var _ctxStartTime   = 0;
-    var _seekOffset     = 0;   // ajuste de posição por seek
-    var _silenceCount   = 0;
-    var _SILENCE_NEEDED = 4;   // 4 × 400ms = ~1.6s de silêncio
-    var _SILENCE_RMS    = 0.0008;
-    var _endedSent      = false;
+    // Intercepta AudioContext para pause/resume via suspend/resume
+    var _ctx = null;
+    var _analyser = null;
+    var _linked = false;
+    var _silCount = 0;
+    var _silNeeded = 5;
+    var _silRMS = 0.001;
+    var _endedSent = false;
 
-    // ── Intercepta AudioContext ──
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       window.AudioContext = window.webkitAudioContext = function() {
         _ctx = new _OrigAC();
-        _setupAnalyser();
+        _analyser = _ctx.createAnalyser();
+        _analyser.fftSize = 2048;
+        var _orig = AudioNode.prototype.connect;
+        AudioNode.prototype.connect = function(dest, a, b) {
+          if (_ctx && dest === _ctx.destination) {
+            if (!_linked) { _linked = true; _orig.call(_analyser, _ctx.destination); }
+            return _orig.call(this, _analyser, a, b);
+          }
+          return _orig.apply(this, arguments);
+        };
         return _ctx;
       };
       window.AudioContext.prototype = _OrigAC.prototype;
-    }
-
-    function _setupAnalyser() {
-      if (!_ctx || _analyser) return;
-      _analyser = _ctx.createAnalyser();
-      _analyser.fftSize = 2048;
-      var _orig = AudioNode.prototype.connect;
-      AudioNode.prototype.connect = function(dest, outIdx, inIdx) {
-        if (_ctx && dest === _ctx.destination) {
-          if (!_analyserLinked) {
-            _analyserLinked = true;
-            _orig.call(_analyser, _ctx.destination);
-          }
-          return _orig.call(this, _analyser, outIdx, inIdx);
-        }
-        return _orig.apply(this, arguments);
-      };
     }
 
     function checkSilence() {
@@ -65,89 +55,56 @@
       var rms = 0;
       for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
       rms = Math.sqrt(rms / buf.length);
-      if (rms < _SILENCE_RMS) {
-        _silenceCount++;
-        if (_silenceCount >= _SILENCE_NEEDED) {
-          _endedSent = true;
-          _silenceCount = 0;
-          try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e){}
-        }
-      } else {
-        _silenceCount = 0;
+      if (rms < _silRMS) { _silCount++; } else { _silCount = 0; }
+      if (_silCount >= _silNeeded) {
+        _endedSent = true; _silCount = 0;
+        try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
       }
     }
 
-    function getPosSec() {
-      if (!_ctx) return 0;
-      return Math.max(0, (_ctx.currentTime - _ctxStartTime) + _seekOffset);
-    }
-
-    var songUrl     = null;
-    var playerReady = false;
-    var posTimer    = null;
+    var songUrl = null, playerReady = false, silTimer = null;
 
     var params = new URLSearchParams(window.location.search);
     if (params.get('url')) {
       songUrl = decodeURIComponent(params.get('url'));
-      try { sessionStorage.setItem('chipSongUrl', songUrl); } catch(e){}
+      try { sessionStorage.setItem('chipSongUrl', songUrl); } catch(e) {}
     } else {
-      try {
-        var s = sessionStorage.getItem('chipSongUrl');
-        if (s) { songUrl = s; sessionStorage.removeItem('chipSongUrl'); }
-      } catch(e){}
+      try { var sv = sessionStorage.getItem('chipSongUrl'); if (sv) { songUrl = sv; sessionStorage.removeItem('chipSongUrl'); } } catch(e) {}
     }
 
     function stripExt(s) { return s.replace(/\.[^.]+$/, ''); }
-    function setStatus(m, c) { var el=document.getElementById('status'); el.textContent=m; el.className=c||''; }
+    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
-    function startPoller() {
-      if (posTimer) clearInterval(posTimer);
-      _ctxStartTime = _ctx ? _ctx.currentTime : 0;
-      _seekOffset   = 0;
-      _endedSent    = false;
-      _silenceCount = 0;
-      posTimer = setInterval(function() {
-        if (!_ctx) return;
-        try { window.parent.postMessage({ type:'position', posSec:getPosSec(), state:_ctx.state }, '*'); } catch(e){}
-        checkSilence();
-      }, 400);
+    function startSilencePoller() {
+      if (silTimer) clearInterval(silTimer);
+      _endedSent = false; _silCount = 0;
+      silTimer = setInterval(checkSilence, 400);
     }
 
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
       if (d.type === 'play' && d.url) { songUrl = d.url; if (playerReady) startPlay(); }
-      if (d.type === 'pause')  { if (_ctx && _ctx.state==='running')   _ctx.suspend(); setStatus('\u23F8 Pausado',''); }
-      if (d.type === 'resume') { if (_ctx && _ctx.state==='suspended') _ctx.resume();
-        var n = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
-        setStatus('\u266A ' + n, 'playing');
-      }
-      // Seek: reposiciona o timer base
-      if (d.type === 'seek' && typeof d.sec === 'number') {
-        if (_ctx) {
-          _seekOffset = d.sec - (_ctx.currentTime - _ctxStartTime);
-          _endedSent  = false;
-          _silenceCount = 0;
-        }
-      }
+      if (d.type === 'pause')  { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); }
+      if (d.type === 'resume') { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); }
     });
 
     function startPlay() {
       if (!songUrl || !seq()) return;
       if (_ctx && _ctx.state === 'suspended') _ctx.resume();
-      _endedSent = false; _silenceCount = 0;
+      _endedSent = false; _silCount = 0;
       var n = stripExt(decodeURIComponent(songUrl.split('/').pop()));
       setStatus('\u266A ' + n, 'playing');
-      try { seq().playSonglist([songUrl]); setTimeout(startPoller, 300); }
+      try { seq().playSonglist([songUrl]); setTimeout(startSilencePoller, 500); }
       catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
-        if (reg.installing) { reg.installing.addEventListener('statechange', function() { if (this.state==='activated') location.reload(); }); }
-        else if (reg.waiting) { reg.waiting.addEventListener('statechange', function() { if (this.state==='activated') location.reload(); }); }
+        if (reg.installing) reg.installing.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
+        else if (reg.waiting) reg.waiting.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
         else loadBundle();
       }).catch(loadBundle);
     } else loadBundle();
@@ -156,13 +113,16 @@
       var s = document.createElement('script');
       s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.0a47.js';
       s.onload = function() {
-        var tries=0, iv=setInterval(function(){
+        var tries = 0, iv = setInterval(function() {
           tries++;
-          if (seq()) { clearInterval(iv); playerReady=true; try{window.parent.postMessage({type:'ready'},'*');}catch(e){} if(songUrl)startPlay(); else setStatus('Pronto.',''); }
-          else if (tries>100) { clearInterval(iv); setStatus('Timeout.','error'); }
+          if (seq()) {
+            clearInterval(iv); playerReady = true;
+            try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
+            if (songUrl) startPlay(); else setStatus('Pronto.', '');
+          } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
         }, 300);
       };
-      s.onerror = function() { setStatus('Erro bundle.','error'); };
+      s.onerror = function() { setStatus('Erro bundle.', 'error'); };
       document.head.appendChild(s);
     }
   </script>
