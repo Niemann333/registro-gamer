@@ -20,58 +20,56 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx             = null;
-    var _analyser        = null;
-    var _analyserLinked  = false;
-    var _ctxStartTime    = 0;   // audioCtx.currentTime quando a música começou
-    var _seekOffset      = 0;   // offset acumulado por seeks (em segundos)
-    var _endedSent       = false;
-    var _silenceCount    = 0;
-    var _SILENCE_NEEDED  = 4;
-    var _SILENCE_RMS     = 0.0005;
+    var _ctx            = null;
+    var _analyser       = null;
+    var _analyserLinked = false;
+    var _ctxStartTime   = 0;
+    var _seekOffset     = 0;   // ajuste de posição por seek
+    var _silenceCount   = 0;
+    var _SILENCE_NEEDED = 4;   // 4 × 400ms = ~1.6s de silêncio
+    var _SILENCE_RMS    = 0.0008;
+    var _endedSent      = false;
 
     // ── Intercepta AudioContext ──
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
-      var _Patched = function() {
+      window.AudioContext = window.webkitAudioContext = function() {
         _ctx = new _OrigAC();
         _setupAnalyser();
         return _ctx;
       };
-      _Patched.prototype = _OrigAC.prototype;
-      window.AudioContext = window.webkitAudioContext = _Patched;
+      window.AudioContext.prototype = _OrigAC.prototype;
     }
 
     function _setupAnalyser() {
       if (!_ctx || _analyser) return;
       _analyser = _ctx.createAnalyser();
       _analyser.fftSize = 2048;
-
-      // Intercepta connect() — roteia tudo pelo analyser antes do destino
-      var _OrigConnect = AudioNode.prototype.connect;
+      var _orig = AudioNode.prototype.connect;
       AudioNode.prototype.connect = function(dest, outIdx, inIdx) {
         if (_ctx && dest === _ctx.destination) {
           if (!_analyserLinked) {
             _analyserLinked = true;
-            _OrigConnect.call(_analyser, _ctx.destination);
+            _orig.call(_analyser, _ctx.destination);
           }
-          return _OrigConnect.call(this, _analyser, outIdx, inIdx);
+          return _orig.call(this, _analyser, outIdx, inIdx);
         }
-        return _OrigConnect.apply(this, arguments);
+        return _orig.apply(this, arguments);
       };
     }
 
     function checkSilence() {
       if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
-      var data = new Float32Array(_analyser.fftSize);
-      _analyser.getFloatTimeDomainData(data);
+      var buf = new Float32Array(_analyser.fftSize);
+      _analyser.getFloatTimeDomainData(buf);
       var rms = 0;
-      for (var i = 0; i < data.length; i++) rms += data[i] * data[i];
-      rms = Math.sqrt(rms / data.length);
+      for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+      rms = Math.sqrt(rms / buf.length);
       if (rms < _SILENCE_RMS) {
         _silenceCount++;
         if (_silenceCount >= _SILENCE_NEEDED) {
           _endedSent = true;
+          _silenceCount = 0;
           try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e){}
         }
       } else {
@@ -79,7 +77,6 @@
       }
     }
 
-    // posSec real = (audioCtx.currentTime - _ctxStartTime) + _seekOffset
     function getPosSec() {
       if (!_ctx) return 0;
       return Math.max(0, (_ctx.currentTime - _ctxStartTime) + _seekOffset);
@@ -95,16 +92,13 @@
       try { sessionStorage.setItem('chipSongUrl', songUrl); } catch(e){}
     } else {
       try {
-        var saved = sessionStorage.getItem('chipSongUrl');
-        if (saved) { songUrl = saved; sessionStorage.removeItem('chipSongUrl'); }
+        var s = sessionStorage.getItem('chipSongUrl');
+        if (s) { songUrl = s; sessionStorage.removeItem('chipSongUrl'); }
       } catch(e){}
     }
 
     function stripExt(s) { return s.replace(/\.[^.]+$/, ''); }
-    function setStatus(msg, cls) {
-      var el = document.getElementById('status');
-      el.textContent = msg; el.className = cls || '';
-    }
+    function setStatus(m, c) { var el=document.getElementById('status'); el.textContent=m; el.className=c||''; }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
     function startPoller() {
@@ -113,13 +107,9 @@
       _seekOffset   = 0;
       _endedSent    = false;
       _silenceCount = 0;
-
       posTimer = setInterval(function() {
         if (!_ctx) return;
-        var pos = getPosSec();
-        try {
-          window.parent.postMessage({ type: 'position', posSec: pos, state: _ctx.state }, '*');
-        } catch(e){}
+        try { window.parent.postMessage({ type:'position', posSec:getPosSec(), state:_ctx.state }, '*'); } catch(e){}
         checkSilence();
       }, 400);
     }
@@ -127,25 +117,14 @@
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
-
-      if (d.type === 'play' && d.url) {
-        songUrl = d.url;
-        if (playerReady) startPlay();
+      if (d.type === 'play' && d.url) { songUrl = d.url; if (playerReady) startPlay(); }
+      if (d.type === 'pause')  { if (_ctx && _ctx.state==='running')   _ctx.suspend(); setStatus('\u23F8 Pausado',''); }
+      if (d.type === 'resume') { if (_ctx && _ctx.state==='suspended') _ctx.resume();
+        var n = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
+        setStatus('\u266A ' + n, 'playing');
       }
-      if (d.type === 'pause') {
-        if (_ctx && _ctx.state === 'running') _ctx.suspend();
-        setStatus('⏸ Pausado', '');
-      }
-      if (d.type === 'resume') {
-        if (_ctx && _ctx.state === 'suspended') _ctx.resume();
-        var name = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
-        setStatus('♪ ' + name, 'playing');
-      }
-      // Seek: gadget envia a posição alvo em segundos
-      // Ajustamos _seekOffset para que getPosSec() retorne o valor certo
+      // Seek: reposiciona o timer base
       if (d.type === 'seek' && typeof d.sec === 'number') {
-        // getPosSec() = (currentTime - _ctxStartTime) + _seekOffset = d.sec
-        // → _seekOffset = d.sec - (currentTime - _ctxStartTime)
         if (_ctx) {
           _seekOffset = d.sec - (_ctx.currentTime - _ctxStartTime);
           _endedSent  = false;
@@ -158,52 +137,32 @@
       if (!songUrl || !seq()) return;
       if (_ctx && _ctx.state === 'suspended') _ctx.resume();
       _endedSent = false; _silenceCount = 0;
-      var name = stripExt(decodeURIComponent(songUrl.split('/').pop()));
-      setStatus('♪ ' + name, 'playing');
-      try {
-        seq().playSonglist([songUrl]);
-        setTimeout(startPoller, 300);
-      } catch(ex) {
-        setStatus('Erro: ' + ex.message, 'error');
-      }
+      var n = stripExt(decodeURIComponent(songUrl.split('/').pop()));
+      setStatus('\u266A ' + n, 'playing');
+      try { seq().playSonglist([songUrl]); setTimeout(startPoller, 300); }
+      catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
-    // SW + bundle
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
-        if (reg.installing) {
-          reg.installing.addEventListener('statechange', function() {
-            if (this.state === 'activated') location.reload();
-          });
-        } else if (reg.waiting) {
-          reg.waiting.addEventListener('statechange', function() {
-            if (this.state === 'activated') location.reload();
-          });
-        } else { loadBundle(); }
-      }).catch(function() { loadBundle(); });
-    } else { loadBundle(); }
+        if (reg.installing) { reg.installing.addEventListener('statechange', function() { if (this.state==='activated') location.reload(); }); }
+        else if (reg.waiting) { reg.waiting.addEventListener('statechange', function() { if (this.state==='activated') location.reload(); }); }
+        else loadBundle();
+      }).catch(loadBundle);
+    } else loadBundle();
 
     function loadBundle() {
       var s = document.createElement('script');
       s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.0a47.js';
       s.onload = function() {
-        var tries = 0;
-        var iv = setInterval(function() {
+        var tries=0, iv=setInterval(function(){
           tries++;
-          if (seq()) {
-            clearInterval(iv);
-            playerReady = true;
-            try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e){}
-            if (songUrl) startPlay();
-            else setStatus('Pronto.', '');
-          } else if (tries > 100) {
-            clearInterval(iv);
-            setStatus('Timeout.', 'error');
-          }
+          if (seq()) { clearInterval(iv); playerReady=true; try{window.parent.postMessage({type:'ready'},'*');}catch(e){} if(songUrl)startPlay(); else setStatus('Pronto.',''); }
+          else if (tries>100) { clearInterval(iv); setStatus('Timeout.','error'); }
         }, 300);
       };
-      s.onerror = function() { setStatus('Erro bundle.', 'error'); };
+      s.onerror = function() { setStatus('Erro bundle.','error'); };
       document.head.appendChild(s);
     }
   </script>
