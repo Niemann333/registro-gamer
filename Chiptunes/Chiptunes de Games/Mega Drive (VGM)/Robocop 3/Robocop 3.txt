@@ -1,0 +1,27 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Robocop 3
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Matt Furniss
+Publisher:           Flying Edge
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         1:06   1:05
+Bonus Screen                        0:10   0:08
+In Game 1                           1:18   1:17
+In Game 2                           1:12   1:10
+End of Level                        0:18   0:17
+Game Over                           0:04   -
+
+Notes:
+-none-

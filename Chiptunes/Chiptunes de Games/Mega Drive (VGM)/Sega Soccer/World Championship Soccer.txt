@@ -1,0 +1,31 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           World Championship Soccer
+      / World Cup Soccer / World Cup Italia '90
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     <unknown>
+Publisher:           Sega
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Title Theme                         0:12   -
+Menu Theme                          0:08   0:08
+Game BGM 1                          2:43   2:43
+Game BGM 2                          2:34   2:34
+Game BGM 3                          3:11   3:10
+Ending Theme                        0:17   0:16
+Game Over                           0:05   -
+
+Notes:
+This is the last pre-1990 game on the hardware
+that needed to be ripped. A few of the tunes
+are pretty good, even. :) -DJSW
