@@ -1,0 +1,38 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Mortal Kombat
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Dan Forden, Matt Furniss
+Publisher:           Arena / Midway / Probe
+Package created by:  DJ Squarewave
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening Theme                       0:29   0:29
+Test Your Might, Fatality           0:05   -
+Courtyard                           0:57   0:46
+Courtyard Victory                   0:04   -
+Warrior's Shrine                    1:06   0:58
+Warrior's Shrine Victory            0:03   -
+The Pit                             0:54   0:38
+The Pit Victory                     0:05   -
+Hall                                0:47   0:43
+Hall Victory                        0:03   -
+Goro's Lair                         0:21   0:20
+Goro's Lair Victory                 0:03   -
+Entrance                            0:13   0:13
+Entrance Victory                    0:07   -
+2-Player vs.                        0:03   -
+Unknown (Sound Test 15)             0:04   -
+
+Notes:
+1.01: Added arcade composer.
+1.00: Slightly edited a couple track IDs.
