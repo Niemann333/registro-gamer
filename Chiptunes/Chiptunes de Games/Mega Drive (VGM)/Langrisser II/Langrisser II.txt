@@ -1,0 +1,60 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Langrisser II
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Noriyuki Iwadare,
+                                 Isao Mizoguchi
+Publisher:           NCS Masaya
+Package created by:  DJ Squarewave
+Package version:     1.02
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening Theme (Part 1)              0:43   0:38
+Opening Theme (Part 2)              0:45   -
+Main Theme of Langrisser            0:30   0:27
+Neo Holy War                        1:02   0:59
+Leon                                1:30   1:28
+Knight's Errand                     2:01   2:00
+Bargas                              1:22   1:07
+One's Side                          0:56   0:56
+Morgan                              1:21   1:21
+No Surrender                        1:17   1:15
+Jessica                             0:16   0:16
+Ancient Magic                       0:18   0:18
+The Evil Person                     1:15   1:09
+Enemy Reinforcements                1:06   1:06
+Riana                               0:51   0:44
+Fight it Out                        1:29   0:56
+Eggbert                             1:06   1:05
+The Legend of Sword                 1:51   1:49
+Shop                                0:43   0:40
+Imelda                              0:58   0:51
+The Dark Princess                   0:57   0:52
+Bosel                               0:52   0:52
+Aniki                               0:21   0:21
+Soldier                             1:29   1:27
+Bernhardt                           1:23   1:21
+The Last Battle                     1:07   1:06
+Ending Theme (Part 1)               1:50   -
+A Story Forever (Part 1)            6:56   6:55
+A Story Forever (Part 2)            0:17   -
+Ending Theme (Part 4)               0:16   -
+Requiem                             1:04   1:04
+
+Notes:
+1.02: Re-ripped "Ending Theme (Part 1)" as it
+was incomplete.
+1.01: General cleanups.
+
+Tracknames taken from the arrange OST, or the
+GYM set for tracks not on the OST. Playlist
+order may not be 100% accurate, if you can do
+better then send me an updated M3U. -DJSW
