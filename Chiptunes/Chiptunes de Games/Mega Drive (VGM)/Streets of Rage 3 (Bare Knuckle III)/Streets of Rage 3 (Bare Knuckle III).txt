@@ -1,0 +1,78 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           Streets of Rage 3 (W) /
+                     Bare Knuckle III (J)
+System:              Sega Genesis
+Music hardware:      YM2612, SEGA VDP PSG
+Complete music dump: Yes
+
+Music author:        Yuzo Koshiro,
+                     Motohiro Kawashima
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1994-03-18 (J) / 1994 (W)
+
+Package created by:  Dark Pulse
+Package version:     1.01
+
+Song list, in Player Select/Level Music/Other Music order:
+Song name                           Length:
+                                    Total  Loop
+Spinning Machine                    0:25   0:25
+Fuze                                1:23   1:16
+Cycle I                             1:37   1:31
+Dub Slash                           1:44   1:42
+Dance Club                          0:19   0:19
+Percussion                          1:16   1:16
+Bulldozer                           1:10   1:10
+Random Cross                        1:14   1:14
+Happy Paradise                      1:29   1:29
+Tunnelway                           0:19   0:19
+Shinobi Reverse                     1:43   1:42
+Beat Ambience                       3:20   2:50
+Moon                                2:00   1:57
+Crazy Train                         2:08   2:07
+The Poets I                         1:34   1:33
+The Poets II                        2:29   2:29
+Cycle II                            1:30   1:29
+Inga Rasen                          3:51   3:50
+Boss                                1:17   1:16
+Fateful Meeting                     0:51   0:51
+Mr. X!                              0:19   0:19
+Round Clear                         0:07   -
+Bad Ending                          0:38   0:38
+Good Ending                         3:50   1:55
+Game Over                           0:04   -
+Kama de Coco                        0:26   0:25
+Beyond Oasis Early Tune             0:52   0:51
+
+Notes:
+Some of the sounds suffer from similar issue as
+the previous two SOR/BK installments, and not
+much can be done about it, as usual.
+
+Interesting Note: Even though Yuzo Koshiro gets
+sole credit ingame, the official OST lists both
+him and Motohiro Kawashima (Who also did the
+song "Expander" in SOR2/BKII.) As such, I've
+co-credited them accordingly here.
+
+The game contains some songs that sound like
+very early versions of Beyond Oasis.
+
+"Kama de Coco" is only used in the Japan
+version, Bare Knuckle. It is Ash's song, and
+since Ash looks and acts stereotypically
+homosexual, SOA Neatly excised him from SOR3.
+The Song, however, is still there.
+
+
+Sex: Male?
+-DP
+
+Package history:
+1.01 2022-01-01 andlabs: Fixed txt file for
+ vgmrips.

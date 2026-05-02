@@ -1,0 +1,30 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Super Hang-On
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Katsuhiro Hayashi,
+                                 Kouichi Namiki
+Publisher:           Sega
+Package created by:  CRV
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Select Your Class                   0:09   0:08
+Outride a Crisis                    2:37   2:25
+Sprinter                            2:30   2:30
+Winning Run                         3:01   2:59
+Hard Road                           3:02   3:01
+Finished                            0:17   0:16
+Enter Your Name                     0:41   -
+Winner (Shop BGM)                   0:11   0:11
+
+Notes:
+-

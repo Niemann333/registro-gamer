@@ -1,0 +1,37 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Super Monaco GP
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Tokuhiko Uwabo
+Publisher:           Sega
+Package created by:  Duchemole
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Extreme Tension                     0:12   0:10
+The Checker Flag                    0:05   - 
+The Heat Waves                      1:04   1:03 
+A Break                             0:04   -                    
+Qualify                             0:09   -
+F1 Grand Prix                       0:12   -
+At a Loss                           0:05   -                
+Super License                       0:09   -
+Exhaust Fumes                       0:58   0:57 
+Concentration                       1:25   1:02              
+The Bitterness                      0:22   0:22
+Impatience                          0:40   0:39 
+Contentment                         0:49   0:48                
+Hold in Check                       0:29   0:23
+Theme of Monaco                     1:31   1:01    
+
+Notes:
+Musics in sound test order.
+Thanks to Danjuro for his help.

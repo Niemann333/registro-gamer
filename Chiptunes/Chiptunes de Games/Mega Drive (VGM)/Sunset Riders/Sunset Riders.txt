@@ -1,0 +1,61 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Sunset Riders
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Masahiro Ikariko, H. Inoue
+Publisher:           Konami
+Package created by:  Quaze
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Konami Logo                         0:02   -
+Escape (Title)                      0:08   -
+Time to Set Off (Player Select)     0:14   0:13
+Gunfight at the Sunset Corral
+                     (Town Stage 1) 0:53   0:46
+Yuppie! (Stage Clear)               0:06   -
+Wanted! (Boss Introduction)         0:05   -
+Face With Courage
+     (Town Stage 2, Forest Stage 1) 0:45   0:45
+It's Time to Pay (Simon Greedwell)  0:28   0:25
+Quick Draw (Bonus Stage)            0:14   0:13
+Butch Cassidy and Sunset Riders
+                    (Train Stage 1) 0:29   0:25
+Train Stage 2                       0:37   0:34
+Ay, Chihuahua (Paco Loco)           0:23   0:21
+The Rosy Setting Sun
+                 (Mountain Stage 1) 0:36   0:32
+Mountain Stage 2                    0:26   0:26
+Me Ready for Pow-Wow
+                    (Chief Scalpen) 0:19   0:14
+Please Help my Friends
+              (Chief Scalpen Clear) 0:10   -
+Draw Your Gun! (Forest Stage 2)     0:30   0:26
+The Great Petal (Sir Richard Rose)  0:30   0:28
+The Magnificent Four
+          (Sir Richard Rose Part 2) 0:27   0:26
+Continue of Sorrow (Continue)       0:10   0:08
+Hic Jacet (Game Over)               0:04   -
+Dance Over Night (Easy Game Clear)  0:32   0:14
+The Big Win (Staff Roll)            0:51   -
+Looking Up at the Stars
+                       (Name Entry) 0:09   0:08
+You and He, Big Trouble
+             (Versus Mode: Round 1) 0:19   0:17
+Adios, Amigo (Versus Mode: Round 2) 0:22   0:20
+We're Gonna Blow You Away!
+             (Versus Mode: Round 3) 0:29   0:26
+
+Notes:
+Track names taken from the OST of the arcade
+version of the game. Two tracks (Train Stage 2,
+Mountain Stage 2) are not in the arcade game,
+thus no song titles.
