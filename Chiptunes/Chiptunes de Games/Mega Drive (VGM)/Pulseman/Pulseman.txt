@@ -1,0 +1,80 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Pulseman
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Junichi Masuda
+Publisher:           Game Freak
+Package created by:  Dark Pulse
+Package version:     1.01
+
+Files, in Sound Test order:
+
+Name                                Length:
+                                    Total  Loop
+01 - Neo Tokyo                      1:02   0:56
+02 - Integrated City                1:42   0:57
+03 - Blank Structure                1:21   0:50
+04 - Stereo Protect                 2:40   1:16
+05 - Cycle Partition                1:20   1:08
+06 - Real Overflow                  1:26   1:10
+07 - CL Architecture                1:25   1:12
+08 - Shutdown 2                     1:09   1:04
+09 - Kernel Pages                   2:02   1:36
+10 - Technology                     1:34   1:17
+11 - Halt 16 Voice                  0:56   0:42
+12 - Brain Wash                     3:01   2:51
+13 - Brain Voice                    1:36   1:16
+14 - Piston Power                   2:16   2:16
+15 - Rebooting                      2:19   2:16
+16 - Boot Sequence                  1:14   1:02
+17 - Remounting                     1:07   0:46
+18 - Voltage Algorithm              1:45   1:38
+19 - Metamorphoser                  0:45   0:37
+20 - Dead Dimension                 1:27   1:16
+21 - End Traceback                  3:16   3:02
+22 - Run Command                    1:11   0:54
+23 - Stop Program                   1:12   1:10
+24 - Swap Area                      0:54   0:43
+25 - Port 1                         1:09   0:56
+26 - Memory Static                  1:02   0:56
+27 - Bad Trap                       0:45   0:37
+28 - File Systems                   1:04   0:58
+29 - Accelerator                    1:19   1:17
+30 - Shutdown                       1:14   1:04
+31 - Electrace Man                  0:20   -
+32 - Super Target                   1:32   1:25
+33 - Dump Succeeded                 0:44   0:25
+34 - Amabilis                       1:36   -
+
+
+Notes:
+This game, in particular, is the one I've most
+wanted to rip. It's pretty much responsible
+for many of the interests and even my nick.
+It's also a big deal responsible for Project
+2612 coming to life. This is a great game,
+with some nifty graphical tricks. If you
+haven't played it, by all means, give it a
+shot.
+
+That said, there is one problem with one song:
+Electrace Man, for some odd reason, has a small
+pause at each part, and I cannot figure out why
+at all.
+
+Finally, the company that made this game, Game
+Freak, went on to greater things. Y'see, in
+1996, they developed a little game called
+Pocket Monsters...
+
+
+Pika!
+-DP
+
+Updates
+1.01: Jun'ichi -> Junichi
