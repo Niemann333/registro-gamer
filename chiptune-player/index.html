@@ -7,11 +7,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #070d07; overflow: hidden; }
     #status {
-      font-family: monospace;
-      font-size: 10px; color: #2a5a2a;
-      padding: 4px 8px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      height: 22px; line-height: 14px;
+      font-family: monospace; font-size: 10px; color: #2a5a2a;
+      padding: 4px 8px; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; height: 22px; line-height: 14px;
     }
     #status.playing { color: #39ff14; }
     #status.error   { color: #ff4444; }
@@ -21,24 +19,25 @@
 <body>
   <div id="root"></div>
   <div id="status">Inicializando...</div>
-
   <script>
     // ── Intercepta AudioContext ANTES do bundle ──
-    // Isso nos dá controle de pause/resume sem depender de API interna
-    var _capturedCtx = null;
+    var _ctx = null;
+    var _ctxStartTime = 0; // audioCtx.currentTime no momento que começou a tocar
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
-      var _PatchedAC = function() {
-        var ctx = new _OrigAC();
-        _capturedCtx = ctx;
-        return ctx;
+      var _Patched = function() {
+        _ctx = new _OrigAC();
+        return _ctx;
       };
-      _PatchedAC.prototype = _OrigAC.prototype;
-      window.AudioContext = window.webkitAudioContext = _PatchedAC;
+      _Patched.prototype = _OrigAC.prototype;
+      window.AudioContext = window.webkitAudioContext = _Patched;
     }
 
     var songUrl     = null;
     var playerReady = false;
+    var posTimer    = null;
+    var lastCtxTime = -1;
+    var stoppedTicks = 0;
 
     // Lê ?url=
     var params = new URLSearchParams(window.location.search);
@@ -53,51 +52,78 @@
     }
 
     function stripExt(s) { return s.replace(/\.[^.]+$/, ''); }
-
     function setStatus(msg, cls) {
       var el = document.getElementById('status');
-      el.textContent = msg;
-      el.className = cls || '';
+      el.textContent = msg; el.className = cls || '';
     }
+    function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
-    function seq() {
-      return window.ChipPlayer && window.ChipPlayer.sequencer;
+    // Poller: usa audioCtx.currentTime (para quando suspend(), retoma no resume())
+    function startPoller() {
+      if (posTimer) clearInterval(posTimer);
+      _ctxStartTime = _ctx ? _ctx.currentTime : 0;
+      lastCtxTime = -1;
+      stoppedTicks = 0;
+
+      posTimer = setInterval(function() {
+        if (!_ctx) return;
+        var pos = _ctx.currentTime - _ctxStartTime; // segundos desde que tocou
+        if (pos < 0) pos = 0;
+
+        // Envia posição pro gadget
+        try {
+          window.parent.postMessage({
+            type: 'position',
+            posSec: pos,
+            state: _ctx.state  // 'running' | 'suspended'
+          }, '*');
+        } catch(e){}
+
+        // Detecta parada natural do engine (song acabou sem loop)
+        // audioCtx.currentTime para de avançar quando o engine para
+        if (_ctx.state === 'running') {
+          if (_ctx.currentTime === lastCtxTime) {
+            stoppedTicks++;
+            if (stoppedTicks >= 4) { // ~2s parado
+              clearInterval(posTimer);
+              try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e){}
+            }
+          } else {
+            stoppedTicks = 0;
+          }
+          lastCtxTime = _ctx.currentTime;
+        }
+      }, 500);
     }
 
     // Recebe comandos do gadget
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
-
       if (d.type === 'play' && d.url) {
         songUrl = d.url;
         if (playerReady) startPlay();
       }
       if (d.type === 'pause') {
-        if (_capturedCtx && _capturedCtx.state === 'running') {
-          _capturedCtx.suspend();
-          setStatus('⏸ Pausado', '');
-        }
+        if (_ctx && _ctx.state === 'running') _ctx.suspend();
+        setStatus('⏸ Pausado', '');
       }
       if (d.type === 'resume') {
-        if (_capturedCtx && _capturedCtx.state === 'suspended') {
-          _capturedCtx.resume();
-          var name = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
-          setStatus('♪ ' + name, 'playing');
-        }
+        if (_ctx && _ctx.state === 'suspended') _ctx.resume();
+        var name = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
+        setStatus('♪ ' + name, 'playing');
       }
     });
 
     function startPlay() {
       if (!songUrl || !seq()) return;
-      // Garante que o AudioContext está rodando
-      if (_capturedCtx && _capturedCtx.state === 'suspended') {
-        _capturedCtx.resume();
-      }
+      if (_ctx && _ctx.state === 'suspended') _ctx.resume();
       var name = stripExt(decodeURIComponent(songUrl.split('/').pop()));
       setStatus('♪ ' + name, 'playing');
       try {
         seq().playSonglist([songUrl]);
+        // Dá um tick pro engine iniciar antes de capturar o currentTime
+        setTimeout(startPoller, 200);
       } catch(ex) {
         setStatus('Erro: ' + ex.message, 'error');
       }
@@ -115,13 +141,9 @@
           reg.waiting.addEventListener('statechange', function() {
             if (this.state === 'activated') location.reload();
           });
-        } else {
-          loadBundle();
-        }
+        } else { loadBundle(); }
       }).catch(function() { loadBundle(); });
-    } else {
-      loadBundle();
-    }
+    } else { loadBundle(); }
 
     function loadBundle() {
       var s = document.createElement('script');
