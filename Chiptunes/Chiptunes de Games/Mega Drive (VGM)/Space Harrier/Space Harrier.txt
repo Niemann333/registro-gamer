@@ -1,0 +1,44 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Space Harrier
+System:              Sega 32X
+Complete music dump: Yes
+
+Original authors:    Hiroshi Kawaguchi
+Publisher:           Sega
+Package created by:  2ch-H
+Package version:     1.00
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+01 - Sega Logo                      0:03   -
+02 - Credit                         0:01   -
+03 - Theme                          4:08   3:44
+04 - Squilla                        0:34   0:34
+05 - Ida                            0:31   0:25
+06 - Godarni                        0:22   0:22
+07 - Wiwi Jumbo                     2:24   1:41
+08 - Battle Field (Bonus Stage)     1:19   -
+09 - Syura                          0:31   0:31
+10 - Valda                          0:17   0:17
+11 - Stanray                        0:44   0:44
+12 - Lake Side Memory (Ending)      1:02   -
+13 - Winner's Song (Name Entry)     0:34   -
+14 - Theme (With Voice)             4:08   3:44
+
+Total Length                       16:40  28:42
+
+Notes:
+Track Names are used in Space Harrier II 
+-Space Harrier Complete Collection- OST.
+
+This pack was made using Gens/GS r7+ VGM mod.
+
+
+Package history:
+1.00 2015-11-28 2ch-H: Initial release.
