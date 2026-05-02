@@ -1,0 +1,57 @@
+***********************************************
+* Megadrive VGM music package                 *
+* http://project2612.org/                     *
+***********************************************
+
+Game name:           Sonic the Hedgehog 2
+System:              Sega Mega Drive
+Complete music dump: Yes
+
+Original author:     Masato Nakamura, Izuho
+                     Takeuchi (Sound Assistant)
+Publisher:           Sega
+Package created by:  DJ Squarewave
+Package version:     1.01
+
+Files, in approximate game order:
+
+Name                                Length:
+                                    Total  Loop
+Opening Theme                       0:09   -
+Options                             0:06   0:06
+Emerald Hill Zone                   0:44   0:41
+Act Clear                           0:06   -
+Chemical Plant Zone                 1:02   0:48
+Drowning                            0:11   -
+Aquatic Ruin Zone                   0:36   0:36
+Casino Night Zone                   1:01   0:56
+Hill Top Zone                       0:43   0:43
+Mystic Cave Zone                    0:56   0:54
+Oil Ocean Zone                      0:47   0:41
+Metropolis Zone                     0:49   0:42
+Sky Chase Zone                      0:40   0:36
+Wing Fortress Zone                  0:48   0:45
+Death Egg Zone                      0:51   0:51
+Dr. Robotnik's Theme                0:36   0:36
+Final Boss                          0:58   0:55
+Continue?                           0:09   -
+Ending Theme                        1:13   -
+Staff Roll                          2:38   -
+Game Over                           0:11   -
+Invincibility                       0:11   0:10
+Super Sonic                         0:23   0:19
+Extra Life                          0:03   -
+2 Player Results                    0:41   0:41
+Emerald Hill (2 Player)             0:39   0:36
+Casino Night (2 Player)             0:46   0:43
+Mystic Cave (2 Player)              0:55   0:52
+Special Stage                       0:49   0:38
+Chaos Emerald                       0:02   -
+Unused (Sound Test 10)              0:50   0:49
+
+Notes:
+Japanese titles taken from the manual.
+
+1.00: Added correct musician credits.
+1.01: Fixed "Wing Fortress Zone", courtesy of
+kode54.

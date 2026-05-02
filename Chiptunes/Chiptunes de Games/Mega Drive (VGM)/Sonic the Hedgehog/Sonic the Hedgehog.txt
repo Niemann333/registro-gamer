@@ -1,0 +1,54 @@
+***********************************************
+* VGM music package                           *
+* https://vgmrips.net/                        *
+***********************************************
+
+Game name:           Sonic the Hedgehog
+System:              Sega Mega Drive
+Music hardware:      YM2612, SEGA VDP PSG
+Complete music dump: Yes
+
+Music author:        Masato Nakamura
+Game developer:      Sega
+Game publisher:      Sega
+Game release date:   1991-06-23 (W) /
+                     1991-07-26 (J)
+
+Package created by:  DJ Squarewave
+Package version:     1.12
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+Title Theme                         0:09   -
+Green Hill Zone                     0:53   0:38
+Marble Zone                         0:38   0:36
+Spring Yard Zone                    0:41   0:38
+Labyrinth Zone                      0:37   0:35
+Star Light Zone                     0:46   0:42
+Scrap Brain Zone                    1:13   1:12
+Special Stage                       0:33   0:33
+Robotnik                            0:22   0:21
+Final Zone                          0:22   0:19
+Stage Clear                         0:06   -
+Ending Theme                        0:18   -
+Staff Roll                          2:01   -
+Invincibility                       0:12   0:11
+1-up                                0:04   -
+Chaos Emerald                       0:03   -
+Drowning                            0:12   -
+Continue?                           0:09   -
+Game Over                           0:12   -
+
+Notes:
+I know someone else would have ripped this -- I
+wanted it just to listen to myself!
+
+Release notes from project2612; names/dates lost:
+1.10 Credited Yukifumi Makino for Drowning and
+Chaos Emerald jingles.
+1.11 Boss Theme -> Robotnik
+
+Package history:
+1.12 2022-01-04 andlabs: Fixed txt file for
+ vgmrips.
