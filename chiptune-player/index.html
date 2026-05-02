@@ -4,37 +4,37 @@
   <meta charset="UTF-8">
   <title>Chiptune Player</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #070d07; overflow: hidden; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:#070d07; overflow:hidden; }
     #status {
-      font-family: monospace; font-size: 10px; color: #2a5a2a;
-      padding: 4px 8px; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis; height: 22px; line-height: 14px;
+      font-family:monospace; font-size:10px; color:#2a5a2a;
+      padding:4px 8px; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis; height:22px; line-height:14px;
     }
-    #status.playing { color: #39ff14; }
-    #status.error   { color: #ff4444; }
-    #root { display: none; }
+    #status.playing { color:#39ff14; }
+    #status.error   { color:#ff4444; }
+    #root { display:none; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx      = null;
-    var _analyser = null;
-    var _analyserPatched = false;
-    var _ctxStartTime    = 0;
+    var _ctx             = null;
+    var _analyser        = null;
+    var _analyserLinked  = false;
+    var _ctxStartTime    = 0;   // audioCtx.currentTime quando a música começou
+    var _seekOffset      = 0;   // offset acumulado por seeks (em segundos)
     var _endedSent       = false;
     var _silenceCount    = 0;
-    var _SILENCE_NEEDED  = 4;   // 4 × 500ms = 2s de silêncio → fim da música
-    var _SILENCE_RMS     = 0.0005; // limiar de amplitude
+    var _SILENCE_NEEDED  = 4;
+    var _SILENCE_RMS     = 0.0005;
 
-    // ── 1. Intercepta AudioContext ──
+    // ── Intercepta AudioContext ──
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Patched = function() {
         _ctx = new _OrigAC();
-        // Cria AnalyserNode imediatamente após o contexto existir
         _setupAnalyser();
         return _ctx;
       };
@@ -47,30 +47,20 @@
       _analyser = _ctx.createAnalyser();
       _analyser.fftSize = 2048;
 
-      // ── 2. Intercepta connect() para rotear TUDO pelo AnalyserNode ──
-      if (!_analyserPatched) {
-        _analyserPatched = true;
-        var _OrigConnect = AudioNode.prototype.connect;
-        // Conecta o analyser ao destino final (só uma vez)
-        var _analyserToDestinationDone = false;
-
-        AudioNode.prototype.connect = function(dest, outIdx, inIdx) {
-          // Se alguém tenta conectar ao destino final do contexto
-          if (_ctx && dest === _ctx.destination) {
-            // Roteia pelo analyser primeiro
-            if (!_analyserToDestinationDone) {
-              _analyserToDestinationDone = true;
-              _OrigConnect.call(_analyser, _ctx.destination);
-            }
-            // Conecta este nó ao analyser em vez do destino direto
-            return _OrigConnect.call(this, _analyser, outIdx, inIdx);
+      // Intercepta connect() — roteia tudo pelo analyser antes do destino
+      var _OrigConnect = AudioNode.prototype.connect;
+      AudioNode.prototype.connect = function(dest, outIdx, inIdx) {
+        if (_ctx && dest === _ctx.destination) {
+          if (!_analyserLinked) {
+            _analyserLinked = true;
+            _OrigConnect.call(_analyser, _ctx.destination);
           }
-          return _OrigConnect.apply(this, arguments);
-        };
-      }
+          return _OrigConnect.call(this, _analyser, outIdx, inIdx);
+        }
+        return _OrigConnect.apply(this, arguments);
+      };
     }
 
-    // ── 3. Detecção de silêncio via AnalyserNode ──
     function checkSilence() {
       if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
       var data = new Float32Array(_analyser.fftSize);
@@ -89,11 +79,16 @@
       }
     }
 
+    // posSec real = (audioCtx.currentTime - _ctxStartTime) + _seekOffset
+    function getPosSec() {
+      if (!_ctx) return 0;
+      return Math.max(0, (_ctx.currentTime - _ctxStartTime) + _seekOffset);
+    }
+
     var songUrl     = null;
     var playerReady = false;
     var posTimer    = null;
 
-    // Lê ?url=
     var params = new URLSearchParams(window.location.search);
     if (params.get('url')) {
       songUrl = decodeURIComponent(params.get('url'));
@@ -112,31 +107,27 @@
     }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
-    // ── Polling: posição + detecção de silêncio ──
     function startPoller() {
       if (posTimer) clearInterval(posTimer);
       _ctxStartTime = _ctx ? _ctx.currentTime : 0;
+      _seekOffset   = 0;
       _endedSent    = false;
       _silenceCount = 0;
 
       posTimer = setInterval(function() {
         if (!_ctx) return;
-        var pos = Math.max(0, _ctx.currentTime - _ctxStartTime);
+        var pos = getPosSec();
         try {
-          window.parent.postMessage({
-            type: 'position',
-            posSec: pos,
-            state: _ctx.state
-          }, '*');
+          window.parent.postMessage({ type: 'position', posSec: pos, state: _ctx.state }, '*');
         } catch(e){}
         checkSilence();
-      }, 500);
+      }, 400);
     }
 
-    // ── Recebe comandos do gadget ──
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
+
       if (d.type === 'play' && d.url) {
         songUrl = d.url;
         if (playerReady) startPlay();
@@ -150,13 +141,23 @@
         var name = songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : '';
         setStatus('♪ ' + name, 'playing');
       }
+      // Seek: gadget envia a posição alvo em segundos
+      // Ajustamos _seekOffset para que getPosSec() retorne o valor certo
+      if (d.type === 'seek' && typeof d.sec === 'number') {
+        // getPosSec() = (currentTime - _ctxStartTime) + _seekOffset = d.sec
+        // → _seekOffset = d.sec - (currentTime - _ctxStartTime)
+        if (_ctx) {
+          _seekOffset = d.sec - (_ctx.currentTime - _ctxStartTime);
+          _endedSent  = false;
+          _silenceCount = 0;
+        }
+      }
     });
 
     function startPlay() {
       if (!songUrl || !seq()) return;
       if (_ctx && _ctx.state === 'suspended') _ctx.resume();
-      _endedSent = false;
-      _silenceCount = 0;
+      _endedSent = false; _silenceCount = 0;
       var name = stripExt(decodeURIComponent(songUrl.split('/').pop()));
       setStatus('♪ ' + name, 'playing');
       try {
@@ -167,7 +168,7 @@
       }
     }
 
-    // ── SW + bundle ──
+    // SW + bundle
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
