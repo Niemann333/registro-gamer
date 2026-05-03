@@ -1,0 +1,54 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Track & Field (U) /
+                     Track & Field
+                     in Barcelona (E) /
+                     Hyper Olympic (J) /
+                     Hyper Sports (J)
+System:              Nintendo Entertainment
+                     System / Famicom
+Music hardware:      NES APU (N2A03)
+
+Music author:        Shokichi Ishihara (AC/NES)
+Game developer:      Konami
+Game publisher:      Konami (JU) / Kemco (E)
+Game release date:   1987-04 (U) /
+                     1992-02-02 (E) /
+                     1985-06-02 (J) /
+                     1985-09-27 (Hyper Sports)
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title Screen                     0:16   -
+02 Event Start                      0:06   -
+03 World Record                     0:05   -
+04 Event Clear                      0:04   -
+05 Game Over                        0:04   -
+06 Event Start                      0:05   -
+07 World Record                     0:05   -
+08 Event Clear                      0:04   -
+09 Event Miss                       0:03   -
+10 Commendation                     0:18   -
+11 Game Over                        0:04   -
+
+Total Length                        1:16   1:16
+
+
+Notes:
+I was included the Hyper Sports tracks here,
+because the American division of Konami was
+build Hyper Olympic and Hyper Sports in one
+cartridge. These two games are separated in
+Japan, and makes the use of Konami's
+Hyper Shot controller for Famicom (not to
+be confused with Bandai's Hyper Shot).
+
+
+Package history:
+1.00 2013-07-03 Sonic of 8!: Initial release.

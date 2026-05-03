@@ -1,0 +1,57 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Legacy of The Wizard (U) /
+                     Dragon Slayer IV:
+                     Drasle Family (J)
+System:              Nintendo Entertainment
+                     System / Family Computer
+Music hardware:      NES APU (N2A03)
+
+Music author:        Yuzo Koshiro,
+                     Mieko Ishikawa
+Game developer:      Nihon Falcom, Compile
+Game publisher:      Broderbund (U) /
+                     Namcot (J)
+ Licensed By:        Nihon Falcom
+Game release date:   1989-04 (U) /
+                     1987-07-17(J)
+
+Package created by:  2ch-H
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Opening Theme                    0:22   0:13
+02 Theme of Inn & Home              0:26   0:26
+03 Select Scene                     0:26   0:26
+04 Ground Theme                     0:32   0:26
+05 All Together Now                 0:31   0:31
+06 Theme of Shop                    0:43   0:42
+07 Xemn Worzen                      0:38   0:38
+08 Mid Boss                         0:21   0:21
+09 Pochi                            0:21   0:21
+10 Lyll Worzen                      0:52   0:32
+11 Mayna Worzen                     0:26   0:26
+12 Dilgyos                          0:32   0:26
+13 Ending Theme                     0:58   0:58
+14 Theme of Death                   0:11   0:11
+15 Treasure Chest                   0:02   -
+16 Roas Worzen (Unused)             0:26   0:26
+
+Total Length                        7:47  14:46
+
+
+Notes:
+Track Names are used in Dragon Slayer IV OST.
+
+This pack was made using MESS0152 VGM mod.
+
+Size reduction (vgm_cmp):
+    251 KB  -> 180 KB (71.7 %)
+
+
+Package history:
+1.00 2015-01-16 2ch-H: Initial release.
