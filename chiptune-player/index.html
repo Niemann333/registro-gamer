@@ -20,34 +20,61 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    // ── Intercepta AudioContext para pause/resume ──
-    var _ctx = null, _analyser = null, _linked = false;
-    var _OrigAC = window.AudioContext || window.webkitAudioContext;
-    if (_OrigAC) {
-      window.AudioContext = window.webkitAudioContext = function() {
-        _ctx = new _OrigAC();
+    var _ctx         = null;
+    var _analyser    = null;
+    var _linked      = false;
+    var _ctxStart    = 0;    // audioCtx.currentTime quando música começou
+    var _silCount    = 0;
+    var _silNeeded   = 6;    // 6 × 300ms = 1.8s de silêncio
+    var _silRMS      = 0.001;
+    var _endedSent   = false;
+    var _posTimer    = null;
+
+    // ── Intercepta AudioContext ──
+    (function() {
+      var Orig = window.AudioContext || window.webkitAudioContext;
+      if (!Orig) return;
+      var Patched = function() {
+        _ctx = Reflect.construct(Orig, [], Patched);
+        // Analyser para detecção de silêncio
         _analyser = _ctx.createAnalyser();
         _analyser.fftSize = 2048;
-        var _orig = AudioNode.prototype.connect;
+        // Intercepta connect() para rotear pelo analyser
+        var origConn = AudioNode.prototype.connect;
         AudioNode.prototype.connect = function(dest, a, b) {
-          if (_ctx && dest === _ctx.destination) {
-            if (!_linked) { _linked = true; _orig.call(_analyser, _ctx.destination); }
-            return _orig.call(this, _analyser, a, b);
+          if (_ctx && dest === _ctx.destination && !_linked) {
+            _linked = true;
+            origConn.call(_analyser, _ctx.destination);
           }
-          return _orig.apply(this, arguments);
+          if (_ctx && dest === _ctx.destination) {
+            return origConn.call(this, _analyser, a, b);
+          }
+          return origConn.apply(this, arguments);
         };
         return _ctx;
       };
-      window.AudioContext.prototype = _OrigAC.prototype;
+      Patched.prototype = Object.create(Orig.prototype);
+      Patched.prototype.constructor = Patched;
+      Object.setPrototypeOf(Patched, Orig);
+      window.AudioContext = window.webkitAudioContext = Patched;
+    })();
+
+    function checkSilence() {
+      if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
+      var buf = new Float32Array(_analyser.fftSize);
+      _analyser.getFloatTimeDomainData(buf);
+      var rms = 0;
+      for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+      rms = Math.sqrt(rms / buf.length);
+      if (rms < _silRMS) { _silCount++; } else { _silCount = 0; }
+      if (_silCount >= _silNeeded) {
+        _endedSent = true; _silCount = 0;
+        try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
+      }
     }
 
     var songUrl = null, playerReady = false;
-    var _ctxStartTime = 0; // ctx.currentTime quando a música começou
-    var _posTimer = null;
-    var _endedSent = false;
-    var _stateHooked = false;
 
-    // ── Lê ?url= ──
     var params = new URLSearchParams(window.location.search);
     if (params.get('url')) {
       songUrl = decodeURIComponent(params.get('url'));
@@ -60,45 +87,23 @@
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
 
-    // ── Intercepta handlePlayerStateupdate do sequencer ──
-    // É chamado com (isStopped, numVoices) quando o chip para
-    function hookSequencer() {
-      if (_stateHooked || !seq()) return;
-      _stateHooked = true;
-      var s = seq();
-      var orig = s.handlePlayerStateupdate;
-      s.handlePlayerStateupdate = function(isStopped, numVoices) {
-        // Chama o handler original (que pode chamar advanceSong internamente)
-        if (orig) orig.apply(this, arguments);
-        // Informa o gadget
-        if (isStopped && !_endedSent) {
-          _endedSent = true;
-          try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
-        }
-      };
-    }
-
-    // ── Polling de posição via AudioContext.currentTime ──
-    // currentTime avança com o áudio real (para em suspend, retoma em resume)
     function startPoller() {
       if (_posTimer) clearInterval(_posTimer);
-      _ctxStartTime = _ctx ? _ctx.currentTime : 0;
+      _ctxStart  = _ctx ? _ctx.currentTime : 0;
       _endedSent = false;
+      _silCount  = 0;
 
       _posTimer = setInterval(function() {
         if (!_ctx) return;
-        var pos = Math.max(0, _ctx.currentTime - _ctxStartTime);
+        // audioCtx.currentTime: para em suspend(), retoma em resume() — perfeito para posição
+        var pos = Math.max(0, _ctx.currentTime - _ctxStart);
         try {
-          window.parent.postMessage({
-            type: 'position',
-            posSec: pos,
-            state: _ctx.state
-          }, '*');
+          window.parent.postMessage({ type: 'position', posSec: pos }, '*');
         } catch(e) {}
-      }, 200);
+        checkSilence();
+      }, 300);
     }
 
-    // ── Recebe comandos do gadget ──
     window.addEventListener('message', function(e) {
       if (!e.data) return;
       var d = e.data;
@@ -106,7 +111,7 @@
         songUrl = d.url; _endedSent = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'pause')  {
+      if (d.type === 'pause') {
         if (_ctx && _ctx.state === 'running') _ctx.suspend();
       }
       if (d.type === 'resume') {
@@ -117,19 +122,15 @@
     function startPlay() {
       if (!songUrl || !seq()) return;
       if (_ctx && _ctx.state === 'suspended') _ctx.resume();
-      _endedSent = false;
-      var n = stripExt(decodeURIComponent(songUrl.split('/').pop()));
-      setStatus('\u266A ' + n, 'playing');
+      _endedSent = false; _silCount = 0;
+      setStatus('\u266A ' + stripExt(decodeURIComponent(songUrl.split('/').pop())), 'playing');
       try {
         seq().playSonglist([songUrl]);
-        hookSequencer();
-        setTimeout(startPoller, 400);
-      } catch(ex) {
-        setStatus('Erro: ' + ex.message, 'error');
-      }
+        setTimeout(startPoller, 500);
+      } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
-    // ── SW + bundle ──
+    // SW + bundle
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
@@ -146,9 +147,7 @@
         var tries = 0, iv = setInterval(function() {
           tries++;
           if (seq()) {
-            clearInterval(iv);
-            playerReady = true;
-            hookSequencer();
+            clearInterval(iv); playerReady = true;
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
             if (songUrl) startPlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
