@@ -21,60 +21,82 @@
   <div id="status">Inicializando...</div>
   <script>
     var _ctx       = null;
-    var _gainNode  = null;   // controla volume / fade
-    var _analyser  = null;   // detecta silêncio
+    var _analyser  = null;
+    var _linked    = false;
+    var _scp       = null;   // ScriptProcessorNode do chip-player-js
+    var _scpFading = false;
     var _ctxStart  = 0;
     var _silCount  = 0;
     var _endedSent = false;
     var _posTimer  = null;
 
-    // Salva o connect original ANTES de qualquer patch
-    var _origConn = AudioNode.prototype.connect;
+    // ── 1. Captura o ScriptProcessorNode que o chip usa para gerar áudio ──
+    // Permite aplicar fade diretamente nos samples de saída
+    var _OrigCSP = AudioContext.prototype.createScriptProcessor
+                || AudioContext.prototype.createJavaScriptNode;
+    if (_OrigCSP) {
+      AudioContext.prototype.createScriptProcessor =
+      AudioContext.prototype.createJavaScriptNode = function() {
+        var node = _OrigCSP.apply(this, arguments);
+        _scp = node; // guarda referência
+        return node;
+      };
+    }
 
-    // Captura o AudioContext criado pelo bundle
-    var _OrigAC = window.AudioContext || window.webkitAudioContext;
+    // ── 2. Captura AudioContext e AnalyserNode para detecção de silêncio ──
+    var _origConn = AudioNode.prototype.connect;
+    var _OrigAC   = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
         _ctx = new _OrigAC();
-        setupNodes();
+        try {
+          _analyser = _ctx.createAnalyser();
+          _analyser.fftSize = 2048;
+          var _oc = AudioNode.prototype.connect;
+          AudioNode.prototype.connect = function(dest, a, b) {
+            if (_ctx && dest === _ctx.destination) {
+              if (!_linked) { _linked = true; _oc.call(_analyser, _ctx.destination); }
+              return _oc.call(this, _analyser, a, b);
+            }
+            return _oc.apply(this, arguments);
+          };
+        } catch(e) {}
         return _ctx;
       };
       _Wrap.prototype = _OrigAC.prototype;
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
-    function setupNodes() {
-      if (!_ctx || _gainNode) return;
-      try {
-        _gainNode  = _ctx.createGain();
-        _analyser  = _ctx.createAnalyser();
-        _analyser.fftSize = 2048;
-        _gainNode.gain.value = 1.0;
-
-        // Cadeia: source → gainNode → analyser → destination
-        // Usa origConn para não acionar nosso próprio patch
-        _origConn.call(_gainNode, _analyser);
-        _origConn.call(_analyser, _ctx.destination);
-
-        // Patch: redireciona qualquer connect ao destination para o gainNode
-        AudioNode.prototype.connect = function(dest, a, b) {
-          if (_ctx && dest === _ctx.destination) {
-            return _origConn.call(this, _gainNode, a, b);
-          }
-          return _origConn.apply(this, arguments);
-        };
-      } catch(e) {}
-    }
-
-    // Fade out via GainNode (~3s) — silence detector dispara songEnded automaticamente
+    // ── 3. Fade: sobrescreve onaudioprocess para reduzir samples gradualmente ──
     function doFadeOut() {
-      if (!_gainNode || !_ctx) return;
-      var now = _ctx.currentTime;
-      _gainNode.gain.cancelScheduledValues(now);
-      _gainNode.gain.setValueAtTime(_gainNode.gain.value, now);
-      _gainNode.gain.linearRampToValueAtTime(0.0, now + 3.0);
+      if (!_scp || _scpFading) return;
+      _scpFading = true;
+
+      var origHandler = _scp.onaudioprocess; // handler do chip-player-js
+      var sampleRate  = _ctx ? _ctx.sampleRate : 44100;
+      var fadeSamples = sampleRate * 3;  // 3 segundos de fade
+      var samplesElapsed = 0;
+
+      _scp.onaudioprocess = function(e) {
+        // Chip gera áudio normalmente
+        if (origHandler) origHandler.call(_scp, e);
+
+        // Aplica ganho decrescente nos samples de saída
+        samplesElapsed += e.outputBuffer.length;
+        var gain = Math.max(0, 1.0 - samplesElapsed / fadeSamples);
+
+        var ob = e.outputBuffer;
+        for (var c = 0; c < ob.numberOfChannels; c++) {
+          var d = ob.getChannelData(c);
+          for (var i = 0; i < d.length; i++) {
+            d[i] *= gain;
+          }
+        }
+        // Quando gain chega a 0, o silence detector vai disparar songEnded
+      };
     }
 
+    // ── Detecção de silêncio via AnalyserNode ──
     function checkSilence() {
       if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
       try {
@@ -112,6 +134,7 @@
       _ctxStart  = _ctx ? _ctx.currentTime : 0;
       _endedSent = false;
       _silCount  = 0;
+      _scpFading = false;
       _posTimer  = setInterval(function() {
         if (!_ctx) return;
         var pos = Math.max(0, _ctx.currentTime - _ctxStart);
@@ -124,7 +147,7 @@
       if (!e.data) return;
       var d = e.data;
       if (d.type === 'play' && d.url) {
-        songUrl = d.url; _endedSent = false;
+        songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
       }
       if (d.type === 'pause') {
@@ -134,7 +157,6 @@
         try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
       }
       if (d.type === 'fadeout') {
-        // Gadget pediu fade — silence detector vai pegar e enviar songEnded
         doFadeOut();
       }
     });
@@ -142,12 +164,7 @@
     function startPlay() {
       if (!songUrl || !seq()) return;
       try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
-      // Reseta gain para 1.0 (caso fade anterior não tenha terminado)
-      if (_gainNode && _ctx) {
-        _gainNode.gain.cancelScheduledValues(_ctx.currentTime);
-        _gainNode.gain.setValueAtTime(1.0, _ctx.currentTime);
-      }
-      _endedSent = false; _silCount = 0;
+      _endedSent = false; _silCount = 0; _scpFading = false;
       var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
       try { n = decodeURIComponent(n); } catch(e) {}
       setStatus('\u266A ' + n, 'playing');
