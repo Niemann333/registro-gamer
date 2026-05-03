@@ -1,0 +1,66 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Mike Tyson's Punch-Out!! /
+                     Punch-Out!!
+System:              Nintendo Entertainment
+                     System / Famicom
+Music hardware:      NES APU (N2A03)
+
+Music author:        Koji Kondo (Arcade),
+                     various,
+                     Kenji Yamamoto,
+                     Akito Nakatsuka,
+                     Yukio Kaneoka (NES)
+Game developer:      Nintendo IRD (AC / NES)
+Game publisher:      Nintendo
+Game release date:   1987-10 (U) /
+                     1987-11-21 (J) /
+                     1987-12-15 (E) /
+                     1990-08 (U, Punch-Out!!) /
+                     1990 (E, Punch-Out!!) /
+                     198? (J, Punch-Out!!)
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:09   -
+02 Introduction                     0:23   -
+03 Glass Joe ~ Mr. Sand Man         0:08   -
+04 Round Start ~ Great Tiger ~
+   Bald Bull ~ Mike Tyson ~
+   Mr. Dream                        0:04   -
+05 Boxing                           0:32   0:32
+06 Opponent Is Down                 0:05   0:05
+07 You Won                          0:06   -
+08 Von Kaiser ~ Super Macho Man     0:06   -
+09 Title Bout!!                     0:06   -
+10 Piston Honda                     0:08   -
+11 Get Up!                          0:05   0:05
+12 We Have a New Champion!!         0:07   -
+13 Training ~ Credits               0:27   0:27
+14 Don Flamenco                     0:07   -
+15 King Hippo                       0:05   -
+16 Let's Rematch!                   0:06   -
+17 Soda Popinski                    0:07   -
+18 New Champ!                       0:11   -
+19 The Dream Fight!!                0:05   -
+20 Game Over                        0:12   -
+
+Total Length                        3:20   4:30
+
+
+Notes:
+The Japanese version of Punch-Out!! is only
+released as a prize contest, for those won at
+the Family Computer Golf U.S. Course contest in
+Japan. It was released in a Gold Cartridge, and
+it was not be sold in retail stores.
+
+
+Package history:
+1.00 2014-08-19 Sonic of 8!: Initial release.

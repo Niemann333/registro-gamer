@@ -1,0 +1,47 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Mitsume ga Tooru
+System:              Nintendo Entertainment
+                     System
+Music hardware:      NES APU (N2A03)
+
+Music author:        Hiroyuki Iwatsuki
+Game developer:      Natsume
+Game publisher:      Tomy
+Game release date:   1992-07-17
+
+Package created by:  Dekyo-NO
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Introduction, Final Boss         0:34   0:34
+02 Stage 1-1, Stage 2-1             1:02   1:02
+03 Stage 1-2, Stage 5-1             1:08   1:00
+04 Shop                             0:15   0:15
+05 Boss                             0:26   0:26
+06 Stage Clear                      0:18   -
+07 Stage 2-2, Stage 4-2             0:43   0:43
+08 Stage 3-1, Stage 4-1             0:48   0:48
+09 Stage 3-2                        0:45   0:45
+10 Stage 5-2                        0:55   0:54
+11 Stage 5-3                        0:53   0:43
+12 Ending                           0:10   0:10
+13 Staff Roll                       2:29   0:21
+14 Game Over                        0:03   -
+
+Total Length                       10:29  18:09
+
+
+Notes:
+More Natsume goodness.
+
+Size reduction (vgm_cmp):
+    581 KB -> 492 KB (84.6 %)
+
+
+Package history:
+1.00 2021-09-24 Dekyo-NO: Initial release.
