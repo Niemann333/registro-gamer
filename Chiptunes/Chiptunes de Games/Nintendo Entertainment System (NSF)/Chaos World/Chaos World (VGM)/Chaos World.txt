@@ -1,0 +1,59 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Chaos World
+System:              Family Computer
+Music hardware:      NES APU (N2A03)
+
+Music author:        Iku Mizutani,
+                     Hiroyuki Iwatsuki
+Game developer:      Natsume
+Game publisher:      Natsume
+Game release date:   1991-10-25
+
+Package created by:  GTheGuardian
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:32   -
+02 The Adventure Begins             0:51   0:51
+03 Royal Castle                     0:23   0:22
+04 Peaceful Town                    1:26   1:18
+05 Field                            1:08   1:08
+06 Battle                           0:36   0:34
+07 Victory                          0:03   -
+08 Underground Exploration          0:11   0:11
+09 Welcome to the Village           0:55   0:55
+10 Shopping in the Merchant's Home  0:34   0:34
+11 A Rest in the Inn                0:05   -
+12 Idea in the Demon's Hand         0:42   0:42
+13 Now, Let's Set Sail!             0:34   0:34
+14 Mid-Boss Battle                  0:37   0:37
+15 Forus' Death                     0:09   0:09
+16 Getting Rich Quick in the Town
+   of Temptation!                   1:29   0:51
+17 Into the Labyrinth               0:38   0:38
+18 Deadly Battle with Ares          0:26   0:26
+19 Saradis, Castle in the Sky       0:31   0:31
+20 Setting Off for the Final Battle 1:00   1:00
+21 Chaos                            0:41   0:41
+22 Ending                           1:44   1:44
+23 Annihilation!                    0:02   -
+24 Unknown                          0:34   0:34
+
+Total Length                       15:49  30:07
+
+
+Notes:
+Track names are from
+"Rom Cassette Disc In NATSUME Vol.1"
+(CDCD-10006)
+
+This pack was made using MAME 0.164 VGM mod.
+
+
+Package history:
+1.00 2015-11-07 GTheGuardian: Initial release.
