@@ -1,0 +1,37 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Tetris
+System:              Nintendo Entertainment
+                     System / Famicom
+Music hardware:      NES APU (N2A03)
+
+Music author:        Hiroshi Suzuki
+Game developer:      Bullet-Proof Software
+Game publisher:      Bullet-Proof Software
+Game release date:   1988-12-22
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Peddler                          0:26   -
+02 Technotris                       0:58   0:58
+03 Karlnka                          0:42   0:42
+04 Troika                           1:10   0:58
+05 Celebration 1                    0:32   -
+06 Celebration 2                    0:32   -
+07 Heroes                           0:40   -
+
+Total Length                        5:00   7:37
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2012-10-04 Sonic of 8!: Initial release.
