@@ -20,37 +20,59 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx      = null;
-    var _analyser = null;
-    var _linked   = false;
-    var _ctxStart = 0;
-    var _silCount = 0;
+    var _ctx       = null;
+    var _gainNode  = null;   // controla volume / fade
+    var _analyser  = null;   // detecta silêncio
+    var _ctxStart  = 0;
+    var _silCount  = 0;
     var _endedSent = false;
     var _posTimer  = null;
+
+    // Salva o connect original ANTES de qualquer patch
+    var _origConn = AudioNode.prototype.connect;
 
     // Captura o AudioContext criado pelo bundle
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
         _ctx = new _OrigAC();
-        // Cria analyser para detecção de silêncio
-        try {
-          _analyser = _ctx.createAnalyser();
-          _analyser.fftSize = 2048;
-          // Roteia toda saída pelo analyser
-          var _oc = AudioNode.prototype.connect;
-          AudioNode.prototype.connect = function(dest, a, b) {
-            if (_ctx && dest === _ctx.destination) {
-              if (!_linked) { _linked = true; _oc.call(_analyser, _ctx.destination); }
-              return _oc.call(this, _analyser, a, b);
-            }
-            return _oc.apply(this, arguments);
-          };
-        } catch(e) {}
+        setupNodes();
         return _ctx;
       };
       _Wrap.prototype = _OrigAC.prototype;
       window.AudioContext = window.webkitAudioContext = _Wrap;
+    }
+
+    function setupNodes() {
+      if (!_ctx || _gainNode) return;
+      try {
+        _gainNode  = _ctx.createGain();
+        _analyser  = _ctx.createAnalyser();
+        _analyser.fftSize = 2048;
+        _gainNode.gain.value = 1.0;
+
+        // Cadeia: source → gainNode → analyser → destination
+        // Usa origConn para não acionar nosso próprio patch
+        _origConn.call(_gainNode, _analyser);
+        _origConn.call(_analyser, _ctx.destination);
+
+        // Patch: redireciona qualquer connect ao destination para o gainNode
+        AudioNode.prototype.connect = function(dest, a, b) {
+          if (_ctx && dest === _ctx.destination) {
+            return _origConn.call(this, _gainNode, a, b);
+          }
+          return _origConn.apply(this, arguments);
+        };
+      } catch(e) {}
+    }
+
+    // Fade out via GainNode (~3s) — silence detector dispara songEnded automaticamente
+    function doFadeOut() {
+      if (!_gainNode || !_ctx) return;
+      var now = _ctx.currentTime;
+      _gainNode.gain.cancelScheduledValues(now);
+      _gainNode.gain.setValueAtTime(_gainNode.gain.value, now);
+      _gainNode.gain.linearRampToValueAtTime(0.0, now + 3.0);
     }
 
     function checkSilence() {
@@ -105,13 +127,26 @@
         songUrl = d.url; _endedSent = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'pause')  { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
-      if (d.type === 'resume') { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
+      if (d.type === 'pause') {
+        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
+      }
+      if (d.type === 'resume') {
+        try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
+      }
+      if (d.type === 'fadeout') {
+        // Gadget pediu fade — silence detector vai pegar e enviar songEnded
+        doFadeOut();
+      }
     });
 
     function startPlay() {
       if (!songUrl || !seq()) return;
       try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
+      // Reseta gain para 1.0 (caso fade anterior não tenha terminado)
+      if (_gainNode && _ctx) {
+        _gainNode.gain.cancelScheduledValues(_ctx.currentTime);
+        _gainNode.gain.setValueAtTime(1.0, _ctx.currentTime);
+      }
       _endedSent = false; _silCount = 0;
       var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
       try { n = decodeURIComponent(n); } catch(e) {}
@@ -134,13 +169,9 @@
           reg.waiting.addEventListener('statechange', function() {
             if (this.state === 'activated') location.reload();
           });
-        } else {
-          loadBundle();
-        }
+        } else { loadBundle(); }
       }).catch(loadBundle);
-    } else {
-      loadBundle();
-    }
+    } else { loadBundle(); }
 
     function loadBundle() {
       var s = document.createElement('script');
