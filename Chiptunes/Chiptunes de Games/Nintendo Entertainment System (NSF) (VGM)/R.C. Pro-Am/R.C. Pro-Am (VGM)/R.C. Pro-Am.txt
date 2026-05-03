@@ -1,0 +1,36 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           R.C. Pro-Am
+System:              Nintendo Entertainment
+                     System
+Music hardware:      NES APU (N2A03)
+
+Music author:        David Wise
+Game developer:      Rare
+Game publisher:      Nintendo
+Game release date:   1987
+
+Package created by:  NewRisingSun
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title Screen                     0:34   -
+02 Race Begins                      0:04   -
+03 Race Ends                        0:04   -
+04 Trophy Room                      0:02   -
+05 High Score Entry                 0:29   -
+06 Game Over                        0:05   -
+
+Total Length                        1:18   1:18
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2017-05-06 NewRisingSun: Initial release.

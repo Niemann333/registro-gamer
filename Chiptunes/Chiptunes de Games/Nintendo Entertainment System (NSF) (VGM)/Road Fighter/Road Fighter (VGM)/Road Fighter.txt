@@ -1,0 +1,37 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Road Fighter
+System:              Nintendo Entertainment
+                     System / Famicom
+Music hardware:      NES APU (N2A03)
+
+Music author:        Yoshinori Sasaki (AC),
+                     unknown (NES)
+Game developer:      Konami
+Game publisher:      Palcom (E) /
+                     Konami (J)
+Game release date:   1992-06-18 (E) /
+                     1985-07-11 (J)
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Game Start                       0:05   -
+02 Check Point                      0:07   -
+03 Goal                             0:11   -
+04 Game Over                        0:04   -
+
+Total Length                        0:27   0:27
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2013-07-13 Sonic of 8!: Initial release.
