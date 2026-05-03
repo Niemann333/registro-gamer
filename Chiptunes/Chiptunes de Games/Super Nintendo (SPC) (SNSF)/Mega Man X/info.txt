@@ -1,0 +1,15 @@
+Megaman X
+Dumped by: Datschge
+ID666 tags by: Datschge
+Downloaded from: http://snesmusic.org
+
+Update 3:
+-Retagged composer fields in accordance with the Rockman X Sound Box compilation
+-Assorted timer fixes.
+
+Update 2:
+-Retitled and reordered songs to be brought in line with the X1~6 official soundtrack.
+Added specific composer information for the 9 songs for which it is known.
+
+Update:
+-Capcom logo jingle added.
