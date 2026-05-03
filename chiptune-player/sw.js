@@ -1,21 +1,12 @@
-// Service Worker v4 — redireciona /static/ para /registro-gamer/chiptune-player/static/
-// Atualizar este comentário força o browser a reinstalar o SW
-
-self.addEventListener('install', function(event) {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', function(event) {
-  event.waitUntil(clients.claim());
-});
-
+// v5 - força reinstalação
+self.addEventListener('install', function(e) { self.skipWaiting(); });
+self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
-  if (url.match(/niemann333\.github\.io\/static\//)) {
-    var newUrl = url.replace(
+  if (url.indexOf('niemann333.github.io/static/') !== -1) {
+    event.respondWith(fetch(url.replace(
       'niemann333.github.io/static/',
       'niemann333.github.io/registro-gamer/chiptune-player/static/'
-    );
-    event.respondWith(fetch(newUrl));
+    )));
   }
 });
