@@ -1,0 +1,19 @@
+#############################################################
+#
+# Knightmare, Konami
+# Playlist by BifiMsx
+#
+#############################################################
+
+
+knightmare.kss::KSS,183,Introduction,0:06,,0
+knightmare.kss::KSS,157,Level 1,0:20,,1
+knightmare.kss::KSS,163,Level 1 Boss,0:30,,1
+knightmare.kss::KSS,169,Level 2,0:30,,1
+knightmare.kss::KSS,161,Level 2 Boss,0:30,,1
+knightmare.kss::KSS,165,Power up,0:03,,0
+knightmare.kss::KSS,168,Pause,0:01,,0
+knightmare.kss::KSS,174,Dead,0:03,,0
+knightmare.kss::KSS,191,Exit warp,0:03,,0
+knightmare.kss::KSS,180,Rescue Aphrodite,0:15,,0
+knightmare.kss::KSS,186,Game Over,0:06,,1

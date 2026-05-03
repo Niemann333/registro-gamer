@@ -1,0 +1,21 @@
+#EXTM3U
+#EXTINF:6,[KNIGHTMARE] Game Start
+Knightmare (Special Konami Soundchip)::KSS,183,[KNIGHTMARE] Game Start,6,,0
+#EXTINF:43,[KNIGHTMARE] Main BGM 1
+Knightmare (Special Konami Soundchip)::KSS,129,[KNIGHTMARE] Main BGM 1,19,0-
+#EXTINF:19,[KNIGHTMARE] Boss BGM 1
+Knightmare (Special Konami Soundchip)::KSS,163,[KNIGHTMARE] Boss BGM 1,7,0-
+#EXTINF:35,[KNIGHTMARE] Main BGM 2
+Knightmare (Special Konami Soundchip)::KSS,159,[KNIGHTMARE] Main BGM 2,15,0-
+#EXTINF:23,[KNIGHTMARE] Boss BGM 2
+Knightmare (Special Konami Soundchip)::KSS,161,[KNIGHTMARE] Boss BGM 2,9,0-
+#EXTINF:2,[KNIGHTMARE] Power Up
+Knightmare (Special Konami Soundchip)::KSS,165,[KNIGHTMARE] Power Up,2,,0
+#EXTINF:2,[KNIGHTMARE] ???
+Knightmare (Special Konami Soundchip)::KSS,177,[KNIGHTMARE] ???,2,,0
+#EXTINF:2,[KNIGHTMARE] Miss
+Knightmare (Special Konami Soundchip)::KSS,171,[KNIGHTMARE] Miss,2,,0
+#EXTINF:5,[KNIGHTMARE] Game Over
+Knightmare (Special Konami Soundchip)::KSS,186,[KNIGHTMARE] Game Over,5,,0
+#EXTINF:13,[KNIGHTMARE] ???
+Knightmare (Special Konami Soundchip)::KSS,180,[KNIGHTMARE] ???,13,,0

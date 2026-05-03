@@ -1,0 +1,70 @@
+#
+# GOLVELLIUS (PSG)
+# (c)COMPILE
+# Made by ShaiWa
+#
+Golvellius PSG.kss::KSS,$01,Golvellius - PSG (MSX) (C)COMPILE [ First Cave ],43,,3
+Golvellius PSG.kss::KSS,$02,Golvellius - PSG (MSX) (C)COMPILE [ Overworld 1 ],1:20,,3
+Golvellius PSG.kss::KSS,$03,Golvellius - PSG (MSX) (C)COMPILE [ 03 ],52,,0
+Golvellius PSG.kss::KSS,$04,Golvellius - PSG (MSX) (C)COMPILE [ Kelesis Theme ],1:05,,4
+Golvellius PSG.kss::KSS,$05,Golvellius - PSG (MSX) (C)COMPILE [ Death Of A Hero ],1:04,,3
+Golvellius PSG.kss::KSS,$06,Golvellius - PSG (MSX) (C)COMPILE [ 06 ],25,,3
+Golvellius PSG.kss::KSS,$07,Golvellius - PSG (MSX) (C)COMPILE [ Heading Into Battle 1 ],48,,3
+Golvellius PSG.kss::KSS,$08,Golvellius - PSG (MSX) (C)COMPILE [ Demon Rolick ],50,,3
+Golvellius PSG.kss::KSS,$09,Golvellius - PSG (MSX) (C)COMPILE [ Wise Woman ],48,,3
+Golvellius PSG.kss::KSS,$0A,Golvellius - PSG (MSX) (C)COMPILE [ Demon Haidee ? ],30,,3
+Golvellius PSG.kss::KSS,$0B,Golvellius - PSG (MSX) (C)COMPILE [ Enny The Fairy ],34,,3
+Golvellius PSG.kss::KSS,$0C,Golvellius - PSG (MSX) (C)COMPILE [ 0C ],33,,3
+Golvellius PSG.kss::KSS,$0D,Golvellius - PSG (MSX) (C)COMPILE [ Password ],51,,3
+Golvellius PSG.kss::KSS,$0E,Golvellius - PSG (MSX) (C)COMPILE [ Randar Theme ],25,,3
+Golvellius PSG.kss::KSS,$0F,Golvellius - PSG (MSX) (C)COMPILE [ Dina The Fairy ],42,,3
+Golvellius PSG.kss::KSS,$10,Golvellius - PSG (MSX) (C)COMPILE [ Rio The Fairy ],30,,3
+Golvellius PSG.kss::KSS,$11,Golvellius - PSG (MSX) (C)COMPILE [ Heading Into Battle 2 ],1:04,,3
+Golvellius PSG.kss::KSS,$12,Golvellius - PSG (MSX) (C)COMPILE [ Cave Of Demon Golvellius ? ],40,,3
+Golvellius PSG.kss::KSS,$13,Golvellius - PSG (MSX) (C)COMPILE [ Demon Bachular ],40,,3
+Golvellius PSG.kss::KSS,$14,Golvellius - PSG (MSX) (C)COMPILE [ A Hero's Queste Is Complete ],1:30,,3
+Golvellius PSG.kss::KSS,$15,Golvellius - PSG (MSX) (C)COMPILE [ Cave To Valley Of Doom ],1:05,,3
+Golvellius PSG.kss::KSS,$16,Golvellius - PSG (MSX) (C)COMPILE [ Demon Fosbus ],27,,3
+Golvellius PSG.kss::KSS,$17,Golvellius - PSG (MSX) (C)COMPILE [ Winkle The Fairy ],25,,3
+Golvellius PSG.kss::KSS,$18,Golvellius - PSG (MSX) (C)COMPILE [ 18 ],43,,3
+Golvellius PSG.kss::KSS,$19,Golvellius - PSG (MSX) (C)COMPILE [ 19 ],33,,3
+Golvellius PSG.kss::KSS,$1A,Golvellius - PSG (MSX) (C)COMPILE [ Demon Warlick ],31,,3
+Golvellius PSG.kss::KSS,$1B,Golvellius - PSG (MSX) (C)COMPILE [ 1B ],41,,3
+Golvellius PSG.kss::KSS,$1C,Golvellius - PSG (MSX) (C)COMPILE [ Demon Despa ],1:04,,3
+Golvellius PSG.kss::KSS,$1D,Golvellius - PSG (MSX) (C)COMPILE [ COMPILE Tune ],3,,0
+Golvellius PSG.kss::KSS,$1E,Golvellius - PSG (MSX) (C)COMPILE [ Demon Defeated ],4,,0
+Golvellius PSG.kss::KSS,$1F,Golvellius - PSG (MSX) (C)COMPILE [ Overworld 3 ],40,,3
+Golvellius PSG.kss::KSS,$20,Golvellius - PSG (MSX) (C)COMPILE [ Entering The Cave To Valley Of Doom ],1:04,,3
+Golvellius PSG.kss::KSS,$21,Golvellius - PSG (MSX) (C)COMPILE [ sfx21 ],2,,0
+Golvellius PSG.kss::KSS,$22,Golvellius - PSG (MSX) (C)COMPILE [ sfx22 ],2,,0
+Golvellius PSG.kss::KSS,$23,Golvellius - PSG (MSX) (C)COMPILE [ sfx23 ],2,,0
+Golvellius PSG.kss::KSS,$24,Golvellius - PSG (MSX) (C)COMPILE [ sfx24 ],2,,0
+Golvellius PSG.kss::KSS,$25,Golvellius - PSG (MSX) (C)COMPILE [ sfx25 ],2,,0
+Golvellius PSG.kss::KSS,$26,Golvellius - PSG (MSX) (C)COMPILE [ sfx26 ],2,,0
+Golvellius PSG.kss::KSS,$27,Golvellius - PSG (MSX) (C)COMPILE [ sfx27 ],2,,0
+Golvellius PSG.kss::KSS,$28,Golvellius - PSG (MSX) (C)COMPILE [ sfx28 ],2,,0
+Golvellius PSG.kss::KSS,$29,Golvellius - PSG (MSX) (C)COMPILE [ sfx29 ],2,,0
+Golvellius PSG.kss::KSS,$2A,Golvellius - PSG (MSX) (C)COMPILE [ sfx2A ],2,,0
+Golvellius PSG.kss::KSS,$2B,Golvellius - PSG (MSX) (C)COMPILE [ sfx2B ],2,,0
+Golvellius PSG.kss::KSS,$2C,Golvellius - PSG (MSX) (C)COMPILE [ sfx2C ],2,,0
+Golvellius PSG.kss::KSS,$2D,Golvellius - PSG (MSX) (C)COMPILE [ sfx2D ],5,,0
+Golvellius PSG.kss::KSS,$2E,Golvellius - PSG (MSX) (C)COMPILE [ sfx2E ],2,,0
+Golvellius PSG.kss::KSS,$2F,Golvellius - PSG (MSX) (C)COMPILE [ sfx2F ],2,,0
+Golvellius PSG.kss::KSS,$30,Golvellius - PSG (MSX) (C)COMPILE [ sfx30 ],3,,0
+Golvellius PSG.kss::KSS,$31,Golvellius - PSG (MSX) (C)COMPILE [ sfx31 ],3,,0
+Golvellius PSG.kss::KSS,$32,Golvellius - PSG (MSX) (C)COMPILE [ sfx32 ],3,,0
+Golvellius PSG.kss::KSS,$33,Golvellius - PSG (MSX) (C)COMPILE [ sfx33 ],3,,0
+Golvellius PSG.kss::KSS,$34,Golvellius - PSG (MSX) (C)COMPILE [ sfx34 ],3,,0
+Golvellius PSG.kss::KSS,$35,Golvellius - PSG (MSX) (C)COMPILE [ sfx35 ],5,,0
+Golvellius PSG.kss::KSS,$36,Golvellius - PSG (MSX) (C)COMPILE [ sfx36 ],3,,0
+Golvellius PSG.kss::KSS,$37,Golvellius - PSG (MSX) (C)COMPILE [ sfx37 ],4,,0
+Golvellius PSG.kss::KSS,$38,Golvellius - PSG (MSX) (C)COMPILE [ sfx38 ],6,,0
+Golvellius PSG.kss::KSS,$39,Golvellius - PSG (MSX) (C)COMPILE [ sfx39 ],2,,0
+Golvellius PSG.kss::KSS,$3A,Golvellius - PSG (MSX) (C)COMPILE [ sfx3A ],3,,0
+Golvellius PSG.kss::KSS,$3B,Golvellius - PSG (MSX) (C)COMPILE [ sfx3B ],3,,0
+Golvellius PSG.kss::KSS,$3C,Golvellius - PSG (MSX) (C)COMPILE [ sfx3C ],3,,0
+Golvellius PSG.kss::KSS,$3D,Golvellius - PSG (MSX) (C)COMPILE [ sfx3D ],3,,0
+Golvellius PSG.kss::KSS,$3E,Golvellius - PSG (MSX) (C)COMPILE [ sfx3E ],3,,0
+Golvellius PSG.kss::KSS,$3F,Golvellius - PSG (MSX) (C)COMPILE [ sfx3F ],3,,0
+Golvellius PSG.kss::KSS,$40,Golvellius - PSG (MSX) (C)COMPILE [ sfx40 ],3,,0
+Golvellius PSG.kss::KSS,$41,Golvellius - PSG (MSX) (C)COMPILE [ sfx41 ],3,,0

@@ -1,0 +1,108 @@
+#
+# GOLVELLIUS II (FM-PAC & PSG)
+# (c)COMPILE
+# Made by ShaiWa
+#
+Golvellius II (Fm-pac & Psg).kss::KSS,$01,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Kelesis Theme ],1:06,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$02,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Overworld 2 ],1:30,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$04,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Death Of A Hero ],60,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$06,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Overworld 1 ],35,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$07,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Wise Woman ],49,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$0a,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Enny The Fairy ],34,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$0c,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Overworld 3 ],55,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$0d,Golvellius II - Fm-Pac (MSX2) (C)Compile [ And Your Name Is ? ],29,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$0e,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Randar Theme ],24,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$0f,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Dina The Fairy ],42,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$10,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Rio The Fairy ],30,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$11,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Winkle The Fairy ],27,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$18,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Overworld 4 ],1:32,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$1a,Golvellius II - Fm-Pac (MSX2) (C)Compile [ Entering Cave To Valley Of Doom ],1:04,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$21,Golvellius II - Fm-Pac (MSX2) (C)Compile [ 21 ],48,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$22,Golvellius II - Fm-Pac (MSX2) (C)Compile [ 22 ],24,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$23,Golvellius II - Fm-Pac (MSX2) (C)Compile [ 23 ],51,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$26,Golvellius II - Fm-Pac (MSX2) (C)Compile [ The City ],46,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$27,Golvellius II - Fm-Pac (MSX2) (C)Compile [ 27 ],53,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$00,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx00 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$28,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx28 ],4,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$2a,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx2a ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$32,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx32 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$33,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx33 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$34,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx34 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$35,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx35 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$36,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx36 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$37,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx37 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$38,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx38 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$39,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx39 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3a,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3a ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3b,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3b ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3c,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3c ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3d,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3d ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3e,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3e ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$3f,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx3f ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$40,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx40 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$41,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx41 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$42,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx42 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$43,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx43 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$44,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx44 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$45,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx45 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$46,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx46 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$47,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx47 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$48,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx48 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$49,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx49 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$4a,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx4a ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$4b,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx4b ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$4c,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx4c ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$4d,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx4d ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$4e,Golvellius II - Fm-Pac (MSX2) (C)Compile [ sfx4e ],3,,0
+
+Golvellius II (Fm-pac & Psg).kss::KSS,$81,Golvellius II - PSG (MSX2) (C)Compile [ Kelesis Theme ],1:06,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$82,Golvellius II - PSG (MSX2) (C)Compile [ Overworld 2 ],1:30,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$84,Golvellius II - PSG (MSX2) (C)Compile [ Death Of A Hero ],60,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$86,Golvellius II - PSG (MSX2) (C)Compile [ Overworld 1 ],35,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$87,Golvellius II - PSG (MSX2) (C)Compile [ Wise Woman ],49,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$8a,Golvellius II - PSG (MSX2) (C)Compile [ Enny The Fairy ],34,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$8c,Golvellius II - PSG (MSX2) (C)Compile [ Overworld 3 ],55,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$8d,Golvellius II - PSG (MSX2) (C)Compile [ And Your Name Is ? ],29,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$8e,Golvellius II - PSG (MSX2) (C)Compile [ Randar Theme ],24,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$8f,Golvellius II - PSG (MSX2) (C)Compile [ Dina The Fairy ],42,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$90,Golvellius II - PSG (MSX2) (C)Compile [ Rio The Fairy ],30,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$91,Golvellius II - PSG (MSX2) (C)Compile [ Winkle The Fairy ],27,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$98,Golvellius II - PSG (MSX2) (C)Compile [ Overworld 4 ],1:32,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$9a,Golvellius II - PSG (MSX2) (C)Compile [ Entering Cave To Valley Of Doom ],1:04,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$91,Golvellius II - PSG (MSX2) (C)Compile [ 91 ],48,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$92,Golvellius II - PSG (MSX2) (C)Compile [ 92 ],24,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$93,Golvellius II - PSG (MSX2) (C)Compile [ 93 ],51,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$96,Golvellius II - PSG (MSX2) (C)Compile [ The City ],46,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$97,Golvellius II - PSG (MSX2) (C)Compile [ 97 ],53,,3
+Golvellius II (Fm-pac & Psg).kss::KSS,$80,Golvellius II - PSG (MSX2) (C)Compile [ sfx80 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$a8,Golvellius II - PSG (MSX2) (C)Compile [ sfxa8 ],4,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$aa,Golvellius II - PSG (MSX2) (C)Compile [ sfxaa ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b2,Golvellius II - PSG (MSX2) (C)Compile [ sfxb2 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b3,Golvellius II - PSG (MSX2) (C)Compile [ sfxb3 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b4,Golvellius II - PSG (MSX2) (C)Compile [ sfxb4 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b5,Golvellius II - PSG (MSX2) (C)Compile [ sfxb5 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b6,Golvellius II - PSG (MSX2) (C)Compile [ sfxb6 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b7,Golvellius II - PSG (MSX2) (C)Compile [ sfxb7 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b8,Golvellius II - PSG (MSX2) (C)Compile [ sfxb8 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$b9,Golvellius II - PSG (MSX2) (C)Compile [ sfxb9 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$ba,Golvellius II - PSG (MSX2) (C)Compile [ sfxba ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$bb,Golvellius II - PSG (MSX2) (C)Compile [ sfxbb ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$bc,Golvellius II - PSG (MSX2) (C)Compile [ sfxbc ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$bd,Golvellius II - PSG (MSX2) (C)Compile [ sfxbd ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$be,Golvellius II - PSG (MSX2) (C)Compile [ sfxbe ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$bf,Golvellius II - PSG (MSX2) (C)Compile [ sfxbf ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c0,Golvellius II - PSG (MSX2) (C)Compile [ sfxc0 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c1,Golvellius II - PSG (MSX2) (C)Compile [ sfxc1 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c2,Golvellius II - PSG (MSX2) (C)Compile [ sfxc2 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c3,Golvellius II - PSG (MSX2) (C)Compile [ sfxc3 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c4,Golvellius II - PSG (MSX2) (C)Compile [ sfxc4 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c5,Golvellius II - PSG (MSX2) (C)Compile [ sfxc5 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c6,Golvellius II - PSG (MSX2) (C)Compile [ sfxc6 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c7,Golvellius II - PSG (MSX2) (C)Compile [ sfxc7 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c8,Golvellius II - PSG (MSX2) (C)Compile [ sfxc8 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$c9,Golvellius II - PSG (MSX2) (C)Compile [ sfxc9 ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$ca,Golvellius II - PSG (MSX2) (C)Compile [ sfxca ],3,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$cb,Golvellius II - PSG (MSX2) (C)Compile [ sfxcb ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$cc,Golvellius II - PSG (MSX2) (C)Compile [ sfxcc ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$cd,Golvellius II - PSG (MSX2) (C)Compile [ sfxcd ],5,,0
+Golvellius II (Fm-pac & Psg).kss::KSS,$ce,Golvellius II - PSG (MSX2) (C)Compile [ sfxce ],3,,0

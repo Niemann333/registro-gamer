@@ -1,0 +1,45 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/music               *
+***********************************************
+Game name:           Columns
+System:              MSX2
+Music hardware:      MSX-Music (YM2413)
+
+Music author:        Tokuhiko Uwabo (original)
+Game developer:      Compile
+Game publisher:      Nihon Telenet
+Game release date:   1990 (?)
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Filthy                           0:19   -
+02 Quagmire                         0:07   -
+03 Clotho                           1:47   1:30
+04 Lathesis                         2:12   2:09
+05 Atropos                          2:08   2:08
+06 Boy Wonder                       0:40   -
+07 Concilation                      0:05   -
+
+Total Length                        7:18  13:05
+
+
+Notes:
+FM Version.
+
+Real composer is unknown.
+
+Atropos has a bug on start due to strip of 
+AY's commands.
+
+Proof that this game is made by Compile:
+Press PageUp to Pause the game and you may hear
+the Compile Pause Sound (same on Aleste).
+
+
+Package history:
+1.00 11/11/2011 Sonic of 8!: Initial release.

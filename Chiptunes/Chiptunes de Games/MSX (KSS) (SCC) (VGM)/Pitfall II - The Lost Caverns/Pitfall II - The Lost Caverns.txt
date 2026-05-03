@@ -1,0 +1,35 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Pitfall II -
+                     The Lost Caverns
+System:              MSX
+Music hardware:      AY-3-8910A
+
+Music author:        unknown
+Game developer:      Activision (A26);
+                     Pony Canyon? (MSX)
+Game publisher:      Pony Canyon
+Game release date:   1984
+
+Package created by:  Sonic of 8!
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Game Start ~ Main BGM            0:34   0:15
+02 Main BGM                         0:15   0:15
+03 Miss ~ Main BGM                  0:30   0:15
+04 Balloon BGM                      0:23   0:22
+
+Total Length                        1:42   2:49
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2013-12-19 Sonic of 8!: Initial release.
