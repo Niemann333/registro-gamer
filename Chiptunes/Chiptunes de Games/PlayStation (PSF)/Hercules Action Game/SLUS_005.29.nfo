@@ -1,0 +1,15 @@
+Disney's Hercules Action Game (1997)(Eurocom)(Majesco)[SLUS_005.29]
+
+Composer: Steve Duckworth
+
+Driver: Original
+Source Format: SEQ/VH/VB
+
+- VGMToolbox used for data extraction, stub creation, timing, tagging, and 
+automated PSF/MINIPSF assembly.
+
+- PSF-o-Cycle v1.01 used for driver patching.  See stub source in "src" 
+directory.
+
+- History
+ 2010-07-17 v1.0
