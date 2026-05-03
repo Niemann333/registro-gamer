@@ -1,0 +1,70 @@
+Tomba! miniPSF Rip
+
+----<>----
+Title:     Tomba!
+Disc ID:   SCUS-94236
+Developer: Whoopee Camp
+Composers: Harumi Fujita, Nao Hatsutani
+Release:   1998
+Region:    US
+
+----<>----
+Rippers:      manakoAT & Talec Arashi
+Tagger/Timer: Dark Pulse
+Driver:       Not Original (Fear Effect2 - Retro Helix (SLES_033.86))
+Files:        37 miniPSF + 1 psflib + 1 readme
+Date:         March 17, 2008
+
+Rip status: Complete, fully tagged & timed.
+
+----<>----
+Tracklist
+
+tomba.psflib
+
+01 - Title Screen.minipsf
+02 - Options Menu.minipsf
+03 - Village Of All Beginnings.minipsf
+04 - 100 Year Old Man's Hut.minipsf
+05 - Dwarf Forest.minipsf
+06 - Dwarf Village.minipsf
+07 - Mushroom Forest.minipsf
+08 - Mansion.minipsf
+09 - Phoenix Mountain.minipsf
+10 - Baccus Village.minipsf
+11 - Haunted Mansion (Near Baccus Lake).minipsf
+12 - Baccus Lake.minipsf
+13 - Underground Sewers.minipsf
+14 - Lava Caves.minipsf
+15 - Evil Pig Boss.minipsf
+16 - Phoenix Mountain (Purified).minipsf
+17 - Lava Caves (Purified).minipsf
+18 - Haunted Mansion (Purified).minipsf
+19 - Deep Jungle.minipsf
+20 - Village Of Civilization.minipsf
+21 - Clock Tower.minipsf
+22 - Lumberjack Factory.minipsf
+23 - Iron Castle.minipsf
+24 - Underground Maze.minipsf
+25 - Witch Mizuno's House.minipsf
+26 - Trick Village.minipsf
+27 - Dwarf Village (Purified).minipsf
+28 - Dirt Motocross.minipsf
+29 - The Mermaid's Singing Rock.minipsf
+30 - Deep Jungle (Purified).minipsf
+31 - Final Evil Pig Boss.minipsf
+32 - Tomba's Farewell.minipsf
+33 - UNKNOWN.minipsf
+34 - UNKNOWN.minipsf
+35 - UNKNOWN.minipsf
+36 - UNKNOWN.minipsf
+
+----<>----
+Contact
+
+manakoAT:   manako@gmx.de
+
+Talec:      stardroidjupiter@gmail.com
+            http://dimensionalarea.net
+
+Dark Pulse: darkpulse@project2612.org
