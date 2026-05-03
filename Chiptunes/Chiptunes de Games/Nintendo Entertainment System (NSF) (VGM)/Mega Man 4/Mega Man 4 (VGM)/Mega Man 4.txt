@@ -1,0 +1,73 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Mega Man 4 (U, E) /
+                     Rockman 4: Aratanaru
+                     Yabou!! (J)
+System:              Nintendo Entertainment
+                     System / Family Computer
+Music hardware:      NES APU (N2A03)
+
+Music author:        Minae Fujii,
+                     Manami Matsumae,
+                     Takashi Tateishi,
+                     Yasuaki Fujita
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1992-01 (U) /
+                     1991-12-06 (J) /
+                     1993-01-21 (E)
+
+Package created by:  2ch-H
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Opening                          0:40   -
+02 Opening 2                        0:12   0:11
+03 Title                            0:39   0:27
+04 Pass Word                        0:08   0:08
+05 Stage Select                     0:13   0:13
+06 Game Start                       0:06   -
+07 Bright Man Stage                 0:50   0:33
+08 Toad Man Stage                   1:09   0:30
+09 Drill Man Stage                  0:50   0:45
+10 Pharaoh Man Stage                0:45   0:34
+11 Ring Man Stage                   0:44   0:35
+12 Dust Man Stage                   0:42   0:27
+13 Dive Man Stage                   0:52   0:43
+14 Skull Man Stage                  1:25   0:47
+15 Get Items                        0:05   -
+16 Boss                             0:16   0:16
+17 Stage Clear                      0:03   -
+18 Get A Weapon                     0:07   0:07
+19 Dr. Cossack Stage Map            0:08   -
+20 Dr. Cossack Stage 1              0:33   0:33
+21 Dr. Cossack Stage 2              0:58   0:58
+22 Dr. Wily Stage Map               0:06   -
+23 Dr. Wily Stage 1                 0:48   0:43
+24 Dr. Wily Stage 2                 0:51   0:48
+25 Last Boss                        0:12   0:11
+26 All Stage Clear                  0:10   -
+27 Ending                           1:36   0:29
+28 Credit Roll                      0:49   0:48
+29 Game Over                        0:03   -
+30 Proto Man                        0:13   -
+
+Total Length                       16:13  26:58
+
+
+Notes:
+Track Names are used in Rockman Sound Box.
+
+This pack was made using MESS0156 VGM mod.
+
+
+Size reduction (vgm_cmp):
+    1.82 MB -> 1.18 MB (64.8 %)
+
+
+Package history:
+1.00 2015-04-25 2ch-H: Initial release.

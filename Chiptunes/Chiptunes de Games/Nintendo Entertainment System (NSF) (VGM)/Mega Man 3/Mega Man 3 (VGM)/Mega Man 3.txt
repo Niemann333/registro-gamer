@@ -1,0 +1,65 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Mega Man 3 (U, E) /
+                     Rockman 3: Dr. Wily no
+                     Saigo !? (J)
+System:              Nintendo Entertainment
+                     System / Family Computer
+Music hardware:      NES APU (N2A03)
+
+Music author:        Yasuaki Fujita,
+                     Harumi Fujita
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1990-10 (U) /
+                     1990-09-28 (J) /
+                     1992-02-20 (E)
+
+Package created by:  2ch-H
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:54   0:23
+02 Pass Word                        0:16   0:13
+03 Stage Select                     0:10   0:10
+04 Game Start                       0:06   -
+05 Needle Man Stage                 1:14   0:53
+06 Magnet Man Stage                 0:40   0:32
+07 Gemini Man Stage                 0:55   0:55
+08 Hard Man Stage                   0:47   0:47
+09 Top Man Stage                    0:51   0:45
+10 Snake Man Stage                  0:42   0:38
+11 Spark Man Stage                  0:38   0:26
+12 Shadow Man Stage                 1:01   0:59
+13 Proto Man                        0:13   -
+14 Boss                             0:35   0:26
+15 Stage Clear                      0:04   -
+16 Get A Weapon                     0:38   0:26
+17 Dr. Wily Stage Map               0:19   -
+18 Dr. Wily Stage 1                 0:49   0:47
+19 Dr. Wily Stage 2                 0:40   0:38
+20 Dr. Wily Stage 3                 0:46   0:38
+21 Dr. Wily Stage Boss              0:22   0:17
+22 All Stage Clear                  0:05   -
+23 Ending                           2:08   1:26
+24 Credit Roll                      1:13   0:59
+
+Total Length                       16:06  28:24
+
+
+Notes:
+Track Names are used in Rockman Sound Box.
+
+This pack was made using MESS0156 VGM mod.
+
+
+Size reduction (vgm_cmp):
+    1.78 MB -> 1.17 MB (65.7 %)
+
+
+Package history:
+1.00 2015-04-25 2ch-H: Initial release.
