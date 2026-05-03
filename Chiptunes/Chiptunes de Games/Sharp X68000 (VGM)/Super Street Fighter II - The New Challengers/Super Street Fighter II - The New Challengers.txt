@@ -1,0 +1,104 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Super Street Fighter II:
+                     The New Challengers
+System:              Sharp X68000
+Music hardware:      YM2151, OKIM6258
+
+Music author:        Isao Abe, Syun Nishigaki
+ Additional authors: Yoko Shimomura,
+                     Felix Mendelssohn
+Game developer:      Capcom
+Game publisher:      Capcom
+Game release date:   1994-09-30
+
+Package created by:  GTheGuardian
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Opening Demo                     0:24   -
+02 Player Select                    0:18   0:14
+03 Tournament                       0:03   -
+04 VS.                              0:04   -
+05 Ken Stage 1                      1:11   0:59
+06 Ken Stage 2                      0:40   0:38
+07 Ryu Stage 1                      0:56   0:48
+08 Ryu Stage 2                      0:28   0:26
+09 E. Honda Stage 1                 1:03   0:52
+10 E. Honda Stage 2                 0:27   0:26
+11 Chun-Li Stage 1                  0:57   0:52
+12 Chun-Li Stage 2                  0:26   0:25
+13 Blanka Stage 1                   1:01   0:53
+14 Blanka Stage 2                   0:25   0:23
+15 Zangief Stage 1                  0:57   0:48
+16 Zangief Stage 2                  0:27   0:26
+17 Guile Stage 1                    1:22   1:09
+18 Guile Stage 2                    0:51   0:50
+19 Dhalsim Stage 1                  1:47   0:53
+20 Dhalsim Stage 2                  0:48   0:47
+21 Fei Long Stage 1                 0:39   0:36
+22 Fei Long Stage 2                 0:29   0:28
+23 Cammy Stage 1                    1:03   0:55
+24 Cammy Stage 2                    0:26   0:25
+25 T. Hawk Stage 1                  0:40   0:39
+26 T. Hawk Stage 2                  0:45   0:44
+27 Dee Jay Stage 1                  0:43   0:40
+28 Dee Jay Stage 2                  0:15   0:06
+29 Stage-End                        0:05   -
+30 Bonus Stage                      0:17   0:11
+31 Balrog Stage 1                   0:59   0:51
+32 Balrog Stage 2                   0:25   0:24
+33 Vega Stage 1                     1:01   0:54
+34 Vega Stage 2                     0:45   0:44
+35 Sagat Stage 1                    1:24   1:16
+36 Sagat Stage 2                    0:21   0:21
+37 M. Bison Stage 1                 1:04   1:03
+38 M. Bison Stage 2                 0:56   0:51
+39 Here Comes the New Challenger    0:02   -
+40 Ken Ending                       0:18   0:11
+41 Ken Ending 2                     1:25   -
+42 Ryu Ending                       1:06   -
+43 E. Honda Ending                  0:31   0:20
+44 Chun-Li Ending                   0:28   0:24
+45 Chun-Li Ending 2                 0:22   0:18
+46 Chun-Li Ending 3                 0:35   0:19
+47 Blanka Ending                    0:21   0:13
+48 Zangief Ending                   0:12   0:11
+49 Guile Ending                     0:30   0:23
+50 Dhalsim Ending                   0:34   -
+51 Fei Long Ending                  0:39   0:21
+52 Cammy Ending                     1:02   0:52
+53 T. Hawk Ending                   1:14   -
+54 Dee Jay Ending                   0:36   0:25
+55 Balrog Ending                    0:37   0:16
+56 Vega Ending                      0:33   0:21
+57 Sagat Ending                     0:17   0:16
+58 M. Bison Ending                  0:16   0:16
+59 Congratulations!                 0:29   0:15
+60 Staff Roll                       1:38   1:12
+61 Continue                         0:10   0:09
+62 Game Over                        0:04   -
+63 Ranking Display                  0:02   -
+
+Total Length                      40:58 1:10:41
+
+
+Notes:
+Track names are from
+"Super Street Fighter II Arcade Gametrack"
+(SRCL-2822)
+
+This pack was made using XM6 2.05 VGM mod.
+
+
+Unable to optimize with opt_oki due to the game
+doing a constant stream to the OKI6258 chip.
+-Valley Bell
+
+
+Package history:
+1.00 2020-05-10 GTheGuardian: Initial release.

@@ -1,0 +1,65 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Bosconian
+System:              Sharp X68000
+Music hardware:      YM2151, OKIM6258
+
+Music author:        Yuzo Koshiro,
+                     Hideya Nagata
+Game developer:      Dempa
+Game publisher:      Dempa
+Game release date:   1988-12
+
+Package created by:  vampirefrog
+Package version:     1.05
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Little Wave                      0:53   0:34
+02 Red Alert                        0:51   0:38
+03 Good Morning                     0:28   -
+04 Blast Off !!                     0:08   -
+05 Get "Lady"                       0:55   0:52
+06 Excellence                       0:27   0:26
+07 Battle Was Gone                  0:42   0:28
+08 Dusk...                          0:11   -
+09 Space Hibabango                  0:53   -
+10 Blast Power !                    2:06   1:11
+11 Flash Flash Flash                2:15   1:58
+12 Asteroid Memory                  1:01   -
+
+Total Length                       10:49  16:56
+
+
+Notes:
+The original 1981 arcade was developed by Namco
+and distributed by Namco (J) and
+Midway Games (U).
+The X68000 version seems to be ported and
+published by Dempa.
+
+The songs were ripped from the sound test.
+The music was composed specifically for this
+port. The original arcade game only has a few
+jingles, no real songs.
+
+Composer pages: http://vgmdb.net/artist/148
+                http://vgmdb.net/artist/362
+
+External links:
+Credits info: http://goo.gl/fgtZxW
+Wikipedia: http://goo.gl/AMDy3u
+8-bits: http://goo.gl/itpplW
+GamesDBase: http://goo.gl/RGW5eT
+GameBase: http://goo.gl/OG5LDP
+GameBase X68K GA_Id: 134
+MobyGames: http://goo.gl/UU1oIg
+GameFAQs: http://goo.gl/3ys9A0
+
+
+Package history:
+1.00 2015-06-07 vampirefrog: Initial release.
+1.05 2015-10-26 Valley Bell: Optimized VGMs.
