@@ -1,0 +1,46 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Misty Blue
+System:              NEC PC-8801
+Music hardware:      Soundboard 2 (YM2608)
+
+Music author:        Yuzo Koshiro
+Game developer:      Enix
+Game publisher:      Enix
+Game release date:   1990-04-02
+
+Package created by:  tails_
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 In the Morning                   1:25   1:25
+02 Broken Beats                     0:44   -
+03 Opening                          2:41   2:41
+04 Lovers                           0:45   -
+05 Doubt                            0:27   -
+06 Don't You Know That              1:18   0:39
+07 Illusion                         0:52   -
+08 I Wanna Close to You             1:18   1:18
+09 Misty Blue                       2:53   -
+10 Hold Me Tonight                  1:42   1:41
+11 Dancing Heart                    1:20   1:13
+12 Catch the Step                   2:07   -
+13 Theme of Enix Quest              1:12   1:12
+14 Escape (Enix Quest)              1:09   1:09
+15 Battle (Enix Quest)              0:35   0:33
+16 Mikki's House                    0:57   -
+17 Police                           0:49   -
+
+Total Length                       22:13  33:25
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2013-01-13 tails_: Initial release.
