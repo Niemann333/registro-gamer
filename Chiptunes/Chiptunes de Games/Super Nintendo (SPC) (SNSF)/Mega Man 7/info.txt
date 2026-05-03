@@ -1,0 +1,36 @@
+Mega Man 7
+Dumped by: Datschge, YK
+ID666 tags by: Anti Resonance
+Downloaded from: http://snesmusic.org
+
+Update 4:
+-Composer info updated.
+
+Update 3:
+-Five songs from the sample/prototype version
+ included. Four are rough variants of songs
+ found in the final game, while one is entirely
+ new and unused.
+-Two extra jingles included.
+-Previous "Select Jingle" renamed to
+ "Special Item 1", since that's what it *is*.
+-Afformentioned jingle removed from the
+ standard order, and placed at the end.
+
+Update 2:
+-Missing jingle added.
+-Track order changed somewhat.
+-Titles/timers/tags cleaned up a bit.
+
+Update:
+-Capcom logo jingle added.
+
+
+Version: v1.3
+New set now using the extended id666 tag format
+	 v1.2
+Renamed file names to a more logical order
+
+	 v1.1
+Added artist... well since I don't know who did which song these tags are 
+filled with 'Capcom Sound Team'.
