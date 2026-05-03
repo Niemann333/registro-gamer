@@ -20,48 +20,37 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx       = null;
-    var _analyser  = null;
-    var _linked    = false;
-    var _ctxStart  = 0;
-    var _silCount  = 0;
-    var _silNeeded = 6;
-    var _silRMS    = 0.001;
+    var _ctx      = null;
+    var _analyser = null;
+    var _linked   = false;
+    var _ctxStart = 0;
+    var _silCount = 0;
     var _endedSent = false;
     var _posTimer  = null;
 
-    // ── Captura AudioContext sem quebrar instanceof ──
-    // Simplesmente observa a criação sem subclassificar
+    // Captura o AudioContext criado pelo bundle
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
-      var _WrappedAC = function() {
+      var _Wrap = function() {
         _ctx = new _OrigAC();
-        setupAnalyser();
-        return _ctx;  // retorna o objeto real, não this
-      };
-      _WrappedAC.prototype = _OrigAC.prototype;
-      window.AudioContext = _WrappedAC;
-      if (window.webkitAudioContext) window.webkitAudioContext = _WrappedAC;
-    }
-
-    function setupAnalyser() {
-      if (!_ctx || _analyser) return;
-      try {
-        _analyser = _ctx.createAnalyser();
-        _analyser.fftSize = 2048;
-        // Intercepta connect para rotear pelo analyser
-        var _origConn = AudioNode.prototype.connect;
-        AudioNode.prototype.connect = function(dest, a, b) {
-          if (_ctx && dest === _ctx.destination) {
-            if (!_linked) {
-              _linked = true;
-              _origConn.call(_analyser, _ctx.destination);
+        // Cria analyser para detecção de silêncio
+        try {
+          _analyser = _ctx.createAnalyser();
+          _analyser.fftSize = 2048;
+          // Roteia toda saída pelo analyser
+          var _oc = AudioNode.prototype.connect;
+          AudioNode.prototype.connect = function(dest, a, b) {
+            if (_ctx && dest === _ctx.destination) {
+              if (!_linked) { _linked = true; _oc.call(_analyser, _ctx.destination); }
+              return _oc.call(this, _analyser, a, b);
             }
-            return _origConn.call(this, _analyser, a, b);
-          }
-          return _origConn.apply(this, arguments);
-        };
-      } catch(e) {}
+            return _oc.apply(this, arguments);
+          };
+        } catch(e) {}
+        return _ctx;
+      };
+      _Wrap.prototype = _OrigAC.prototype;
+      window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
     function checkSilence() {
@@ -72,9 +61,9 @@
         var rms = 0;
         for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
         rms = Math.sqrt(rms / buf.length);
-        if (rms < _silRMS) { _silCount++; } else { _silCount = 0; }
-        if (_silCount >= _silNeeded) {
-          _endedSent = true; _silCount = 0;
+        if (rms < 0.001) { _silCount++; } else { _silCount = 0; }
+        if (_silCount >= 6) {
+          _endedSent = true;
           try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
         }
       } catch(e) {}
@@ -93,12 +82,8 @@
       } catch(e) {}
     }
 
-    function stripExt(s) { return s.replace(/\.[^.]+$/, ''); }
-    function setStatus(m, c) {
-      var el = document.getElementById('status');
-      el.textContent = m; el.className = c || '';
-    }
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
+    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
     function startPoller() {
       if (_posTimer) clearInterval(_posTimer);
@@ -120,19 +105,17 @@
         songUrl = d.url; _endedSent = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'pause') {
-        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
-      }
-      if (d.type === 'resume') {
-        try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
-      }
+      if (d.type === 'pause')  { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
+      if (d.type === 'resume') { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
     });
 
     function startPlay() {
       if (!songUrl || !seq()) return;
       try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
       _endedSent = false; _silCount = 0;
-      setStatus('\u266A ' + stripExt(decodeURIComponent(songUrl.split('/').pop())), 'playing');
+      var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
+      try { n = decodeURIComponent(n); } catch(e) {}
+      setStatus('\u266A ' + n, 'playing');
       try {
         seq().playSonglist([songUrl]);
         setTimeout(startPoller, 500);
@@ -167,18 +150,15 @@
         var iv = setInterval(function() {
           tries++;
           if (seq()) {
-            clearInterval(iv);
-            playerReady = true;
+            clearInterval(iv); playerReady = true;
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
-            if (songUrl) startPlay();
-            else setStatus('Pronto.', '');
+            if (songUrl) startPlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) {
-            clearInterval(iv);
-            setStatus('Timeout.', 'error');
+            clearInterval(iv); setStatus('Timeout.', 'error');
           }
         }, 300);
       };
-      s.onerror = function() { setStatus('Erro bundle.', 'error'); };
+      s.onerror = function() { setStatus('Erro ao carregar bundle.', 'error'); };
       document.head.appendChild(s);
     }
   </script>
