@@ -1,0 +1,48 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Choujin Sentai Jetman
+System:              Nintendo Entertainment
+                     System / Family Computer
+Music hardware:      NES APU (N2A03)
+
+Music author:        Hiroyuki Iwatsuki
+Game developer:      Natsume
+Game publisher:      Angel
+Game release date:   1991
+
+Package created by:  drdevil
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:59   -
+02 Area Select                      0:10   0:10
+03 Area A                           1:11   1:11
+04 Area B                           0:48   0:48
+05 Area C                           0:58   0:58
+06 Area D                           0:21   0:21
+07 Area E                           0:45   0:45
+08 Boss Intro                       0:10   -
+09 Transformation                   0:22   -
+10 Boss                             0:53   0:53
+11 Area Clear                       0:04   -
+12 Last Area Intro                  0:26   0:13
+13 Last Area                        1:04   0:56
+14 Final Boss                       1:29   1:28
+15 Ending                           1:21   1:21
+16 Game Over                        0:04   -
+17 Battle Mode Win                  0:05   -
+18 Battle Mode Lose                 0:05   -
+
+Total Length                       11:15  20:17
+
+
+Notes:
+-
+
+
+Package history:
+1.00 2016-04-07 drdevil: Initial release.
