@@ -197,32 +197,7 @@
         seq().playSonglist([songUrl]);
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
-        setTimeout(function() { setupMediaSession(n); }, 1000);
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
-    }
-
-    function setupMediaSession(n) {
-      try {
-        if (!('mediaSession' in navigator) || !('MediaMetadata' in window)) return;
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: n || 'Chiptune',
-          artist: 'Registro Gamer',
-          album: 'Chiptune Player'
-        });
-        navigator.mediaSession.setActionHandler('play', function() {
-          try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
-        });
-        navigator.mediaSession.setActionHandler('pause', function() {
-          try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
-        });
-        navigator.mediaSession.setActionHandler('nexttrack', function() {
-          try { window.parent.postMessage({ type: 'mediasession', action: 'next' }, '*'); } catch(e) {}
-        });
-        navigator.mediaSession.setActionHandler('previoustrack', function() {
-          try { window.parent.postMessage({ type: 'mediasession', action: 'prev' }, '*'); } catch(e) {}
-        });
-        navigator.mediaSession.playbackState = 'playing';
-      } catch(e) {}
     }
 
     if ('serviceWorker' in navigator) {
