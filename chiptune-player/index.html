@@ -119,36 +119,34 @@
       } catch(e) {}
     }
 
-    function setupMediaSession() {
-      if (!('mediaSession' in navigator)) return;
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : 'Chiptune',
-        artist: 'Registro Gamer',
-        album: 'Chiptune Player'
-      });
-      navigator.mediaSession.setActionHandler('play', function() {
-        try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
-        try { window.parent.postMessage({ type: 'mediasession', action: 'play' }, '*'); } catch(e) {}
-      });
-      navigator.mediaSession.setActionHandler('pause', function() {
-        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
-        try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', function() {
-        try { window.parent.postMessage({ type: 'mediasession', action: 'next' }, '*'); } catch(e) {}
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', function() {
-        try { window.parent.postMessage({ type: 'mediasession', action: 'prev' }, '*'); } catch(e) {}
-      });
-      navigator.mediaSession.setActionHandler('stop', function() {
-        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
-        try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
-      });
-    }
-
-    function updateMediaSession() {
-      if (!('mediaSession' in navigator)) return;
-      navigator.mediaSession.playbackState = (_ctx && _ctx.state === 'running') ? 'playing' : 'paused';
+    function setupMediaSession(name) {
+      try {
+        if (!('mediaSession' in navigator)) return;
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: name || 'Chiptune',
+          artist: 'Registro Gamer',
+          album: 'Chiptune Player'
+        });
+        navigator.mediaSession.setActionHandler('play', function() {
+          try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
+          try { window.parent.postMessage({ type: 'mediasession', action: 'play' }, '*'); } catch(e) {}
+        });
+        navigator.mediaSession.setActionHandler('pause', function() {
+          try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
+          try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
+        });
+        navigator.mediaSession.setActionHandler('nexttrack', function() {
+          try { window.parent.postMessage({ type: 'mediasession', action: 'next' }, '*'); } catch(e) {}
+        });
+        navigator.mediaSession.setActionHandler('previoustrack', function() {
+          try { window.parent.postMessage({ type: 'mediasession', action: 'prev' }, '*'); } catch(e) {}
+        });
+        navigator.mediaSession.setActionHandler('stop', function() {
+          try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
+          try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
+        });
+        navigator.mediaSession.playbackState = 'playing';
+      } catch(e) {}
     }
 
     var _isVGM    = false;
@@ -226,8 +224,7 @@
         seq().playSonglist([songUrl]);
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
-        setupMediaSession();
-        updateMediaSession();
+        setTimeout(function(){ setupMediaSession(n); }, 1000);
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
