@@ -1,0 +1,121 @@
+Archive created by -=MIRSOFT=-
+Look for game MODs at http://gamemods.mirsoft.info
+
+*** Archive info ***
+Archiver: DeeDyner
+Type: Game rip
+Format: S3M, IT
+Original Composer: Alexander Brandon, Sean Hiler, Robert A. Allen, Bryan Rudge
+Tracker: Alexander Brandon, Sean Hiler, Robert A. Allen, Bryan Rudge
+Num of tunes: 62
+Complete: 100%
+
+*** Game info ***
+Name: Jazz Jackrabbit 2
+Platform: PC
+Year: 1998
+Genre: Jump'n'run
+Publisher: Epic Megagames
+Developer: Epic Megagames
+
+*** Additional info ***
+Game music ripper: DeeDyner
+His comment: I was trying to find on the internet the latest versions of the Jazz Jackrabbit 2 tunes (those that are packed inside the .j2b files), but every site gives you or the pre-release versions, or the versions brought by lori-central.com . The .j2b versions sounds different from the lori-central.com and pre-release versions so I decided to rip them.
+Actually, there's no good .j2b ripper on internet
+I found the only two ones:
+
+-j2b2it.exe
+This rips the content of .j2b files exporting them into .it files, but it will corrupt some of the pattern and instrument data giving you an almost correct playback of the tunes…
+
+-Open ModPlug Tracker 1.18+
+Opening the .j2b files with this one, you will obtain a perfect playback of the tunes, but you will lose ALL the unused data of the files. OpenMPT will delete: unused patterns, unused samples, unused samples/instruments text, original samples/instruments filenames…
+
+You will not find on the internet a perfect algorithm that rips the content of .j2b files correctly.
+So, how to rip the music data perfectly?
+This is how I made it:
+I dumped several times the content of my RAM into a single file without extension, while I was playing the game (I made a dumping of the RAM on every level with its specific tune).
+Then I opened the dumped files with an hex editor trying to find the headers of .s3m and .it files.
+When I found the beginnings and the endings of .s3m and .it files syntax, I copied all the text into new hex editor projects and then I exported them into new files.
+The result was that I obtained a folder of 20 .s3m files and 5 .it files. ;)
+
+In this folder there are ALL the tunes from Jazz Jackrabbit 2.
+There are:
+-the versions extracted from the .j2b files with original instrument/sample names;
+-the game pre-release versions;
+-additional tracks that are in the game folder;
+-unused tracks;
+
+This should be the list:
+-Extracted Files:
+Beach.s3m        Beach Bunny!            (last saved with Impulse Tracker 2.04)
+Bonus2.s3m       Bonus Level Remix       (last saved with Scream Tracker 3.20)
+Bonus3.s3m       Jazz 2 Bonus Stage      (last saved with Scream Tracker 3.20)
+Boss1.s3m        Jazz Boss Tune 2        (last saved with Scream Tracker 3.20)
+Boss2.s3m        Jazz Boss tune 1        (last saved with Scream Tracker 3.20)
+Carrotus.s3m     Carrotus                (last saved with Impulse Tracker 2.13)
+Castle.s3m       Jazz Castle             (last saved with Impulse Tracker 2.04)
+Colony.s3m       Colonius Level 1        (last saved with Impulse Tracker 2.04)
+Dang.s3m         Jazz be Damned          (last saved with Impulse Tracker 2.13)
+Diamond.s3m      Diamondus Remix         (last saved with Scream Tracker 3.20)
+Ending.it        Finale                  (last saved with Impulse Tracker 2.13)
+Fastrack.it      Fast Track              (last saved with Impulse Tracker 2.10)
+Freeze.s3m       Hell Freezes Over       (last saved with Impulse Tracker 2.13)
+Funkyg.s3m       Hippie Heaven           (last saved with Scream Tracker 3.20)
+Hell.s3m         Dark Groove (part 1)    (last saved with Scream Tracker 3.20)
+Intro.s3m        Jazz Intro              (last saved with Impulse Tracker 2.13)
+Jungle.s3m       Jungle Fevah v2.0       (last saved with Impulse Tracker 2.13)
+Labrat.s3m       Labratory Level         (last saved with Scream Tracker 3.20)
+Medivo.it        Medivo                  (last saved with Impulse Tracker 2.10)
+Medivo2.it       Medival Jam             (last saved with Impulse Tracker 2.09)
+Menu.s3m                                 (last saved with Scream Tracker 3.20)
+Order.s3m        Pull Back the Bass      (last saved with Scream Tracker 3.20)
+Tubelec.s3m      Tubelectric Remix       (last saved with Scream Tracker 3.20)
+Water.s3m        Water Level             (last saved with Impulse Tracker 2.07)
+Whare.it         White Hare              (last saved with Impulse Tracker 2.14)
+
+-Other Tracks:
+70's grove.mod   70's grove              (last saved with ProTracker 3.62)
+City1g.it        Streetwize              (last saved with Impulse Tracker 2.14p2)
+Easter.it        Frolick Lane            (last saved with Impulse Tracker 2.14p3)
+Ending2.it       (this is another version of Ending.it with a different version of Eva's saying "Oh, thank you! *kiss* *kiss* *kiss* *kiss*")
+Ending3.it       (this is the version of Ending.it without Eva saying "Oh, thank you! *kiss* *kiss* *kiss* *kiss*")
+Funck-2.mod      Funck2                  (last saved with ProTracker 3.62)
+Grabbag.it       Grabbag                 (last saved with ModPlug Tracker 1.00a5) (tune from the game "Duke Nukem 3D")
+Haunted.it       Jazz Belmont            (last saved with Impulse Tracker 2.14p2)
+M16a.mod         Rebel Base 2            (last saved with Scream Tracker 3.20) (tune from the game "Crusader: No Remorse")
+Metal.mod        Metal                   (last saved with Scream Tracker 3.20) (tune from the game "Crusader: No Regret")
+Xmas2.s3m        Candion                 (last saved with Scream Tracker 3.20) (tune from the game "Jazz Jackrabbit: Holiday Hare 1995")
+
+-Prerelease Files:
+BEACH.S3M        Beach Bunny!            (last saved with Impulse Tracker 2.04)
+CARROTUS.S3M     Carrotus                (last saved with Impulse Tracker 2.13)
+CASTLE.S3M       Jazz Castle             (last saved with Impulse Tracker 2.04)
+COLON2.IT        Medivo                  (last saved with Impulse Tracker 2.10)
+COLONY.S3M       Colonius Level 1        (last saved with Impulse Tracker 2.04)
+DANG.S3M         Jazz be Damned          (last saved with Impulse Tracker 2.13)
+DIAMOND.S3M      Diamondus Remix         (last saved with Scream Tracker 3.20)
+ENDING.IT        Finale                  (last saved with Impulse Tracker 2.13)
+FASTRACK.IT      Fast Track              (last saved with Impulse Tracker 2.10)
+FREEZE.S3M       Hell Freezes Over       (last saved with Impulse Tracker 2.13)
+FUNKYG.S3M       Hippie Heaven           (last saved with Scream Tracker 3.20)
+HELL.S3M         Dark Groove (part 1)    (last saved with Scream Tracker 3.20)
+INTRO.S3M        Jazz Intro              (last saved with Impulse Tracker 2.13)
+JUNGLE.S3M       Jungle Fevah v2.0       (last saved with Impulse Tracker 2.13)
+LABRAT.S3M       Labratory Level         (last saved with Scream Tracker 3.20)
+MEDIVO2.IT       Medival Jam             (last saved with Impulse Tracker 2.09)
+JAZ26.S3M        Pull Back the Bass      (last saved with Scream Tracker 3.20)
+JAZ27.S3M                                (last saved with Scream Tracker 3.20)
+TUBELEC.S3M      Tubelectric Remix       (last saved with Scream Tracker 3.20)
+WATER.S3M        Water Level             (last saved with Impulse Tracker 2.07)
+
+-Unused Tracks:
+Atlantis.it    jazz 2 (atlantis level)   (last saved with Impulse Tracker 2.14p2)
+Dreamland.it   jazz 2 (dreamland level)  (last saved with Impulse Tracker 2.14p2)
+JAZ27~.S3M                               (last saved with Impulse Tracker 2.04)
+JAZ30.S3M                                (last saved with Scream Tracker 3.20)
+JAZCAST.S3M    Jazz Castle               (last saved with Impulse Tracker 2.04)
+Menu2.s3m      Jazz 2 menu music         (last saved with Impulse Tracker 2.04)
+
+What more do you want? ;D
+
+If you want the Lori-Central versions, go to this link: http://www.loricentral.com/jj2music.html
