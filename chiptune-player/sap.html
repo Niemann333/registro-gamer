@@ -174,12 +174,27 @@
         if (asapWeb.asap && asapWeb.context && asapWeb.processor) {
           clearInterval(wait);
 
+          var info     = asapWeb.asap.getInfo();
+          var songs    = info.getSongs();
+          var defSong  = info.getDefaultSong();
+
+          // Envia metadados de subsongs ao gadget
+          var durations = [];
+          for (var i = 0; i < songs; i++) {
+            durations.push(info.getDuration(i));
+          }
+          try {
+            window.parent.postMessage({
+              type: 'subsongs',
+              count: songs,
+              defaultSong: defSong,
+              durations: durations
+            }, '*');
+          } catch(e) {}
+
           // Recalcula duração com loopCount e reinicia o song
           var durMs = calcDuration(currentSong);
-          try {
-            // Reinicia com duração calculada
-            asapWeb.asap.playSong(currentSong, durMs);
-          } catch(e) {}
+          try { asapWeb.asap.playSong(currentSong, durMs); } catch(e) {}
 
           hookAnalyser();
           startPoller();
@@ -212,7 +227,23 @@
       if (d.type === 'fadeout') {
         doFadeOut();
       }
-      if (d.type === 'seek' && typeof d.ms === 'number') {
+      if (d.type === 'subsong' && typeof d.index === 'number') {
+        currentSong = d.index;
+        silCount    = 0;
+        endedSent   = false;
+        scpFading   = false;
+        var durMs = calcDuration(currentSong);
+        try {
+          if (asapWeb.context && asapWeb.context.state === 'suspended') asapWeb.context.resume();
+          asapWeb.asap.playSong(currentSong, durMs);
+          // Refaz analyser e poller
+          hookAnalyser();
+          startPoller();
+          var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
+          try { n = decodeURIComponent(n); } catch(e) {}
+          setStatus('\u266A ' + n + ' [' + (currentSong + 1) + ']', 'playing');
+        } catch(e) { setStatus('Erro subsong', 'error'); }
+      }
         try { asapWeb.seek(d.ms); } catch(e) {}
       }
       if (d.type === 'setloop' && typeof d.count === 'number') {
