@@ -1,0 +1,46 @@
+***********************************************
+* VGM music package                           *
+* http://vgmrips.net/                         *
+***********************************************
+Game name:           Devil Crash (J) /
+                     Devil's Crush (U)
+System:              PC Engine / TurboGrafx-16
+Music hardware:      HuC6280
+
+Music author:        Toshiaki Sakoda,
+                     Masanobu Tsukamoto
+Game developer:      Red, Compile
+Game publisher:      Naxat Soft
+Game release date:   1990-07-20
+
+Package created by:  Kaminari
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Title                            0:45   0:45
+02 Main Theme                       3:20   3:18
+03 Bonus Stage 1, 4                 0:45   0:32
+04 Bonus Stage 2, 5                 0:52   0:37
+05 Bonus Stage 3                    0:42   0:41
+06 Bonus Stage 6                    0:46   0:35
+07 Special Score                    0:02   -
+08 Extra Ball                       0:03   -
+09 Perfect                          0:02   -
+10 Complete                         0:02   -
+11 The Best Five!                   0:33   0:32
+12 Ending                           0:12   0:11
+13 Unknown                          1:30   1:04
+
+Total Length                        9:35  17:51
+
+
+Notes:
+Song list in approximate game order.
+This pack was recorded with NEZplay (OffGao -
+VGM mod by Valley Bell).
+
+
+Package history:
+1.00 2015-01-23 Kaminari: Initial release.

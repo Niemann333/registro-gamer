@@ -1,0 +1,95 @@
+***********************************************
+* VGM music package                           *
+* http://vgm.mdscene.net/                     *
+***********************************************
+Game name:           Jantei Monogatari 3:
+                     Saver Angels
+System:              PC Engine Super CD-ROM2
+Music hardware:      HuC6280
+
+Music author:        Iku Mizutani
+Game developer:      Atlus
+Game publisher:      Atlus
+Game release date:   1993-04-23
+
+Package created by:  2ch-H
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Cyonbo                           0:16   -
+02 School                           1:04   0:49
+03 School Hallway                   0:50   0:47
+04 School Duty Room                 0:11   0:11
+05 School Locker Room               0:12   0:11
+06 School Infirmary                 0:13   0:13
+07 School Principal Room            0:20   0:19
+08 Item Get                         0:02   -
+09 Skill Select                     0:17   0:17
+10 Mahjong (Normal)                 0:32   0:32
+11 Mahjong (Reach)                  0:19   0:19
+12 You Win                          0:04   -
+13 You Lose                         0:03   -
+14 Ekaterina                        0:56   0:56
+15 Surprise attack                  0:01   -
+16 Ekaterina (Outro)                0:06   -
+17 Kill You                         0:06   -
+18 Battle Scene 
+   (Six Sisters Witch of the East)  1:09   1:04
+19 Saki Found                       0:04   -
+20 Ultra Pinko                      0:06   -
+21 Mahjong (Boss Battle)            0:48   0:45
+22 Solution                         0:13   0:13
+23 Eye Catch (Divan)                0:02   -
+24 Rest                             0:53   0:53
+25 Divan of sorrow                  1:26   0:43
+26 Rampling                         0:13   0:11
+27 Battle Scene (Charlotte)         1:17   1:10
+28 Wrestling Darkness               0:11   -
+29 Adonis , Prince Arthur           0:43   0:43
+30 Mahjong (Adonis , Prince Arthur) 0:53   0:52
+31 Masumi Transfer                  1:10   0:54
+32 Hyper Masumi                     0:10   -
+33 Ura Draa Trap                    0:26   0:26
+34 Discover the Laboratory Culture  0:02   -
+35 Laboratory Culture               0:11   0:10
+36 Meet with Prince Arthur          0:07   -
+37 Truth of the Prince Arthur       0:32   0:32
+38 Prince Arthur's Past             0:17   -
+39 Welcome                          0:04   -
+40 Alice's castle                   0:52   0:52
+41 Alice                            0:24   0:23
+42 Saki Transformation              0:06   0:06
+43 Magical Saki                     0:06   -
+44 Battle Scene (Alice)             0:41   0:41
+45 After the Battle                 0:42   0:42
+46 Explosion of the Castle          1:15   0:11
+47 Seimakai                         0:17   0:17
+48 Brainwashing                     0:08   0:07
+49 Ura Draa                         0:41   0:41
+50 Perfect Ura Draa                 0:18   0:07
+51 Regeneration Beast               0:22   -
+52 Battle Beast                     0:07   0:07
+53 Divan                            0:43   -
+54 Decisive Battle                  0:22   0:21
+55 Work Together                    0:51   0:50
+56 The End of The Ura Draa          0:10   0:10
+57 Mahjong (Mahjong Mode)           1:13   1:08
+
+Total Length                       25:47  45:40
+
+
+Notes:
+Track Names are used in use scene.
+
+This pack was made using MESS0144 VGM mod.
+
+Other Tracks are CD-DA. 
+
+Size reduction (vgm_cmp):
+    21.7 MB -> 12.0 MB (55.2 %)
+
+
+Package history:
+1.00 2012-05-23 2ch-H: Initial release.
