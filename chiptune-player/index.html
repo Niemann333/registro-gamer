@@ -119,8 +119,37 @@
       } catch(e) {}
     }
 
-    function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
-    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: songUrl ? stripExt(decodeURIComponent(songUrl.split('/').pop())) : 'Chiptune',
+        artist: 'Registro Gamer',
+        album: 'Chiptune Player'
+      });
+      navigator.mediaSession.setActionHandler('play', function() {
+        try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
+        try { window.parent.postMessage({ type: 'mediasession', action: 'play' }, '*'); } catch(e) {}
+      });
+      navigator.mediaSession.setActionHandler('pause', function() {
+        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
+        try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', function() {
+        try { window.parent.postMessage({ type: 'mediasession', action: 'next' }, '*'); } catch(e) {}
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', function() {
+        try { window.parent.postMessage({ type: 'mediasession', action: 'prev' }, '*'); } catch(e) {}
+      });
+      navigator.mediaSession.setActionHandler('stop', function() {
+        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
+        try { window.parent.postMessage({ type: 'mediasession', action: 'pause' }, '*'); } catch(e) {}
+      });
+    }
+
+    function updateMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      navigator.mediaSession.playbackState = (_ctx && _ctx.state === 'running') ? 'playing' : 'paused';
+    }
 
     var _isVGM    = false;
     var _calibrated = false;
@@ -197,6 +226,8 @@
         seq().playSonglist([songUrl]);
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
+        setupMediaSession();
+        updateMediaSession();
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
