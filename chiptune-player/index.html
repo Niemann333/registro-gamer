@@ -21,6 +21,7 @@
   <div id="status">Inicializando...</div>
   <script>
     var _ctx      = null;
+    var _ctxStart = 0;
     var _scp      = null;
     var _scpFading = false;
     var _analyser = null;
@@ -121,19 +122,27 @@
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
-    function startPoller() {
+    var _isVGM = false; // true quando o arquivo atual é VGM/VGZ
+
+    function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
+      _isVGM     = !!isVGM;
+      _ctxStart  = _ctx ? _ctx.currentTime : 0;
       _endedSent = false; _silCount = 0; _scpFading = false;
       _posTimer = setInterval(function() {
         if (!_ctx) return;
+        var posMs = 0, durMs = 0;
         var p = player();
-        var pos = 0, dur = 0;
-        if (p) {
-          try { pos = p.getPositionMs ? p.getPositionMs() : 0; } catch(e) {}
-          try { dur = p.getDurationMs ? p.getDurationMs() : 0; } catch(e) {}
+        if (_isVGM) {
+          // VGM: getPositionMs() reseta a cada loop — usa audioCtx.currentTime
+          posMs = Math.round(Math.max(0, _ctx.currentTime - _ctxStart) * 1000);
+        } else {
+          // Outros formatos: getPositionMs() conta corretamente
+          if (p && p.getPositionMs) try { posMs = p.getPositionMs(); } catch(e) {}
         }
+        if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
         try {
-          window.parent.postMessage({ type: 'position', posMs: pos, durMs: dur }, '*');
+          window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*');
         } catch(e) {}
         checkSilence();
       }, 250);
@@ -152,7 +161,11 @@
       if (d.type === 'seek' && typeof d.ms === 'number') {
         var p = player();
         if (p && p.seekMs) {
-          try { p.seekMs(d.ms); } catch(e) {}
+          try {
+            p.seekMs(d.ms);
+            // Reajusta _ctxStart para que posMs = d.ms após o seek
+            if (_ctx) _ctxStart = _ctx.currentTime - d.ms / 1000;
+          } catch(e) {}
         }
       }
     });
@@ -166,7 +179,8 @@
       setStatus('\u266A ' + n, 'playing');
       try {
         seq().playSonglist([songUrl]);
-        setTimeout(startPoller, 500);
+        var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
+        setTimeout(function(){ startPoller(isVGM); }, 500);
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
