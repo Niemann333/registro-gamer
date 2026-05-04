@@ -20,21 +20,22 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx      = null;
-    var _ctxStart = 0;
-    var _scp      = null;
+    var _ctx       = null;
+    var _ctxStart  = 0;
+    var _scp       = null;
     var _scpFading = false;
-    var _analyser = null;
-    var _linked   = false;
-    var _silCount = 0;
+    var _analyser  = null;
+    var _linked    = false;
+    var _silCount  = 0;
     var _endedSent = false;
     var _posTimer  = null;
+    var _isVGM     = false;
+    var _calibrated = false;
 
-    // Captura ScriptProcessorNode para fade manual
-    var _OrigCSP = null;
+    // Captura ScriptProcessorNode para fade
     try {
-      _OrigCSP = AudioContext.prototype.createScriptProcessor
-              || AudioContext.prototype.createJavaScriptNode;
+      var _OrigCSP = AudioContext.prototype.createScriptProcessor
+                  || AudioContext.prototype.createJavaScriptNode;
       if (_OrigCSP) {
         AudioContext.prototype.createScriptProcessor =
         AudioContext.prototype.createJavaScriptNode = function() {
@@ -45,7 +46,7 @@
       }
     } catch(e) {}
 
-    // Captura AudioContext + AnalyserNode
+    // Captura AudioContext
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
@@ -72,9 +73,9 @@
       if (!_scp || _scpFading) return;
       _scpFading = true;
       var orig = _scp.onaudioprocess;
-      var sr   = _ctx ? _ctx.sampleRate : 44100;
+      var sr = _ctx ? _ctx.sampleRate : 44100;
       var total = sr * 3;
-      var done  = 0;
+      var done = 0;
       _scp.onaudioprocess = function(e) {
         if (orig) orig.call(_scp, e);
         done += e.outputBuffer.length;
@@ -104,9 +105,11 @@
     }
 
     function player() {
-      return window.ChipPlayer && window.ChipPlayer.sequencer && window.ChipPlayer.sequencer.getPlayer
-        ? window.ChipPlayer.sequencer.getPlayer()
-        : null;
+      try {
+        return window.ChipPlayer && window.ChipPlayer.sequencer
+          ? window.ChipPlayer.sequencer.getPlayer()
+          : null;
+      } catch(e) { return null; }
     }
 
     var songUrl = null, playerReady = false;
@@ -125,9 +128,6 @@
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
-    var _isVGM    = false;
-    var _calibrated = false;
-
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
       _isVGM      = !!isVGM;
@@ -139,30 +139,18 @@
 
       _posTimer = setInterval(function() {
         if (!_ctx || _ctx.state !== 'running') return;
-
-        // Calibra _ctxStart na primeira vez que áudio está rodando
-        if (!_calibrated) {
-          _calibrated = true;
-          _ctxStart   = _ctx.currentTime;
-        }
+        if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; }
 
         var posMs = 0, durMs = 0;
         var p = player();
-
         if (_isVGM) {
-          // VGM: getPositionMs() reseta a cada loop — usa currentTime acumulado
           posMs = Math.round((_ctx.currentTime - _ctxStart) * 1000);
         } else {
-          // Outros formatos: getPositionMs() funciona corretamente
           if (p && p.getPositionMs) try { posMs = p.getPositionMs(); } catch(e) {}
         }
-
         if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
 
-        try {
-          window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*');
-        } catch(e) {}
-
+        try { window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*'); } catch(e) {}
         checkSilence();
       }, 250);
     }
@@ -174,18 +162,12 @@
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'pause')  { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
-      if (d.type === 'resume') { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
+      if (d.type === 'pause')   { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
+      if (d.type === 'resume')  { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
       if (d.type === 'fadeout') { doFadeOut(); }
       if (d.type === 'seek' && typeof d.ms === 'number') {
         var p = player();
-        if (p && p.seekMs) {
-          try {
-            p.seekMs(d.ms);
-            // Reajusta _ctxStart para que posMs = d.ms após o seek
-            if (_ctx) _ctxStart = _ctx.currentTime - d.ms / 1000;
-          } catch(e) {}
-        }
+        if (p && p.seekMs) try { p.seekMs(d.ms); if (_ctx) _ctxStart = _ctx.currentTime - d.ms / 1000; } catch(e) {}
       }
     });
 
