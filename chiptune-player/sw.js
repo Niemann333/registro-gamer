@@ -1,4 +1,4 @@
-// v5 - força reinstalação
+// v6 - force cache bust
 self.addEventListener('install', function(e) { self.skipWaiting(); });
 self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });
 self.addEventListener('fetch', function(event) {
