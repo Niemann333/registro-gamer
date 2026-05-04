@@ -1,0 +1,50 @@
+name: Gerar índice de Chiptunes
+
+on:
+  push:
+    paths:
+      - 'Chiptunes/**'
+  workflow_dispatch:
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Gerar chiptunes-index.json
+        run: |
+          python3 - << 'EOF'
+          import os, json
+
+          def scan(path):
+              result = []
+              for entry in sorted(os.scandir(path), key=lambda e: (e.is_file(), e.name)):
+                  if entry.is_dir():
+                      result.append({
+                          "name": entry.name,
+                          "type": "dir",
+                          "path": entry.path,
+                          "children": scan(entry.path)
+                      })
+                  else:
+                      result.append({
+                          "name": entry.name,
+                          "type": "file",
+                          "path": entry.path
+                      })
+              return result
+
+          index = scan("Chiptunes")
+          with open("chiptune-player/chiptunes-index.json", "w") as f:
+              json.dump(index, f)
+          print("Index gerado com sucesso")
+          EOF
+
+      - name: Commit do índice
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add chiptune-player/chiptunes-index.json
+          git diff --staged --quiet || git commit -m "Atualiza índice de chiptunes"
+          git push
