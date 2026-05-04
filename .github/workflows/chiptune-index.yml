@@ -6,11 +6,14 @@ on:
       - 'Chiptunes/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-index:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Gerar chiptunes-index.json
         run: |
@@ -19,7 +22,11 @@ jobs:
 
           def scan(path):
               result = []
-              for entry in sorted(os.scandir(path), key=lambda e: (e.is_file(), e.name)):
+              try:
+                  entries = sorted(os.scandir(path), key=lambda e: (e.is_file(), e.name))
+              except:
+                  return result
+              for entry in entries:
                   if entry.is_dir():
                       result.append({
                           "name": entry.name,
@@ -28,23 +35,30 @@ jobs:
                           "children": scan(entry.path)
                       })
                   else:
-                      result.append({
-                          "name": entry.name,
-                          "type": "file",
-                          "path": entry.path
-                      })
+                      ext = os.path.splitext(entry.name)[1].lower()
+                      if ext in ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay',
+                                 '.gbs','.hes','.kss','.sap','.sid','.mod','.s3m',
+                                 '.xm','.it','.mid','.midi','.gsf','.minigsf',
+                                 '.2sf','.psf','.ssf','.dsf']:
+                          result.append({
+                              "name": entry.name,
+                              "type": "file",
+                              "path": entry.path
+                          })
               return result
 
+          os.makedirs("chiptune-player", exist_ok=True)
           index = scan("Chiptunes")
-          with open("chiptune-player/chiptunes-index.json", "w") as f:
-              json.dump(index, f)
-          print("Index gerado com sucesso")
+          out = "chiptune-player/chiptunes-index.json"
+          with open(out, "w", encoding="utf-8") as f:
+              json.dump(index, f, ensure_ascii=False)
+          print(f"Índice gerado: {out}")
           EOF
 
       - name: Commit do índice
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add chiptune-player/chiptunes-index.json
-          git diff --staged --quiet || git commit -m "Atualiza índice de chiptunes"
+          git diff --staged --quiet || git commit -m "ci: atualiza índice de chiptunes [skip ci]"
           git push
