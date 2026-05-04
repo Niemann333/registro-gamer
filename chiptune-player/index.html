@@ -20,32 +20,29 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
-    var _ctx       = null;
-    var _analyser  = null;
-    var _linked    = false;
-    var _scp       = null;   // ScriptProcessorNode do chip-player-js
+    var _ctx      = null;
+    var _scp      = null;
     var _scpFading = false;
-    var _ctxStart  = 0;
-    var _silCount  = 0;
+    var _analyser = null;
+    var _linked   = false;
+    var _silCount = 0;
     var _endedSent = false;
     var _posTimer  = null;
 
-    // ── 1. Captura o ScriptProcessorNode que o chip usa para gerar áudio ──
-    // Permite aplicar fade diretamente nos samples de saída
+    // Captura ScriptProcessorNode para fade manual
     var _OrigCSP = AudioContext.prototype.createScriptProcessor
                 || AudioContext.prototype.createJavaScriptNode;
     if (_OrigCSP) {
       AudioContext.prototype.createScriptProcessor =
       AudioContext.prototype.createJavaScriptNode = function() {
         var node = _OrigCSP.apply(this, arguments);
-        _scp = node; // guarda referência
+        _scp = node;
         return node;
       };
     }
 
-    // ── 2. Captura AudioContext e AnalyserNode para detecção de silêncio ──
-    var _origConn = AudioNode.prototype.connect;
-    var _OrigAC   = window.AudioContext || window.webkitAudioContext;
+    // Captura AudioContext + AnalyserNode
+    var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
         _ctx = new _OrigAC();
@@ -67,36 +64,25 @@
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
-    // ── 3. Fade: sobrescreve onaudioprocess para reduzir samples gradualmente ──
     function doFadeOut() {
       if (!_scp || _scpFading) return;
       _scpFading = true;
-
-      var origHandler = _scp.onaudioprocess; // handler do chip-player-js
-      var sampleRate  = _ctx ? _ctx.sampleRate : 44100;
-      var fadeSamples = sampleRate * 3;  // 3 segundos de fade
-      var samplesElapsed = 0;
-
+      var orig = _scp.onaudioprocess;
+      var sr   = _ctx ? _ctx.sampleRate : 44100;
+      var total = sr * 3;
+      var done  = 0;
       _scp.onaudioprocess = function(e) {
-        // Chip gera áudio normalmente
-        if (origHandler) origHandler.call(_scp, e);
-
-        // Aplica ganho decrescente nos samples de saída
-        samplesElapsed += e.outputBuffer.length;
-        var gain = Math.max(0, 1.0 - samplesElapsed / fadeSamples);
-
+        if (orig) orig.call(_scp, e);
+        done += e.outputBuffer.length;
+        var gain = Math.max(0, 1.0 - done / total);
         var ob = e.outputBuffer;
         for (var c = 0; c < ob.numberOfChannels; c++) {
           var d = ob.getChannelData(c);
-          for (var i = 0; i < d.length; i++) {
-            d[i] *= gain;
-          }
+          for (var i = 0; i < d.length; i++) d[i] *= gain;
         }
-        // Quando gain chega a 0, o silence detector vai disparar songEnded
       };
     }
 
-    // ── Detecção de silêncio via AnalyserNode ──
     function checkSilence() {
       if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
       try {
@@ -111,6 +97,12 @@
           try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
         }
       } catch(e) {}
+    }
+
+    function player() {
+      return window.ChipPlayer && window.ChipPlayer.sequencer && window.ChipPlayer.sequencer.getPlayer
+        ? window.ChipPlayer.sequencer.getPlayer()
+        : null;
     }
 
     var songUrl = null, playerReady = false;
@@ -131,16 +123,20 @@
 
     function startPoller() {
       if (_posTimer) clearInterval(_posTimer);
-      _ctxStart  = _ctx ? _ctx.currentTime : 0;
-      _endedSent = false;
-      _silCount  = 0;
-      _scpFading = false;
-      _posTimer  = setInterval(function() {
+      _endedSent = false; _silCount = 0; _scpFading = false;
+      _posTimer = setInterval(function() {
         if (!_ctx) return;
-        var pos = Math.max(0, _ctx.currentTime - _ctxStart);
-        try { window.parent.postMessage({ type: 'position', posSec: pos }, '*'); } catch(e) {}
+        var p = player();
+        var pos = 0, dur = 0;
+        if (p) {
+          try { pos = p.getPositionMs ? p.getPositionMs() : 0; } catch(e) {}
+          try { dur = p.getDurationMs ? p.getDurationMs() : 0; } catch(e) {}
+        }
+        try {
+          window.parent.postMessage({ type: 'position', posMs: pos, durMs: dur }, '*');
+        } catch(e) {}
         checkSilence();
-      }, 300);
+      }, 250);
     }
 
     window.addEventListener('message', function(e) {
@@ -150,14 +146,14 @@
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'pause') {
-        try { if (_ctx && _ctx.state === 'running') _ctx.suspend(); } catch(e) {}
-      }
-      if (d.type === 'resume') {
-        try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
-      }
-      if (d.type === 'fadeout') {
-        doFadeOut();
+      if (d.type === 'pause')  { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
+      if (d.type === 'resume') { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
+      if (d.type === 'fadeout') { doFadeOut(); }
+      if (d.type === 'seek' && typeof d.ms === 'number') {
+        var p = player();
+        if (p && p.seekMs) {
+          try { p.seekMs(d.ms); } catch(e) {}
+        }
       }
     });
 
@@ -174,36 +170,26 @@
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
-    // SW + bundle
     if ('serviceWorker' in navigator) {
       var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
       navigator.serviceWorker.register(swPath).then(function(reg) {
-        if (reg.installing) {
-          reg.installing.addEventListener('statechange', function() {
-            if (this.state === 'activated') location.reload();
-          });
-        } else if (reg.waiting) {
-          reg.waiting.addEventListener('statechange', function() {
-            if (this.state === 'activated') location.reload();
-          });
-        } else { loadBundle(); }
+        if (reg.installing) reg.installing.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
+        else if (reg.waiting) reg.waiting.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
+        else loadBundle();
       }).catch(loadBundle);
-    } else { loadBundle(); }
+    } else loadBundle();
 
     function loadBundle() {
       var s = document.createElement('script');
       s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.0a47.js';
       s.onload = function() {
-        var tries = 0;
-        var iv = setInterval(function() {
+        var tries = 0, iv = setInterval(function() {
           tries++;
           if (seq()) {
             clearInterval(iv); playerReady = true;
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
             if (songUrl) startPlay(); else setStatus('Pronto.', '');
-          } else if (tries > 100) {
-            clearInterval(iv); setStatus('Timeout.', 'error');
-          }
+          } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
         }, 300);
       };
       s.onerror = function() { setStatus('Erro ao carregar bundle.', 'error'); };
