@@ -197,6 +197,28 @@
         seq().playSonglist([songUrl]);
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
+        // MediaSession: teclas de mídia controlam AudioContext diretamente
+        setTimeout(function() {
+          try {
+            if (!('mediaSession' in navigator)) return;
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: n, artist: 'Registro Gamer', album: 'Chiptune Player'
+            });
+            navigator.mediaSession.setActionHandler('play', function() {
+              if (_ctx && _ctx.state === 'suspended') _ctx.resume();
+            });
+            navigator.mediaSession.setActionHandler('pause', function() {
+              if (_ctx && _ctx.state === 'running') _ctx.suspend();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', function() {
+              try { window.parent.postMessage({ type: 'mediasession', action: 'next' }, '*'); } catch(e) {}
+            });
+            navigator.mediaSession.setActionHandler('previoustrack', function() {
+              try { window.parent.postMessage({ type: 'mediasession', action: 'prev' }, '*'); } catch(e) {}
+            });
+            navigator.mediaSession.playbackState = 'playing';
+          } catch(e) {}
+        }, 800);
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
     }
 
