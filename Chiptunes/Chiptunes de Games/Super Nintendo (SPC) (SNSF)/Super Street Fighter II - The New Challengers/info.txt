@@ -1,0 +1,15 @@
+Super Street Fighter 2
+Dumped by: Daniel Kalabakov, Slick Mandela
+ID666 tags by: Daniel Kalabakov, Slick Mandela
+Downloaded from: http://snesmusic.org
+
+Update:
+-Entire soundtrack for American version dumped,
+ as it and the Japanese versions have different
+ instrument samples.
+
+Update:
+-Missing track added. (Pause)
+
+Update:
+-Capcom logo jingle added.
