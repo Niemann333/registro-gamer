@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>SAP Player</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:#070d07; overflow:hidden; }
+    #status {
+      font-family:monospace; font-size:10px; color:#2a5a2a;
+      padding:4px 8px; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis; height:22px; line-height:14px;
+    }
+    #status.playing { color:#39ff14; }
+    #status.error   { color:#ff4444; }
+    #root { display:none; }
+  </style>
+</head>
+<body>
+  <div id="status">Inicializando...</div>
+  <script type="module">
+    import { asapWeb } from './asapweb.js';
+
+    // ── Estado ──
+    var songUrl    = null;
+    var loopCount  = 1;    // recebido do gadget
+    var currentSong = 0;
+    var posTimer   = null;
+    var analyser   = null;
+    var silCount   = 0;
+    var endedSent  = false;
+    var scpFading  = false;
+
+    function setStatus(m, c) {
+      var el = document.getElementById('status');
+      el.textContent = m; el.className = c || '';
+    }
+
+    // ── Pega ?url= ──
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('url')) {
+      songUrl = decodeURIComponent(params.get('url'));
+    }
+
+    // ── Configura AnalyserNode para detecção de silêncio ──
+    // Chamado após asapWeb criar o AudioContext
+    function hookAnalyser() {
+      var ctx = asapWeb.context;
+      var proc = asapWeb.processor;
+      if (!ctx || !proc) return;
+      try {
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        // Desconecta processor do destination, insere analyser no meio
+        proc.disconnect();
+        proc.connect(analyser);
+        analyser.connect(ctx.destination);
+      } catch(e) {}
+    }
+
+    // ── Fade out: substitui onaudioprocess para reduzir samples ──
+    function doFadeOut() {
+      var proc = asapWeb.processor;
+      if (!proc || scpFading) return;
+      scpFading = true;
+      var orig = proc.onaudioprocess;
+      var sr    = asapWeb.context ? asapWeb.context.sampleRate : 44100;
+      var total = sr * 3;  // 3 segundos de fade
+      var done  = 0;
+      proc.onaudioprocess = function(e) {
+        if (orig) orig.call(proc, e);
+        done += e.outputBuffer.length;
+        var gain = Math.max(0, 1.0 - done / total);
+        var ob = e.outputBuffer;
+        for (var c = 0; c < ob.numberOfChannels; c++) {
+          var d = ob.getChannelData(c);
+          for (var i = 0; i < d.length; i++) d[i] *= gain;
+        }
+      };
+    }
+
+    // ── Detecção de silêncio ──
+    function checkSilence() {
+      if (!analyser || endedSent) return;
+      var ctx = asapWeb.context;
+      if (!ctx || ctx.state !== 'running') return;
+      try {
+        var buf = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buf);
+        var rms = 0;
+        for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+        rms = Math.sqrt(rms / buf.length);
+        if (rms < 0.001) { silCount++; } else { silCount = 0; }
+        if (silCount >= 6) {
+          endedSent = true;
+          try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
+        }
+      } catch(e) {}
+    }
+
+    // ── Calcula duração para N loops ──
+    function calcDuration(song) {
+      var asap = asapWeb.asap;
+      if (!asap) return -1;
+      try {
+        var info = asap.getInfo();
+        var dur  = info.getDuration(song);   // ms para 1 play (pode ser -1)
+        var loop = info.getLoop(song);       // true se a música loopa
+
+        if (dur <= 0) return -1;             // duração indefinida
+
+        if (loop) {
+          // SAP com loop: dur = intro + 1 loop (convenção)
+          // Para N loops: intro + loop * N
+          // Estimamos intro = 0 (SAP não separa intro de loop facilmente)
+          // Então: dur * N (aproximação razoável)
+          return dur * loopCount;
+        } else {
+          // Música sem loop, toca uma vez
+          return dur;
+        }
+      } catch(e) { return -1; }
+    }
+
+    // ── Polling de posição ──
+    function startPoller() {
+      if (posTimer) clearInterval(posTimer);
+      silCount  = 0;
+      endedSent = false;
+      scpFading = false;
+
+      posTimer = setInterval(function() {
+        var asap = asapWeb.asap;
+        var ctx  = asapWeb.context;
+        if (!asap || !ctx) return;
+
+        var posMs = 0;
+        var durMs = 0;
+        try { posMs = asap.getPosition(); } catch(e) {}
+        try { durMs = calcDuration(currentSong); } catch(e) {}
+
+        try {
+          window.parent.postMessage({
+            type: 'position',
+            posMs: posMs,
+            durMs: durMs > 0 ? durMs : 0
+          }, '*');
+        } catch(e) {}
+
+        checkSilence();
+      }, 250);
+    }
+
+    // ── Tocar ──
+    function startPlay() {
+      if (!songUrl) { setStatus('Sem URL', 'error'); return; }
+
+      var name = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
+      try { name = decodeURIComponent(name); } catch(e) {}
+      setStatus('\u266A ' + name, 'playing');
+
+      scpFading = false;
+      endedSent = false;
+      silCount  = 0;
+
+      // asapWeb.playUrl carrega e inicia
+      // Usamos um hook: após carregar, reconfiguramos a duração
+      asapWeb.playUrl(songUrl, currentSong);
+
+      // Aguarda o AudioContext e processor existirem
+      var tries = 0;
+      var wait = setInterval(function() {
+        tries++;
+        if (asapWeb.asap && asapWeb.context && asapWeb.processor) {
+          clearInterval(wait);
+
+          // Recalcula duração com loopCount e reinicia o song
+          var durMs = calcDuration(currentSong);
+          try {
+            // Reinicia com duração calculada
+            asapWeb.asap.playSong(currentSong, durMs);
+          } catch(e) {}
+
+          hookAnalyser();
+          startPoller();
+
+          try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
+        } else if (tries > 50) {
+          clearInterval(wait);
+          setStatus('Timeout.', 'error');
+        }
+      }, 100);
+    }
+
+    // ── Mensagens do gadget ──
+    window.addEventListener('message', function(e) {
+      if (!e.data) return;
+      var d = e.data;
+
+      if (d.type === 'play' && d.url) {
+        songUrl     = d.url;
+        loopCount   = d.loopCount || 1;
+        currentSong = d.song     || 0;
+        startPlay();
+      }
+      if (d.type === 'pause') {
+        try { asapWeb.context && asapWeb.context.state === 'running' && asapWeb.context.suspend(); } catch(e) {}
+      }
+      if (d.type === 'resume') {
+        try { asapWeb.context && asapWeb.context.state === 'suspended' && asapWeb.context.resume(); } catch(e) {}
+      }
+      if (d.type === 'fadeout') {
+        doFadeOut();
+      }
+      if (d.type === 'seek' && typeof d.ms === 'number') {
+        try { asapWeb.seek(d.ms); } catch(e) {}
+      }
+      if (d.type === 'setloop' && typeof d.count === 'number') {
+        loopCount = d.count;
+        // Recalcula duração imediatamente se já estiver tocando
+        if (asapWeb.asap) {
+          try {
+            var dur = calcDuration(currentSong);
+            asapWeb.asap.playSong(currentSong, dur);
+          } catch(e) {}
+        }
+      }
+    });
+
+    // ── Inicia se veio ?url= na query ──
+    if (songUrl) {
+      startPlay();
+    } else {
+      setStatus('Pronto.', '');
+    }
+  </script>
+</body>
+</html>
