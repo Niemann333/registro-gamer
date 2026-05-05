@@ -49,6 +49,8 @@
         _origOAP = proc.onaudioprocess;
         analyser = ctx.createAnalyser();
         analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.8;
+        window._analyser = analyser;  // expõe para o visualizador do gadget
         gainNode = ctx.createGain();
         gainNode.gain.value = volLevel;
         proc.disconnect();
