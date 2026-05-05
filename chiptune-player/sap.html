@@ -97,11 +97,12 @@
       } catch(e) { return -1; }
     }
 
-    function startPoller() {
+    function startPoller(graceMs) {
       if (posTimer) clearInterval(posTimer);
       silCount  = 0;
       endedSent = false;
       scpFading = false;
+      var graceUntil = Date.now() + (graceMs || 2000);
       posTimer  = setInterval(function() {
         if (!asapWeb.asap || !asapWeb.context) return;
         var posMs = 0, durMs = 0;
@@ -110,7 +111,8 @@
         try {
           window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs > 0 ? durMs : 0 }, '*');
         } catch(e) {}
-        checkSilence();
+        // Só checa silêncio após período de graça
+        if (Date.now() > graceUntil) checkSilence();
       }, 250);
     }
 
@@ -177,13 +179,12 @@
       }
       if (d.type === 'subsong' && typeof d.index === 'number') {
         currentSong = d.index;
-        silCount = 0; endedSent = false; scpFading = false;
         var durMs = calcDuration(currentSong);
         try {
           if (asapWeb.context && asapWeb.context.state === 'suspended') asapWeb.context.resume();
           asapWeb.asap.playSong(currentSong, durMs);
-          hookAnalyser();
-          startPoller();
+          // Reinicia poller com grace de 2s — NÃO reconecta analyser
+          startPoller(2000);
           var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
           try { n = decodeURIComponent(n); } catch(e) {}
           setStatus('\u266A ' + n + ' [' + (currentSong + 1) + ']', 'playing');
