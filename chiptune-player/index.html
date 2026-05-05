@@ -55,6 +55,7 @@
         try {
           _analyser = _ctx.createAnalyser();
           _analyser.fftSize = 2048;
+          _analyser.smoothingTimeConstant = 0.8;
           var _oc = AudioNode.prototype.connect;
           AudioNode.prototype.connect = function(dest, a, b) {
             if (_ctx && dest === _ctx.destination) {
@@ -76,11 +77,7 @@
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
-    // Dados do visualizador — usa frequencyBinCount para FFT
-    if (_analyser) {
-      _analyser.fftSize = 2048;
-      _analyser.smoothingTimeConstant = 0.8;
-    }
+    function doFadeOut() {
       if (!_scp || _scpFading) return;
       _scpFading = true;
       var orig = _scp.onaudioprocess;
@@ -142,7 +139,7 @@
       _silCount   = 0;
       _scpFading  = false;
 
-      // Envia info de vozes ao gadget logo que o player estiver pronto
+      // Envia info de vozes ao gadget
       setTimeout(function() {
         try {
           var p = window.ChipPlayer.sequencer.player;
@@ -180,23 +177,6 @@
         if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
 
         try { window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*'); } catch(e) {}
-
-        // Dados do visualizador
-        if (_analyser) {
-          try {
-            var oscBuf = new Uint8Array(_analyser.fftSize);
-            _analyser.getByteTimeDomainData(oscBuf);
-            var fftBuf = new Uint8Array(_analyser.frequencyBinCount);
-            _analyser.getByteFrequencyData(fftBuf);
-            // Envia amostras reduzidas para economizar mensagens
-            var oscOut = [], fftOut = [];
-            var step = Math.floor(oscBuf.length / 256);
-            for (var i = 0; i < oscBuf.length; i += step) oscOut.push(oscBuf[i]);
-            for (var i = 0; i < 128; i++) fftOut.push(fftBuf[Math.floor(i * fftBuf.length / 128)]);
-            window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
-          } catch(e) {}
-        }
-
         checkSilence();
       }, 250);
     }
