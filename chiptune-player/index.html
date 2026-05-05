@@ -47,7 +47,7 @@
       }
     } catch(e) {}
 
-    // Captura AudioContext
+    // Captura AudioContext + GainNode para volume
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
@@ -124,46 +124,10 @@
     var params = new URLSearchParams(window.location.search);
     if (params.get('url')) {
       songUrl = decodeURIComponent(params.get('url'));
-      try { sessionStorage.setItem('chipSongUrl', songUrl); } catch(e) {}
-    } else {
-      try {
-        var sv = sessionStorage.getItem('chipSongUrl');
-        if (sv) { songUrl = sv; sessionStorage.removeItem('chipSongUrl'); }
-      } catch(e) {}
     }
 
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
-
-    var _player = null;  // player capturado
-
-    function hookSequencer() {
-      if (!seq()) return;
-      var _origUpdate = seq().handlePlayerStateUpdate.bind(seq());
-      seq().handlePlayerStateUpdate = function(state) {
-        _origUpdate(state);
-        var p = seq().getPlayer();
-        if (p && p !== _player) {
-          _player = p;
-          // Envia info de vozes ao gadget
-          try {
-            var voices = [];
-            var groups = p.getVoiceGroups ? p.getVoiceGroups() : [];
-            for (var i = 0; i < 32; i++) {
-              var n = p.getVoiceName(i);
-              if (!n) break;
-              voices.push(n);
-            }
-            window.parent.postMessage({
-              type: 'voices',
-              names: voices,
-              mask: p.getVoiceMask(),
-              groups: groups
-            }, '*');
-          } catch(e) {}
-        }
-      };
-    }
 
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
@@ -173,6 +137,30 @@
       _endedSent  = false;
       _silCount   = 0;
       _scpFading  = false;
+
+      // Envia info de vozes ao gadget logo que o player estiver pronto
+      setTimeout(function() {
+        try {
+          var p = window.ChipPlayer.sequencer.player;
+          if (p && p.getVoiceName) {
+            var names = [], groups = [];
+            for (var i = 0; i < 64; i++) {
+              var n = p.getVoiceName(i);
+              if (!n) break;
+              names.push(n);
+            }
+            try { groups = p.getVoiceGroups() || []; } catch(e) {}
+            if (names.length > 0) {
+              window.parent.postMessage({
+                type: 'voices',
+                names: names,
+                mask: p.getVoiceMask(),
+                groups: groups
+              }, '*');
+            }
+          }
+        } catch(e) {}
+      }, 800);
 
       _posTimer = setInterval(function() {
         if (!_ctx || _ctx.state !== 'running') return;
@@ -199,8 +187,11 @@
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
       }
-      if (d.type === 'voicemask' && typeof d.mask === 'number') {
-        if (_player) try { _player.setVoiceMask(d.mask); } catch(e) {}
+      if (d.type === 'voicemask' && d.mask) {
+        try {
+          var p = window.ChipPlayer.sequencer.player;
+          if (p && p.setVoiceMask) p.setVoiceMask(d.mask);
+        } catch(e) {}
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
         if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
@@ -245,7 +236,6 @@
           tries++;
           if (seq()) {
             clearInterval(iv); playerReady = true;
-            hookSequencer();
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
             if (songUrl) startPlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
