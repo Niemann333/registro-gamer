@@ -41,6 +41,28 @@
 
     var _origOAP = null;  // onaudioprocess original salvo
 
+    var _visTimer = null;
+    function startVisTimer() {
+      if (_visTimer) return;
+      _visTimer = setInterval(function() {
+        if (!analyser) return;
+        var ctx = asapWeb.context;
+        if (!ctx || ctx.state !== 'running') return;
+        try {
+          var osc = new Uint8Array(analyser.fftSize);
+          analyser.getByteTimeDomainData(osc);
+          var fft = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(fft);
+          var oscOut = new Uint8Array(256);
+          var fftOut = new Uint8Array(128);
+          var step = Math.floor(osc.length / 256);
+          for (var i = 0; i < 256; i++) oscOut[i] = osc[i * step];
+          for (var i = 0; i < 128; i++) fftOut[i] = fft[Math.floor(i * fft.length / 128)];
+          window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
+        } catch(e) {}
+      }, 33);
+    }
+
     function hookAnalyser() {
       var ctx = asapWeb.context;
       var proc = asapWeb.processor;
@@ -158,6 +180,7 @@
           try { asapWeb.asap.playSong(currentSong, durMs); } catch(e) {}
 
           hookAnalyser();
+          startVisTimer();
           startPoller();
           try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
         } else if (tries > 50) {
