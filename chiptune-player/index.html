@@ -56,6 +56,7 @@
           _analyser = _ctx.createAnalyser();
           _analyser.fftSize = 2048;
           _analyser.smoothingTimeConstant = 0.8;
+          _analyser.smoothingTimeConstant = 0.8;
           var _oc = AudioNode.prototype.connect;
           AudioNode.prototype.connect = function(dest, a, b) {
             if (_ctx && dest === _ctx.destination) {
@@ -75,6 +76,30 @@
       };
       _Wrap.prototype = _OrigAC.prototype;
       window.AudioContext = window.webkitAudioContext = _Wrap;
+    }
+
+    var _visTimer = null;
+    function startVisTimer() {
+      if (_visTimer) return;
+      _visTimer = setInterval(function() {
+        if (!_analyser || !_ctx || _ctx.state !== 'running') return;
+        try {
+          var osc = new Uint8Array(_analyser.fftSize);
+          _analyser.getByteTimeDomainData(osc);
+          var fft = new Uint8Array(_analyser.frequencyBinCount);
+          _analyser.getByteFrequencyData(fft);
+          // Downsamples para 256 pontos cada
+          var oscOut = new Uint8Array(256);
+          var fftOut = new Uint8Array(128);
+          var step = Math.floor(osc.length / 256);
+          for (var i = 0; i < 256; i++) oscOut[i] = osc[i * step];
+          for (var i = 0; i < 128; i++) fftOut[i] = fft[Math.floor(i * fft.length / 128)];
+          window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
+        } catch(e) {}
+      }, 33); // ~30fps
+    }
+    function stopVisTimer() {
+      if (_visTimer) { clearInterval(_visTimer); _visTimer = null; }
     }
 
     function doFadeOut() {
@@ -163,9 +188,8 @@
         } catch(e) {}
       }, 800);
 
-      _posTimer = setInterval(function() {
-        if (!_ctx || _ctx.state !== 'running') return;
-        if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; }
+      _posTimer = setInterval(function() {        if (!_ctx || _ctx.state !== 'running') return;
+        if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; startVisTimer(); }
 
         var posMs = 0, durMs = 0;
         var p = player();
