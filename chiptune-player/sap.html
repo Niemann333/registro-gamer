@@ -37,11 +37,15 @@
     var params = new URLSearchParams(window.location.search);
     if (params.get('url')) songUrl = decodeURIComponent(params.get('url'));
 
+    var _origOAP = null;  // onaudioprocess original salvo
+
     function hookAnalyser() {
       var ctx = asapWeb.context;
       var proc = asapWeb.processor;
       if (!ctx || !proc) return;
       try {
+        // Salva onaudioprocess original ANTES de qualquer fade
+        _origOAP = proc.onaudioprocess;
         analyser = ctx.createAnalyser();
         analyser.fftSize = 2048;
         proc.disconnect();
@@ -54,7 +58,7 @@
       var proc = asapWeb.processor;
       if (!proc || scpFading) return;
       scpFading = true;
-      var orig  = proc.onaudioprocess;
+      var orig  = proc.onaudioprocess;  // pode já ser o salvo
       var sr    = asapWeb.context ? asapWeb.context.sampleRate : 44100;
       var total = sr * 3;
       var done  = 0;
@@ -182,8 +186,11 @@
         var durMs = calcDuration(currentSong);
         try {
           if (asapWeb.context && asapWeb.context.state === 'suspended') asapWeb.context.resume();
+          // Restaura onaudioprocess original antes de tocar nova faixa
+          if (asapWeb.processor && _origOAP) {
+            asapWeb.processor.onaudioprocess = _origOAP;
+          }
           asapWeb.asap.playSong(currentSong, durMs);
-          // Reinicia poller com grace de 2s — NÃO reconecta analyser
           startPoller(2000);
           var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
           try { n = decodeURIComponent(n); } catch(e) {}
