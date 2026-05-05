@@ -135,6 +135,36 @@
     function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
+    var _player = null;  // player capturado
+
+    function hookSequencer() {
+      if (!seq()) return;
+      var _origUpdate = seq().handlePlayerStateUpdate.bind(seq());
+      seq().handlePlayerStateUpdate = function(state) {
+        _origUpdate(state);
+        var p = seq().getPlayer();
+        if (p && p !== _player) {
+          _player = p;
+          // Envia info de vozes ao gadget
+          try {
+            var voices = [];
+            var groups = p.getVoiceGroups ? p.getVoiceGroups() : [];
+            for (var i = 0; i < 32; i++) {
+              var n = p.getVoiceName(i);
+              if (!n) break;
+              voices.push(n);
+            }
+            window.parent.postMessage({
+              type: 'voices',
+              names: voices,
+              mask: p.getVoiceMask(),
+              groups: groups
+            }, '*');
+          } catch(e) {}
+        }
+      };
+    }
+
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
       _isVGM      = !!isVGM;
@@ -168,6 +198,9 @@
       if (d.type === 'play' && d.url) {
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
+      }
+      if (d.type === 'voicemask' && typeof d.mask === 'number') {
+        if (_player) try { _player.setVoiceMask(d.mask); } catch(e) {}
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
         if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
@@ -212,6 +245,7 @@
           tries++;
           if (seq()) {
             clearInterval(iv); playerReady = true;
+            hookSequencer();
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
             if (songUrl) startPlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
