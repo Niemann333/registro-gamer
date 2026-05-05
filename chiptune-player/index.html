@@ -32,6 +32,7 @@
     var _posTimer  = null;
     var _isVGM     = false;
     var _calibrated = false;
+    var _silenceDisabled = false;
 
     // Captura ScriptProcessorNode para fade
     try {
@@ -122,7 +123,7 @@
     }
 
     function checkSilence() {
-      if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent) return;
+      if (!_analyser || !_ctx || _ctx.state !== 'running' || _endedSent || _silenceDisabled) return;
       try {
         var buf = new Float32Array(_analyser.fftSize);
         _analyser.getFloatTimeDomainData(buf);
@@ -163,6 +164,7 @@
       _endedSent  = false;
       _silCount   = 0;
       _scpFading  = false;
+      _silenceDisabled = false;
 
       // Envia info de vozes ao gadget
       setTimeout(function() {
@@ -217,6 +219,8 @@
           var p = window.ChipPlayer.sequencer.player;
           if (p && p.setVoiceMask) p.setVoiceMask(d.mask);
         } catch(e) {}
+        // Se há canais mutados, desativa detecção de silêncio
+        _silenceDisabled = !!d.hasMute;
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
         if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
