@@ -25,6 +25,7 @@
     var _scp       = null;
     var _scpFading = false;
     var _analyser  = null;
+    var _gainNode  = null;
     var _linked    = false;
     var _silCount  = 0;
     var _endedSent = false;
@@ -57,7 +58,13 @@
           var _oc = AudioNode.prototype.connect;
           AudioNode.prototype.connect = function(dest, a, b) {
             if (_ctx && dest === _ctx.destination) {
-              if (!_linked) { _linked = true; _oc.call(_analyser, _ctx.destination); }
+              if (!_linked) {
+                _linked = true;
+                _gainNode = _ctx.createGain();
+                _gainNode.gain.value = 1.0;
+                _oc.call(_analyser, _gainNode);
+                _oc.call(_gainNode, _ctx.destination);
+              }
               return _oc.call(this, _analyser, a, b);
             }
             return _oc.apply(this, arguments);
@@ -161,6 +168,9 @@
       if (d.type === 'play' && d.url) {
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
+      }
+      if (d.type === 'volume' && typeof d.level === 'number') {
+        if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
       }
       if (d.type === 'pause')   { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
       if (d.type === 'resume')  { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
