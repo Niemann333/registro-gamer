@@ -76,7 +76,11 @@
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
-    function doFadeOut() {
+    // Dados do visualizador — usa frequencyBinCount para FFT
+    if (_analyser) {
+      _analyser.fftSize = 2048;
+      _analyser.smoothingTimeConstant = 0.8;
+    }
       if (!_scp || _scpFading) return;
       _scpFading = true;
       var orig = _scp.onaudioprocess;
@@ -176,6 +180,23 @@
         if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
 
         try { window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*'); } catch(e) {}
+
+        // Dados do visualizador
+        if (_analyser) {
+          try {
+            var oscBuf = new Uint8Array(_analyser.fftSize);
+            _analyser.getByteTimeDomainData(oscBuf);
+            var fftBuf = new Uint8Array(_analyser.frequencyBinCount);
+            _analyser.getByteFrequencyData(fftBuf);
+            // Envia amostras reduzidas para economizar mensagens
+            var oscOut = [], fftOut = [];
+            var step = Math.floor(oscBuf.length / 256);
+            for (var i = 0; i < oscBuf.length; i += step) oscOut.push(oscBuf[i]);
+            for (var i = 0; i < 128; i++) fftOut.push(fftBuf[Math.floor(i * fftBuf.length / 128)]);
+            window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
+          } catch(e) {}
+        }
+
         checkSilence();
       }, 250);
     }
