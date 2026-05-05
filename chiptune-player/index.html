@@ -183,10 +183,20 @@
             names = names.slice(0, mask.length);
             if (names.length > 0) {
               window.parent.postMessage({
-                type: 'voices',
-                names: names,
-                mask: mask,
-                groups: groups
+                type: 'voices', names: names, mask: mask, groups: groups
+              }, '*');
+            }
+          }
+          // Subsongs SID
+          if (p && p.getNumSubtunes) {
+            var num = p.getNumSubtunes();
+            if (num > 1) {
+              var durs = p.subtuneDurations || [];
+              window.parent.postMessage({
+                type: 'sid-subsongs',
+                count: num,
+                current: p.getSubtune(),
+                durations: Array.prototype.slice.call(durs)
               }, '*');
             }
           }
@@ -216,6 +226,9 @@
       if (d.type === 'play' && d.url) {
         songUrl = d.url; _endedSent = false; _scpFading = false;
         if (playerReady) startPlay();
+      }
+      if (d.type === 'sid-subsong' && typeof d.index === 'number') {
+        try { window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
       }
       if (d.type === 'voicemask' && d.mask) {
         try {
