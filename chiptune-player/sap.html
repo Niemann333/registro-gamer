@@ -25,6 +25,8 @@
     var currentSong = 0;
     var posTimer    = null;
     var analyser    = null;
+    var gainNode    = null;
+    var volLevel    = 1.0;
     var silCount    = 0;
     var endedSent   = false;
     var scpFading   = false;
@@ -44,13 +46,15 @@
       var proc = asapWeb.processor;
       if (!ctx || !proc) return;
       try {
-        // Salva onaudioprocess original ANTES de qualquer fade
         _origOAP = proc.onaudioprocess;
         analyser = ctx.createAnalyser();
         analyser.fftSize = 2048;
+        gainNode = ctx.createGain();
+        gainNode.gain.value = volLevel;
         proc.disconnect();
         proc.connect(analyser);
-        analyser.connect(ctx.destination);
+        analyser.connect(gainNode);
+        gainNode.connect(ctx.destination);
       } catch(e) {}
     }
 
@@ -168,6 +172,10 @@
       if (d.type === 'play' && d.url) {
         songUrl = d.url; loopCount = d.loopCount || 1; currentSong = d.song || 0;
         startPlay();
+      }
+      if (d.type === 'volume' && typeof d.level === 'number') {
+        volLevel = Math.max(0, d.level);
+        if (gainNode) gainNode.gain.value = volLevel;
       }
       if (d.type === 'pause') {
         try { if (asapWeb.context && asapWeb.context.state === 'running') asapWeb.context.suspend(); } catch(e) {}
