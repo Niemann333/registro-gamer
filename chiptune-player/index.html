@@ -178,11 +178,14 @@
               names.push(n);
             }
             try { groups = p.getVoiceGroups() || []; } catch(e) {}
+            var mask = p.getVoiceMask();
+            // Limita nomes ao tamanho real da máscara
+            names = names.slice(0, mask.length);
             if (names.length > 0) {
               window.parent.postMessage({
                 type: 'voices',
                 names: names,
-                mask: p.getVoiceMask(),
+                mask: mask,
                 groups: groups
               }, '*');
             }
