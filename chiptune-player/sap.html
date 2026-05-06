@@ -182,6 +182,22 @@
           hookAnalyser();
           startVisTimer();
           startPoller();
+
+          // Envia vozes POKEY ao gadget
+          try {
+            var info = asapWeb.asap.getInfo();
+            var channels = info.getChannels ? info.getChannels() : 1;
+            var numVoices = channels === 2 ? 8 : 4; // stereo=8, mono=4
+            var names = [];
+            for (var i = 0; i < numVoices; i++) names.push('Ch ' + (i+1));
+            var mask = [];
+            for (var i = 0; i < numVoices; i++) mask.push(true);
+            window.parent.postMessage({
+              type: 'voices', names: names, mask: mask,
+              groups: [{ name: 'POKEY', voices: names.map(function(n,i){ return {idx:i,name:n}; }) }]
+            }, '*');
+          } catch(e) {}
+
           try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
         } else if (tries > 50) {
           clearInterval(wait);
@@ -197,6 +213,17 @@
       if (d.type === 'play' && d.url) {
         songUrl = d.url; loopCount = d.loopCount || 1; currentSong = d.song || 0;
         startPlay();
+      }
+      if (d.type === 'voicemask' && d.mask) {
+        try {
+          // Converte array boolean para bitmask — bit 0 = canal 0, etc.
+          // ASAP: bit=0 significa MUTED, bit=1 significa ATIVO
+          var bitmask = 0;
+          for (var i = 0; i < d.mask.length; i++) {
+            if (d.mask[i]) bitmask |= (1 << i);
+          }
+          asapWeb.asap.mutePokeyChannels(~bitmask & 0xFF);
+        } catch(e) {}
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
         volLevel = Math.max(0, d.level);
