@@ -186,17 +186,20 @@
           // Envia vozes POKEY ao gadget
           try {
             var info = asapWeb.asap.getInfo();
+            console.log('ASAP info methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(info)).join(', '));
             var channels = info.getChannels ? info.getChannels() : 1;
-            var numVoices = channels === 2 ? 8 : 4; // stereo=8, mono=4
+            console.log('channels:', channels);
+            var numVoices = channels === 2 ? 8 : 4;
             var names = [];
             for (var i = 0; i < numVoices; i++) names.push('Ch ' + (i+1));
             var mask = [];
             for (var i = 0; i < numVoices; i++) mask.push(true);
+            console.log('Enviando voices:', names);
             window.parent.postMessage({
               type: 'voices', names: names, mask: mask,
               groups: [{ name: 'POKEY', voices: names.map(function(n,i){ return {idx:i,name:n}; }) }]
             }, '*');
-          } catch(e) {}
+          } catch(e) { console.log('Erro voices:', e); }
 
           try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
         } else if (tries > 50) {
