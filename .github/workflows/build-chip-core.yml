@@ -53,7 +53,9 @@ jobs:
           source $EMSDK/emsdk_env.sh
           cd chip-player-js/libxmp
           autoconf
-          emconfigure ./configure --without-versioned-symbols
+          emconfigure ./configure
+          # Força desabilitar versioned symbols no Makefile gerado (incompatível com WASM)
+          sed -i 's/-DUSE_VERSIONED_SYMBOLS=1/-DUSE_VERSIONED_SYMBOLS=0/g' Makefile
           emmake make
 
       - name: Compilar game-music-emu
