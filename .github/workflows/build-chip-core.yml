@@ -1,12 +1,15 @@
 name: Compilar chip-core (soltune fork)
 
 on:
-  workflow_dispatch:  # Roda só quando você apertar o botão
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
+
+    container:
+      image: emscripten/emsdk:3.1.45
 
     steps:
       - name: Checkout registro-gamer
@@ -16,41 +19,25 @@ jobs:
 
       - name: Clonar soltune/chip-player-js com submodules
         run: |
+          apt-get update -q && apt-get install -y -q git cmake autoconf automake
           git clone --recurse-submodules --depth=1 \
             --branch develop \
             https://github.com/soltune/chip-player-js.git chip-player-js
 
-      - name: Listar estrutura do soltune
+      - name: Instalar Node.js 16 e yarn
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+          apt-get install -y nodejs
+          npm install -g yarn
+
+      - name: Listar estrutura e submodulos
         run: |
           echo "=== Raiz ==="
           ls chip-player-js/
-          echo "=== Submodulos ==="
+          echo "=== .gitmodules ==="
           cat chip-player-js/.gitmodules 2>/dev/null || echo "sem .gitmodules"
-          echo "=== package.json scripts ==="
-          python3 -c "import json; d=json.load(open('chip-player-js/package.json')); [print(k,':',v) for k,v in d.get('scripts',{}).items()]"
-
-      - name: Instalar Node.js 16 (compatível com grpc)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '16'
-
-      - name: Instalar dependências do sistema
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q \
-            build-essential cmake autoconf automake \
-            python3 python3-pip
-          npm install -g yarn
-
-      - name: Instalar Emscripten (emsdk)
-        run: |
-          git clone https://github.com/emscripten-core/emsdk.git
-          cd emsdk
-          ./emsdk install 2.0.34
-          ./emsdk activate 2.0.34
-          echo "EMSDK=$PWD" >> $GITHUB_ENV
-          source ./emsdk_env.sh
-          emcc --version
+          echo "=== scripts package.json ==="
+          node -e "const d=require('./chip-player-js/package.json'); Object.entries(d.scripts||{}).forEach(([k,v])=>console.log(k,':',v))"
 
       - name: Instalar dependências JS
         run: |
@@ -59,26 +46,29 @@ jobs:
 
       - name: Compilar libxmp
         run: |
-          source $EMSDK/emsdk_env.sh
           cd chip-player-js/libxmp
           autoconf
-          # Remove .symver inline asm do fonte — incompatível com WASM/Emscripten
-          find src -name "*.c" -o -name "*.h" | xargs grep -l "symver" 2>/dev/null |             xargs -r sed -i '/symver/d'
-          emconfigure ./configure
+          # Remove .symver incompatível com WASM
+          find src -name "*.c" -o -name "*.h" | xargs grep -l "symver" 2>/dev/null | \
+            xargs -r sed -i '/symver/d'
+          # --host necessário para cross-compilation com Emscripten
+          emconfigure ./configure --host=wasm32-unknown-emscripten
           emmake make
 
       - name: Compilar game-music-emu
         run: |
-          source $EMSDK/emsdk_env.sh
-          git clone --depth=1 https://github.com/mmontag/game-music-emu.git game-music-emu
-          cd game-music-emu
+          if [ -d "chip-player-js/game-music-emu" ]; then
+            cd chip-player-js/game-music-emu
+          else
+            git clone --depth=1 https://github.com/mmontag/game-music-emu.git game-music-emu
+            cd game-music-emu
+          fi
           mkdir -p build && cd build
           emcmake cmake ..
           emmake make
 
       - name: Compilar libvgm
         run: |
-          source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/libvgm" ]; then
             cd chip-player-js/libvgm
             mkdir -p build && cd build
@@ -90,7 +80,6 @@ jobs:
 
       - name: Compilar psflib (PSF/PS1)
         run: |
-          source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/psflib" ]; then
             cd chip-player-js/psflib
             emmake make -f Emscripten.Makefile libpsflib.a
@@ -100,7 +89,6 @@ jobs:
 
       - name: Compilar lazyusf2 (USF/N64)
         run: |
-          source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/lazyusf2" ]; then
             cd chip-player-js/lazyusf2
             emmake make -f Emscripten.Makefile liblazyusf.a
@@ -110,10 +98,9 @@ jobs:
 
       - name: Compilar webGSF (GSF/GBA)
         run: |
-          source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/webGSF/emscripten" ]; then
-            # Cria shim libc/limits.h — removido do Emscripten, mGBA ainda usa
-            SYSROOT=$(em-config EMSCRIPTEN_ROOT)/../sysroot
+            # Shim libc/limits.h removido no Emscripten moderno
+            SYSROOT=$(em-config EMSCRIPTEN_ROOT 2>/dev/null || echo "/emsdk/upstream/emscripten")/../sysroot
             mkdir -p "$SYSROOT/include/libc"
             echo '#include <limits.h>' > "$SYSROOT/include/libc/limits.h"
             cd chip-player-js/webGSF/emscripten
@@ -124,7 +111,6 @@ jobs:
 
       - name: Compilar FluidLite (MIDI)
         run: |
-          source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/fluidlite" ]; then
             mkdir -p chip-player-js/fluidlite/build
             cd chip-player-js/fluidlite/build
@@ -136,7 +122,6 @@ jobs:
 
       - name: Compilar chip-core.wasm
         run: |
-          source $EMSDK/emsdk_env.sh
           cd chip-player-js
           yarn run build-chip-core
 
