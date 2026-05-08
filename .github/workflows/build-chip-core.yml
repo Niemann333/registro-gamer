@@ -1,0 +1,142 @@
+name: Compilar chip-core (soltune fork)
+
+on:
+  workflow_dispatch:  # Roda só quando você apertar o botão
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout registro-gamer
+        uses: actions/checkout@v4
+        with:
+          path: registro-gamer
+
+      - name: Clonar soltune/chip-player-js com submodules
+        run: |
+          git clone --recurse-submodules --depth=1 \
+            --branch develop \
+            https://github.com/soltune/chip-player-js.git chip-player-js
+
+      - name: Instalar Node.js 16 (compatível com grpc)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+
+      - name: Instalar dependências do sistema
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q \
+            build-essential cmake autoconf automake \
+            python3 python3-pip
+          npm install -g yarn
+
+      - name: Instalar Emscripten (emsdk)
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install 3.1.45
+          ./emsdk activate 3.1.45
+          echo "EMSDK=$PWD" >> $GITHUB_ENV
+          source ./emsdk_env.sh
+          emcc --version
+
+      - name: Instalar dependências JS
+        run: |
+          cd chip-player-js
+          yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Compilar libxmp
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/libxmp
+          autoconf
+          emconfigure ./configure
+          emmake make
+
+      - name: Compilar game-music-emu
+        run: |
+          source $EMSDK/emsdk_env.sh
+          git clone --depth=1 https://github.com/mmontag/game-music-emu.git game-music-emu
+          cd game-music-emu
+          mkdir -p build && cd build
+          emcmake cmake ..
+          emmake make
+
+      - name: Compilar libvgm
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/libvgm
+          mkdir -p build && cd build
+          emcmake cmake ..
+          emmake make
+
+      - name: Compilar psflib (PSF/PS1)
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/psflib
+          emmake make -f Emscripten.Makefile libpsflib.a
+
+      - name: Compilar lazyusf2 (USF/N64)
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/lazyusf2
+          emmake make -f Emscripten.Makefile liblazyusf.a
+
+      - name: Compilar webGSF (GSF/GBA)
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/webGSF/emscripten
+          emmake make -f Emscripten.Makefile
+
+      - name: Compilar FluidLite (MIDI)
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js/fluidlite/build
+          emcmake cmake ..
+          emmake make fluidlite-static
+
+      - name: Compilar chip-core.wasm
+        run: |
+          source $EMSDK/emsdk_env.sh
+          cd chip-player-js
+          yarn run build-chip-core
+
+      - name: Build do React (JS bundle)
+        run: |
+          cd chip-player-js
+          cp sample.env .env || true
+          yarn build
+        env:
+          CI: false
+          REACT_APP_CATALOG_PREFIX: ""
+
+      - name: Copiar binários para registro-gamer
+        run: |
+          DEST=registro-gamer/chiptune-player/static/js
+          mkdir -p $DEST
+
+          cp chip-player-js/public/chip-core*.wasm \
+             registro-gamer/chiptune-player/ 2>/dev/null || \
+          cp chip-player-js/build/chip-core*.wasm \
+             registro-gamer/chiptune-player/ 2>/dev/null || true
+
+          cp chip-player-js/build/static/js/main.*.js $DEST/ 2>/dev/null || true
+          cp chip-player-js/build/static/js/chip-core.*.chunk.js $DEST/ 2>/dev/null || true
+
+          echo "=== Arquivos copiados ==="
+          ls -lh registro-gamer/chiptune-player/*.wasm 2>/dev/null || echo "nenhum .wasm"
+          ls -lh $DEST/*.js 2>/dev/null | grep -E "main\.|chip-core" || echo "nenhum .js"
+
+      - name: Commit dos binários
+        run: |
+          cd registro-gamer
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chiptune-player/static/js/main.*.js \
+                  chiptune-player/static/js/chip-core.*.chunk.js \
+                  chiptune-player/chip-core*.wasm 2>/dev/null || true
+          git diff --staged --quiet && echo "Nada mudou" || \
+          git commit -m "build: chip-core.wasm soltune (GSF+PSF+USF)" && git push
