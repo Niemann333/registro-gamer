@@ -112,6 +112,10 @@ jobs:
         run: |
           source $EMSDK/emsdk_env.sh
           if [ -d "chip-player-js/webGSF/emscripten" ]; then
+            # Cria shim libc/limits.h — removido do Emscripten, mGBA ainda usa
+            SYSROOT=$(em-config EMSCRIPTEN_ROOT)/../sysroot
+            mkdir -p "$SYSROOT/include/libc"
+            echo '#include <limits.h>' > "$SYSROOT/include/libc/limits.h"
             cd chip-player-js/webGSF/emscripten
             emmake make -f Emscripten.Makefile
           else
