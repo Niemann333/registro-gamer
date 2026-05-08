@@ -55,18 +55,6 @@ jobs:
           emconfigure ./configure --host=wasm32-unknown-emscripten
           emmake make
 
-      - name: Compilar game-music-emu
-        run: |
-          if [ -d "chip-player-js/game-music-emu" ]; then
-            cd chip-player-js/game-music-emu
-          else
-            git clone --depth=1 https://github.com/mmontag/game-music-emu.git game-music-emu
-            cd game-music-emu
-          fi
-          mkdir -p build && cd build
-          emcmake cmake ..
-          emmake make
-
       - name: Compilar libvgm
         run: |
           if [ -d "chip-player-js/libvgm" ]; then
