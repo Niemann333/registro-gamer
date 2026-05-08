@@ -53,9 +53,9 @@ jobs:
           source $EMSDK/emsdk_env.sh
           cd chip-player-js/libxmp
           autoconf
+          # Remove .symver inline asm do fonte — incompatível com WASM/Emscripten
+          find src -name "*.c" -o -name "*.h" | xargs grep -l "symver" 2>/dev/null |             xargs -r sed -i '/symver/d'
           emconfigure ./configure
-          # Força desabilitar versioned symbols no Makefile gerado (incompatível com WASM)
-          sed -i 's/-DUSE_VERSIONED_SYMBOLS=1/-DUSE_VERSIONED_SYMBOLS=0/g' Makefile
           emmake make
 
       - name: Compilar game-music-emu
