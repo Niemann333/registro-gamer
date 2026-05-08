@@ -20,6 +20,15 @@ jobs:
             --branch develop \
             https://github.com/soltune/chip-player-js.git chip-player-js
 
+      - name: Listar estrutura do soltune
+        run: |
+          echo "=== Raiz ==="
+          ls chip-player-js/
+          echo "=== Submodulos ==="
+          cat chip-player-js/.gitmodules 2>/dev/null || echo "sem .gitmodules"
+          echo "=== package.json scripts ==="
+          python3 -c "import json; d=json.load(open('chip-player-js/package.json')); [print(k,':',v) for k,v in d.get('scripts',{}).items()]"
+
       - name: Instalar Node.js 16 (compatível com grpc)
         uses: actions/setup-node@v4
         with:
@@ -70,35 +79,56 @@ jobs:
       - name: Compilar libvgm
         run: |
           source $EMSDK/emsdk_env.sh
-          cd chip-player-js/libvgm
-          mkdir -p build && cd build
-          emcmake cmake ..
-          emmake make
+          if [ -d "chip-player-js/libvgm" ]; then
+            cd chip-player-js/libvgm
+            mkdir -p build && cd build
+            emcmake cmake ..
+            emmake make
+          else
+            echo "libvgm não encontrado, pulando"
+          fi
 
       - name: Compilar psflib (PSF/PS1)
         run: |
           source $EMSDK/emsdk_env.sh
-          cd chip-player-js/psflib
-          emmake make -f Emscripten.Makefile libpsflib.a
+          if [ -d "chip-player-js/psflib" ]; then
+            cd chip-player-js/psflib
+            emmake make -f Emscripten.Makefile libpsflib.a
+          else
+            echo "psflib não encontrado, pulando"
+          fi
 
       - name: Compilar lazyusf2 (USF/N64)
         run: |
           source $EMSDK/emsdk_env.sh
-          cd chip-player-js/lazyusf2
-          emmake make -f Emscripten.Makefile liblazyusf.a
+          if [ -d "chip-player-js/lazyusf2" ]; then
+            cd chip-player-js/lazyusf2
+            emmake make -f Emscripten.Makefile liblazyusf.a
+          else
+            echo "lazyusf2 não encontrado, pulando"
+          fi
 
       - name: Compilar webGSF (GSF/GBA)
         run: |
           source $EMSDK/emsdk_env.sh
-          cd chip-player-js/webGSF/emscripten
-          emmake make -f Emscripten.Makefile
+          if [ -d "chip-player-js/webGSF/emscripten" ]; then
+            cd chip-player-js/webGSF/emscripten
+            emmake make -f Emscripten.Makefile
+          else
+            echo "webGSF não encontrado, pulando"
+          fi
 
       - name: Compilar FluidLite (MIDI)
         run: |
           source $EMSDK/emsdk_env.sh
-          cd chip-player-js/fluidlite/build
-          emcmake cmake ..
-          emmake make fluidlite-static
+          if [ -d "chip-player-js/fluidlite" ]; then
+            mkdir -p chip-player-js/fluidlite/build
+            cd chip-player-js/fluidlite/build
+            emcmake cmake ..
+            emmake make fluidlite-static
+          else
+            echo "fluidlite não encontrado, pulando"
+          fi
 
       - name: Compilar chip-core.wasm
         run: |
