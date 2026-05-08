@@ -53,7 +53,7 @@ jobs:
           source $EMSDK/emsdk_env.sh
           cd chip-player-js/libxmp
           autoconf
-          emconfigure ./configure
+          emconfigure ./configure --without-versioned-symbols
           emmake make
 
       - name: Compilar game-music-emu
