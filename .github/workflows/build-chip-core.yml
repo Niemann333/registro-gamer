@@ -110,12 +110,13 @@ jobs:
         run: |
           cd chip-player-js
           python3 -c "
-import re, sys
-with open('scripts/build-chip-core.js', 'r') as f:
-    c = f.read()
-c = re.sub(r\"-s BINARYEN_TRAP_MODE='clamp'\", '', c)
-with open('scripts/build-chip-core.js', 'w') as f:
-    f.write(c)
+f = open('scripts/build-chip-core.js', 'r')
+c = f.read()
+f.close()
+c = c.replace(\"-s BINARYEN_TRAP_MODE='clamp'\", '')
+f = open('scripts/build-chip-core.js', 'w')
+f.write(c)
+f.close()
 print('Patch aplicado')
 "
           node scripts/build-chip-core.js
