@@ -94,17 +94,30 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          # Remove flag depreciada BINARYEN_TRAP_MODE
-          sed -i "/'clamp'/d" scripts/build-chip-core.js
-          sed -i "/BINARYEN_TRAP_MODE/d" scripts/build-chip-core.js
-          # Remove espaços extras em nomes de arquivos e flags
-          sed -i "s/\.cpp '/\.cpp'/g" scripts/build-chip-core.js
-          sed -i "s/\.c '/\.c'/g" scripts/build-chip-core.js
-          sed -i "s|/src/ '|/src/'|g" scripts/build-chip-core.js
-          sed -i 's|-DHAVE_CRC32 "|-DHAVE_CRC32"|g' scripts/build-chip-core.js
-          sed -i "s|-DHAVE_CRC32 '|-DHAVE_CRC32'|g" scripts/build-chip-core.js
-          # Remove arquivo es5506.c duplicado
-          sed -i "0,/es5506\.c/! s/vgmplay\/src\/chips\/es5506\.c//" scripts/build-chip-core.js
+          python3 << 'PYEOF'
+          import re
+          with open('scripts/build-chip-core.js', 'r') as f:
+              c = f.read()
+          # Remove BINARYEN_TRAP_MODE
+          c = re.sub(r"['\"]clamp['\"],?\s*", '', c)
+          c = re.sub(r"['\"][^'\"]*BINARYEN_TRAP_MODE[^'\"]*['\"],?\s*", '', c)
+          # Remove espacos extras em paths e flags
+          c = c.replace(".cpp '", ".cpp'")
+          c = c.replace(".c '", ".c'")
+          c = c.replace("/src/ '", "/src/'")
+          c = c.replace('-DHAVE_CRC32 "', '-DHAVE_CRC32"')
+          c = c.replace("-DHAVE_CRC32 '", "-DHAVE_CRC32'")
+          # Remove segunda ocorrencia de es5506.c
+          pat = "vgmplay/src/chips/es5506.c"
+          idx = c.find(pat)
+          if idx != -1:
+              idx2 = c.find(pat, idx + 1)
+              if idx2 != -1:
+                  c = c[:idx2] + c[idx2+len(pat):]
+          with open('scripts/build-chip-core.js', 'w') as f:
+              f.write(c)
+          print('Patches aplicados')
+          PYEOF
           node scripts/build-chip-core.js
 
       - name: Build do React (JS bundle)
