@@ -53,6 +53,13 @@ jobs:
           emconfigure ./configure --host=wasm32-unknown-emscripten --prefix=$PWD/libxmp-lite-stagedir
           emmake make
           emmake make install
+          # build-chip-core procura por libxmp-lite.a — cria link simbólico
+          mkdir -p libxmp-lite-stagedir/lib
+          ln -sf $PWD/libxmp-lite-stagedir/lib/libxmp.a \
+                 $PWD/libxmp-lite-stagedir/lib/libxmp-lite.a 2>/dev/null || \
+          cp libxmp-lite-stagedir/lib/libxmp.a \
+             libxmp-lite-stagedir/lib/libxmp-lite.a 2>/dev/null || true
+          ls -la libxmp-lite-stagedir/lib/
 
       - name: Compilar libvgm
         run: |
