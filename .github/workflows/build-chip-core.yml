@@ -109,15 +109,23 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          cat > /tmp/patch.py << 'PYEOF'
-          with open('scripts/build-chip-core.js', 'r') as f:
-              c = f.read()
-          c = c.replace("-s BINARYEN_TRAP_MODE='clamp'", '')
-          with open('scripts/build-chip-core.js', 'w') as f:
-              f.write(c)
-          print('Patch aplicado')
-          PYEOF
-          python3 /tmp/patch.py
+          # Wrapper que remove BINARYEN_TRAP_MODE antes de chamar em++ real
+          cat > /usr/local/bin/em++ << 'EOF'
+          #!/bin/bash
+          args=()
+          skip=0
+          for arg in "$@"; do
+            if [[ "$arg" == *"BINARYEN_TRAP_MODE"* ]]; then
+              skip=1
+            elif [[ $skip -eq 1 ]]; then
+              skip=0
+            else
+              args+=("$arg")
+            fi
+          done
+          exec /emsdk/upstream/emscripten/em++ "${args[@]}"
+          EOF
+          chmod +x /usr/local/bin/em++
           node scripts/build-chip-core.js
           
       - name: Build do React (JS bundle)
