@@ -114,11 +114,12 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          # Ver a linha exata com BINARYEN para fazer patch correto
           grep -n "BINARYEN" scripts/build-chip-core.js
-          # Remover só esse argumento da array
           sed -i "/'clamp'/d" scripts/build-chip-core.js
           sed -i "/BINARYEN_TRAP_MODE/d" scripts/build-chip-core.js
+          # Remove espaços extras nos nomes de arquivos .cpp/.c
+          sed -i "s/\.cpp '/\.cpp'/g" scripts/build-chip-core.js
+          sed -i "s/\.c '/\.c'/g" scripts/build-chip-core.js
           node scripts/build-chip-core.js
           
       - name: Build do React (JS bundle)
