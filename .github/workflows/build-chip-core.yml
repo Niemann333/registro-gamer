@@ -50,15 +50,14 @@ jobs:
           autoconf
           find src -name "*.c" -o -name "*.h" | xargs grep -l "symver" 2>/dev/null | \
             xargs -r sed -i '/symver/d'
-          emconfigure ./configure --host=wasm32-unknown-emscripten --prefix=$PWD/libxmp-lite-stagedir
+          emconfigure ./configure --host=wasm32-unknown-emscripten \
+            --prefix=$PWD/libxmp-lite-stagedir \
+            --disable-shared --enable-static
           emmake make
           emmake make install
-          # build-chip-core procura por libxmp-lite.a — cria link simbólico
-          mkdir -p libxmp-lite-stagedir/lib
-          ln -sf $PWD/libxmp-lite-stagedir/lib/libxmp.a \
-                 $PWD/libxmp-lite-stagedir/lib/libxmp-lite.a 2>/dev/null || \
+          # Cria alias libxmp-lite.a -> libxmp.a
           cp libxmp-lite-stagedir/lib/libxmp.a \
-             libxmp-lite-stagedir/lib/libxmp-lite.a 2>/dev/null || true
+             libxmp-lite-stagedir/lib/libxmp-lite.a
           ls -la libxmp-lite-stagedir/lib/
 
       - name: Compilar libvgm
