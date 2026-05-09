@@ -30,15 +30,6 @@ jobs:
           apt-get install -y nodejs
           npm install -g yarn
 
-      - name: Listar estrutura e submodulos
-        run: |
-          echo "=== Raiz ==="
-          ls chip-player-js/
-          echo "=== .gitmodules ==="
-          cat chip-player-js/.gitmodules 2>/dev/null || echo "sem .gitmodules"
-          echo "=== scripts package.json ==="
-          node -e "const d=require('./chip-player-js/package.json'); Object.entries(d.scripts||{}).forEach(([k,v])=>console.log(k,':',v))"
-
       - name: Instalar dependências JS
         run: |
           cd chip-player-js
@@ -55,21 +46,9 @@ jobs:
             --disable-shared --enable-static
           emmake make
           emmake make install
-          # Cria alias libxmp-lite.a -> libxmp.a
           cp libxmp-lite-stagedir/lib/libxmp.a \
              libxmp-lite-stagedir/lib/libxmp-lite.a
           ls -la libxmp-lite-stagedir/lib/
-
-      - name: Compilar libvgm
-        run: |
-          if [ -d "chip-player-js/libvgm" ]; then
-            cd chip-player-js/libvgm
-            mkdir -p build && cd build
-            emcmake cmake ..
-            emmake make
-          else
-            echo "libvgm não encontrado, pulando"
-          fi
 
       - name: Compilar psflib (PSF/PS1)
         run: |
@@ -92,8 +71,9 @@ jobs:
       - name: Compilar webGSF (GSF/GBA)
         run: |
           if [ -d "chip-player-js/webGSF/emscripten" ]; then
-            # Patch mGBA: substitui <libc/limits.h> por <limits.h> (removido no Emscripten moderno)
-            find chip-player-js/webGSF/mgba -name "*.h" -o -name "*.c" |               xargs grep -l "libc/limits.h" 2>/dev/null |               xargs -r sed -i 's|#include <libc/limits.h>|#include <limits.h>|g'
+            find chip-player-js/webGSF/mgba -name "*.h" -o -name "*.c" | \
+              xargs grep -l "libc/limits.h" 2>/dev/null | \
+              xargs -r sed -i 's|#include <libc/limits.h>|#include <limits.h>|g'
             cd chip-player-js/webGSF/emscripten
             emmake make -f Emscripten.Makefile
           else
@@ -114,19 +94,21 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          grep -n "BINARYEN" scripts/build-chip-core.js
+          # Remove flag depreciada BINARYEN_TRAP_MODE
           sed -i "/'clamp'/d" scripts/build-chip-core.js
           sed -i "/BINARYEN_TRAP_MODE/d" scripts/build-chip-core.js
-          # Remove espaços extras nos nomes de arquivos .cpp/.c
+          # Remove espaços extras em nomes de arquivos e flags
           sed -i "s/\.cpp '/\.cpp'/g" scripts/build-chip-core.js
           sed -i "s/\.c '/\.c'/g" scripts/build-chip-core.js
+          sed -i "s|/src/ '|/src/'|g" scripts/build-chip-core.js
+          sed -i 's|-DHAVE_CRC32 "|-DHAVE_CRC32"|g' scripts/build-chip-core.js
+          sed -i "s|-DHAVE_CRC32 '|-DHAVE_CRC32'|g" scripts/build-chip-core.js
           node scripts/build-chip-core.js
-          
+
       - name: Build do React (JS bundle)
         run: |
           cd chip-player-js
           cp sample.env .env || true
-          # Cria config Firebase vazia para o React compilar
           mkdir -p src/config
           echo "export default {};" > src/config/firebaseConfig.js
           yarn build
@@ -140,15 +122,12 @@ jobs:
         run: |
           DEST=registro-gamer/chiptune-player/static/js
           mkdir -p $DEST
-
           cp chip-player-js/public/chip-core*.wasm \
              registro-gamer/chiptune-player/ 2>/dev/null || \
           cp chip-player-js/build/chip-core*.wasm \
              registro-gamer/chiptune-player/ 2>/dev/null || true
-
           cp chip-player-js/build/static/js/main.*.js $DEST/ 2>/dev/null || true
           cp chip-player-js/build/static/js/chip-core.*.chunk.js $DEST/ 2>/dev/null || true
-
           echo "=== Arquivos copiados ==="
           ls -lh registro-gamer/chiptune-player/*.wasm 2>/dev/null || echo "nenhum .wasm"
           ls -lh $DEST/*.js 2>/dev/null | grep -E "main\.|chip-core" || echo "nenhum .js"
