@@ -109,18 +109,17 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          python3 -c "
-f = open('scripts/build-chip-core.js', 'r')
-c = f.read()
-f.close()
-c = c.replace(\"-s BINARYEN_TRAP_MODE='clamp'\", '')
-f = open('scripts/build-chip-core.js', 'w')
-f.write(c)
-f.close()
-print('Patch aplicado')
-"
+          cat > /tmp/patch.py << 'PYEOF'
+          with open('scripts/build-chip-core.js', 'r') as f:
+              c = f.read()
+          c = c.replace("-s BINARYEN_TRAP_MODE='clamp'", '')
+          with open('scripts/build-chip-core.js', 'w') as f:
+              f.write(c)
+          print('Patch aplicado')
+          PYEOF
+          python3 /tmp/patch.py
           node scripts/build-chip-core.js
-
+          
       - name: Build do React (JS bundle)
         run: |
           cd chip-player-js
