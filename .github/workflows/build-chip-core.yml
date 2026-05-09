@@ -109,18 +109,16 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
-          node -e "
-            const fs = require('fs');
-            let c = fs.readFileSync('scripts/build-chip-core.js', 'utf8');
-            c = c.replace(/\-s BINARYEN_TRAP_MODE=.clamp./g, '');
-            fs.writeFileSync('scripts/build-chip-core.js', c);
-          "
-          yarn run build-chip-core
+          node -e "const fs=require('fs'); let c=fs.readFileSync('scripts/build-chip-core.js','utf8'); c=c.replace(/[\-]s BINARYEN_TRAP_MODE=.clamp./g,''); fs.writeFileSync('scripts/build-chip-core.js',c);"
+          node scripts/build-chip-core.js
 
       - name: Build do React (JS bundle)
         run: |
           cd chip-player-js
           cp sample.env .env || true
+          # Cria config Firebase vazia para o React compilar
+          mkdir -p src/config
+          echo "export default {};" > src/config/firebaseConfig.js
           yarn build
         env:
           CI: false
