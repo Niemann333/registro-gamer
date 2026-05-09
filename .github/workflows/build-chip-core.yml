@@ -48,7 +48,6 @@ jobs:
           emmake make install
           cp libxmp-lite-stagedir/lib/libxmp.a \
              libxmp-lite-stagedir/lib/libxmp-lite.a
-          ls -la libxmp-lite-stagedir/lib/
 
       - name: Compilar psflib (PSF/PS1)
         run: |
@@ -111,17 +110,16 @@ jobs:
           c = c.replace('-DHAVE_CRC32 "', '-DHAVE_CRC32"')
           c = c.replace("-DHAVE_CRC32 '", "-DHAVE_CRC32'")
 
-          # Remove linhas duplicadas de arquivos fonte (.c e .cpp)
-          seen = set()
+          # Remove APENAS a segunda ocorrencia de es5506.c linha por linha
+          target = "vgmplay/src/chips/es5506.c"
+          found_first = False
           new_lines = []
           for line in c.split('\n'):
-              m = re.search(r"'([^']+\.(c|cpp))'", line)
-              if m:
-                  filepath = m.group(1).strip()
-                  if filepath in seen:
-                      print(f'Removendo duplicata: {filepath}')
+              if target in line:
+                  if found_first:
+                      print(f'Removendo duplicata: {target}')
                       continue
-                  seen.add(filepath)
+                  found_first = True
               new_lines.append(line)
           c = '\n'.join(new_lines)
 
