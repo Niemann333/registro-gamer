@@ -96,26 +96,38 @@ jobs:
           cd chip-player-js
           python3 << 'PYEOF'
           import re
+
           with open('scripts/build-chip-core.js', 'r') as f:
               c = f.read()
+
           # Remove BINARYEN_TRAP_MODE
           c = re.sub(r"['\"]clamp['\"],?\s*", '', c)
           c = re.sub(r"['\"][^'\"]*BINARYEN_TRAP_MODE[^'\"]*['\"],?\s*", '', c)
+
           # Remove espacos extras em paths e flags
           c = c.replace(".cpp '", ".cpp'")
           c = c.replace(".c '", ".c'")
           c = c.replace("/src/ '", "/src/'")
           c = c.replace('-DHAVE_CRC32 "', '-DHAVE_CRC32"')
           c = c.replace("-DHAVE_CRC32 '", "-DHAVE_CRC32'")
-          # Remove segunda ocorrencia de es5506.c
-          pat = "vgmplay/src/chips/es5506.c"
-          idx = c.find(pat)
-          if idx != -1:
-              idx2 = c.find(pat, idx + 1)
-              if idx2 != -1:
-                  c = c[:idx2] + c[idx2+len(pat):]
+
+          # Remove duplicatas de arquivos: mantém apenas a primeira ocorrência
+          seen = set()
+          def dedup_file(m):
+              f = m.group(0)
+              key = f.strip().strip("'\"").strip()
+              if key in seen:
+                  print(f'Removendo duplicata: {key}')
+                  return ''
+              seen.add(key)
+              return f
+
+          # Dedup arquivos .c e .cpp na lista de fontes
+          c = re.sub(r"'[^']+\.(c|cpp)\s*'", dedup_file, c)
+
           with open('scripts/build-chip-core.js', 'w') as f:
               f.write(c)
+
           print('Patches aplicados')
           PYEOF
           node scripts/build-chip-core.js
