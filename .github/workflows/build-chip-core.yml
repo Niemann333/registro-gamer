@@ -111,19 +111,19 @@ jobs:
           c = c.replace('-DHAVE_CRC32 "', '-DHAVE_CRC32"')
           c = c.replace("-DHAVE_CRC32 '", "-DHAVE_CRC32'")
 
-          # Remove duplicatas de arquivos: mantém apenas a primeira ocorrência
+          # Remove linhas duplicadas de arquivos fonte (.c e .cpp)
           seen = set()
-          def dedup_file(m):
-              f = m.group(0)
-              key = f.strip().strip("'\"").strip()
-              if key in seen:
-                  print(f'Removendo duplicata: {key}')
-                  return ''
-              seen.add(key)
-              return f
-
-          # Dedup arquivos .c e .cpp na lista de fontes
-          c = re.sub(r"'[^']+\.(c|cpp)\s*'", dedup_file, c)
+          new_lines = []
+          for line in c.split('\n'):
+              m = re.search(r"'([^']+\.(c|cpp))'", line)
+              if m:
+                  filepath = m.group(1).strip()
+                  if filepath in seen:
+                      print(f'Removendo duplicata: {filepath}')
+                      continue
+                  seen.add(filepath)
+              new_lines.append(line)
+          c = '\n'.join(new_lines)
 
           with open('scripts/build-chip-core.js', 'w') as f:
               f.write(c)
