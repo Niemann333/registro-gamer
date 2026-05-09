@@ -103,6 +103,8 @@ jobs:
           sed -i "s|/src/ '|/src/'|g" scripts/build-chip-core.js
           sed -i 's|-DHAVE_CRC32 "|-DHAVE_CRC32"|g' scripts/build-chip-core.js
           sed -i "s|-DHAVE_CRC32 '|-DHAVE_CRC32'|g" scripts/build-chip-core.js
+          # Remove arquivo es5506.c duplicado
+          sed -i "0,/es5506\.c/! s/vgmplay\/src\/chips\/es5506\.c//" scripts/build-chip-core.js
           node scripts/build-chip-core.js
 
       - name: Build do React (JS bundle)
