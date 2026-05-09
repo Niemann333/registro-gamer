@@ -48,12 +48,11 @@ jobs:
         run: |
           cd chip-player-js/libxmp
           autoconf
-          # Remove .symver incompatível com WASM
           find src -name "*.c" -o -name "*.h" | xargs grep -l "symver" 2>/dev/null | \
             xargs -r sed -i '/symver/d'
-          # --host necessário para cross-compilation com Emscripten
-          emconfigure ./configure --host=wasm32-unknown-emscripten
+          emconfigure ./configure --host=wasm32-unknown-emscripten --prefix=$PWD/libxmp-lite-stagedir
           emmake make
+          emmake make install
 
       - name: Compilar libvgm
         run: |
