@@ -109,6 +109,7 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
+          sed -i "s/-s BINARYEN_TRAP_MODE='clamp'//g" scripts/build-chip-core.js
           yarn run build-chip-core
 
       - name: Build do React (JS bundle)
@@ -119,6 +120,8 @@ jobs:
         env:
           CI: false
           REACT_APP_CATALOG_PREFIX: ""
+          REACT_APP_SOUNDFONT_URL_PATH: "/soundfonts/"
+          REACT_APP_API_BASE: ""
 
       - name: Copiar binários para registro-gamer
         run: |
