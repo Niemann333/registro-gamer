@@ -87,10 +87,8 @@ jobs:
       - name: Compilar webGSF (GSF/GBA)
         run: |
           if [ -d "chip-player-js/webGSF/emscripten" ]; then
-            # Shim libc/limits.h removido no Emscripten moderno
-            SYSROOT=$(em-config EMSCRIPTEN_ROOT 2>/dev/null || echo "/emsdk/upstream/emscripten")/../sysroot
-            mkdir -p "$SYSROOT/include/libc"
-            echo '#include <limits.h>' > "$SYSROOT/include/libc/limits.h"
+            # Patch mGBA: substitui <libc/limits.h> por <limits.h> (removido no Emscripten moderno)
+            find chip-player-js/webGSF/mgba -name "*.h" -o -name "*.c" |               xargs grep -l "libc/limits.h" 2>/dev/null |               xargs -r sed -i 's|#include <libc/limits.h>|#include <limits.h>|g'
             cd chip-player-js/webGSF/emscripten
             emmake make -f Emscripten.Makefile
           else
