@@ -1,4 +1,4 @@
-// v8 - intercepta soundfonts do gifx.co e redireciona para GitHub
+// v9 - serve novo chip-core.wasm do soltune
 self.addEventListener('install', function(e) { self.skipWaiting(); });
 self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });
 self.addEventListener('fetch', function(event) {
@@ -23,7 +23,12 @@ self.addEventListener('fetch', function(event) {
     );
     return;
   }
-  // Bloqueia chiptune.app silenciosamente (falha por CORS)
+  // Redireciona qualquer chip-core*.wasm para o novo soltune
+  if (url.indexOf('chip-core') !== -1 && url.indexOf('.wasm') !== -1) {
+    var wasmUrl = 'https://niemann333.github.io/registro-gamer/chiptune-player/chip-core.wasm';
+    event.respondWith(fetch(wasmUrl, { mode: 'cors', credentials: 'omit' }));
+    return;
+  }
   if (url.indexOf('chiptune.app/') !== -1) {
     event.respondWith(new Response('{}', {
       status: 200,
