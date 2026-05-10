@@ -113,42 +113,29 @@ jobs:
         run: |
           cd chip-player-js
           node scripts/build-chip-core.js
-
-      - name: Build do React (JS bundle)
-        run: |
-          cd chip-player-js
-          cp sample.env .env || true
-          mkdir -p src/config
-          echo "export default {};" > src/config/firebaseConfig.js
-          yarn build
-        env:
-          CI: false
-          PUBLIC_URL: "/registro-gamer/chiptune-player"
-          REACT_APP_CATALOG_PREFIX: ""
-          REACT_APP_SOUNDFONT_URL_PATH: "/soundfonts/"
-          REACT_APP_API_BASE: ""
+          echo "=== chip-core.js gerado ==="
+          ls -lh src/chip-core.js src/chip-core.wasm 2>/dev/null || echo "arquivos não encontrados"
 
       - name: Copiar binários para registro-gamer
         run: |
           DEST=registro-gamer/chiptune-player/static/js
           mkdir -p $DEST
-          cp chip-player-js/public/chip-core*.wasm \
-             registro-gamer/chiptune-player/ 2>/dev/null || \
-          cp chip-player-js/build/chip-core*.wasm \
+
+          # chip-core.wasm e chip-core.js (wrapper Emscripten)
+          cp chip-player-js/src/chip-core.wasm \
              registro-gamer/chiptune-player/ 2>/dev/null || true
-          cp chip-player-js/build/static/js/main.*.js $DEST/ 2>/dev/null || true
-          cp chip-player-js/build/static/js/chip-core.*.chunk.js $DEST/ 2>/dev/null || true
+          cp chip-player-js/src/chip-core.js \
+             registro-gamer/chiptune-player/ 2>/dev/null || true
+
           echo "=== Arquivos copiados ==="
-          ls -lh registro-gamer/chiptune-player/*.wasm 2>/dev/null || echo "nenhum .wasm"
-          ls -lh $DEST/*.js 2>/dev/null | grep -E "main\.|chip-core" || echo "nenhum .js"
+          ls -lh registro-gamer/chiptune-player/chip-core* 2>/dev/null || echo "nenhum"
 
       - name: Commit dos binários
         run: |
           cd registro-gamer
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add chiptune-player/static/js/main.*.js \
-                  chiptune-player/static/js/chip-core.*.chunk.js \
-                  chiptune-player/chip-core*.wasm 2>/dev/null || true
+          git add chiptune-player/chip-core.js \
+                  chiptune-player/chip-core.wasm 2>/dev/null || true
           git diff --staged --quiet && echo "Nada mudou" || \
-          git commit -m "build: chip-core.wasm soltune PUBLIC_URL fix" && git push
+          git commit -m "build: chip-core.js + chip-core.wasm soltune" && git push
