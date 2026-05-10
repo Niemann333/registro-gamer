@@ -277,17 +277,18 @@
     });
 
     function startPlay() {
-      if (!songUrl || !seq()) return;
+      var cp = window.ChipPlayer;
+      if (!songUrl || !cp || (!cp.sequencer && !cp.playContext)) return;
       try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
       _endedSent = false; _silCount = 0; _scpFading = false;
       var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
       try { n = decodeURIComponent(n); } catch(e) {}
       setStatus('\u266A ' + n, 'playing');
       try {
-        if (window.ChipPlayer.sequencer) {
-          window.ChipPlayer.sequencer.playSonglist([songUrl]);
+        if (cp.sequencer) {
+          cp.sequencer.playSonglist([songUrl]);
         } else {
-          window.ChipPlayer.playContext([{ url: songUrl, title: n }]);
+          cp.playContext.call(cp, [{ url: songUrl, title: n }]);
         }
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
