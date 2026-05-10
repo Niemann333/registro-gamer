@@ -169,7 +169,11 @@
       songUrl = decodeURIComponent(params.get('url'));
     }
 
-    function seq() { return window.ChipPlayer && window.ChipPlayer.sequencer; }
+    function seq() {
+      if (window.ChipPlayer && window.ChipPlayer.sequencer) return window.ChipPlayer.sequencer;
+      if (window.ChipPlayer && window.ChipPlayer.playContext) return window.ChipPlayer;
+      return null;
+    }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
     function startPoller(isVGM) {
@@ -244,14 +248,20 @@
         if (playerReady) startPlay();
       }
       if (d.type === 'sid-subsong' && typeof d.index === 'number') {
-        try { window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
+        try {
+          if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index);
+          else if (window.ChipPlayer.prevSubtune) window.ChipPlayer.nextSubtune();
+        } catch(e) {}
       }
       if (d.type === 'voicemask' && d.mask) {
         try {
-          var p = window.ChipPlayer.sequencer.player;
-          if (p && p.setVoiceMask) p.setVoiceMask(d.mask);
+          if (window.ChipPlayer.sequencer) {
+            var p = window.ChipPlayer.sequencer.player;
+            if (p && p.setVoiceMask) p.setVoiceMask(d.mask);
+          } else if (window.ChipPlayer.handleSetVoiceMask) {
+            window.ChipPlayer.handleSetVoiceMask(d.mask);
+          }
         } catch(e) {}
-        // Se há canais mutados, desativa detecção de silêncio
         _silenceDisabled = !!d.hasMute;
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
@@ -274,7 +284,11 @@
       try { n = decodeURIComponent(n); } catch(e) {}
       setStatus('\u266A ' + n, 'playing');
       try {
-        seq().playSonglist([songUrl]);
+        if (window.ChipPlayer.sequencer) {
+          window.ChipPlayer.sequencer.playSonglist([songUrl]);
+        } else {
+          window.ChipPlayer.playContext([{ url: songUrl, title: n }]);
+        }
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
       } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
