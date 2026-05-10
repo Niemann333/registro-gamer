@@ -34,6 +34,22 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
+    // Intercepta fetch de soundfonts antes do bundle
+    var _origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      var url = (typeof input === 'string') ? input : (input.url || '');
+      if (url.indexOf('gifx.co/soundfonts/') !== -1) {
+        var filename = url.split('/').pop();
+        var localUrl = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/' + filename;
+        return _origFetch.call(this, localUrl, init);
+      }
+      if (url.indexOf('chiptune.app/') !== -1) {
+        // Bloqueia silenciosamente chamadas à API do chiptune.app que falhariam por CORS
+        return Promise.reject(new Error('blocked'));
+      }
+      return _origFetch.apply(this, arguments);
+    };
+
     // Captura ScriptProcessorNode para fade
     try {
       var _OrigCSP = AudioContext.prototype.createScriptProcessor
@@ -275,7 +291,7 @@
 
     function loadBundle() {
       var s = document.createElement('script');
-      s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.0a47.js';
+      s.src = (location.pathname.replace(/\/[^/]*$/, '')) + '/static/js/main.7ad6c7fd.js';
       s.onload = function() {
         var tries = 0, iv = setInterval(function() {
           tries++;
