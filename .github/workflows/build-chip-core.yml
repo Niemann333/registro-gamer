@@ -94,54 +94,30 @@ jobs:
         run: |
           cd chip-player-js
 
-          # Debug: mostrar quantas vezes es5506 aparece
-          echo "Ocorrencias de es5506.c antes do patch:"
-          grep -c "es5506" scripts/build-chip-core.js || true
-          grep -n "es5506" scripts/build-chip-core.js || true
+          # Remove BINARYEN_TRAP_MODE
+          sed -i "/'clamp'/d" scripts/build-chip-core.js
+          sed -i "/BINARYEN_TRAP_MODE/d" scripts/build-chip-core.js
 
-          # Escreve script Python em arquivo separado
-          cat > /tmp/patch_build.py << 'PYEOF'
-import re, sys
+          # Remove espacos extras em paths e flags
+          sed -i "s/\.cpp '/\.cpp'/g" scripts/build-chip-core.js
+          sed -i "s/\.c '/\.c'/g" scripts/build-chip-core.js
+          sed -i "s|/src/ '|/src/'|g" scripts/build-chip-core.js
+          sed -i 's|-DHAVE_CRC32 "|-DHAVE_CRC32"|g' scripts/build-chip-core.js
+          sed -i "s|-DHAVE_CRC32 '|-DHAVE_CRC32'|g" scripts/build-chip-core.js
 
-with open('scripts/build-chip-core.js', 'r') as f:
-    c = f.read()
+          # Debug: mostrar linhas com es5506
+          echo "=== Linhas com es5506 antes do patch ==="
+          grep -n "es5506" scripts/build-chip-core.js || echo "nenhuma"
 
-# Remove BINARYEN_TRAP_MODE
-c = re.sub(r"['\"]clamp['\"],?\s*", '', c)
-c = re.sub(r"['\"][^'\"]*BINARYEN_TRAP_MODE[^'\"]*['\"],?\s*", '', c)
+          # Remove a segunda linha que contem es5506.c
+          SECOND=$(grep -n "es5506\.c" scripts/build-chip-core.js | sed -n '2p' | cut -d: -f1)
+          if [ -n "$SECOND" ]; then
+            echo "Removendo linha $SECOND"
+            sed -i "${SECOND}d" scripts/build-chip-core.js
+          fi
 
-# Remove espacos extras
-c = c.replace(".cpp '", ".cpp'")
-c = c.replace(".c '", ".c'")
-c = c.replace("/src/ '", "/src/'")
-c = c.replace('-DHAVE_CRC32 "', '-DHAVE_CRC32"')
-c = c.replace("-DHAVE_CRC32 '", "-DHAVE_CRC32'")
-
-# Remove segunda ocorrencia de es5506.c
-target = "es5506.c"
-count = c.count(target)
-print(f"es5506.c count: {count}", file=sys.stderr)
-if count > 1:
-    idx = c.find(target)
-    idx2 = c.find(target, idx + 1)
-    # Remove a linha inteira da segunda ocorrencia
-    start = c.rfind('\n', 0, idx2) + 1
-    end = c.find('\n', idx2)
-    if end == -1:
-        end = len(c)
-    removed = c[start:end]
-    print(f"Removendo linha: {removed.strip()}", file=sys.stderr)
-    c = c[:start] + c[end+1:]
-
-with open('scripts/build-chip-core.js', 'w') as f:
-    f.write(c)
-
-print("Patch concluido", file=sys.stderr)
-PYEOF
-          python3 /tmp/patch_build.py
-
-          echo "Ocorrencias de es5506.c apos patch:"
-          grep -c "es5506" scripts/build-chip-core.js || true
+          echo "=== Linhas com es5506 apos patch ==="
+          grep -n "es5506" scripts/build-chip-core.js || echo "nenhuma"
 
       - name: Compilar chip-core.wasm
         run: |
