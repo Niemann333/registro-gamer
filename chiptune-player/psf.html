@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8">
+<style>body{margin:0;background:#111;color:#aaa;font-family:monospace;font-size:11px;padding:4px;}</style>
+</head>
+<body>
+<div id="status">Inicializando...</div>
+<script type="module">
+import CHIP_CORE_init from './chip-core.js';
+
+const BS = 4096;
+
+let CC, audioCtx, gainNode, processor;
+let preloaded = {};
+
+const params = new URLSearchParams(location.search);
+const songUrl = params.get('url');
+
+const setStatus = m => document.getElementById('status').textContent = m;
+
+async function fetchBin(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status);
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+function findLibTag(data) {
+  if (data[0] !== 0x50 || data[1] !== 0x53 || data[2] !== 0x46) return null;
+  const rlen = data[4]|(data[5]<<8)|(data[6]<<16)|(data[7]<<24);
+  const clen = data[8]|(data[9]<<8)|(data[10]<<16)|(data[11]<<24);
+  const ts = 16 + rlen + clen;
+  if (ts + 5 >= data.length) return null;
+  if (data[ts]!==0x5B||data[ts+1]!==0x54||data[ts+2]!==0x41||data[ts+3]!==0x47||data[ts+4]!==0x5D) return null;
+  const tags = new TextDecoder().decode(data.slice(ts+5));
+  for (const line of tags.split('\n')) {
+    const eq = line.indexOf('=');
+    if (eq > 0 && line.slice(0,eq).trim().toLowerCase() === '_lib')
+      return line.slice(eq+1).trim();
+  }
+  return null;
+}
+
+// Called by C when it needs a PSF-related file
+window['psx_fileRequestCallback'] = function(p_filenames, count) {
+  for (let i = 0; i < count; i++) {
+    const namePtr = CC.getValue(p_filenames + i*4, '*');
+    const name = CC.UTF8ToString(namePtr);
+    const data = preloaded[name];
+    if (data) {
+      try { CC.FS.unlink('/'+name); } catch(e) {}
+      CC.FS.writeFile('/'+name, data);
+    } else {
+      console.warn('[PSF] file not found:', name);
+    }
+  }
+  return 1;
+};
+
+async function loadSong(url) {
+  setStatus('Carregando...');
+  const filename = decodeURIComponent(url.split('/').pop());
+  const dirUrl = url.replace(/\/[^/]+$/, '');
+
+  const data = await fetchBin(url);
+  preloaded[filename] = data;
+  try { CC.FS.writeFile('/'+filename, data); } catch(e) {}
+
+  // Pre-load psflib recursively
+  await preloadLib(data, dirUrl, 0);
+
+  // Teardown previous
+  try { CC._psf_teardown(); } catch(e) {}
+
+  CC._psf_setup(44100);
+  const ret = CC.ccall('psf_init', 'number', ['string','number'], [filename, 0]);
+  if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
+
+  const sr = CC._psf_get_sample_rate() || 44100;
+  const ver = CC._psf_get_psf_version();
+  setupAudio(sr);
+
+  const n = filename.replace(/\.[^.]+$/, '');
+  setStatus('\u266A ' + n + (ver===2?' [PS2]':''));
+  try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+}
+
+async function preloadLib(data, dirUrl, depth) {
+  if (depth > 3) return;
+  const libName = findLibTag(data);
+  if (!libName || preloaded[libName]) return;
+  try {
+    const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
+    preloaded[libName] = libData;
+    try { CC.FS.writeFile('/'+libName, libData); } catch(e) {}
+    await preloadLib(libData, dirUrl, depth+1);
+  } catch(e) { console.warn('[PSF] lib load failed:', libName, e); }
+}
+
+function setupAudio(sr) {
+  if (audioCtx) { try { audioCtx.close(); } catch(e) {} }
+  audioCtx = new AudioContext({sampleRate: sr});
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = 1;
+  processor = audioCtx.createScriptProcessor(BS, 0, 2);
+  processor.onaudioprocess = ev => {
+    const L = ev.outputBuffer.getChannelData(0);
+    const R = ev.outputBuffer.getChannelData(1);
+    const n = CC._psf_compute_audio_samples();
+    if (n <= 0) { L.fill(0); R.fill(0); return; }
+    const ptr = CC._psf_get_audio_buffer();
+    const buf = new Int16Array(CC.HEAP16.buffer, ptr, n*2);
+    const len = Math.min(n, L.length);
+    for (let i = 0; i < len; i++) { L[i] = buf[i*2]/32768; R[i] = buf[i*2+1]/32768; }
+    const posMs = CC._psf_get_current_position();
+    const durMs = CC._psf_get_max_position();
+    try { window.parent.postMessage({type:'position', posMs, durMs}, '*'); } catch(e) {}
+  };
+  processor.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+}
+
+window.addEventListener('message', e => {
+  if (!e.data || !CC) return;
+  const d = e.data;
+  if (d.type==='play' && d.url) loadSong(d.url);
+  if (d.type==='pause') { try { audioCtx && audioCtx.suspend(); } catch(e) {} }
+  if (d.type==='resume') { try { audioCtx && audioCtx.resume(); } catch(e) {} }
+  if (d.type==='volume' && typeof d.level==='number') { if (gainNode) gainNode.gain.value = Math.max(0, d.level); }
+  if (d.type==='voicemask' && d.mask) {
+    d.mask.forEach((on,i) => {
+      try { CC._psf_set_mask(i, on ? 0 : 1); } catch(e) {}
+    });
+  }
+  if (d.type==='seek' && typeof d.ms==='number') { try { CC._psf_seek_position(d.ms); } catch(e) {} }
+});
+
+(async () => {
+  CC = await CHIP_CORE_init({
+    locateFile: p => p==='chip-core.wasm'
+      ? new URL('./chip-core.wasm', import.meta.url).href : p
+  });
+  if (songUrl) await loadSong(songUrl);
+  else { setStatus('Pronto'); try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {} }
+})();
+</script>
+</body>
+</html>
