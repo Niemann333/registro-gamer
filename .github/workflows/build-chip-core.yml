@@ -96,31 +96,18 @@ jobs:
       - name: Patch build-chip-core.js
         run: |
           cd chip-player-js
-
-          # Remove BINARYEN_TRAP_MODE
           sed -i "/'clamp'/d" scripts/build-chip-core.js
           sed -i "/BINARYEN_TRAP_MODE/d" scripts/build-chip-core.js
-
-          # Remove espacos extras em paths e flags
           sed -i "s/\.cpp '/\.cpp'/g" scripts/build-chip-core.js
           sed -i "s/\.c '/\.c'/g" scripts/build-chip-core.js
           sed -i "s|/src/ '|/src/'|g" scripts/build-chip-core.js
           sed -i 's|-DHAVE_CRC32 "|-DHAVE_CRC32"|g' scripts/build-chip-core.js
           sed -i "s|-DHAVE_CRC32 '|-DHAVE_CRC32'|g" scripts/build-chip-core.js
-
-          # Debug: mostrar linhas com es5506
-          echo "=== Linhas com es5506 antes do patch ==="
-          grep -n "es5506" scripts/build-chip-core.js || echo "nenhuma"
-
-          # Remove a segunda linha que contem es5506.c
           SECOND=$(grep -n "es5506\.c" scripts/build-chip-core.js | sed -n '2p' | cut -d: -f1)
           if [ -n "$SECOND" ]; then
-            echo "Removendo linha $SECOND"
+            echo "Removendo linha duplicada es5506.c: $SECOND"
             sed -i "${SECOND}d" scripts/build-chip-core.js
           fi
-
-          echo "=== Linhas com es5506 apos patch ==="
-          grep -n "es5506" scripts/build-chip-core.js || echo "nenhuma"
 
       - name: Compilar chip-core.wasm
         run: |
@@ -136,6 +123,7 @@ jobs:
           yarn build
         env:
           CI: false
+          PUBLIC_URL: "/registro-gamer/chiptune-player"
           REACT_APP_CATALOG_PREFIX: ""
           REACT_APP_SOUNDFONT_URL_PATH: "/soundfonts/"
           REACT_APP_API_BASE: ""
@@ -163,4 +151,4 @@ jobs:
                   chiptune-player/static/js/chip-core.*.chunk.js \
                   chiptune-player/chip-core*.wasm 2>/dev/null || true
           git diff --staged --quiet && echo "Nada mudou" || \
-          git commit -m "build: chip-core.wasm soltune (GSF+PSF+USF)" && git push
+          git commit -m "build: chip-core.wasm soltune PUBLIC_URL fix" && git push
