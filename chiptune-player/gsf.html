@@ -45,8 +45,19 @@ function findLibTag(data) {
 // Called by C when it needs a GSF-related file
 window['gba_fileRequestCallback'] = function(namePtr) {
   const name = CC.UTF8ToString(namePtr);
-  const data = preloaded[name];
+  // C usa o nome do minigsf como diretório virtual (ex: "song.minigsf/lib.gsflib")
+  // Tenta nome completo primeiro, depois só o basename
+  let data = preloaded[name];
+  if (!data) {
+    const basename = name.split('/').pop();
+    data = preloaded[basename];
+  }
   if (data) {
+    // Cria diretórios virtuais se necessário
+    const parts = name.split('/');
+    if (parts.length > 1) {
+      try { CC.FS.mkdirTree('/'+parts.slice(0,-1).join('/')); } catch(e) {}
+    }
     try { CC.FS.unlink('/'+name); } catch(e) {}
     CC.FS.writeFile('/'+name, data);
     return 1;
