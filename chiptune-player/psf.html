@@ -42,15 +42,16 @@ function findLibTag(data) {
 
 // Called by C when it needs a PSF-related file
 window['psx_fileRequestCallback'] = function(p_filenames, count) {
+  console.log('[PSF] callback count:', count);
   for (let i = 0; i < count; i++) {
     const namePtr = CC.getValue(p_filenames + i*4, '*');
     const name = CC.UTF8ToString(namePtr);
-    const data = preloaded[name];
+    const basename = name.split('/').pop();
+    const data = preloaded[basename] || preloaded[name];
+    console.log('[PSF] requesting:', name, 'found:', !!data);
     if (data) {
       try { CC.FS.unlink('/'+name); } catch(e) {}
       CC.FS.writeFile('/'+name, data);
-    } else {
-      console.warn('[PSF] file not found:', name);
     }
   }
   return 1;
@@ -63,7 +64,10 @@ async function loadSong(url) {
 
   const data = await fetchBin(url);
   preloaded[filename] = data;
-  try { CC.FS.writeFile('/'+filename, data); } catch(e) {}
+  const FS_NAME = 'song.psf';
+  console.log('[PSF] filename:', filename, 'size:', data.byteLength);
+  try { CC.FS.writeFile('/'+FS_NAME, data); console.log('[PSF] write OK'); }
+  catch(e) { console.error('[PSF] write failed:', e); }
 
   // Pre-load psflib recursively
   await preloadLib(data, dirUrl, 0);
@@ -71,8 +75,8 @@ async function loadSong(url) {
   // Teardown previous
   try { CC._psf_teardown(); } catch(e) {}
 
-  CC._psf_setup(44100);
-  const ret = CC.ccall('psf_init', 'number', ['string','number'], [filename, 0]);
+  CC._psf_setup(44100); console.log('[PSF] setup OK');
+  const ret = CC.ccall('psf_init', 'number', ['string','number'], [FS_NAME, 0]);
   if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
 
   const sr = CC._psf_get_sample_rate() || 44100;
