@@ -9,7 +9,6 @@
 import CHIP_CORE_init from './chip-core.js';
 
 const BS = 4096;
-const INDEX_URL = 'https://niemann333.github.io/registro-gamer/chiptune-player/chiptunes-index.json';
 
 let CC, audioCtx, gainNode, processor;
 let preloaded = {};
@@ -25,7 +24,6 @@ async function fetchBin(url) {
   return new Uint8Array(await r.arrayBuffer());
 }
 
-// Parse PSF/GSF tags to find _lib reference
 function findLibTag(data) {
   if (data[0] !== 0x50 || data[1] !== 0x53 || data[2] !== 0x46) return null;
   const rlen = data[4]|(data[5]<<8)|(data[6]<<16)|(data[7]<<24);
@@ -42,28 +40,31 @@ function findLibTag(data) {
   return null;
 }
 
-// Called by C when it needs a GSF-related file
+// C usa o nome do minigsf como prefixo virtual (ex: "song.minigsf/lib.gsflib")
+// Precisamos converter arquivo em diretório quando necessário
 window['gba_fileRequestCallback'] = function(namePtr) {
   const name = CC.UTF8ToString(namePtr);
-  // C usa o nome do minigsf como diretório virtual (ex: "song.minigsf/lib.gsflib")
-  // Tenta nome completo primeiro, depois só o basename
   let data = preloaded[name];
-  if (!data) {
-    const basename = name.split('/').pop();
-    data = preloaded[basename];
-  }
-  if (data) {
-    // Cria diretórios virtuais se necessário
-    const parts = name.split('/');
-    if (parts.length > 1) {
-      try { CC.FS.mkdirTree('/'+parts.slice(0,-1).join('/')); } catch(e) {}
+  if (!data) data = preloaded[name.split('/').pop()];
+  if (!data) { console.warn('[GSF] not found:', name); return 0; }
+  try {
+    // Percorre o path e converte arquivo→diretório para cada componente pai
+    const parts = name.split('/').filter(Boolean);
+    for (let i = 0; i < parts.length - 1; i++) {
+      const p = '/' + parts.slice(0, i+1).join('/');
+      try {
+        const s = CC.FS.stat(p);
+        if (CC.FS.isFile(s.mode)) CC.FS.unlink(p); // remove arquivo conflitante
+      } catch(e) {}
+      try { CC.FS.mkdir(p); } catch(e) {}
     }
     try { CC.FS.unlink('/'+name); } catch(e) {}
     CC.FS.writeFile('/'+name, data);
     return 1;
+  } catch(e) {
+    console.error('[GSF] write error:', name, e);
+    return 0;
   }
-  console.warn('[GSF] file not found:', name);
-  return 0;
 };
 
 async function loadSong(url) {
@@ -71,32 +72,32 @@ async function loadSong(url) {
   const filename = decodeURIComponent(url.split('/').pop());
   const dirUrl = url.replace(/\/[^/]+$/, '');
 
-  // Load song file
   const data = await fetchBin(url);
   preloaded[filename] = data;
   try { CC.FS.writeFile('/'+filename, data); } catch(e) {}
 
-  // Find and pre-load lib (for minigsf)
   const libName = findLibTag(data);
   if (libName) {
     try {
       const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
       preloaded[libName] = libData;
-      try { CC.FS.writeFile('/'+libName, libData); } catch(e) {}
     } catch(e) { console.warn('[GSF] lib load failed:', libName, e); }
   }
 
-  // Teardown previous
   try { CC._gba_teardown(); } catch(e) {}
-
-  // Init player
   CC._gba_setup(44100);
-  const ret = CC.ccall('gba_init', 'number', ['string','number'], [filename, 0]);
+
+  let ret;
+  try {
+    ret = CC.ccall('gba_init', 'number', ['string','number'], [filename, 0]);
+  } catch(e) {
+    setStatus('Erro: ' + (e.message || e));
+    return;
+  }
   if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
 
   const sr = CC._gba_get_sample_rate() || 32768;
   setupAudio(sr);
-
   const n = filename.replace(/\.[^.]+$/, '');
   setStatus('\u266A ' + n);
   try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {}
