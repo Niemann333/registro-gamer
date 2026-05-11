@@ -79,12 +79,9 @@ async function loadSong(url) {
   // Verifica se arquivo existe no FS
   try { const s = CC.FS.stat('/'+FS_NAME); console.log('[PSF] file in FS, size:', s.size); }
   catch(e) { console.error('[PSF] file NOT in FS!'); }
-  // Tenta 1: filename (como era)
-  // const ret = CC.ccall('psf_init', 'number', ['string','number'], [FS_NAME, 0]);
-  // Tenta 2: passa dados brutos (data_ptr, data_len)
-  const dataPtr = CC.allocate(data, CC.ALLOC_NORMAL);
-  console.log('[PSF] dataPtr:', dataPtr, 'len:', data.length);
-  const ret = CC._psf_init(dataPtr, data.length);
+  // Tenta passar a URL real do arquivo
+  console.log('[PSF] tentando com URL:', url);
+  const ret = CC.ccall('psf_init', 'number', ['string','number'], [url, 0]);
   console.log('[PSF] psf_init ret:', ret);
   if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
 
