@@ -44,22 +44,25 @@ function findLibTag(data) {
 // Precisamos converter arquivo em diretório quando necessário
 window['gba_fileRequestCallback'] = function(namePtr) {
   const name = CC.UTF8ToString(namePtr);
+  console.log('[GSF] callback chamado para:', name);
   let data = preloaded[name];
   if (!data) data = preloaded[name.split('/').pop()];
-  if (!data) { console.warn('[GSF] not found:', name); return 0; }
+  if (!data) { console.warn('[GSF] not found:', name, 'preloaded:', Object.keys(preloaded)); return 0; }
   try {
-    // Percorre o path e converte arquivo→diretório para cada componente pai
     const parts = name.split('/').filter(Boolean);
     for (let i = 0; i < parts.length - 1; i++) {
       const p = '/' + parts.slice(0, i+1).join('/');
       try {
         const s = CC.FS.stat(p);
-        if (CC.FS.isFile(s.mode)) CC.FS.unlink(p); // remove arquivo conflitante
-      } catch(e) {}
-      try { CC.FS.mkdir(p); } catch(e) {}
+        console.log('[GSF] existe em', p, 'isFile:', CC.FS.isFile(s.mode));
+        if (CC.FS.isFile(s.mode)) { CC.FS.unlink(p); console.log('[GSF] removeu arquivo', p); }
+      } catch(e) { console.log('[GSF] stat falhou para', p, '(não existe)'); }
+      try { CC.FS.mkdir(p); console.log('[GSF] criou dir', p); }
+      catch(e) { console.log('[GSF] mkdir falhou', p, e.errno); }
     }
     try { CC.FS.unlink('/'+name); } catch(e) {}
     CC.FS.writeFile('/'+name, data);
+    console.log('[GSF] escreveu', name, data.byteLength, 'bytes');
     return 1;
   } catch(e) {
     console.error('[GSF] write error:', name, e);
@@ -86,6 +89,8 @@ async function loadSong(url) {
 
   try { CC._gba_teardown(); } catch(e) {}
   CC._gba_setup(44100);
+  console.log('[GSF] chamando gba_init com:', filename);
+  console.log('[GSF] preloaded keys:', Object.keys(preloaded));
 
   let ret;
   try {
