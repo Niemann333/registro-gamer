@@ -100,17 +100,21 @@ async function loadSong(url) {
     ret = CC.ccall('gba_init', 'number', ['string','number'], [FS_SONG, 0]);
     console.log('[GSF] gba_init OK:', ret);
   } catch(e) {
-    let typeName = '?';
+    // Itanium C++ ABI: excPtr-24=ExceptionInfo, type@+4, adjusted_ptr@+16
+    // std::type_info: vtable@0, name_ptr@+4
+    let typeName = '?', exMsg = '';
     try {
-      const typeAddr = CC.HEAPU32[(e - 24 + 4) >> 2];
-      typeName = CC.UTF8ToString(typeAddr);
-      if (!typeName) {
-        const sub = CC.HEAPU32[(typeAddr + 4) >> 2];
-        typeName = sub ? CC.UTF8ToString(sub) : '(vazio)';
+      const typePtr = CC.HEAPU32[(e - 20) >> 2]; // type_info* at excPtr-20
+      const namePtr = CC.HEAPU32[(typePtr + 4) >> 2]; // name after vtable
+      if (namePtr > 0 && namePtr < CC.HEAPU8.length) typeName = CC.UTF8ToString(namePtr);
+      const adjPtr = CC.HEAPU32[(e - 8) >> 2]; // adjusted_ptr at excPtr-8
+      if (adjPtr > 0 && adjPtr < CC.HEAPU8.length - 8) {
+        const msgPtr = CC.HEAPU32[(adjPtr + 4) >> 2];
+        if (msgPtr > 0 && msgPtr < CC.HEAPU8.length) exMsg = CC.UTF8ToString(msgPtr);
       }
     } catch(e2) {}
-    console.error('[GSF] gba_init exception:', e, 'type:', typeName);
-    setStatus('Erro gba_init: ' + e + ' ('+typeName+')');
+    console.error('[GSF] exception:', e, 'type:', typeName, 'msg:', exMsg);
+    setStatus('Erro: ' + typeName + (exMsg ? ': ' + exMsg : '') + ' (ptr='+e+')');
     return;
   }
   if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
