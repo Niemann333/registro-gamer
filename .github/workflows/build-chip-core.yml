@@ -112,6 +112,8 @@ jobs:
       - name: Compilar chip-core.wasm
         run: |
           cd chip-player-js
+          # Adiciona USE_ZLIB=1 se não estiver presente
+          sed -i "s/-s EXPORTED_FUNCTIONS/-s USE_ZLIB=1 -s EXPORTED_FUNCTIONS/" scripts/build-chip-core.js
           node scripts/build-chip-core.js
           echo "=== chip-core.js gerado ==="
           ls -lh src/chip-core.js src/chip-core.wasm 2>/dev/null || echo "arquivos não encontrados"
