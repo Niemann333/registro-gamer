@@ -88,15 +88,25 @@ async function loadSong(url) {
   }
 
   try { CC._gba_teardown(); } catch(e) {}
-  CC._gba_setup(44100);
+  const setupRet = CC._gba_setup(32768);
+  console.log('[GSF] gba_setup retornou:', setupRet);
   console.log('[GSF] chamando gba_init com:', filename);
   console.log('[GSF] preloaded keys:', Object.keys(preloaded));
 
   let ret;
   try {
     ret = CC.ccall('gba_init', 'number', ['string','number'], [filename, 0]);
+    console.log('[GSF] gba_init retornou:', ret);
   } catch(e) {
-    setStatus('Erro: ' + (e.message || e));
+    // Tenta decodificar tipo da exceção C++
+    let typeName = '?';
+    try {
+      const typeAddr = CC.HEAPU32[(e - 24 + 4) >> 2];
+      const nameAddr = CC.HEAPU32[typeAddr >> 2];
+      typeName = CC.UTF8ToString(nameAddr);
+    } catch(e2) {}
+    console.error('[GSF] gba_init exception:', e, 'type:', typeName);
+    setStatus('Erro gba_init: ' + e + ' (' + typeName + ')');
     return;
   }
   if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
