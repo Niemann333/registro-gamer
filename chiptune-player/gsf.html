@@ -42,28 +42,17 @@ function findLibTag(data) {
   return null;
 }
 
-// C pede arquivo por nome — usa nome genérico mapeado internamente
+// C pede arquivo — escreve no basename (sem criar diretórios)
 window['gba_fileRequestCallback'] = function(namePtr) {
   const name = CC.UTF8ToString(namePtr);
-  console.log('[GSF] callback:', name);
-  // Extrai só o nome do arquivo (basename)
   const basename = name.split('/').pop();
+  console.log('[GSF] callback:', name, '→ basename:', basename);
   const data = preloaded[basename] || preloaded[name];
-  if (!data) { console.warn('[GSF] não encontrado:', name); return 0; }
+  if (!data) { console.warn('[GSF] não encontrado:', basename); return 0; }
   try {
-    const parts = name.split('/').filter(Boolean);
-    // Converte arquivo→diretório para cada componente pai
-    for (let i = 0; i < parts.length - 1; i++) {
-      const p = '/' + parts.slice(0, i+1).join('/');
-      try {
-        const s = CC.FS.stat(p);
-        if (CC.FS.isFile(s.mode)) { CC.FS.unlink(p); console.log('[GSF] removeu arquivo', p); }
-      } catch(e) {}
-      try { CC.FS.mkdir(p); } catch(e) {}
-    }
-    try { CC.FS.unlink('/'+name); } catch(e) {}
-    CC.FS.writeFile('/'+name, data);
-    console.log('[GSF] escreveu', name, data.byteLength, 'bytes');
+    try { CC.FS.unlink('/'+basename); } catch(e) {}
+    CC.FS.writeFile('/'+basename, data);
+    console.log('[GSF] escreveu /', basename, data.byteLength, 'bytes');
     return 1;
   } catch(e) {
     console.error('[GSF] erro callback:', e);
@@ -92,9 +81,14 @@ async function loadSong(url) {
     } catch(e) { console.warn('[GSF] falhou ao baixar lib:', libName, e); }
   }
 
-  // Escreve song com nome genérico (sem # ou espaços)
+// Escreve song com nome genérico (sem # ou espaços)
   try { CC.FS.unlink('/'+FS_SONG); } catch(e) {}
   CC.FS.writeFile('/'+FS_SONG, data);
+  // Pré-escreve gsflib também no basename direto
+  if (libName && preloaded[libName]) {
+    try { CC.FS.writeFile('/'+libName, preloaded[libName]); } catch(e) {}
+    console.log('[GSF] pré-escreveu lib em /', libName);
+  }
   console.log('[GSF] escreveu song em', FS_SONG);
 
   try { CC._gba_teardown(); } catch(e) {}
