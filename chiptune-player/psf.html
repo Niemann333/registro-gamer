@@ -86,7 +86,13 @@ async function loadSong(url) {
   console.log('[PSF] tentando com /song.psf');
   const ret = CC.ccall('psf_init', 'number', ['string','number'], ['/song.psf', 0]);
   console.log('[PSF] psf_init ret:', ret);
-  if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
+  // Tenta renderizar audio mesmo com ret=-1 (pode ser aviso, não erro fatal)
+  const srAny = CC._psf_get_sample_rate() || 44100;
+  console.log('[PSF] sample_rate:', srAny);
+  // Testa compute_audio_samples imediatamente
+  const testSamples = CC._psf_compute_audio_samples();
+  console.log('[PSF] test compute_audio_samples:', testSamples);
+  // if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; } // ignorando ret por ora
 
   const sr = CC._psf_get_sample_rate() || 44100;
   const ver = CC._psf_get_psf_version();
