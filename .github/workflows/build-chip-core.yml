@@ -129,6 +129,11 @@ jobs:
           cp chip-player-js/src/chip-core.js \
              registro-gamer/chiptune-player/ 2>/dev/null || true
 
+          # Patch chip-core.js para suportar Module["readBinary"] (necessário para PSF/GBA no main thread)
+          if [ -f registro-gamer/chiptune-player/chip-core.js ]; then
+            sed -i 's/if(ENVIRONMENT_IS_WORKER){readBinary=url=>/if(Module["readBinary"])readBinary=Module["readBinary"];if(ENVIRONMENT_IS_WORKER){readBinary=url=>/' registro-gamer/chiptune-player/chip-core.js
+            echo "=== Patch readBinary aplicado ==="
+          fi
           echo "=== Arquivos copiados ==="
           ls -lh registro-gamer/chiptune-player/chip-core* 2>/dev/null || echo "nenhum"
 
