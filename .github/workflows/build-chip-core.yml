@@ -56,7 +56,7 @@ jobs:
         run: |
           if [ -d "chip-player-js/psflib" ]; then
             cd chip-player-js/psflib
-            emmake make -f Emscripten.Makefile libpsflib.a
+            emmake make -f Emscripten.Makefile CFLAGS="-O3" CXXFLAGS="-O3" libpsflib.a
           else
             echo "psflib não encontrado, pulando"
           fi
@@ -65,7 +65,7 @@ jobs:
         run: |
           if [ -d "chip-player-js/lazyusf2" ]; then
             cd chip-player-js/lazyusf2
-            emmake make -f Emscripten.Makefile liblazyusf.a
+            emmake make -f Emscripten.Makefile CFLAGS="-O3" CXXFLAGS="-O3" liblazyusf.a
           else
             echo "lazyusf2 não encontrado, pulando"
           fi
@@ -77,7 +77,7 @@ jobs:
               xargs grep -l "libc/limits.h" 2>/dev/null | \
               xargs -r sed -i 's|#include <libc/limits.h>|#include <limits.h>|g'
             cd chip-player-js/webGSF/emscripten
-            emmake make -f Emscripten.Makefile
+            emmake make -f Emscripten.Makefile CFLAGS="-O3" CXXFLAGS="-O3"
           else
             echo "webGSF não encontrado, pulando"
           fi
@@ -114,6 +114,9 @@ jobs:
           cd chip-player-js
           # Adiciona USE_ZLIB=1 se não estiver presente
           sed -i "s/-s EXPORTED_FUNCTIONS/-s USE_ZLIB=1 -s EXPORTED_FUNCTIONS/" scripts/build-chip-core.js
+          # Força -O3 no script de build
+          sed -i "s/-O[012]/-O3/g" scripts/build-chip-core.js || true
+          grep -qE "O3|O2|O1" scripts/build-chip-core.js ||             sed -i "s/'-s EXPORTED_FUNCTIONS'/'-O3', '-s EXPORTED_FUNCTIONS'/" scripts/build-chip-core.js || true
           node scripts/build-chip-core.js
           echo "=== chip-core.js gerado ==="
           ls -lh src/chip-core.js src/chip-core.wasm 2>/dev/null || echo "arquivos não encontrados"
