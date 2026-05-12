@@ -77,14 +77,14 @@ async function loadSong(url) {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
         const libPtr = CC.allocate(libData, CC.ALLOC_NORMAL);
         console.log('[USF] loading lib:', libName, libData.length, 'bytes');
-        // Tenta (state, data, len, is_lib) — assinatura lazyusf2
-        const r = CC._n64_load_file(statePtr, libPtr, libData.length, 1);
+        // Tenta (data, len, is_lib, state) — state como 4º arg
+        const r = CC._n64_load_file(libPtr, libData.length, 1, statePtr);
         console.log('[USF] lib load ret:', r);
       } catch(e) { console.warn('[USF] lib failed:', e); }
     }
     const songPtr = CC.allocate(songData, CC.ALLOC_NORMAL);
     console.log('[USF] loading song:', songData.length, 'bytes');
-    const r2 = CC._n64_load_file(statePtr, songPtr, songData.length, 0);
+    const r2 = CC._n64_load_file(songPtr, songData.length, 0, statePtr);
     console.log('[USF] song load ret:', r2);
   } else {
     const data = await fetchBin(url);
