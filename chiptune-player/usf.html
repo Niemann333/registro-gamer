@@ -42,6 +42,14 @@ function findLibTag(data) {
 }
 
 // Descomprime o executável PSF usando DecompressionStream nativo do browser
+// Extrai a área reservada do PSF (onde USF guarda dados do N64)
+function extractUSFReserved(data) {
+  if (data[0] !== 0x50 || data[1] !== 0x53 || data[2] !== 0x46) throw new Error('Not PSF');
+  const rlen = data[4]|(data[5]<<8)|(data[6]<<16)|(data[7]<<24);
+  console.log('[USF] PSF v='+data[3].toString(16)+' rlen='+rlen+' clen='+(data[8]|(data[9]<<8)|(data[10]<<16)|(data[11]<<24)));
+  return data.slice(16, 16 + rlen);
+}
+
 async function inflate(compressed, mode) {
   const ds = new DecompressionStream(mode);
   const writer = ds.writable.getWriter();
@@ -107,17 +115,18 @@ async function loadSong(url) {
     if (libName) {
       try {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
-        console.log('[USF] decompressing lib:', libName, libData.length, 'bytes');
-        const libDecomp = await decompressPSF(libData);
-        const libPtr = CC.allocate(libDecomp, CC.ALLOC_NORMAL);
-        const r = CC._n64_load_file(libPtr, libDecomp.length, 1, 0);
+        // USF usa reserved area (não executável comprimido)
+        const libRaw = extractUSFReserved(libData);
+        console.log('[USF] lib reserved area:', libRaw.length, 'bytes');
+        const libPtr = CC.allocate(libRaw, CC.ALLOC_NORMAL);
+        const r = CC._n64_load_file(libPtr, libRaw.length, 1, 0);
         console.log('[USF] lib load ret:', r);
       } catch(e) { console.warn('[USF] lib failed:', e); }
     }
-    const songDecomp = await decompressPSF(songData);
-    const songPtr = CC.allocate(songDecomp, CC.ALLOC_NORMAL);
-    console.log('[USF] loading song decompressed:', songDecomp.length, 'bytes');
-    const r2 = CC._n64_load_file(songPtr, songDecomp.length, 0, 0);
+    const songRaw = extractUSFReserved(songData);
+    console.log('[USF] song reserved area:', songRaw.length, 'bytes');
+    const songPtr = CC.allocate(songRaw, CC.ALLOC_NORMAL);
+    const r2 = CC._n64_load_file(songPtr, songRaw.length, 0, 0);
     console.log('[USF] song load ret:', r2);
   } else {
     const data = await fetchBin(url);
