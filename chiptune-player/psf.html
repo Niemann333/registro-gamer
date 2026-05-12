@@ -64,10 +64,13 @@ async function loadSong(url) {
 
   const data = await fetchBin(url);
   preloaded[filename] = data;
-  const FS_NAME = 'song.psf';
+  const FS_NAME = 'song.psf'; // nome genérico para FS e readBinary
   console.log('[PSF] filename:', filename, 'size:', data.byteLength);
   try { CC.FS.writeFile('/'+FS_NAME, data); console.log('[PSF] write OK'); }
   catch(e) { console.error('[PSF] write failed:', e); }
+  // Guarda no preloaded para readBinary
+  preloaded[FS_NAME] = data;
+  preloaded[filename] = data;
 
   // Pre-load psflib recursively
   await preloadLib(data, dirUrl, 0);
@@ -156,7 +159,13 @@ window.addEventListener('message', e => {
 (async () => {
   CC = await CHIP_CORE_init({
     locateFile: p => p==='chip-core.wasm'
-      ? new URL('./chip-core.wasm', import.meta.url).href : p
+      ? new URL('./chip-core.wasm', import.meta.url).href : p,
+    // Injeta readBinary para funcionar no main thread (não só em Web Workers)
+    readBinary: (url) => {
+      console.log('[PSF] readBinary:', url);
+      const name = decodeURIComponent(url.split('/').pop());
+      return preloaded[name] || preloaded[url] || null;
+    }
   });
   if (songUrl) await loadSong(songUrl);
   else { setStatus('Pronto'); try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {} }
