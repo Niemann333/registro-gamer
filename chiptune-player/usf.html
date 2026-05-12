@@ -56,21 +56,17 @@ async function loadSong(url) {
   // Shutdown anterior
   try { CC._n64_shutdown(); } catch(e) {}
   
-  // Aloca state para lazyusf2 (estrutura interna do emulador N64)
-  // Tamanho varia: começa com 256KB e aumenta se necessário
-  const STATE_SIZE = 256 * 1024;
-  const stateArr = new Uint8Array(STATE_SIZE);
-  const statePtr = CC.allocate(stateArr, CC.ALLOC_NORMAL);
-  console.log('[USF] statePtr:', statePtr);
+  // Aloca e inicializa state do emulador N64 (lazyusf2 precisa de ~32MB)
+  let statePtr = 0;
   try {
+    statePtr = CC.allocate(new Uint8Array(256 * 1024), CC.ALLOC_NORMAL);
     CC._usf_clear(statePtr);
-    console.log('[USF] usf_clear OK');
+    console.log('[USF] usf_clear OK (256KB)');
   } catch(e) {
-    console.error('[USF] usf_clear failed:', e, '→ tentando state maior');
-    // Tenta 32MB
-    const largePtr = CC.allocate(new Uint8Array(32 * 1024 * 1024), CC.ALLOC_NORMAL);
-    CC._usf_clear(largePtr);
-    console.log('[USF] usf_clear OK com 32MB');
+    console.log('[USF] tentando 32MB state...');
+    statePtr = CC.allocate(new Uint8Array(32 * 1024 * 1024), CC.ALLOC_NORMAL);
+    CC._usf_clear(statePtr);
+    console.log('[USF] usf_clear OK (32MB), statePtr:', statePtr);
   }
 
   if (isMini) {
@@ -81,18 +77,19 @@ async function loadSong(url) {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
         const libPtr = CC.allocate(libData, CC.ALLOC_NORMAL);
         console.log('[USF] loading lib:', libName, libData.length, 'bytes');
-        const r = CC._n64_load_file(libPtr, libData.length, 1, 0);
+        // Tenta (state, data, len, is_lib) — assinatura lazyusf2
+        const r = CC._n64_load_file(statePtr, libPtr, libData.length, 1);
         console.log('[USF] lib load ret:', r);
       } catch(e) { console.warn('[USF] lib failed:', e); }
     }
     const songPtr = CC.allocate(songData, CC.ALLOC_NORMAL);
     console.log('[USF] loading song:', songData.length, 'bytes');
-    const r = CC._n64_load_file(songPtr, songData.length, 0, 0);
-    console.log('[USF] song load ret:', r);
+    const r2 = CC._n64_load_file(statePtr, songPtr, songData.length, 0);
+    console.log('[USF] song load ret:', r2);
   } else {
     const data = await fetchBin(url);
     const ptr = CC.allocate(data, CC.ALLOC_NORMAL);
-    const r = CC._n64_load_file(ptr, data.length, 0, 0);
+    const r = CC._n64_load_file(statePtr, ptr, data.length, 0);
     console.log('[USF] load ret:', r);
   }
 
