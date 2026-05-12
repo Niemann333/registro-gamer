@@ -95,20 +95,6 @@ async function loadSong(url) {
 
   // Shutdown anterior
   try { CC._n64_shutdown(); } catch(e) {}
-  
-  // Inicializa state N64 via _malloc (sem criar array JS enorme)
-  try {
-    const STATE_SIZE = 32 * 1024 * 1024; // 32MB
-    const statePtr = CC._malloc(STATE_SIZE);
-    if (statePtr) {
-      // Zero-fill eficiente diretamente no heap WASM
-      CC.HEAPU8.fill(0, statePtr, statePtr + STATE_SIZE);
-      CC._usf_clear(statePtr);
-      console.log('[USF] usf_clear OK, statePtr:', statePtr);
-    } else {
-      console.warn('[USF] malloc falhou');
-    }
-  } catch(e) { console.warn('[USF] usf_clear skipped:', e.message); }
 
   if (isMini) {
     const songData = await fetchBin(url);
