@@ -53,8 +53,25 @@ async function loadSong(url) {
   const dirUrl = url.replace(/\/[^/]+$/, '');
   const isMini = /\.miniusf$/i.test(filename);
 
-  // Shutdown anterior sem usf_clear (que precisa de state válido)
+  // Shutdown anterior
   try { CC._n64_shutdown(); } catch(e) {}
+  
+  // Aloca state para lazyusf2 (estrutura interna do emulador N64)
+  // Tamanho varia: começa com 256KB e aumenta se necessário
+  const STATE_SIZE = 256 * 1024;
+  const stateArr = new Uint8Array(STATE_SIZE);
+  const statePtr = CC.allocate(stateArr, CC.ALLOC_NORMAL);
+  console.log('[USF] statePtr:', statePtr);
+  try {
+    CC._usf_clear(statePtr);
+    console.log('[USF] usf_clear OK');
+  } catch(e) {
+    console.error('[USF] usf_clear failed:', e, '→ tentando state maior');
+    // Tenta 32MB
+    const largePtr = CC.allocate(new Uint8Array(32 * 1024 * 1024), CC.ALLOC_NORMAL);
+    CC._usf_clear(largePtr);
+    console.log('[USF] usf_clear OK com 32MB');
+  }
 
   if (isMini) {
     const songData = await fetchBin(url);
@@ -66,7 +83,7 @@ async function loadSong(url) {
         console.log('[USF] loading lib:', libName, libData.length, 'bytes');
         const r = CC._n64_load_file(libPtr, libData.length, 1, 0);
         console.log('[USF] lib load ret:', r);
-      } catch(e) { console.warn('[USF] lib load failed:', e); }
+      } catch(e) { console.warn('[USF] lib failed:', e); }
     }
     const songPtr = CC.allocate(songData, CC.ALLOC_NORMAL);
     console.log('[USF] loading song:', songData.length, 'bytes');
