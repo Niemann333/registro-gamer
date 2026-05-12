@@ -53,25 +53,30 @@ async function loadSong(url) {
   const dirUrl = url.replace(/\/[^/]+$/, '');
   const isMini = /\.miniusf$/i.test(filename);
 
-  // Shutdown previous
+  // Shutdown anterior sem usf_clear (que precisa de state válido)
   try { CC._n64_shutdown(); } catch(e) {}
-  CC._usf_clear(0);
 
   if (isMini) {
-    // Load the song file first to find lib reference
     const songData = await fetchBin(url);
     const libName = findLibTag(songData);
     if (libName) {
       try {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
-        loadUSFData(libData, true); // load lib first
-      } catch(e) { console.warn('[USF] lib load failed:', libName, e); }
+        const libPtr = CC.allocate(libData, CC.ALLOC_NORMAL);
+        console.log('[USF] loading lib:', libName, libData.length, 'bytes');
+        const r = CC._n64_load_file(libPtr, libData.length, 1, 0);
+        console.log('[USF] lib load ret:', r);
+      } catch(e) { console.warn('[USF] lib load failed:', e); }
     }
-    loadUSFData(songData, false); // then load song
+    const songPtr = CC.allocate(songData, CC.ALLOC_NORMAL);
+    console.log('[USF] loading song:', songData.length, 'bytes');
+    const r = CC._n64_load_file(songPtr, songData.length, 0, 0);
+    console.log('[USF] song load ret:', r);
   } else {
-    // .usf is self-contained
     const data = await fetchBin(url);
-    loadUSFData(data, false);
+    const ptr = CC.allocate(data, CC.ALLOC_NORMAL);
+    const r = CC._n64_load_file(ptr, data.length, 0, 0);
+    console.log('[USF] load ret:', r);
   }
 
   const actualSR = CC._n64_get_duration_ms ? SR : SR;
