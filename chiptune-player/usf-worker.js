@@ -23,6 +23,9 @@ XMLHttpRequest.prototype.send = function(body) {
     Object.defineProperty(this, 'status',    {value: 200, configurable: true});
     Object.defineProperty(this, 'response',  {value: data.buffer, configurable: true});
     Object.defineProperty(this, 'readyState',{value: 4,   configurable: true});
+    // Log para verificar que os dados chegam corretos
+    const first4 = data ? Array.from(data.slice(0,4)).map(x=>x.toString(16).padStart(2,'0')).join(' ') : 'null';
+    console.log('[worker XHR intercept]', this._cacheKey, data?.length+'b', 'first4:', first4);
     if (this._isAsync) {
       setTimeout(() => {
         this.onreadystatechange && this.onreadystatechange();
@@ -65,16 +68,20 @@ async function loadSong(url) {
   try { CC._n64_shutdown(); } catch(e) {}
 
   // Inicializa estado N64 — necessário antes de n64_load_file
-  // No Worker não trava a UI mesmo sendo lento
   postMessage({type:'status', text:'Inicializando N64...'});
   try {
     const STATE_SIZE = 32 * 1024 * 1024;
-    const ptr = CC._malloc(STATE_SIZE);
-    CC.HEAPU8.fill(0, ptr, ptr + STATE_SIZE);
-    CC._usf_clear(ptr);
-    postMessage({type:'log', text:'usf_clear OK, ptr:'+ptr});
+    const ptr = CC._malloc ? CC._malloc(STATE_SIZE) : 0;
+    postMessage({type:'log', text:'usf_clear malloc ptr:'+ptr});
+    if (ptr) {
+      CC.HEAPU8.fill(0, ptr, ptr + STATE_SIZE); // zero só a região alocada
+      CC._usf_clear(ptr);
+      postMessage({type:'log', text:'usf_clear OK'});
+    } else {
+      postMessage({type:'log', text:'usf_clear: malloc retornou 0'});
+    }
   } catch(e) {
-    postMessage({type:'log', text:'usf_clear skipped: '+e.message});
+    postMessage({type:'log', text:'usf_clear catch: '+(e && (e.message||String(e)))});
   }
 
   const filename = decodeURIComponent(url.split('/').pop());
@@ -96,7 +103,7 @@ async function loadSong(url) {
           [libName,1,0,0]);
         postMessage({type:'log', text:'lib ret: '+r});
         if (r!==0) { postMessage({type:'error',text:'lib falhou ('+r+')'}); return; }
-      } catch(e) { postMessage({type:'log', text:'lib error: '+e.message}); }
+      } catch(e) { postMessage({type:'log', text:'lib throw: '+(e&&(e.message||String(e)))}); }
     }
   }
 
