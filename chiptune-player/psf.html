@@ -5,6 +5,18 @@
 </head>
 <body>
 <div id="status">Inicializando...</div>
+<script>
+// XHR interceptor - captura todas as requisições do WASM
+const _OrigXHR = window.XMLHttpRequest;
+window.XMLHttpRequest = class extends _OrigXHR {
+  open(method, url, async) {
+    if (!String(url).includes('chip-core') && !String(url).includes('.wasm')) {
+      console.log('[XHR]', method, String(url).slice(-80), 'sync:', async===false);
+    }
+    return super.open(method, url, async);
+  }
+};
+</script>
 <script type="module">
 import CHIP_CORE_init from './chip-core.js';
 
