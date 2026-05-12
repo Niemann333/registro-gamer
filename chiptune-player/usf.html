@@ -96,18 +96,19 @@ async function loadSong(url) {
   // Shutdown anterior
   try { CC._n64_shutdown(); } catch(e) {}
   
-  // Aloca e inicializa state do emulador N64 (lazyusf2 precisa de ~32MB)
-  let statePtr = 0;
+  // Inicializa state N64 via _malloc (sem criar array JS enorme)
   try {
-    statePtr = CC.allocate(new Uint8Array(256 * 1024), CC.ALLOC_NORMAL);
-    CC._usf_clear(statePtr);
-    console.log('[USF] usf_clear OK (256KB)');
-  } catch(e) {
-    console.log('[USF] tentando 32MB state...');
-    statePtr = CC.allocate(new Uint8Array(32 * 1024 * 1024), CC.ALLOC_NORMAL);
-    CC._usf_clear(statePtr);
-    console.log('[USF] usf_clear OK (32MB), statePtr:', statePtr);
-  }
+    const STATE_SIZE = 32 * 1024 * 1024; // 32MB
+    const statePtr = CC._malloc(STATE_SIZE);
+    if (statePtr) {
+      // Zero-fill eficiente diretamente no heap WASM
+      CC.HEAPU8.fill(0, statePtr, statePtr + STATE_SIZE);
+      CC._usf_clear(statePtr);
+      console.log('[USF] usf_clear OK, statePtr:', statePtr);
+    } else {
+      console.warn('[USF] malloc falhou');
+    }
+  } catch(e) { console.warn('[USF] usf_clear skipped:', e.message); }
 
   if (isMini) {
     const songData = await fetchBin(url);
