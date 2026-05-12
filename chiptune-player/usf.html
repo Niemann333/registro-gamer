@@ -115,18 +115,16 @@ async function loadSong(url) {
     if (libName) {
       try {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
-        // USF usa reserved area (não executável comprimido)
-        const libRaw = extractUSFReserved(libData);
-        console.log('[USF] lib reserved area:', libRaw.length, 'bytes');
-        const libPtr = CC.allocate(libRaw, CC.ALLOC_NORMAL);
-        const r = CC._n64_load_file(libPtr, libRaw.length, 1, 0);
+        // Passa o arquivo PSF completo (usf_clear já inicializou o state global)
+        const libPtr = CC.allocate(libData, CC.ALLOC_NORMAL);
+        console.log('[USF] lib full PSF:', libData.length, 'bytes, first4:', Array.from(libData.slice(0,4)).map(x=>x.toString(16).padStart(2,"0")).join(" "));
+        const r = CC._n64_load_file(libPtr, libData.length, 1, 0);
         console.log('[USF] lib load ret:', r);
       } catch(e) { console.warn('[USF] lib failed:', e); }
     }
-    const songRaw = extractUSFReserved(songData);
-    console.log('[USF] song reserved area:', songRaw.length, 'bytes');
-    const songPtr = CC.allocate(songRaw, CC.ALLOC_NORMAL);
-    const r2 = CC._n64_load_file(songPtr, songRaw.length, 0, 0);
+    const songPtr2 = CC.allocate(songData, CC.ALLOC_NORMAL);
+    console.log('[USF] song full PSF:', songData.length, 'bytes');
+    const r2 = CC._n64_load_file(songPtr2, songData.length, 0, 0);
     console.log('[USF] song load ret:', r2);
   } else {
     const data = await fetchBin(url);
