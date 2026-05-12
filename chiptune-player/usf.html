@@ -42,29 +42,36 @@ function findLibTag(data) {
 }
 
 // Descomprime o executável PSF usando DecompressionStream nativo do browser
+async function inflate(compressed, mode) {
+  const ds = new DecompressionStream(mode);
+  const writer = ds.writable.getWriter();
+  writer.write(compressed); writer.close();
+  const chunks = []; const reader = ds.readable.getReader();
+  while (true) { const {done, value} = await reader.read(); if (done) break; chunks.push(value); }
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total); let off = 0;
+  for (const ch of chunks) { out.set(ch, off); off += ch.length; }
+  return out;
+}
+
 async function decompressPSF(data) {
   if (data[0] !== 0x50 || data[1] !== 0x53 || data[2] !== 0x46) throw new Error('Not PSF');
   const rlen = data[4]|(data[5]<<8)|(data[6]<<16)|(data[7]<<24);
   const clen = data[8]|(data[9]<<8)|(data[10]<<16)|(data[11]<<24);
-  const compressed = data.slice(16 + rlen, 16 + rlen + clen);
-  const ds = new DecompressionStream('deflate-raw');
-  const writer = ds.writable.getWriter();
-  writer.write(compressed);
-  writer.close();
-  const chunks = [];
-  const reader = ds.readable.getReader();
-  while (true) {
-    const {done, value} = await reader.read();
-    if (done) break;
-    chunks.push(value);
+  const start = 16 + rlen;
+  console.log('[USF] PSF rlen='+rlen+' clen='+clen+' filesize='+data.length+' end='+(start+clen));
+  const compressed = data.slice(start, start + clen);
+  console.log('[USF] compressed first4:', Array.from(compressed.slice(0,4)).map(x=>x.toString(16).padStart(2,"0")).join(" "));
+  for (const mode of ["deflate-raw", "deflate"]) {
+    try {
+      const out = await inflate(compressed, mode);
+      console.log('[USF] decompressed ('+mode+'): '+clen+' -> '+out.length+' bytes, first4: '+Array.from(out.slice(0,4)).map(x=>x.toString(16)).join(" "));
+      return out;
+    } catch(e) { console.warn('[USF] inflate('+mode+') failed:', e.message); }
   }
-  const total = chunks.reduce((s, c) => s + c.length, 0);
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const ch of chunks) { out.set(ch, off); off += ch.length; }
-  console.log('[USF] decompressed:', clen, '→', total, 'bytes, first4:', Array.from(out.slice(0,4)).map(x=>x.toString(16)).join(' '));
-  return out;
+  throw new Error("All decompression modes failed");
 }
+
 
 function loadUSFData(data, isLib) {
   const ptr = CC.allocate(data, CC.ALLOC_NORMAL);
