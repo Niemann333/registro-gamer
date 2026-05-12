@@ -64,6 +64,19 @@ async function loadSong(url) {
   postMessage({type:'status', text:'Carregando...'});
   try { CC._n64_shutdown(); } catch(e) {}
 
+  // Inicializa estado N64 — necessário antes de n64_load_file
+  // No Worker não trava a UI mesmo sendo lento
+  postMessage({type:'status', text:'Inicializando N64...'});
+  try {
+    const STATE_SIZE = 32 * 1024 * 1024;
+    const ptr = CC._malloc(STATE_SIZE);
+    CC.HEAPU8.fill(0, ptr, ptr + STATE_SIZE);
+    CC._usf_clear(ptr);
+    postMessage({type:'log', text:'usf_clear OK, ptr:'+ptr});
+  } catch(e) {
+    postMessage({type:'log', text:'usf_clear skipped: '+e.message});
+  }
+
   const filename = decodeURIComponent(url.split('/').pop());
   const isMini = /\.miniusf$/i.test(filename);
   const dirUrl = url.replace(/\/[^/]+$/,'');
