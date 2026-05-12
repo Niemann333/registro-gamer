@@ -5,18 +5,6 @@
 </head>
 <body>
 <div id="status">Inicializando...</div>
-<script>
-// XHR interceptor - captura todas as requisições do WASM
-const _OrigXHR = window.XMLHttpRequest;
-window.XMLHttpRequest = class extends _OrigXHR {
-  open(method, url, async) {
-    if (!String(url).includes('chip-core') && !String(url).includes('.wasm')) {
-      console.log('[XHR]', method, String(url).slice(-80), 'sync:', async===false);
-    }
-    return super.open(method, url, async);
-  }
-};
-</script>
 <script type="module">
 import CHIP_CORE_init from './chip-core.js';
 
@@ -52,22 +40,31 @@ function findLibTag(data) {
   return null;
 }
 
-// Called by C when it needs a PSF-related file
 window['psx_fileRequestCallback'] = function(p_filenames, count) {
-  console.log('[PSF] callback count:', count);
   for (let i = 0; i < count; i++) {
     const namePtr = CC.getValue(p_filenames + i*4, '*');
     const name = CC.UTF8ToString(namePtr);
     const basename = name.split('/').pop();
     const data = preloaded[basename] || preloaded[name];
-    console.log('[PSF] requesting:', name, 'found:', !!data);
     if (data) {
-      try { CC.FS.unlink('/'+name); } catch(e) {}
-      CC.FS.writeFile('/'+name, data);
+      try { CC.FS.unlink('/'+basename); } catch(e) {}
+      try { CC.FS.writeFile('/'+basename, data); } catch(e) {}
     }
   }
   return 1;
 };
+
+async function preloadLib(data, dirUrl, depth) {
+  if (depth > 3) return;
+  const libName = findLibTag(data);
+  if (!libName || preloaded[libName]) return;
+  try {
+    const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
+    preloaded[libName] = libData;
+    try { CC.FS.writeFile('/'+libName, libData); } catch(e) {}
+    await preloadLib(libData, dirUrl, depth+1);
+  } catch(e) { console.warn('[PSF] lib load failed:', libName, e); }
+}
 
 async function loadSong(url) {
   setStatus('Carregando...');
@@ -76,28 +73,71 @@ async function loadSong(url) {
 
   const data = await fetchBin(url);
   preloaded[filename] = data;
-  const FS_NAME = 'song.psf'; // nome genérico para FS e readBinary
-  console.log('[PSF] filename:', filename, 'size:', data.byteLength);
-  try { CC.FS.writeFile('/'+FS_NAME, data); console.log('[PSF] write OK'); }
-  catch(e) { console.error('[PSF] write failed:', e); }
-  // Guarda no preloaded para readBinary
-  preloaded[FS_NAME] = data;
-  preloaded[filename] = data;
+  preloaded['song.psf'] = data;
+  try { CC.FS.writeFile('/song.psf', data); } catch(e) {}
 
-  // Pre-load psflib recursively
   await preloadLib(data, dirUrl, 0);
 
-  // Teardown previous
   try { CC._psf_teardown(); } catch(e) {}
+  CC._psf_setup(44100);
 
-  CC._psf_setup(44100); console.log('[PSF] setup OK');
-  // Verifica se arquivo existe no FS
-  try { const s = CC.FS.stat('/'+FS_NAME); console.log('[PSF] file in FS, size:', s.size); }
-  catch(e) { console.error('[PSF] file NOT in FS!'); }
-  // Tenta passar a URL real do arquivo
-  console.log('[PSF] CWD:', CC.FS.cwd());
-  CC.FS.chdir('/');
-  // Tenta com path absoluto
-  console.log('[PSF] tentando psf_load direto...');
-  // psf_load(path, callbacks_NULL, version, info_cb, info_ctx, load, load_cb, load_ctx, err_cb, err_ctx)
-  const pathPtr = CC.allocate(new TextEncoder().encode('/song.psf
+  let ret;
+  try {
+    ret = CC.ccall('psf_init', 'number', ['string','number'], ['song.psf', 0]);
+  } catch(e) {
+    setStatus('Erro: ' + e);
+    return;
+  }
+  if (ret !== 0) { setStatus('Erro ao carregar ('+ret+')'); return; }
+
+  const sr = CC._psf_get_sample_rate() || 44100;
+  setupAudio(sr);
+  const n = filename.replace(/\.[^.]+$/, '');
+  setStatus('\u266A ' + n);
+  try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+}
+
+function setupAudio(sr) {
+  if (audioCtx) { try { audioCtx.close(); } catch(e) {} }
+  audioCtx = new AudioContext({sampleRate: sr});
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = 1;
+  processor = audioCtx.createScriptProcessor(BS, 0, 2);
+  processor.onaudioprocess = ev => {
+    const L = ev.outputBuffer.getChannelData(0);
+    const R = ev.outputBuffer.getChannelData(1);
+    const n = CC._psf_compute_audio_samples();
+    if (n <= 0) { L.fill(0); R.fill(0); return; }
+    const ptr = CC._psf_get_audio_buffer();
+    const buf = new Int16Array(CC.HEAP16.buffer, ptr, n*2);
+    const len = Math.min(n, L.length);
+    for (let i = 0; i < len; i++) { L[i] = buf[i*2]/32768; R[i] = buf[i*2+1]/32768; }
+    const posMs = CC._psf_get_current_position();
+    const durMs = CC._psf_get_max_position();
+    try { window.parent.postMessage({type:'position', posMs, durMs}, '*'); } catch(e) {}
+  };
+  processor.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+}
+
+window.addEventListener('message', e => {
+  if (!e.data || !CC) return;
+  const d = e.data;
+  if (d.type==='play' && d.url) { preloaded = {}; loadSong(d.url); }
+  if (d.type==='pause') { try { audioCtx && audioCtx.suspend(); } catch(e) {} }
+  if (d.type==='resume') { try { audioCtx && audioCtx.resume(); } catch(e) {} }
+  if (d.type==='volume' && typeof d.level==='number') { if (gainNode) gainNode.gain.value = Math.max(0, d.level); }
+  if (d.type==='seek' && typeof d.ms==='number') { try { CC._psf_seek_position(d.ms); } catch(e) {} }
+});
+
+(async () => {
+  CC = await CHIP_CORE_init({
+    locateFile: p => p==='chip-core.wasm'
+      ? new URL('./chip-core.wasm', import.meta.url).href : p
+  });
+  if (songUrl) await loadSong(songUrl);
+  else { setStatus('Pronto'); try { window.parent.postMessage({type:'ready'}, '*'); } catch(e) {} }
+})();
+</script>
+</body>
+</html>
