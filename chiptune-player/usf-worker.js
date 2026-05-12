@@ -70,18 +70,16 @@ async function loadSong(url) {
   // Inicializa estado N64 — necessário antes de n64_load_file
   postMessage({type:'status', text:'Inicializando N64...'});
   try {
+    // CC.allocate usa _malloc internamente (mais compatível que CC._malloc direto)
     const STATE_SIZE = 32 * 1024 * 1024;
-    const ptr = CC._malloc ? CC._malloc(STATE_SIZE) : 0;
-    postMessage({type:'log', text:'usf_clear malloc ptr:'+ptr});
+    const ptr = CC.allocate(new Uint8Array(STATE_SIZE), 0); // 0 = ALLOC_NORMAL
+    postMessage({type:'log', text:'usf_clear ptr:'+ptr});
     if (ptr) {
-      CC.HEAPU8.fill(0, ptr, ptr + STATE_SIZE); // zero só a região alocada
       CC._usf_clear(ptr);
       postMessage({type:'log', text:'usf_clear OK'});
-    } else {
-      postMessage({type:'log', text:'usf_clear: malloc retornou 0'});
     }
   } catch(e) {
-    postMessage({type:'log', text:'usf_clear catch: '+(e && (e.message||String(e)))});
+    postMessage({type:'log', text:'usf_clear catch: '+(e&&(e.message||String(e)))});
   }
 
   const filename = decodeURIComponent(url.split('/').pop());
@@ -98,20 +96,27 @@ async function loadSong(url) {
       try {
         const libData = await fetchBin(dirUrl+'/'+encodeURIComponent(libName));
         fileCache[libName] = libData;
-        postMessage({type:'log', text:'lib cached: '+libName+' ('+libData.length+'b)'});
+        // Escreve no FS (n64_load_file usa fopen internamente)
+        try { CC.FS.unlink('/'+libName); } catch(e) {}
+        CC.FS.writeFile('/'+libName, libData);
+        postMessage({type:'log', text:'lib in FS: '+libName+' ('+libData.length+'b)'});
         const r = CC.ccall('n64_load_file','number',['string','number','number','number'],
-          [libName,1,0,0]);
+          ['/'+libName,1,0,0]);
         postMessage({type:'log', text:'lib ret: '+r});
         if (r!==0) { postMessage({type:'error',text:'lib falhou ('+r+')'}); return; }
       } catch(e) { postMessage({type:'log', text:'lib throw: '+(e&&(e.message||String(e)))}); }
     }
   }
 
+  // Escreve song no FS
+  try { CC.FS.unlink('/song.usf'); } catch(e) {}
+  CC.FS.writeFile('/song.usf', songData);
+  postMessage({type:'log', text:'song in FS ('+songData.length+'b)'});
   postMessage({type:'status', text:'Iniciando emulador...'});
   let ret;
   try {
     ret = CC.ccall('n64_load_file','number',['string','number','number','number'],
-      [filename,0,0,0]);
+      ['/song.usf',0,0,0]);
   } catch(e) {
     postMessage({type:'error', text:'Erro: '+e.message}); return;
   }
