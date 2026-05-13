@@ -9,116 +9,84 @@ body{background:#111;color:#aaa;font-family:monospace;font-size:11px;height:22px
 </head>
 <body>
 <div id="status">Inicializando...</div>
-
 <script src="scriptprocessor_player.min.js"></script>
 <script src="backend_psx.js"></script>
 <script>
-(function() {
-  var params = new URLSearchParams(location.search);
-  var songUrl = params.get('url');
-  var setStatus = function(t) { document.getElementById('status').textContent = t; };
+(function(){
+var params  = new URLSearchParams(location.search);
+var songUrl = params.get('url');
+var setStatus = function(t){ document.getElementById('status').textContent = t; };
 
-  var currentName = '';
-  var songStartMs = null;    // performance.now() quando começou
-  var totalPausedMs = 0;     // ms acumulados em pause
-  var pauseStartMs = null;   // quando entrou em pause
-  var posInterval = null;
-  var ctx = null;
+var inst = null;
+var posInterval = null;
+var currentName = '';
 
-  function getCtx() {
-    if (!ctx) try { ctx = ScriptNodePlayer.getWebAudioContext(); } catch(e) {}
-    return ctx;
-  }
+function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
-  function startPositionUpdates() {
-    if (posInterval) clearInterval(posInterval);
-    posInterval = setInterval(function() {
-      if (songStartMs === null) return;
-      var now = performance.now();
-      var paused = pauseStartMs !== null ? (now - pauseStartMs) : 0;
-      var elapsed = now - songStartMs - totalPausedMs - paused;
-      try { parent.postMessage({type:'position', posMs: Math.round(elapsed), durMs: 0}, '*'); } catch(e) {}
-    }, 500);
-  }
+/* Expõe dados de frequência para o osciloscopio do gadget (mesmo domínio) */
+window.getFreqData = function(){
+  try{ return getInst().getFreqByteData(); }catch(e){ return null; }
+};
 
-  function doLoad(url) {
-    currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/, '');
-    setStatus('Carregando...');
-    songStartMs = null;
-    totalPausedMs = 0;
-    pauseStartMs = null;
-    if (posInterval) { clearInterval(posInterval); posInterval = null; }
+function startPositionUpdates(){
+  if(posInterval) clearInterval(posInterval);
+  posInterval = setInterval(function(){
+    var i = getInst(); if(!i) return;
+    try{
+      /* getPlaybackPosition retorna posição, getMaxPlaybackPosition retorna duração */
+      var pos = i.getPlaybackPosition();    // provavelmente ms
+      var dur = i.getMaxPlaybackPosition(); // provavelmente ms
+      /* fallback: getCurrentPlaytime() retorna segundos */
+      if(!pos || pos < 0) pos = (i.getCurrentPlaytime && i.getCurrentPlaytime()) * 1000 || 0;
+      parent.postMessage({type:'position', posMs: Math.round(pos), durMs: Math.round(dur||0)}, '*');
+    }catch(e){}
+  }, 500);
+}
 
-    var c = getCtx();
-    if (c) c.resume();
-    ScriptNodePlayer.loadMusicFromURL(url, {});
+function doLoad(url){
+  currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/,'');
+  setStatus('Carregando...');
+  inst = null;
+  if(posInterval){ clearInterval(posInterval); posInterval = null; }
+  ScriptNodePlayer.loadMusicFromURL(url, {});
 
-    // Aguarda 1.5s e marca início (tempo suficiente para PSF inicializar)
-    setTimeout(function() {
-      var c2 = getCtx();
-      if (c2 && c2.state === 'running') {
-        songStartMs = performance.now();
-        setStatus('\u266A ' + currentName);
-        startPositionUpdates();
-        try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
-      } else if (c2) {
-        // AudioContext ainda suspenso — aguarda mais
-        c2.resume().then(function() {
-          songStartMs = performance.now();
-          setStatus('\u266A ' + currentName);
-          startPositionUpdates();
-          try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
-        });
-      }
-    }, 1500);
-  }
+  /* Aguarda player iniciar e pega info da música */
+  var tries = 0;
+  var waitReady = setInterval(function(){
+    var i = getInst();
+    if(!i){ if(++tries > 30) clearInterval(waitReady); return; }
+    var info = i.getSongInfo && i.getSongInfo();
+    var title = (info && info.title) ? info.title : currentName;
+    var game  = (info && info.game)  ? ' — ' + info.game : '';
+    setStatus('\u266A ' + title + game);
+    startPositionUpdates();
+    try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
+    clearInterval(waitReady);
+  }, 500);
+}
 
-  // Inicializa backend PSX
-  var backend = new PSXBackendAdapter(false);
+/* Inicializa PSX backend */
+ScriptNodePlayer.initialize(
+  new PSXBackendAdapter(false),
+  function(){ try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
+  [], true, undefined
+).then(function(){
+  if(songUrl) doLoad(songUrl);
+  else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
+});
 
-  ScriptNodePlayer.initialize(
-    backend,
-    function() { try { parent.postMessage({type:'ended'}, '*'); } catch(e) {} },
-    [], true, undefined
-  ).then(function() {
-    var c = getCtx();
-    if (c) c.resume();
+/* Controles via postMessage do gadget */
+window.addEventListener('message', function(e){
+  if(!e.data) return;
+  var d = e.data;
+  var i = getInst();
 
-    if (songUrl) {
-      doLoad(songUrl);
-    } else {
-      setStatus('Pronto');
-      try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
-    }
-  });
-
-  // Controles via postMessage do gadget
-  window.addEventListener('message', function(e) {
-    if (!e.data) return;
-    var d = e.data;
-    var c = getCtx();
-
-    if (d.type === 'play' && d.url) {
-      doLoad(d.url);
-    }
-    if (d.type === 'pause' && c) {
-      if (pauseStartMs === null) pauseStartMs = performance.now();
-      c.suspend();
-      if (posInterval) { clearInterval(posInterval); posInterval = null; }
-    }
-    if (d.type === 'resume' && c) {
-      if (pauseStartMs !== null) {
-        totalPausedMs += performance.now() - pauseStartMs;
-        pauseStartMs = null;
-      }
-      c.resume();
-      startPositionUpdates();
-    }
-    if (d.type === 'volume' && typeof d.level === 'number') {
-      // Volume via GainNode master se disponível
-      try { ScriptNodePlayer.getInstance().setVolume && ScriptNodePlayer.getInstance().setVolume(d.level); } catch(ex) {}
-    }
-  });
+  if(d.type === 'play' && d.url)  doLoad(d.url);
+  if(d.type === 'pause'  && i)  { try{ i.pause();  }catch(ex){} if(posInterval){ clearInterval(posInterval); posInterval=null; } }
+  if(d.type === 'resume' && i)  { try{ i.resume(); }catch(ex){} startPositionUpdates(); }
+  if(d.type === 'volume' && i && typeof d.level === 'number') try{ i.setVolume(d.level); }catch(ex){}
+  if(d.type === 'seek'   && i && typeof d.ms === 'number')    try{ i.seekPlaybackPosition && i.seekPlaybackPosition(d.ms); }catch(ex){}
+});
 })();
 </script>
 </body>
