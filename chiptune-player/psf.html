@@ -2,10 +2,14 @@
 <html>
 <head><meta charset="utf-8">
 <style>
-body{margin:0;background:#111;color:#aaa;font-family:monospace;font-size:11px;padding:4px;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;height:22px}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.01);cursor:pointer;z-index:9}
+#status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
+<div id="overlay" title="Clique para iniciar áudio"></div>
 <div id="status">Inicializando...</div>
 
 <script src="scriptprocessor_player.min.js"></script>
@@ -13,74 +17,77 @@ body{margin:0;background:#111;color:#aaa;font-family:monospace;font-size:11px;pa
 <script>
 const params = new URLSearchParams(location.search);
 const songUrl = params.get('url');
-
 const setStatus = t => { document.getElementById('status').textContent = t; };
 
-let playerInitialized = false;
+let playerReady = false;
 let pendingUrl = null;
+let currentName = '';
 
 function doLoad(url) {
-  const filename = decodeURIComponent(url.split('/').pop());
-  const name = filename.replace(/\.[^.]+$/, '');
+  currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/, '');
   setStatus('Carregando...');
-
-  ScriptNodePlayer.loadMusicFromURL(url, {},
-    function() {
-      setStatus('\u266A ' + name);
-      try { parent.postMessage({type: 'ready'}, '*'); } catch(e) {}
-    },
-    function(err) {
-      setStatus('Erro ao carregar: ' + (err || ''));
-      console.error('[PSF] load error:', err);
-    }
-  );
+  ScriptNodePlayer.loadMusicFromURL(url, {});
 }
 
-// Inicializa o player com o backend PSX
+function activateAudio() {
+  document.getElementById('overlay').style.display = 'none';
+  if (pendingUrl) {
+    doLoad(pendingUrl);
+    pendingUrl = null;
+  }
+}
+
+// Clique para liberar AudioContext (política do browser)
+document.getElementById('overlay').addEventListener('click', activateAudio);
+
+// Mensagem do gadget pai — 'play' serve como trigger também
+window.addEventListener('message', function(e) {
+  if (!e.data) return;
+  const d = e.data;
+  if (d.type === 'play' && d.url) {
+    activateAudio();
+    doLoad(d.url);
+  }
+  if (d.type === 'volume' && typeof d.level === 'number') {
+    try { ScriptNodePlayer.setVolume(d.level); } catch(ex) {}
+  }
+  if (d.type === 'pause')  try { ScriptNodePlayer.pause();  } catch(ex) {}
+  if (d.type === 'resume') try { ScriptNodePlayer.resume(); } catch(ex) {}
+  if (d.type === 'seek' && typeof d.ms === 'number') {
+    try { ScriptNodePlayer.seekTo(d.ms / 1000); } catch(ex) {}
+  }
+});
+
+// Inicializa backend PSX
 const backend = new PSXBackendAdapter(false);
 
 ScriptNodePlayer.initialize(
   backend,
   function() { /* track end */ },
-  [],   // sem preloads
-  true, // stereo
+  [],
+  true,
   undefined
-).then(function(msg) {
-  playerInitialized = true;
-  if (pendingUrl) {
-    doLoad(pendingUrl);
-    pendingUrl = null;
+).then(function() {
+  playerReady = true;
+
+  // Evento: song pronta para tocar
+  ScriptNodePlayer.addListener && ScriptNodePlayer.addListener('onStarted', function() {
+    setStatus('\u266A ' + currentName);
+    try { parent.postMessage({type:'ready'}, '*'); } catch(ex) {}
+  });
+
+  if (songUrl) {
+    pendingUrl = songUrl;
+    // Se overlay foi clicado antes do init (improvável mas seguro)
+    if (document.getElementById('overlay').style.display === 'none') {
+      doLoad(songUrl);
+      pendingUrl = null;
+    } else {
+      setStatus('\u25B6 Clique para tocar');
+    }
   } else {
     setStatus('Pronto');
-    try { parent.postMessage({type: 'ready'}, '*'); } catch(e) {}
-  }
-});
-
-// Carrega via URL parameter
-if (songUrl) {
-  if (playerInitialized) {
-    doLoad(songUrl);
-  } else {
-    pendingUrl = songUrl;
-  }
-}
-
-// Mensagens do gadget (iframe)
-window.addEventListener('message', function(e) {
-  if (!e.data) return;
-  const d = e.data;
-  if (d.type === 'play' && d.url) {
-    if (playerInitialized) doLoad(d.url);
-    else pendingUrl = d.url;
-  }
-  if (d.type === 'volume' && typeof d.level === 'number') {
-    try { ScriptNodePlayer.setVolume(d.level); } catch(e) {}
-  }
-  if (d.type === 'pause') {
-    try { ScriptNodePlayer.pause(); } catch(e) {}
-  }
-  if (d.type === 'resume') {
-    try { ScriptNodePlayer.resume(); } catch(e) {}
+    try { parent.postMessage({type:'ready'}, '*'); } catch(ex) {}
   }
 });
 </script>
