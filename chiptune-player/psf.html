@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8">
+<style>
+body{margin:0;background:#111;color:#aaa;font-family:monospace;font-size:11px;padding:4px;}
+</style>
+</head>
+<body>
+<div id="status">Inicializando...</div>
+
+<script src="scriptprocessor_player.min.js"></script>
+<script src="backend_psx.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const songUrl = params.get('url');
+
+const setStatus = t => { document.getElementById('status').textContent = t; };
+
+let playerInitialized = false;
+let pendingUrl = null;
+
+function doLoad(url) {
+  const filename = decodeURIComponent(url.split('/').pop());
+  const name = filename.replace(/\.[^.]+$/, '');
+  setStatus('Carregando...');
+
+  ScriptNodePlayer.loadMusicFromURL(url, {},
+    function() {
+      setStatus('\u266A ' + name);
+      try { parent.postMessage({type: 'ready'}, '*'); } catch(e) {}
+    },
+    function(err) {
+      setStatus('Erro ao carregar: ' + (err || ''));
+      console.error('[PSF] load error:', err);
+    }
+  );
+}
+
+// Inicializa o player com o backend PSX
+const backend = new PSXBackendAdapter(false);
+
+ScriptNodePlayer.initialize(
+  backend,
+  function() { /* track end */ },
+  [],   // sem preloads
+  true, // stereo
+  undefined
+).then(function(msg) {
+  playerInitialized = true;
+  if (pendingUrl) {
+    doLoad(pendingUrl);
+    pendingUrl = null;
+  } else {
+    setStatus('Pronto');
+    try { parent.postMessage({type: 'ready'}, '*'); } catch(e) {}
+  }
+});
+
+// Carrega via URL parameter
+if (songUrl) {
+  if (playerInitialized) {
+    doLoad(songUrl);
+  } else {
+    pendingUrl = songUrl;
+  }
+}
+
+// Mensagens do gadget (iframe)
+window.addEventListener('message', function(e) {
+  if (!e.data) return;
+  const d = e.data;
+  if (d.type === 'play' && d.url) {
+    if (playerInitialized) doLoad(d.url);
+    else pendingUrl = d.url;
+  }
+  if (d.type === 'volume' && typeof d.level === 'number') {
+    try { ScriptNodePlayer.setVolume(d.level); } catch(e) {}
+  }
+  if (d.type === 'pause') {
+    try { ScriptNodePlayer.pause(); } catch(e) {}
+  }
+  if (d.type === 'resume') {
+    try { ScriptNodePlayer.resume(); } catch(e) {}
+  }
+});
+</script>
+</body>
+</html>
