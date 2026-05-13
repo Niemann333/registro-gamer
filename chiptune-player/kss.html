@@ -144,17 +144,6 @@ function doLoad(url, overrideTrack){
   }, 400);
 }
 
-/* Botão click-to-play para acesso direto (não em iframe) */
-var btn = document.getElementById('clickbtn');
-if(!inIframe && btn){
-  btn.style.display = 'flex';
-  btn.addEventListener('click', function(){
-    // Este clique É um gesto de usuário — chama doLoad aqui!
-    btn.style.display = 'none';
-    if(songUrl && playerReady) doLoad(songUrl);
-  });
-}
-
 /* Inicializa NEZ backend */
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
