@@ -5,22 +5,12 @@
 *{margin:0;padding:0}
 body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
 #status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clickbtn{display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;align-items:center;justify-content:center;cursor:pointer;z-index:99}
 </style>
 </head>
 <body>
 <div id="status">Inicializando...</div>
-<div id="clickbtn" style="display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;align-items:center;justify-content:center;cursor:pointer;z-index:99">▶ Clique para tocar</div>
-
-<script>
-/* Cria AudioContext o mais cedo possível para pegar a ativação do clique do usuário */
-window._earlyAC = null;
-var _earlyAC = window._earlyAC;
-try {
-  window._earlyAC = _earlyAC = new (window.AudioContext || window.webkitAudioContext)();
-  _earlyAC.resume(); // tenta ativar já
-  console.log('[KSS] early AudioContext:', _earlyAC.state);
-} catch(e) {}
-</script>
+<div id="clickbtn">▶ Clique para tocar</div>
 
 <script>
 /* Tap de áudio para osciloscópio */
@@ -51,46 +41,28 @@ try {
 
 <script>
 (function(){
-// Detecta se está em iframe (gadget) ou link direto
-var inIframe = (window !== window.parent);
-
-// Se link direto, mostra botão de click
-if (!inIframe) {
-  var btn = document.getElementById('clickbtn');
-  if(btn) {
-    btn.style.display = 'flex';
-    btn.addEventListener('click', function() {
-      btn.style.display = 'none';
-      if(window._earlyAC) window._earlyAC.resume();
-      try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
-      try{ var i=ScriptNodePlayer.getInstance(); i && i.play && i.play(); }catch(e){}
-    });
-  }
-}
-
-var params  = new URLSearchParams(location.search);
-var songUrl = params.get('url');
+var params       = new URLSearchParams(location.search);
+var songUrl      = params.get('url');
 var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : 0;
-var setStatus = function(t){ document.getElementById('status').textContent = t; };
+var inIframe     = (window !== window.parent);
+var setStatus    = function(t){ document.getElementById('status').textContent = t; };
 
-var inst = null;
-var posInterval = null;
-var visRAF = null;
-var fadeDurMs = 5000;
-var totalDurMs = 0;
+var inst         = null;
+var posInterval  = null;
+var visRAF       = null;
+var fadeDurMs    = 5000;
+var totalDurMs   = 0;
+var playerReady  = false;
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
-/* Osciloscópio */
 function startVisLoop(){
   if(visRAF) return;
   var last = 0;
   function frame(ts){
     visRAF = requestAnimationFrame(frame);
-    if(ts - last < 34) return;
-    last = ts;
-    var an = window._kssAnalyser;
-    if(!an) return;
+    if(ts - last < 34) return; last = ts;
+    var an = window._kssAnalyser; if(!an) return;
     try{
       an.getByteTimeDomainData(window._kssOscBuf);
       an.getFloatFrequencyData(window._kssFftBuf);
@@ -119,8 +91,7 @@ function startPositionUpdates(){
       var pos = i.getPlaybackPosition() || 0;
       var dur = totalDurMs || i.getMaxPlaybackPosition() || 0;
       if(dur > 0 && fadeDurMs > 0 && pos >= dur - fadeDurMs){
-        var ratio = Math.max(0, (dur - pos) / fadeDurMs);
-        try{ i.setVolume(ratio); }catch(e){}
+        try{ i.setVolume(Math.max(0,(dur-pos)/fadeDurMs)); }catch(e){}
       }
       parent.postMessage({type:'position', posMs:Math.round(pos), durMs:Math.round(dur)}, '*');
     }catch(e){}
@@ -128,19 +99,19 @@ function startPositionUpdates(){
 }
 
 function doLoad(url, overrideTrack){
+  // Esta função DEVE ser chamada de dentro de um gesto de usuário
   var i = getInst();
   if(i) try{ i.pause(); }catch(e){}
   inst = null; fadeDurMs = 5000; totalDurMs = 0;
   if(posInterval){ clearInterval(posInterval); posInterval = null; }
   stopVisLoop();
 
-  // KSS pode ter formato "url;track;timeout" — extrai opções
   var parts   = url.split(';');
   var fileUrl = parts[0];
   var track   = overrideTrack !== undefined ? overrideTrack :
                 (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
-  var options = { track: isNaN(track) ? -1 : track, timeout: isNaN(timeout) ? -1 : timeout };
+  var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? -1 : timeout };
   console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
@@ -152,23 +123,18 @@ function doLoad(url, overrideTrack){
     var i2 = getInst();
     if(!i2){ if(++tries > 40) clearInterval(wait); return; }
     try{ i2.setVolume(1); }catch(e){}
-    // Garante que o AudioContext está ativo
     try{ i2.play && i2.play(); }catch(e){}
-    if(_earlyAC) try{ _earlyAC.resume(); }catch(e){}
-    try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
 
     var info = i2.getSongInfo && i2.getSongInfo();
-    console.log('[KSS] songInfo:', JSON.stringify(info));
     var meta = i2.getSongInfoMeta && i2.getSongInfoMeta();
     var title = (info && info.title) || currentName;
-    var game  = (info && info.game)  ? ' \u2014 ' + info.game : '';
+    var game  = (info && info.game) ? ' \u2014 ' + info.game : '';
     setStatus('\u266A ' + title + game);
 
     if(meta){
       if(meta.length) totalDurMs = parseDuration(meta.length);
       if(meta.fade)   fadeDurMs  = parseDuration(meta.fade);
     }
-
     startPositionUpdates();
     startVisLoop();
     try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
@@ -176,12 +142,18 @@ function doLoad(url, overrideTrack){
   }, 400);
 }
 
-/* Injeta AudioContext criado cedo no ScriptNodePlayer */
-if (_earlyAC) {
-  try { ScriptNodePlayer._setGlobalWebAudioCtx && ScriptNodePlayer._setGlobalWebAudioCtx(_earlyAC); } catch(e) {}
+/* Botão click-to-play para acesso direto (não em iframe) */
+var btn = document.getElementById('clickbtn');
+if(!inIframe && btn){
+  btn.style.display = 'flex';
+  btn.addEventListener('click', function(){
+    // Este clique É um gesto de usuário — chama doLoad aqui!
+    btn.style.display = 'none';
+    if(songUrl && playerReady) doLoad(songUrl);
+  });
 }
 
-/* Inicializa NEZ backend — precisa de ChannelStreamer como 5º arg */
+/* Inicializa NEZ backend */
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
 var channelStreamer = new ChannelStreamer();
@@ -192,17 +164,18 @@ ScriptNodePlayer.initialize(
   function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
   [], true, undefined
 ).then(function(){
-  if(songUrl) doLoad(songUrl);
-  else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
+  playerReady = true;
+
+  if(inIframe && songUrl){
+    // No iframe: tenta carregar automaticamente (allow="autoplay" do gadget)
+    doLoad(songUrl);
+  } else if(!inIframe){
+    // Link direto: aguarda clique do botão
+    setStatus('\u25B6 Clique para tocar');
+  }
 });
 
-/* Fallback: qualquer clique na página resume o audio (teste direto via URL) */
-document.addEventListener('click', function(){
-  if(_earlyAC) _earlyAC.resume();
-  try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
-  try{ ScriptNodePlayer.getInstance() && ScriptNodePlayer.getInstance().play(); }catch(e){}
-}, {passive:true});
-
+/* Controles via postMessage do gadget */
 window.addEventListener('message', function(e){
   if(!e.data) return;
   var d = e.data;
@@ -212,7 +185,7 @@ window.addEventListener('message', function(e){
   if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); startVisLoop(); }
   if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
   if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
-  if(d.type==='track' && typeof d.num==='number') doLoad(songUrl||'', d.num);
+  if(d.type==='track'  && typeof d.num==='number')        doLoad(songUrl||'', d.num);
 });
 })();
 </script>
