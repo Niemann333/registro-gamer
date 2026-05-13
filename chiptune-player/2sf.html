@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0}
+body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
+#status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+<div id="status">Inicializando...</div>
+
+<script>
+/* Tap de áudio para o osciloscópio — antes dos backends */
+(function(){
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  var _orig = AC.prototype.createScriptProcessor;
+  AC.prototype.createScriptProcessor = function(){
+    var proc = _orig.apply(this, arguments);
+    var ctx  = this;
+    setTimeout(function(){
+      if(window._dsAnalyser) return;
+      var an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      window._dsAnalyser = an;
+      window._dsOscBuf   = new Uint8Array(an.frequencyBinCount);
+      window._dsFftBuf   = new Float32Array(an.frequencyBinCount);
+      try{ proc.connect(an); }catch(e){}
+    }, 150);
+    return proc;
+  };
+})();
+</script>
+
+<script src="scriptprocessor_player.min.js"></script>
+<script src="backend_ds.js"></script>
+
+<script>
+(function(){
+var params  = new URLSearchParams(location.search);
+var songUrl = params.get('url');
+var setStatus = function(t){ document.getElementById('status').textContent = t; };
+
+var inst = null;
+var posInterval = null;
+var visRAF = null;
+var fadeDurMs = 5000;
+var totalDurMs = 0;
+
+function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
+
+/* Osciloscópio → visdata via postMessage ao gadget ~30fps */
+function startVisLoop(){
+  if(visRAF) return;
+  var last = 0;
+  function frame(ts){
+    visRAF = requestAnimationFrame(frame);
+    if(ts - last < 34) return;
+    last = ts;
+    var an = window._dsAnalyser;
+    if(!an) return;
+    try{
+      an.getByteTimeDomainData(window._dsOscBuf);
+      an.getFloatFrequencyData(window._dsFftBuf);
+      parent.postMessage({type:'visdata', osc:window._dsOscBuf, fft:window._dsFftBuf}, '*');
+    }catch(e){}
+  }
+  visRAF = requestAnimationFrame(frame);
+}
+function stopVisLoop(){ if(visRAF){cancelAnimationFrame(visRAF);visRAF=null;} }
+
+function parseDuration(str){
+  if(!str) return 0;
+  var s = parseFloat(str);
+  if(!isNaN(s) && s < 10000) return s * 1000;
+  if(!isNaN(s)) return s;
+  var m = str.match(/(\d+):(\d+\.?\d*)/);
+  if(m) return (parseInt(m[1])*60 + parseFloat(m[2])) * 1000;
+  return 0;
+}
+
+function startPositionUpdates(){
+  if(posInterval) clearInterval(posInterval);
+  posInterval = setInterval(function(){
+    var i = getInst(); if(!i) return;
+    try{
+      var pos = i.getPlaybackPosition() || 0;
+      var dur = totalDurMs || i.getMaxPlaybackPosition() || 0;
+      if(dur > 0 && fadeDurMs > 0 && pos >= dur - fadeDurMs){
+        var ratio = Math.max(0, (dur - pos) / fadeDurMs);
+        try{ i.setVolume(ratio); }catch(e){}
+      }
+      parent.postMessage({type:'position', posMs:Math.round(pos), durMs:Math.round(dur)}, '*');
+    }catch(e){}
+  }, 250);
+}
+
+function doLoad(url){
+  var i = getInst();
+  if(i) try{ i.pause(); }catch(e){}
+  inst = null; fadeDurMs = 5000; totalDurMs = 0;
+  if(posInterval){ clearInterval(posInterval); posInterval = null; }
+  stopVisLoop();
+
+  var currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/,'');
+  setStatus('Carregando...');
+  ScriptNodePlayer.loadMusicFromURL(url, {});
+
+  var tries = 0;
+  var wait = setInterval(function(){
+    var i2 = getInst();
+    if(!i2){ if(++tries > 40) clearInterval(wait); return; }
+    try{ i2.setVolume(1); }catch(e){}
+
+    var info = i2.getSongInfo && i2.getSongInfo();
+    var meta = i2.getSongInfoMeta && i2.getSongInfoMeta();
+    var title = (info && info.title) || currentName;
+    var game  = (info && info.game)  ? ' \u2014 ' + info.game : '';
+    setStatus('\u266A ' + title + game);
+
+    if(meta){
+      if(meta.length) totalDurMs = parseDuration(meta.length);
+      if(meta.fade)   fadeDurMs  = parseDuration(meta.fade);
+    }
+
+    startPositionUpdates();
+    startVisLoop();
+    try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
+    clearInterval(wait);
+  }, 400);
+}
+
+/* Inicializa GBA backend */
+var backend = new DsBackendAdapter();
+
+
+ScriptNodePlayer.initialize(
+  backend,
+  function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
+  [], true, undefined
+).then(function(){
+  if(songUrl) doLoad(songUrl);
+  else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
+});
+
+window.addEventListener('message', function(e){
+  if(!e.data) return;
+  var d = e.data;
+  var i = getInst();
+  if(d.type==='play'   && d.url)               doLoad(d.url);
+  if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} stopVisLoop(); }
+  if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); startVisLoop(); }
+  if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
+  if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
+});
+})();
+</script>
+</body>
+</html>
