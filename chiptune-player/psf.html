@@ -11,8 +11,7 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 <div id="status">Inicializando...</div>
 
 <script>
-/* Intercepta createScriptProcessor ANTES do backend carregar
-   para adicionar AnalyserNode como tap de áudio (osciloscópio) */
+/* Intercepta createScriptProcessor ANTES dos backends para tap de áudio */
 (function(){
   var AC = window.AudioContext || window.webkitAudioContext;
   if(!AC) return;
@@ -21,25 +20,17 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
     var proc = _orig.apply(this, arguments);
     var ctx  = this;
     setTimeout(function(){
-      if(!window._analyser){
-        window._analyser = ctx.createAnalyser();
-        window._analyser.fftSize = 512;
-        window._analyserData = new Uint8Array(window._analyser.frequencyBinCount);
-        try{ proc.connect(window._analyser); }catch(e){}  // tap sem desconectar
-      }
-    }, 100);
+      if(window._psfAnalyser) return;
+      var an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      window._psfAnalyser = an;
+      window._psfOscBuf   = new Uint8Array(an.frequencyBinCount);
+      window._psfFftBuf   = new Float32Array(an.frequencyBinCount);
+      try{ proc.connect(an); }catch(e){}  // tap extra — não quebra chain
+    }, 150);
     return proc;
   };
 })();
-
-/* getFreqData exposto para o gadget (mesmo domínio → acesso direto) */
-window.getFreqData = function(){
-  if(!window._analyser || !window._analyserData) return null;
-  try{
-    window._analyser.getByteTimeDomainData(window._analyserData);
-    return window._analyserData;
-  }catch(e){ return null; }
-};
 </script>
 
 <script src="scriptprocessor_player.min.js"></script>
@@ -53,10 +44,33 @@ var setStatus = function(t){ document.getElementById('status').textContent = t; 
 
 var inst = null;
 var posInterval = null;
+var visRAF = null;
 var fadeDurMs = 5000;
 var totalDurMs = 0;
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
+
+/* Loop de visualização — envia visdata ao gadget ~30fps */
+function startVisLoop(){
+  if(visRAF) return;
+  var last = 0;
+  function frame(ts){
+    visRAF = requestAnimationFrame(frame);
+    if(ts - last < 34) return;
+    last = ts;
+    var an = window._psfAnalyser;
+    if(!an) return;
+    try{
+      an.getByteTimeDomainData(window._psfOscBuf);
+      an.getFloatFrequencyData(window._psfFftBuf);
+      parent.postMessage({type:'visdata',
+        osc: window._psfOscBuf,
+        fft: window._psfFftBuf}, '*');
+    }catch(e){}
+  }
+  visRAF = requestAnimationFrame(frame);
+}
+function stopVisLoop(){ if(visRAF){cancelAnimationFrame(visRAF);visRAF=null;} }
 
 function parseDuration(str){
   if(!str) return 0;
@@ -75,7 +89,6 @@ function startPositionUpdates(){
     try{
       var pos = i.getPlaybackPosition() || 0;
       var dur = totalDurMs || i.getMaxPlaybackPosition() || 0;
-      /* Fade out */
       if(dur > 0 && fadeDurMs > 0 && pos >= dur - fadeDurMs){
         var ratio = Math.max(0, (dur - pos) / fadeDurMs);
         try{ i.setVolume(ratio); }catch(e){}
@@ -90,6 +103,7 @@ function doLoad(url){
   if(i) try{ i.pause(); }catch(e){}
   inst = null; fadeDurMs = 5000; totalDurMs = 0;
   if(posInterval){ clearInterval(posInterval); posInterval = null; }
+  stopVisLoop();
 
   var currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/,'');
   setStatus('Carregando...');
@@ -113,6 +127,7 @@ function doLoad(url){
     }
 
     startPositionUpdates();
+    startVisLoop();
     try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
     clearInterval(wait);
   }, 400);
@@ -120,7 +135,7 @@ function doLoad(url){
 
 ScriptNodePlayer.initialize(
   new PSXBackendAdapter(false),
-  function(){ try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
+  function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
   [], true, undefined
 ).then(function(){
   if(songUrl) doLoad(songUrl);
@@ -132,8 +147,8 @@ window.addEventListener('message', function(e){
   var d = e.data;
   var i = getInst();
   if(d.type==='play'   && d.url)               doLoad(d.url);
-  if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} }
-  if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); }
+  if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} stopVisLoop(); }
+  if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); startVisLoop(); }
   if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
   if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
 });
