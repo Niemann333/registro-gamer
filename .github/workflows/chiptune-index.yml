@@ -34,7 +34,7 @@ jobs:
                       if ext in ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay',
                                  '.gbs','.hes','.kss','.sap','.sid','.mod','.s3m',
                                  '.xm','.it','.mid','.midi','.gsf','.minigsf',
-                                 '.2sf','.psf','.ssf','.dsf','.usf','.miniusf']:
+                                 '.2sf','.psf','.ssf','.dsf','.usf','.miniusf','.2sf','.mini2sf']:
                           result.append({
                               "name": entry.name,
                               "type": "file",
