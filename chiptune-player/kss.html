@@ -110,7 +110,7 @@ function doLoad(url, overrideTrack){
   var track   = overrideTrack !== undefined ? overrideTrack :
                 (parts.length > 1 ? parseInt(parts[1]) : 0);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
-  var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? -1 : timeout };
+  var options = { track: isNaN(track) ? -1 : track, timeout: isNaN(timeout) ? -1 : timeout };
   console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
@@ -151,7 +151,7 @@ channelStreamer.setZoom(1);
 ScriptNodePlayer.initialize(
   backend,
   function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
-  [], true, channelStreamer
+  [], true, undefined
 ).then(function(){
   if(songUrl) doLoad(songUrl);
   else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
