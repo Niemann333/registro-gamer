@@ -123,6 +123,9 @@ function doLoad(url, overrideTrack){
     var i2 = getInst();
     if(!i2){ if(++tries > 40) clearInterval(wait); return; }
     try{ i2.setVolume(1); }catch(e){}
+    // Garante que o AudioContext está ativo e inicia playback
+    try{ i2.play && i2.play(); }catch(e){}
+    try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
 
     var info = i2.getSongInfo && i2.getSongInfo();
     console.log('[KSS] songInfo:', JSON.stringify(info));
