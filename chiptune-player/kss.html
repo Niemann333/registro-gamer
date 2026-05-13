@@ -41,6 +41,7 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 (function(){
 var params  = new URLSearchParams(location.search);
 var songUrl = params.get('url');
+var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : 0;
 var setStatus = function(t){ document.getElementById('status').textContent = t; };
 
 var inst = null;
@@ -108,7 +109,7 @@ function doLoad(url, overrideTrack){
   var parts   = url.split(';');
   var fileUrl = parts[0];
   var track   = overrideTrack !== undefined ? overrideTrack :
-                (parts.length > 1 ? parseInt(parts[1]) : 0);
+                (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
   var options = { track: isNaN(track) ? -1 : track, timeout: isNaN(timeout) ? -1 : timeout };
   console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
