@@ -3,14 +3,48 @@
 <head><meta charset="utf-8">
 <style>
 *{margin:0;padding:0}
-body{background:#1a1a1a;color:#ccc;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
+body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
 #status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
 <div id="status">Inicializando...</div>
+
+<script>
+/* Intercepta createScriptProcessor ANTES do backend carregar
+   para adicionar AnalyserNode como tap de áudio (osciloscópio) */
+(function(){
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  var _orig = AC.prototype.createScriptProcessor;
+  AC.prototype.createScriptProcessor = function(){
+    var proc = _orig.apply(this, arguments);
+    var ctx  = this;
+    setTimeout(function(){
+      if(!window._analyser){
+        window._analyser = ctx.createAnalyser();
+        window._analyser.fftSize = 512;
+        window._analyserData = new Uint8Array(window._analyser.frequencyBinCount);
+        try{ proc.connect(window._analyser); }catch(e){}  // tap sem desconectar
+      }
+    }, 100);
+    return proc;
+  };
+})();
+
+/* getFreqData exposto para o gadget (mesmo domínio → acesso direto) */
+window.getFreqData = function(){
+  if(!window._analyser || !window._analyserData) return null;
+  try{
+    window._analyser.getByteTimeDomainData(window._analyserData);
+    return window._analyserData;
+  }catch(e){ return null; }
+};
+</script>
+
 <script src="scriptprocessor_player.min.js"></script>
 <script src="backend_psx.js"></script>
+
 <script>
 (function(){
 var params  = new URLSearchParams(location.search);
@@ -19,22 +53,16 @@ var setStatus = function(t){ document.getElementById('status').textContent = t; 
 
 var inst = null;
 var posInterval = null;
-var fadeDurMs = 5000;   // fade padrão 5s
+var fadeDurMs = 5000;
 var totalDurMs = 0;
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
-/* Osciloscópio — gadget acessa via iframe.contentWindow.getFreqData() */
-window.getFreqData = function(){
-  try{ var i=getInst(); return i ? i.getFreqByteData() : null; }catch(e){ return null; }
-};
-
 function parseDuration(str){
   if(!str) return 0;
   var s = parseFloat(str);
-  if(!isNaN(s) && s < 10000) return s * 1000; // veio em segundos
-  if(!isNaN(s)) return s;                       // veio em ms
-  // formato mm:ss.mmm
+  if(!isNaN(s) && s < 10000) return s * 1000;
+  if(!isNaN(s)) return s;
   var m = str.match(/(\d+):(\d+\.?\d*)/);
   if(m) return (parseInt(m[1])*60 + parseFloat(m[2])) * 1000;
   return 0;
@@ -46,27 +74,21 @@ function startPositionUpdates(){
     var i = getInst(); if(!i) return;
     try{
       var pos = i.getPlaybackPosition() || 0;
-      var dur = i.getMaxPlaybackPosition() || 0;
-      if(dur > 0 && totalDurMs > 0) dur = totalDurMs;
-
-      /* Fade out nos últimos fadeDurMs */
+      var dur = totalDurMs || i.getMaxPlaybackPosition() || 0;
+      /* Fade out */
       if(dur > 0 && fadeDurMs > 0 && pos >= dur - fadeDurMs){
         var ratio = Math.max(0, (dur - pos) / fadeDurMs);
         try{ i.setVolume(ratio); }catch(e){}
       }
-
       parent.postMessage({type:'position', posMs: Math.round(pos), durMs: Math.round(dur)}, '*');
     }catch(e){}
   }, 250);
 }
 
 function doLoad(url){
-  /* Para música atual imediatamente */
   var i = getInst();
   if(i) try{ i.pause(); }catch(e){}
-  inst = null;
-  fadeDurMs = 5000;
-  totalDurMs = 0;
+  inst = null; fadeDurMs = 5000; totalDurMs = 0;
   if(posInterval){ clearInterval(posInterval); posInterval = null; }
 
   var currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/,'');
@@ -74,21 +96,17 @@ function doLoad(url){
   ScriptNodePlayer.loadMusicFromURL(url, {});
 
   var tries = 0;
-  var waitReady = setInterval(function(){
+  var wait = setInterval(function(){
     var i2 = getInst();
-    if(!i2){ if(++tries > 40) clearInterval(waitReady); return; }
-
-    /* Restaura volume após fade da música anterior */
+    if(!i2){ if(++tries > 40) clearInterval(wait); return; }
     try{ i2.setVolume(1); }catch(e){}
 
-    /* Info da música */
     var info = i2.getSongInfo && i2.getSongInfo();
     var meta = i2.getSongInfoMeta && i2.getSongInfoMeta();
     var title = (info && info.title) || currentName;
     var game  = (info && info.game)  ? ' \u2014 ' + info.game : '';
     setStatus('\u266A ' + title + game);
 
-    /* Duração e fade da metadata */
     if(meta){
       if(meta.length) totalDurMs = parseDuration(meta.length);
       if(meta.fade)   fadeDurMs  = parseDuration(meta.fade);
@@ -96,11 +114,10 @@ function doLoad(url){
 
     startPositionUpdates();
     try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
-    clearInterval(waitReady);
+    clearInterval(wait);
   }, 400);
 }
 
-/* Inicializa PSX backend */
 ScriptNodePlayer.initialize(
   new PSXBackendAdapter(false),
   function(){ try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
@@ -110,7 +127,6 @@ ScriptNodePlayer.initialize(
   else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
 });
 
-/* Controles via postMessage */
 window.addEventListener('message', function(e){
   if(!e.data) return;
   var d = e.data;
