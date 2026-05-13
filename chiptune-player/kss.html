@@ -9,13 +9,14 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 </head>
 <body>
 <div id="status">Inicializando...</div>
-<div id="clickbtn" onclick="startAudio()" style="display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:99">▶ Clique para tocar</div>
+<div id="clickbtn" style="display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;align-items:center;justify-content:center;cursor:pointer;z-index:99">▶ Clique para tocar</div>
 
 <script>
 /* Cria AudioContext o mais cedo possível para pegar a ativação do clique do usuário */
-var _earlyAC = null;
+window._earlyAC = null;
+var _earlyAC = window._earlyAC;
 try {
-  _earlyAC = new (window.AudioContext || window.webkitAudioContext)();
+  window._earlyAC = _earlyAC = new (window.AudioContext || window.webkitAudioContext)();
   _earlyAC.resume(); // tenta ativar já
   console.log('[KSS] early AudioContext:', _earlyAC.state);
 } catch(e) {}
@@ -53,19 +54,18 @@ try {
 // Detecta se está em iframe (gadget) ou link direto
 var inIframe = (window !== window.parent);
 
-function startAudio() {
-  document.getElementById('clickbtn').style.display = 'none';
-  if(_earlyAC) _earlyAC.resume();
-  try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
-  try{ var i=ScriptNodePlayer.getInstance(); i && i.play && i.play(); }catch(e){}
-}
-
 // Se link direto, mostra botão de click
 if (!inIframe) {
-  window.addEventListener('load', function(){
-    var btn = document.getElementById('clickbtn');
-    if(btn) btn.style.display = 'flex';
-  });
+  var btn = document.getElementById('clickbtn');
+  if(btn) {
+    btn.style.display = 'flex';
+    btn.addEventListener('click', function() {
+      btn.style.display = 'none';
+      if(window._earlyAC) window._earlyAC.resume();
+      try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+      try{ var i=ScriptNodePlayer.getInstance(); i && i.play && i.play(); }catch(e){}
+    });
+  }
 }
 
 var params  = new URLSearchParams(location.search);
