@@ -2,14 +2,12 @@
 <html>
 <head><meta charset="utf-8">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#111;color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;height:22px}
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.01);cursor:pointer;z-index:9}
+*{margin:0;padding:0}
+body{background:#111;color:#aaa;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
 #status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
-<div id="overlay" title="Clique para iniciar áudio"></div>
 <div id="status">Inicializando...</div>
 
 <script src="scriptprocessor_player.min.js"></script>
@@ -19,75 +17,88 @@ const params = new URLSearchParams(location.search);
 const songUrl = params.get('url');
 const setStatus = t => { document.getElementById('status').textContent = t; };
 
-let playerReady = false;
-let pendingUrl = null;
 let currentName = '';
+let playing = false;
+let posInterval = null;
+
+// Envia posição para o gadget periodicamente
+function startPositionUpdates() {
+  if (posInterval) clearInterval(posInterval);
+  posInterval = setInterval(function() {
+    try {
+      var t = ScriptNodePlayer.getCurrentTime ? ScriptNodePlayer.getCurrentTime() : 0;
+      parent.postMessage({type:'position', posMs: Math.round(t * 1000), durMs: 0}, '*');
+    } catch(e) {}
+  }, 500);
+}
 
 function doLoad(url) {
   currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/, '');
   setStatus('Carregando...');
+  if (posInterval) { clearInterval(posInterval); posInterval = null; }
+  // Tenta resume do AudioContext antes de carregar
+  try { ScriptNodePlayer.resume(); } catch(e) {}
   ScriptNodePlayer.loadMusicFromURL(url, {});
 }
 
-function activateAudio() {
-  document.getElementById('overlay').style.display = 'none';
-  if (pendingUrl) {
-    doLoad(pendingUrl);
-    pendingUrl = null;
-  }
-}
-
-// Clique para liberar AudioContext (política do browser)
-document.getElementById('overlay').addEventListener('click', activateAudio);
-
-// Mensagem do gadget pai — 'play' serve como trigger também
-window.addEventListener('message', function(e) {
-  if (!e.data) return;
-  const d = e.data;
-  if (d.type === 'play' && d.url) {
-    activateAudio();
-    doLoad(d.url);
-  }
-  if (d.type === 'volume' && typeof d.level === 'number') {
-    try { ScriptNodePlayer.setVolume(d.level); } catch(ex) {}
-  }
-  if (d.type === 'pause')  try { ScriptNodePlayer.pause();  } catch(ex) {}
-  if (d.type === 'resume') try { ScriptNodePlayer.resume(); } catch(ex) {}
-  if (d.type === 'seek' && typeof d.ms === 'number') {
-    try { ScriptNodePlayer.seekTo(d.ms / 1000); } catch(ex) {}
-  }
-});
-
-// Inicializa backend PSX
+// Inicializa PSX backend
 const backend = new PSXBackendAdapter(false);
 
 ScriptNodePlayer.initialize(
   backend,
-  function() { /* track end */ },
-  [],
-  true,
+  function() { /* track end — avisa gadget */ try { parent.postMessage({type:'ended'}, '*'); } catch(e) {} },
+  [],    // sem preloads
+  true,  // stereo
   undefined
 ).then(function() {
-  playerReady = true;
+  // Player pronto — tenta ativar AudioContext logo
+  try { ScriptNodePlayer.resume(); } catch(e) {}
 
-  // Evento: song pronta para tocar
-  ScriptNodePlayer.addListener && ScriptNodePlayer.addListener('onStarted', function() {
-    setStatus('\u266A ' + currentName);
-    try { parent.postMessage({type:'ready'}, '*'); } catch(ex) {}
-  });
+  // Escuta eventos do player (quando começa a tocar)
+  // O ScriptNodePlayer chama callbacks internamente — usamos polling de getCurrentTime
+  var checkStart = setInterval(function() {
+    try {
+      var t = ScriptNodePlayer.getCurrentTime ? ScriptNodePlayer.getCurrentTime() : -1;
+      if (t > 0 && !playing) {
+        playing = true;
+        setStatus('\u266A ' + currentName);
+        startPositionUpdates();
+        try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+        clearInterval(checkStart);
+      }
+    } catch(e) { clearInterval(checkStart); }
+  }, 200);
 
   if (songUrl) {
-    pendingUrl = songUrl;
-    // Se overlay foi clicado antes do init (improvável mas seguro)
-    if (document.getElementById('overlay').style.display === 'none') {
-      doLoad(songUrl);
-      pendingUrl = null;
-    } else {
-      setStatus('\u25B6 Clique para tocar');
-    }
+    doLoad(songUrl);
   } else {
     setStatus('Pronto');
-    try { parent.postMessage({type:'ready'}, '*'); } catch(ex) {}
+    try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+  }
+});
+
+// Mensagens do gadget (controles)
+window.addEventListener('message', function(e) {
+  if (!e.data) return;
+  var d = e.data;
+
+  if (d.type === 'play' && d.url) {
+    playing = false;
+    doLoad(d.url);
+  }
+  if (d.type === 'pause') {
+    try { ScriptNodePlayer.pause(); } catch(e) {}
+    if (posInterval) { clearInterval(posInterval); posInterval = null; }
+  }
+  if (d.type === 'resume') {
+    try { ScriptNodePlayer.resume(); } catch(e) {}
+    startPositionUpdates();
+  }
+  if (d.type === 'volume' && typeof d.level === 'number') {
+    try { ScriptNodePlayer.setVolume(d.level); } catch(e) {}
+  }
+  if (d.type === 'seek' && typeof d.ms === 'number') {
+    try { ScriptNodePlayer.seekTo(d.ms / 1000); } catch(e) {}
   }
 });
 </script>
