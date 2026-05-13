@@ -1,25 +1,20 @@
 name: Gerar índice de Chiptunes
-
 on:
   push:
     paths:
       - 'Chiptunes/**'
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   build-index:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Gerar chiptunes-index.json
         run: |
           python3 - << 'EOF'
           import os, json
-
           def scan(path):
               result = []
               try:
@@ -39,14 +34,13 @@ jobs:
                       if ext in ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay',
                                  '.gbs','.hes','.kss','.sap','.sid','.mod','.s3m',
                                  '.xm','.it','.mid','.midi','.gsf','.minigsf',
-                                 '.2sf','.psf','.ssf','.dsf']:
+                                 '.2sf','.psf','.ssf','.dsf','.usf','.miniusf']:
                           result.append({
                               "name": entry.name,
                               "type": "file",
                               "path": entry.path
                           })
               return result
-
           os.makedirs("chiptune-player", exist_ok=True)
           index = scan("Chiptunes")
           out = "chiptune-player/chiptunes-index.json"
@@ -54,7 +48,6 @@ jobs:
               json.dump(index, f, ensure_ascii=False)
           print(f"Índice gerado: {out}")
           EOF
-
       - name: Commit do índice
         run: |
           git config user.name "github-actions[bot]"
