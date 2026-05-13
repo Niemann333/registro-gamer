@@ -112,7 +112,7 @@ function doLoad(url, overrideTrack){
                 (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
   // timeout em segundos — default 300s (5min) para KSS que loop infinito
-  var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? 300 : timeout };
+  var options = { track: isNaN(track) ? 0 : track, timeout: 600 }; // 600s fixo para KSS
   console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
@@ -124,6 +124,7 @@ function doLoad(url, overrideTrack){
     var i2 = getInst();
     if(!i2){ if(++tries > 40) clearInterval(wait); return; }
     try{ i2.setVolume(1); }catch(e){}
+    try{ i2.setPlaybackTimeout && i2.setPlaybackTimeout(0); }catch(e){}
     try{ i2.play && i2.play(); }catch(e){}
 
     var info = i2.getSongInfo && i2.getSongInfo();
