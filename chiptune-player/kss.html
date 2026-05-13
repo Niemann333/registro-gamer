@@ -97,7 +97,7 @@ function startPositionUpdates(){
   }, 250);
 }
 
-function doLoad(url){
+function doLoad(url, overrideTrack){
   var i = getInst();
   if(i) try{ i.pause(); }catch(e){}
   inst = null; fadeDurMs = 5000; totalDurMs = 0;
@@ -107,9 +107,11 @@ function doLoad(url){
   // KSS pode ter formato "url;track;timeout" — extrai opções
   var parts   = url.split(';');
   var fileUrl = parts[0];
-  var track   = parts.length > 1 ? parseInt(parts[1]) : 0;
+  var track   = overrideTrack !== undefined ? overrideTrack :
+                (parts.length > 1 ? parseInt(parts[1]) : 0);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
   var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? -1 : timeout };
+  console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
   setStatus('Carregando...');
@@ -122,6 +124,7 @@ function doLoad(url){
     try{ i2.setVolume(1); }catch(e){}
 
     var info = i2.getSongInfo && i2.getSongInfo();
+    console.log('[KSS] songInfo:', JSON.stringify(info));
     var meta = i2.getSongInfoMeta && i2.getSongInfoMeta();
     var title = (info && info.title) || currentName;
     var game  = (info && info.game)  ? ' \u2014 ' + info.game : '';
@@ -143,6 +146,7 @@ function doLoad(url){
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
 var channelStreamer = new ChannelStreamer();
+channelStreamer.setZoom(1);
 
 ScriptNodePlayer.initialize(
   backend,
@@ -162,6 +166,7 @@ window.addEventListener('message', function(e){
   if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); startVisLoop(); }
   if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
   if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
+  if(d.type==='track' && typeof d.num==='number') doLoad(songUrl||'', d.num);
 });
 })();
 </script>
