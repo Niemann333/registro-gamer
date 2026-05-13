@@ -13,94 +13,113 @@ body{background:#111;color:#aaa;font-family:monospace;font-size:11px;height:22px
 <script src="scriptprocessor_player.min.js"></script>
 <script src="backend_psx.js"></script>
 <script>
-const params = new URLSearchParams(location.search);
-const songUrl = params.get('url');
-const setStatus = t => { document.getElementById('status').textContent = t; };
+(function() {
+  var params = new URLSearchParams(location.search);
+  var songUrl = params.get('url');
+  var setStatus = function(t) { document.getElementById('status').textContent = t; };
 
-let currentName = '';
-let playing = false;
-let posInterval = null;
+  var currentName = '';
+  var songStartMs = null;    // performance.now() quando começou
+  var totalPausedMs = 0;     // ms acumulados em pause
+  var pauseStartMs = null;   // quando entrou em pause
+  var posInterval = null;
+  var ctx = null;
 
-// Envia posição para o gadget periodicamente
-function startPositionUpdates() {
-  if (posInterval) clearInterval(posInterval);
-  posInterval = setInterval(function() {
-    try {
-      var t = ScriptNodePlayer.getCurrentTime ? ScriptNodePlayer.getCurrentTime() : 0;
-      parent.postMessage({type:'position', posMs: Math.round(t * 1000), durMs: 0}, '*');
-    } catch(e) {}
-  }, 500);
-}
+  function getCtx() {
+    if (!ctx) try { ctx = ScriptNodePlayer.getWebAudioContext(); } catch(e) {}
+    return ctx;
+  }
 
-function doLoad(url) {
-  currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/, '');
-  setStatus('Carregando...');
-  if (posInterval) { clearInterval(posInterval); posInterval = null; }
-  // Tenta resume do AudioContext antes de carregar
-  try { ScriptNodePlayer.resume(); } catch(e) {}
-  ScriptNodePlayer.loadMusicFromURL(url, {});
-}
+  function startPositionUpdates() {
+    if (posInterval) clearInterval(posInterval);
+    posInterval = setInterval(function() {
+      if (songStartMs === null) return;
+      var now = performance.now();
+      var paused = pauseStartMs !== null ? (now - pauseStartMs) : 0;
+      var elapsed = now - songStartMs - totalPausedMs - paused;
+      try { parent.postMessage({type:'position', posMs: Math.round(elapsed), durMs: 0}, '*'); } catch(e) {}
+    }, 500);
+  }
 
-// Inicializa PSX backend
-const backend = new PSXBackendAdapter(false);
+  function doLoad(url) {
+    currentName = decodeURIComponent(url.split('/').pop()).replace(/\.[^.]+$/, '');
+    setStatus('Carregando...');
+    songStartMs = null;
+    totalPausedMs = 0;
+    pauseStartMs = null;
+    if (posInterval) { clearInterval(posInterval); posInterval = null; }
 
-ScriptNodePlayer.initialize(
-  backend,
-  function() { /* track end — avisa gadget */ try { parent.postMessage({type:'ended'}, '*'); } catch(e) {} },
-  [],    // sem preloads
-  true,  // stereo
-  undefined
-).then(function() {
-  // Player pronto — tenta ativar AudioContext logo
-  try { ScriptNodePlayer.resume(); } catch(e) {}
+    var c = getCtx();
+    if (c) c.resume();
+    ScriptNodePlayer.loadMusicFromURL(url, {});
 
-  // Escuta eventos do player (quando começa a tocar)
-  // O ScriptNodePlayer chama callbacks internamente — usamos polling de getCurrentTime
-  var checkStart = setInterval(function() {
-    try {
-      var t = ScriptNodePlayer.getCurrentTime ? ScriptNodePlayer.getCurrentTime() : -1;
-      if (t > 0 && !playing) {
-        playing = true;
+    // Aguarda 1.5s e marca início (tempo suficiente para PSF inicializar)
+    setTimeout(function() {
+      var c2 = getCtx();
+      if (c2 && c2.state === 'running') {
+        songStartMs = performance.now();
         setStatus('\u266A ' + currentName);
         startPositionUpdates();
         try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
-        clearInterval(checkStart);
+      } else if (c2) {
+        // AudioContext ainda suspenso — aguarda mais
+        c2.resume().then(function() {
+          songStartMs = performance.now();
+          setStatus('\u266A ' + currentName);
+          startPositionUpdates();
+          try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+        });
       }
-    } catch(e) { clearInterval(checkStart); }
-  }, 200);
+    }, 1500);
+  }
 
-  if (songUrl) {
-    doLoad(songUrl);
-  } else {
-    setStatus('Pronto');
-    try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
-  }
-});
+  // Inicializa backend PSX
+  var backend = new PSXBackendAdapter(false);
 
-// Mensagens do gadget (controles)
-window.addEventListener('message', function(e) {
-  if (!e.data) return;
-  var d = e.data;
+  ScriptNodePlayer.initialize(
+    backend,
+    function() { try { parent.postMessage({type:'ended'}, '*'); } catch(e) {} },
+    [], true, undefined
+  ).then(function() {
+    var c = getCtx();
+    if (c) c.resume();
 
-  if (d.type === 'play' && d.url) {
-    playing = false;
-    doLoad(d.url);
-  }
-  if (d.type === 'pause') {
-    try { ScriptNodePlayer.pause(); } catch(e) {}
-    if (posInterval) { clearInterval(posInterval); posInterval = null; }
-  }
-  if (d.type === 'resume') {
-    try { ScriptNodePlayer.resume(); } catch(e) {}
-    startPositionUpdates();
-  }
-  if (d.type === 'volume' && typeof d.level === 'number') {
-    try { ScriptNodePlayer.setVolume(d.level); } catch(e) {}
-  }
-  if (d.type === 'seek' && typeof d.ms === 'number') {
-    try { ScriptNodePlayer.seekTo(d.ms / 1000); } catch(e) {}
-  }
-});
+    if (songUrl) {
+      doLoad(songUrl);
+    } else {
+      setStatus('Pronto');
+      try { parent.postMessage({type:'ready'}, '*'); } catch(e) {}
+    }
+  });
+
+  // Controles via postMessage do gadget
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    var d = e.data;
+    var c = getCtx();
+
+    if (d.type === 'play' && d.url) {
+      doLoad(d.url);
+    }
+    if (d.type === 'pause' && c) {
+      if (pauseStartMs === null) pauseStartMs = performance.now();
+      c.suspend();
+      if (posInterval) { clearInterval(posInterval); posInterval = null; }
+    }
+    if (d.type === 'resume' && c) {
+      if (pauseStartMs !== null) {
+        totalPausedMs += performance.now() - pauseStartMs;
+        pauseStartMs = null;
+      }
+      c.resume();
+      startPositionUpdates();
+    }
+    if (d.type === 'volume' && typeof d.level === 'number') {
+      // Volume via GainNode master se disponível
+      try { ScriptNodePlayer.getInstance().setVolume && ScriptNodePlayer.getInstance().setVolume(d.level); } catch(ex) {}
+    }
+  });
+})();
 </script>
 </body>
 </html>
