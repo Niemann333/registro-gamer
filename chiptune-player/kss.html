@@ -9,6 +9,7 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 </head>
 <body>
 <div id="status">Inicializando...</div>
+<div id="clickbtn" onclick="startAudio()" style="display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:99">▶ Clique para tocar</div>
 
 <script>
 /* Cria AudioContext o mais cedo possível para pegar a ativação do clique do usuário */
@@ -49,6 +50,24 @@ try {
 
 <script>
 (function(){
+// Detecta se está em iframe (gadget) ou link direto
+var inIframe = (window !== window.parent);
+
+function startAudio() {
+  document.getElementById('clickbtn').style.display = 'none';
+  if(_earlyAC) _earlyAC.resume();
+  try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  try{ var i=ScriptNodePlayer.getInstance(); i && i.play && i.play(); }catch(e){}
+}
+
+// Se link direto, mostra botão de click
+if (!inIframe) {
+  window.addEventListener('load', function(){
+    var btn = document.getElementById('clickbtn');
+    if(btn) btn.style.display = 'flex';
+  });
+}
+
 var params  = new URLSearchParams(location.search);
 var songUrl = params.get('url');
 var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : 0;
