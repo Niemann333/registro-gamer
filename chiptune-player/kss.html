@@ -111,7 +111,8 @@ function doLoad(url, overrideTrack){
   var track   = overrideTrack !== undefined ? overrideTrack :
                 (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
-  var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? -1 : timeout };
+  // timeout em segundos — default 300s (5min) para KSS que loop infinito
+  var options = { track: isNaN(track) ? 0 : track, timeout: isNaN(timeout) ? 300 : timeout };
   console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
