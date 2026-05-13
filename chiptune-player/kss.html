@@ -11,6 +11,16 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 <div id="status">Inicializando...</div>
 
 <script>
+/* Cria AudioContext o mais cedo possível para pegar a ativação do clique do usuário */
+var _earlyAC = null;
+try {
+  _earlyAC = new (window.AudioContext || window.webkitAudioContext)();
+  _earlyAC.resume(); // tenta ativar já
+  console.log('[KSS] early AudioContext:', _earlyAC.state);
+} catch(e) {}
+</script>
+
+<script>
 /* Tap de áudio para osciloscópio */
 (function(){
   var AC = window.AudioContext || window.webkitAudioContext;
@@ -123,8 +133,9 @@ function doLoad(url, overrideTrack){
     var i2 = getInst();
     if(!i2){ if(++tries > 40) clearInterval(wait); return; }
     try{ i2.setVolume(1); }catch(e){}
-    // Garante que o AudioContext está ativo e inicia playback
+    // Garante que o AudioContext está ativo
     try{ i2.play && i2.play(); }catch(e){}
+    if(_earlyAC) try{ _earlyAC.resume(); }catch(e){}
     try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
 
     var info = i2.getSongInfo && i2.getSongInfo();
@@ -146,6 +157,11 @@ function doLoad(url, overrideTrack){
   }, 400);
 }
 
+/* Injeta AudioContext criado cedo no ScriptNodePlayer */
+if (_earlyAC) {
+  try { ScriptNodePlayer._setGlobalWebAudioCtx && ScriptNodePlayer._setGlobalWebAudioCtx(_earlyAC); } catch(e) {}
+}
+
 /* Inicializa NEZ backend — precisa de ChannelStreamer como 5º arg */
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
@@ -160,6 +176,13 @@ ScriptNodePlayer.initialize(
   if(songUrl) doLoad(songUrl);
   else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
 });
+
+/* Fallback: qualquer clique na página resume o audio (teste direto via URL) */
+document.addEventListener('click', function(){
+  if(_earlyAC) _earlyAC.resume();
+  try{ ScriptNodePlayer.getWebAudioContext && ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  try{ ScriptNodePlayer.getInstance() && ScriptNodePlayer.getInstance().play(); }catch(e){}
+}, {passive:true});
 
 window.addEventListener('message', function(e){
   if(!e.data) return;
