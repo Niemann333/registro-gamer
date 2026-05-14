@@ -84,7 +84,8 @@ function doLoad(url, overrideTrack){
   var tries = 0;
   var wait = setInterval(function(){
     var i2 = getInst();
-    if(!i2){ if(++tries > 40) clearInterval(wait); return; }
+    console.log('[KSS] wait tries:', tries, 'inst:', !!i2);
+    if(!i2){ if(++tries > 100) { setStatus('Erro: player não inicializou'); clearInterval(wait); } return; }
     try{ i2.setVolume(1); }catch(e){}
     try{ i2.setPlaybackTimeout && i2.setPlaybackTimeout(0); }catch(e){}
     try{ i2.play && i2.play(); }catch(e){}
@@ -103,7 +104,7 @@ function doLoad(url, overrideTrack){
     startVisLoop();
     try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
     clearInterval(wait);
-  }, 400);
+  }, 200);
 }
 
 /* Inicializa NEZ backend */
