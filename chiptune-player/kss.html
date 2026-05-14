@@ -12,11 +12,34 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 
 <script src="scriptprocessor_player.min.js"></script>
 <script>
-/* Pre-aquece o AudioContext enquanto a ativação do usuário ainda é válida */
-try{
-  ScriptNodePlayer._setGlobalWebAudioCtx();
-  ScriptNodePlayer.getWebAudioContext().resume();
-}catch(e){}
+/* Pre-aquece e mantém o AudioContext vivo com buffer silencioso em loop.
+   Sem isto, o Chrome suspende o contexto se o áudio demorar a começar. */
+var _keepAliveNode = null;
+function _startKeepAlive(ctx) {
+  if(_keepAliveNode) return;
+  try{
+    var src = ctx.createBufferSource();
+    var buf = ctx.createBuffer(1, 1, ctx.sampleRate); // 1 amostra silenciosa
+    src.buffer = buf;
+    src.loop = true;
+    src.connect(ctx.destination);
+    src.start(0);
+    _keepAliveNode = src;
+  }catch(e){}
+}
+function _warmContext() {
+  try{
+    ScriptNodePlayer._setGlobalWebAudioCtx();
+    var ac = ScriptNodePlayer.getWebAudioContext();
+    ac.resume().then(function(){ _startKeepAlive(ac); }).catch(function(){});
+    _startKeepAlive(ac);
+  }catch(e){}
+}
+_warmContext();
+/* Resume ao voltar ao tab */
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) _warmContext();
+});
 </script>
 <script src="backend_nez.js"></script>
 
@@ -99,7 +122,7 @@ function doLoad(url, overrideTrack){
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
   setStatus('Carregando track ' + trackNum + '...');
 
-  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  _warmContext();
 
   ScriptNodePlayer.loadMusicFromURL(fileUrl, { track: trackNum, timeout: 600 });
 
@@ -140,7 +163,7 @@ ScriptNodePlayer.initialize(backend,
   onTrackEnd,  // ← silence timeout → tenta próximo track
   [], true, undefined
 ).then(function(){
-  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  _warmContext();
   if(songUrl){ autoTrack = defaultTrack; doLoad(songUrl); }
   else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
 });
@@ -152,7 +175,7 @@ window.addEventListener('message', function(e){
   if(d.type==='play'   && d.url){ userPicked=false; autoTrack=defaultTrack; doLoad(d.url); }
   if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} stopVisLoop(); }
   if(d.type==='resume' && i){
-    try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(ex){}
+    _warmContext();
     try{i.resume();}catch(ex){}
     startPositionUpdates(); startVisLoop();
   }
@@ -163,7 +186,7 @@ window.addEventListener('message', function(e){
 
 /* Qualquer clique na página → resume (fallback para URL direta) */
 document.addEventListener('click', function(){
-  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  _warmContext();
   try{ var i=getInst(); i&&i.play&&i.play(); }catch(e){}
 }, {passive:true});
 })();
