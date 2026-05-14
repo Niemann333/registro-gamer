@@ -34,7 +34,6 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
-    // Intercepta fetch de soundfonts antes do bundle
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
       var url = (typeof input === 'string') ? input : (input.url || '');
@@ -44,13 +43,11 @@
         return _origFetch.call(this, localUrl, init);
       }
       if (url.indexOf('chiptune.app/') !== -1) {
-        // Bloqueia silenciosamente chamadas à API do chiptune.app que falhariam por CORS
         return Promise.reject(new Error('blocked'));
       }
       return _origFetch.apply(this, arguments);
     };
 
-    // Captura ScriptProcessorNode para fade
     try {
       var _OrigCSP = AudioContext.prototype.createScriptProcessor
                   || AudioContext.prototype.createJavaScriptNode;
@@ -64,7 +61,6 @@
       }
     } catch(e) {}
 
-    // Captura AudioContext + GainNode para volume
     var _OrigAC = window.AudioContext || window.webkitAudioContext;
     if (_OrigAC) {
       var _Wrap = function() {
@@ -72,7 +68,6 @@
         try {
           _analyser = _ctx.createAnalyser();
           _analyser.fftSize = 2048;
-          _analyser.smoothingTimeConstant = 0.8;
           _analyser.smoothingTimeConstant = 0.8;
           var _oc = AudioNode.prototype.connect;
           AudioNode.prototype.connect = function(dest, a, b) {
@@ -103,17 +98,16 @@
         try {
           var osc = new Uint8Array(_analyser.fftSize);
           _analyser.getByteTimeDomainData(osc);
-          var fft = new Uint8Array(_analyser.frequencyBinCount);
-          _analyser.getByteFrequencyData(fft);
-          // Downsamples para 256 pontos cada
+          var fft = new Float32Array(_analyser.frequencyBinCount);
+          _analyser.getFloatFrequencyData(fft);
           var oscOut = new Uint8Array(256);
-          var fftOut = new Uint8Array(128);
+          var fftOut = new Float32Array(128);
           var step = Math.floor(osc.length / 256);
           for (var i = 0; i < 256; i++) oscOut[i] = osc[i * step];
           for (var i = 0; i < 128; i++) fftOut[i] = fft[Math.floor(i * fft.length / 128)];
           window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
         } catch(e) {}
-      }, 33); // ~30fps
+      }, 33);
     }
     function stopVisTimer() {
       if (_visTimer) { clearInterval(_visTimer); _visTimer = null; }
@@ -186,7 +180,6 @@
       _scpFading  = false;
       _silenceDisabled = false;
 
-      // Envia info de vozes ao gadget
       setTimeout(function() {
         try {
           var p = window.ChipPlayer.sequencer.player;
@@ -199,7 +192,6 @@
             }
             try { groups = p.getVoiceGroups() || []; } catch(e) {}
             var mask = p.getVoiceMask();
-            // Limita nomes ao tamanho real da máscara
             names = names.slice(0, mask.length);
             if (names.length > 0) {
               window.parent.postMessage({
@@ -207,7 +199,6 @@
               }, '*');
             }
           }
-          // Subsongs SID
           if (p && p.getNumSubtunes) {
             var num = p.getNumSubtunes();
             if (num > 1) {
@@ -223,7 +214,8 @@
         } catch(e) {}
       }, 800);
 
-      _posTimer = setInterval(function() {        if (!_ctx || _ctx.state !== 'running') return;
+      _posTimer = setInterval(function() {
+        if (!_ctx || _ctx.state !== 'running') return;
         if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; startVisTimer(); }
 
         var posMs = 0, durMs = 0;
