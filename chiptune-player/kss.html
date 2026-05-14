@@ -5,14 +5,20 @@
 *{margin:0;padding:0}
 body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;height:22px;overflow:hidden}
 #status{padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#clickbtn{display:none;position:fixed;inset:0;background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:13px;align-items:center;justify-content:center;cursor:pointer;z-index:99}
 </style>
 </head>
 <body>
 <div id="status">Inicializando...</div>
-<div id="clickbtn">▶ Clique para tocar</div>
 
 <script src="scriptprocessor_player.min.js"></script>
+<script>
+/* Pre-aquece o AudioContext IMEDIATAMENTE enquanto a ativação do usuário ainda é válida.
+   O NEZ WASM é pesado — sem isso a janela de 5s expira antes de loadMusicFromURL ser chamado. */
+try {
+  ScriptNodePlayer._setGlobalWebAudioCtx();
+  ScriptNodePlayer.getWebAudioContext().resume();
+} catch(e) {}
+</script>
 <script src="backend_nez.js"></script>
 
 <script>
@@ -20,7 +26,6 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 var params       = new URLSearchParams(location.search);
 var songUrl      = params.get('url');
 var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : 0;
-var inIframe     = (window !== window.parent);
 var setStatus    = function(t){ document.getElementById('status').textContent = t; };
 
 var inst         = null;
@@ -28,12 +33,24 @@ var posInterval  = null;
 var visRAF       = null;
 var fadeDurMs    = 5000;
 var totalDurMs   = 0;
-var playerReady  = false;
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
-function startVisLoop(){ /* osciloscópio desativado temporariamente */ }
-function stopVisLoop(){}
+function startVisLoop(){
+  if(visRAF) return;
+  var last = 0;
+  function frame(ts){
+    visRAF = requestAnimationFrame(frame);
+    if(ts - last < 34) return; last = ts;
+    var i = getInst(); if(!i) return;
+    try{
+      var fft = i.getFreqByteData();
+      parent.postMessage({type:'visdata', osc:null, fft:fft}, '*');
+    }catch(e){}
+  }
+  visRAF = requestAnimationFrame(frame);
+}
+function stopVisLoop(){ if(visRAF){cancelAnimationFrame(visRAF);visRAF=null;} }
 
 function parseDuration(str){
   if(!str) return 0;
@@ -61,7 +78,6 @@ function startPositionUpdates(){
 }
 
 function doLoad(url, overrideTrack){
-  // Esta função DEVE ser chamada de dentro de um gesto de usuário
   var i = getInst();
   if(i) try{ i.pause(); }catch(e){}
   inst = null; fadeDurMs = 5000; totalDurMs = 0;
@@ -73,33 +89,37 @@ function doLoad(url, overrideTrack){
   var track   = overrideTrack !== undefined ? overrideTrack :
                 (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
   var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
-  // timeout em segundos — default 300s (5min) para KSS que loop infinito
-  var options = { track: isNaN(track) ? 0 : track, timeout: 600 }; // 600s fixo para KSS
-  console.log('[KSS] doLoad', fileUrl, 'track:', options.track);
+  var options = { track: isNaN(track) ? 0 : track, timeout: 600 };
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
   setStatus('Carregando...');
+
+  // Garante AudioContext ativo antes de carregar
+  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+
   ScriptNodePlayer.loadMusicFromURL(fileUrl, options);
 
   var tries = 0;
   var wait = setInterval(function(){
     var i2 = getInst();
-    console.log('[KSS] wait tries:', tries, 'inst:', !!i2);
-    if(!i2){ if(++tries > 100) { setStatus('Erro: player não inicializou'); clearInterval(wait); } return; }
+    if(!i2){ if(++tries > 100){ setStatus('Erro'); clearInterval(wait); } return; }
+
     try{ i2.setVolume(1); }catch(e){}
     try{ i2.setPlaybackTimeout && i2.setPlaybackTimeout(0); }catch(e){}
-    try{ i2.play && i2.play(); }catch(e){}
 
-    var info = i2.getSongInfo && i2.getSongInfo();
-    var meta = i2.getSongInfoMeta && i2.getSongInfoMeta();
+    var info = null;
+    try{ info = i2.getSongInfo && i2.getSongInfo(); }catch(e){}
     var title = (info && info.title) || currentName;
     var game  = (info && info.game) ? ' \u2014 ' + info.game : '';
     setStatus('\u266A ' + title + game);
 
+    var meta = null;
+    try{ meta = i2.getSongInfoMeta && i2.getSongInfoMeta(); }catch(e){}
     if(meta){
       if(meta.length) totalDurMs = parseDuration(meta.length);
       if(meta.fade)   fadeDurMs  = parseDuration(meta.fade);
     }
+
     startPositionUpdates();
     startVisLoop();
     try{ parent.postMessage({type:'ready'}, '*'); }catch(e){}
@@ -110,30 +130,28 @@ function doLoad(url, overrideTrack){
 /* Inicializa NEZ backend */
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
-ScriptNodePlayer.initialize(
-  backend,
-  function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
-  [], true
-).then(function(){
-  playerReady = true;
 
-  if(inIframe && songUrl){
-    // No iframe: tenta carregar automaticamente (allow="autoplay" do gadget)
-    doLoad(songUrl);
-  } else if(!inIframe){
-    // Link direto: aguarda clique do botão
-    setStatus('\u25B6 Clique para tocar');
-  }
+ScriptNodePlayer.initialize(backend,
+  function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
+  [], true, undefined
+).then(function(){
+  // Tenta resume novamente após WASM carregar
+  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  if(songUrl) doLoad(songUrl);
+  else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
 });
 
-/* Controles via postMessage do gadget */
 window.addEventListener('message', function(e){
   if(!e.data) return;
   var d = e.data;
   var i = getInst();
   if(d.type==='play'   && d.url)               doLoad(d.url);
   if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} stopVisLoop(); }
-  if(d.type==='resume' && i){ try{i.resume();}catch(ex){} startPositionUpdates(); startVisLoop(); }
+  if(d.type==='resume' && i){
+    try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(ex){}
+    try{i.resume();}catch(ex){}
+    startPositionUpdates(); startVisLoop();
+  }
   if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
   if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
   if(d.type==='track'  && typeof d.num==='number')        doLoad(songUrl||'', d.num);
