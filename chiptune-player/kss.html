@@ -36,7 +36,6 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 </script>
 
 <script src="scriptprocessor_player.min.js"></script>
-<script src="channelstreamer.min.js"></script>
 <script src="backend_nez.js"></script>
 
 <script>
@@ -147,13 +146,10 @@ function doLoad(url, overrideTrack){
 /* Inicializa NEZ backend */
 var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
-var channelStreamer = new ChannelStreamer();
-channelStreamer.setZoom(1);
-
 ScriptNodePlayer.initialize(
   backend,
   function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
-  [], true, undefined
+  [], true
 ).then(function(){
   playerReady = true;
 
