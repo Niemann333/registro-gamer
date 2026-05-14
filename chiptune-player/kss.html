@@ -12,29 +12,6 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 <div id="status">Inicializando...</div>
 <div id="clickbtn">▶ Clique para tocar</div>
 
-<script>
-/* Tap de áudio para osciloscópio */
-(function(){
-  var AC = window.AudioContext || window.webkitAudioContext;
-  if(!AC) return;
-  var _orig = AC.prototype.createScriptProcessor;
-  AC.prototype.createScriptProcessor = function(){
-    var proc = _orig.apply(this, arguments);
-    var ctx  = this;
-    setTimeout(function(){
-      if(window._kssAnalyser) return;
-      var an = ctx.createAnalyser();
-      an.fftSize = 1024;
-      window._kssAnalyser = an;
-      window._kssOscBuf   = new Uint8Array(an.frequencyBinCount);
-      window._kssFftBuf   = new Float32Array(an.frequencyBinCount);
-      try{ proc.connect(an); }catch(e){}
-    }, 150);
-    return proc;
-  };
-})();
-</script>
-
 <script src="scriptprocessor_player.min.js"></script>
 <script src="backend_nez.js"></script>
 
@@ -55,22 +32,8 @@ var playerReady  = false;
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
-function startVisLoop(){
-  if(visRAF) return;
-  var last = 0;
-  function frame(ts){
-    visRAF = requestAnimationFrame(frame);
-    if(ts - last < 34) return; last = ts;
-    var an = window._kssAnalyser; if(!an) return;
-    try{
-      an.getByteTimeDomainData(window._kssOscBuf);
-      an.getFloatFrequencyData(window._kssFftBuf);
-      parent.postMessage({type:'visdata', osc:window._kssOscBuf, fft:window._kssFftBuf}, '*');
-    }catch(e){}
-  }
-  visRAF = requestAnimationFrame(frame);
-}
-function stopVisLoop(){ if(visRAF){cancelAnimationFrame(visRAF);visRAF=null;} }
+function startVisLoop(){ /* osciloscópio desativado temporariamente */ }
+function stopVisLoop(){}
 
 function parseDuration(str){
   if(!str) return 0;
