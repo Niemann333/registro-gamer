@@ -12,12 +12,11 @@ body{background:#0a0a0a;color:#39ff14;font-family:monospace;font-size:11px;heigh
 
 <script src="scriptprocessor_player.min.js"></script>
 <script>
-/* Pre-aquece o AudioContext IMEDIATAMENTE enquanto a ativação do usuário ainda é válida.
-   O NEZ WASM é pesado — sem isso a janela de 5s expira antes de loadMusicFromURL ser chamado. */
-try {
+/* Pre-aquece o AudioContext enquanto a ativação do usuário ainda é válida */
+try{
   ScriptNodePlayer._setGlobalWebAudioCtx();
   ScriptNodePlayer.getWebAudioContext().resume();
-} catch(e) {}
+}catch(e){}
 </script>
 <script src="backend_nez.js"></script>
 
@@ -25,7 +24,7 @@ try {
 (function(){
 var params       = new URLSearchParams(location.search);
 var songUrl      = params.get('url');
-var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : -1;
+var defaultTrack = params.get('track') !== null ? parseInt(params.get('track')) : 0;
 var setStatus    = function(t){ document.getElementById('status').textContent = t; };
 
 var inst         = null;
@@ -33,6 +32,11 @@ var posInterval  = null;
 var visRAF       = null;
 var fadeDurMs    = 5000;
 var totalDurMs   = 0;
+
+/* Auto-track: se o track atual for silencioso, tenta o próximo */
+var autoTrack    = defaultTrack;
+var autoMaxTrack = 20;  // tenta até 20 tracks
+var userPicked   = params.get('track') !== null; // se URL especificou track, não auto-navega
 
 function getInst(){ if(!inst) try{ inst = ScriptNodePlayer.getInstance(); }catch(e){} return inst; }
 
@@ -45,22 +49,12 @@ function startVisLoop(){
     var i = getInst(); if(!i) return;
     try{
       var fft = i.getFreqByteData();
-      parent.postMessage({type:'visdata', osc:null, fft:fft}, '*');
+      if(fft) parent.postMessage({type:'visdata', osc:null, fft:fft}, '*');
     }catch(e){}
   }
   visRAF = requestAnimationFrame(frame);
 }
 function stopVisLoop(){ if(visRAF){cancelAnimationFrame(visRAF);visRAF=null;} }
-
-function parseDuration(str){
-  if(!str) return 0;
-  var s = parseFloat(str);
-  if(!isNaN(s) && s < 10000) return s * 1000;
-  if(!isNaN(s)) return s;
-  var m = str.match(/(\d+):(\d+\.?\d*)/);
-  if(m) return (parseInt(m[1])*60 + parseFloat(m[2])) * 1000;
-  return 0;
-}
 
 function startPositionUpdates(){
   if(posInterval) clearInterval(posInterval);
@@ -77,6 +71,18 @@ function startPositionUpdates(){
   }, 250);
 }
 
+function onTrackEnd(){
+  stopVisLoop();
+  if(posInterval){ clearInterval(posInterval); posInterval = null; }
+  if(!userPicked && autoTrack < autoMaxTrack){
+    // Track silencioso — tenta o próximo automaticamente
+    autoTrack++;
+    doLoad(songUrl, autoTrack);
+  } else {
+    try{ parent.postMessage({type:'ended'}, '*'); }catch(e){}
+  }
+}
+
 function doLoad(url, overrideTrack){
   var i = getInst();
   if(i) try{ i.pause(); }catch(e){}
@@ -88,16 +94,14 @@ function doLoad(url, overrideTrack){
   var fileUrl = parts[0];
   var track   = overrideTrack !== undefined ? overrideTrack :
                 (parts.length > 1 ? parseInt(parts[1]) : defaultTrack);
-  var timeout = parts.length > 2 ? parseInt(parts[2]) : -1;
-  var options = { track: isNaN(track) ? -1 : track, timeout: 600 };
+  var trackNum = isNaN(track) ? 0 : track;
 
   var currentName = decodeURIComponent(fileUrl.split('/').pop()).replace(/\.[^.]+$/,'');
-  setStatus('Carregando...');
+  setStatus('Carregando track ' + trackNum + '...');
 
-  // Garante AudioContext ativo antes de carregar
   try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
 
-  ScriptNodePlayer.loadMusicFromURL(fileUrl, options);
+  ScriptNodePlayer.loadMusicFromURL(fileUrl, { track: trackNum, timeout: 600 });
 
   var tries = 0;
   var wait = setInterval(function(){
@@ -105,19 +109,20 @@ function doLoad(url, overrideTrack){
     if(!i2){ if(++tries > 100){ setStatus('Erro'); clearInterval(wait); } return; }
 
     try{ i2.setVolume(1); }catch(e){}
-    try{ i2.setPlaybackTimeout && i2.setPlaybackTimeout(0); }catch(e){}
+    // Silence timeout de 2s: se o track for silencioso dispara onTrackEnd → próximo track
+    try{ i2.setSilenceTimeout(2); }catch(e){}
 
     var info = null;
     try{ info = i2.getSongInfo && i2.getSongInfo(); }catch(e){}
     var title = (info && info.title) || currentName;
-    var game  = (info && info.game) ? ' \u2014 ' + info.game : '';
-    setStatus('\u266A ' + title + game);
+    var tracks = (info && info.tracks) ? '/' + info.tracks : '';
+    setStatus('\u266A ' + title + ' [' + trackNum + tracks + ']');
 
     var meta = null;
     try{ meta = i2.getSongInfoMeta && i2.getSongInfoMeta(); }catch(e){}
     if(meta){
-      if(meta.length) totalDurMs = parseDuration(meta.length);
-      if(meta.fade)   fadeDurMs  = parseDuration(meta.fade);
+      if(meta.length) totalDurMs = parseFloat(meta.length) * 1000;
+      if(meta.fade)   fadeDurMs  = parseFloat(meta.fade) * 1000;
     }
 
     startPositionUpdates();
@@ -132,12 +137,11 @@ var backend = new NEZBackendAdapter();
 backend.setProcessorBufSize(4096);
 
 ScriptNodePlayer.initialize(backend,
-  function(){ stopVisLoop(); try{ parent.postMessage({type:'ended'}, '*'); }catch(e){} },
+  onTrackEnd,  // ← silence timeout → tenta próximo track
   [], true, undefined
 ).then(function(){
-  // Tenta resume novamente após WASM carregar
   try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
-  if(songUrl) doLoad(songUrl);
+  if(songUrl){ autoTrack = defaultTrack; doLoad(songUrl); }
   else{ setStatus('Pronto'); try{ parent.postMessage({type:'ready'}, '*'); }catch(e){} }
 });
 
@@ -145,7 +149,7 @@ window.addEventListener('message', function(e){
   if(!e.data) return;
   var d = e.data;
   var i = getInst();
-  if(d.type==='play'   && d.url)               doLoad(d.url);
+  if(d.type==='play'   && d.url){ userPicked=false; autoTrack=defaultTrack; doLoad(d.url); }
   if(d.type==='pause'  && i){ try{i.pause();}catch(ex){} if(posInterval){clearInterval(posInterval);posInterval=null;} stopVisLoop(); }
   if(d.type==='resume' && i){
     try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(ex){}
@@ -154,8 +158,14 @@ window.addEventListener('message', function(e){
   }
   if(d.type==='volume' && i && typeof d.level==='number') try{i.setVolume(d.level);}catch(ex){}
   if(d.type==='seek'   && i && typeof d.ms==='number')    try{i.seekPlaybackPosition&&i.seekPlaybackPosition(d.ms);}catch(ex){}
-  if(d.type==='track'  && typeof d.num==='number')        doLoad(songUrl||'', d.num);
+  if(d.type==='track'  && typeof d.num==='number'){ userPicked=true; autoTrack=d.num; doLoad(songUrl||'', d.num); }
 });
+
+/* Qualquer clique na página → resume (fallback para URL direta) */
+document.addEventListener('click', function(){
+  try{ ScriptNodePlayer.getWebAudioContext().resume(); }catch(e){}
+  try{ var i=getInst(); i&&i.play&&i.play(); }catch(e){}
+}, {passive:true});
 })();
 </script>
 </body>
