@@ -51,10 +51,10 @@
         try {
           var osc = new Uint8Array(analyser.fftSize);
           analyser.getByteTimeDomainData(osc);
-          var fft = new Uint8Array(analyser.frequencyBinCount);
-          analyser.getByteFrequencyData(fft);
+          var fft = new Float32Array(analyser.frequencyBinCount);
+          analyser.getFloatFrequencyData(fft);
           var oscOut = new Uint8Array(256);
-          var fftOut = new Uint8Array(128);
+          var fftOut = new Float32Array(128);
           var step = Math.floor(osc.length / 256);
           for (var i = 0; i < 256; i++) oscOut[i] = osc[i * step];
           for (var i = 0; i < 128; i++) fftOut[i] = fft[Math.floor(i * fft.length / 128)];
