@@ -268,41 +268,6 @@
     if (songUrl) startPlay();
     else setStatus('Pronto.', '');
   
-    // ── Media Session ──
-    var _msAudio = null;
-    function setupMediaSession() {
-      if (!('mediaSession' in navigator)) return;
-      // Audio silencioso para ativar Media Session no browser
-      _msAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-      _msAudio.loop = true;
-      _msAudio.volume = 0;
-      var actions = {
-        play:          function()  { window.parent.postMessage({type:'mediakey',action:'play'}, '*'); },
-        pause:         function()  { window.parent.postMessage({type:'mediakey',action:'pause'}, '*'); },
-        nexttrack:     function()  { window.parent.postMessage({type:'mediakey',action:'nexttrack'}, '*'); },
-        previoustrack: function()  { window.parent.postMessage({type:'mediakey',action:'previoustrack'}, '*'); },
-        seekforward:   function(d) { window.parent.postMessage({type:'mediakey',action:'seekforward', offset:d&&d.seekOffset?d.seekOffset:10}, '*'); },
-        seekbackward:  function(d) { window.parent.postMessage({type:'mediakey',action:'seekbackward',offset:d&&d.seekOffset?d.seekOffset:10}, '*'); }
-      };
-      for (var a in actions) try { navigator.mediaSession.setActionHandler(a, actions[a]); } catch(e) {}
-    }
-    function msActivate() {
-      if (!_msAudio) return;
-      _msAudio.play().catch(function(){});
-    }
-    window.addEventListener('message', function(ev) {
-      if (!ev.data || !('mediaSession' in navigator)) return;
-      if (ev.data.type === 'setmeta') {
-        msActivate();
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title:  ev.data.title  || 'Chiptune',
-          artist: ev.data.artist || 'Registro Gamer',
-          album:  'Registro Gamer \u00b7 Chiptune'
-        });
-        navigator.mediaSession.playbackState = 'playing';
-      }
-    });
-    setupMediaSession();
 </script>
 </body>
 </html>
