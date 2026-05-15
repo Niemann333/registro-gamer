@@ -237,7 +237,7 @@
       var d = e.data;
       if (d.type === 'play' && d.url) {
         songUrl = d.url; _endedSent = false; _scpFading = false;
-        if (playerReady) startPlay();
+        if (playerReady) schedulePlay();
       }
       if (d.type === 'sid-subsong' && typeof d.index === 'number') {
         try {
@@ -268,23 +268,36 @@
       }
     });
 
+    var _playRetries = 0;
+    function schedulePlay() {
+      _playRetries = 0;
+      if (seq()) { startPlay(); }
+      else { _retryPlay(); }
+    }
+    function _retryPlay() {
+      if (_playRetries++ > 20) { setStatus('Player não pronto.', 'error'); return; }
+      setTimeout(function() { if (seq()) startPlay(); else _retryPlay(); }, 300);
+    }
     function startPlay() {
       var cp = window.ChipPlayer;
-      if (!songUrl || !cp || (!cp.sequencer && !cp.playContext)) return;
+      if (!songUrl || !seq()) { _retryPlay(); return; }
       try { if (_ctx && _ctx.state === 'suspended') _ctx.resume(); } catch(e) {}
       _endedSent = false; _silCount = 0; _scpFading = false;
       var n = songUrl.split('/').pop().replace(/\.[^.]+$/, '');
       try { n = decodeURIComponent(n); } catch(e) {}
       setStatus('\u266A ' + n, 'playing');
       try {
-        if (cp.sequencer) {
+        if (cp && cp.sequencer) {
           cp.sequencer.playSonglist([songUrl]);
-        } else {
+        } else if (cp && cp.playContext) {
           cp.playContext.call(cp, [{ url: songUrl, title: n }]);
-        }
+        } else { _retryPlay(); return; }
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
-      } catch(ex) { setStatus('Erro: ' + ex.message, 'error'); }
+      } catch(ex) {
+        if (_playRetries < 5) { setStatus('Tentando...', ''); _retryPlay(); }
+        else { setStatus('Erro: ' + ex.message, 'error'); }
+      }
     }
 
     if ('serviceWorker' in navigator) {
@@ -305,7 +318,7 @@
           if (seq()) {
             clearInterval(iv); playerReady = true;
             try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
-            if (songUrl) startPlay(); else setStatus('Pronto.', '');
+            if (songUrl) schedulePlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
         }, 300);
       };
