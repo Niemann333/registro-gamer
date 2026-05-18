@@ -34,17 +34,25 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
+    // SF2 local — sempre usa este arquivo independente do nome pedido pelo bundle
+    var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
+
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
       var url = (typeof input === 'string') ? input : (input.url || '');
-      if (url.indexOf('gifx.co/soundfonts/') !== -1) {
-        var filename = url.split('/').pop();
-        var localUrl = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/' + filename;
-        return _origFetch.call(this, localUrl, init);
+
+      // Redireciona QUALQUER pedido de soundfont para o SF2 local,
+      // independente do nome do arquivo solicitado pelo bundle
+      if (url.indexOf('gifx.co/soundfonts/') !== -1 ||
+          (url.indexOf('/soundfonts/') !== -1 && url.indexOf('.sf2') !== -1)) {
+        return _origFetch.call(this, SF2_LOCAL, init);
       }
+
+      // Bloqueia recursos externos do chiptune.app (evita calls desnecessários)
       if (url.indexOf('chiptune.app/') !== -1) {
         return Promise.reject(new Error('blocked'));
       }
+
       return _origFetch.apply(this, arguments);
     };
 
@@ -245,6 +253,11 @@
           else if (window.ChipPlayer.prevSubtune) window.ChipPlayer.nextSubtune();
         } catch(e) {}
       }
+      if (d.type === 'subsong' && typeof d.index === 'number') {
+        try {
+          if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index);
+        } catch(e) {}
+      }
       if (d.type === 'voicemask' && d.mask) {
         try {
           if (window.ChipPlayer.sequencer) {
@@ -325,7 +338,6 @@
       s.onerror = function() { setStatus('Erro ao carregar bundle.', 'error'); };
       document.head.appendChild(s);
     }
-  
-</script>
+  </script>
 </body>
 </html>
