@@ -34,78 +34,43 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
-    // SF2 local — único soundfont disponível
+    // SF2 local
     var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
 
-    // Detecta se uma URL é pedido de soundfont
-    function _isSoundfont(url) {
-      return url.indexOf('.sf2') !== -1
-          || url.indexOf('soundfont') !== -1
-          || url.indexOf('Soundfont') !== -1
-          || url.indexOf('gifx.co/soundfonts') !== -1;
-    }
-
-    // Detecta se é recurso do chiptune.app que NÃO é soundfont
-    function _isBlockedExternal(url) {
-      return url.indexOf('chiptune.app/') !== -1 && !_isSoundfont(url);
-    }
+    // ── Stub requestMIDIAccess para evitar SecurityError em iframe ─────────────
+    // O bundle usa MIDI API → falha em iframe → stub retorna dispositivos vazios
+    // assim o bundle cai no fallback SF2
+    try {
+      if (navigator.requestMIDIAccess) {
+        Object.defineProperty(navigator, 'requestMIDIAccess', {
+          value: function() {
+            return Promise.resolve({
+              inputs: { size: 0, forEach: function(){}, get: function(){}, has: function(){}, keys: function(){ return [][Symbol.iterator](); }, values: function(){ return [][Symbol.iterator](); }, entries: function(){ return [][Symbol.iterator](); } },
+              outputs: { size: 0, forEach: function(){}, get: function(){}, has: function(){}, keys: function(){ return [][Symbol.iterator](); }, values: function(){ return [][Symbol.iterator](); }, entries: function(){ return [][Symbol.iterator](); } },
+              onstatechange: null,
+              sysexEnabled: false
+            });
+          },
+          writable: true, configurable: true
+        });
+      }
+    } catch(e) {}
 
     // ── Intercepta fetch ──────────────────────────────────────────────────────
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
       var url = (typeof input === 'string') ? input : (input && input.url) || '';
-      if (_isSoundfont(url))       return _origFetch.call(this, SF2_LOCAL, init);
-      if (_isBlockedExternal(url)) return Promise.reject(new Error('blocked'));
+
+      // Redireciona qualquer pedido de soundfont para o SF2 local
+      if (url.indexOf('.sf2') !== -1 ||
+          url.indexOf('soundfont') !== -1 ||
+          url.indexOf('gifx.co/soundfonts') !== -1) {
+        return _origFetch.call(this, SF2_LOCAL, init);
+      }
+
+      // Permite TUDO o resto (inclusive chiptune.app — necessário para MIDI)
       return _origFetch.apply(this, arguments);
     };
-
-    // ── Intercepta XMLHttpRequest ─────────────────────────────────────────────
-    (function() {
-      var _OrigXHR = window.XMLHttpRequest;
-      function _PatchedXHR() {
-        var _xhr = new _OrigXHR();
-        var _self = this;
-        ['open','send','abort','setRequestHeader',
-         'getResponseHeader','getAllResponseHeaders','overrideMimeType']
-          .forEach(function(m) {
-            _self[m] = function() { return _xhr[m].apply(_xhr, arguments); };
-          });
-        // Intercepta open() para trocar a URL se for soundfont
-        _self.open = function(method, url, async, user, pass) {
-          if (_isSoundfont(url)) url = SF2_LOCAL;
-          else if (_isBlockedExternal(url)) {
-            // Simula erro sem fazer request real
-            setTimeout(function() {
-              Object.defineProperty(_xhr, 'status', { value: 0 });
-              if (_self.onerror) _self.onerror(new Error('blocked'));
-            }, 0);
-            return;
-          }
-          _xhr.open(method, url,
-            async !== undefined ? async : true,
-            user, pass);
-        };
-        // Proxy de eventos e propriedades
-        ['onload','onerror','onabort','onprogress','onreadystatechange',
-         'responseType','withCredentials','timeout']
-          .forEach(function(prop) {
-            Object.defineProperty(_self, prop, {
-              get: function() { return _xhr[prop]; },
-              set: function(v) { _xhr[prop] = v; }
-            });
-          });
-        ['status','statusText','response','responseText','responseXML',
-         'readyState','upload']
-          .forEach(function(prop) {
-            Object.defineProperty(_self, prop, {
-              get: function() { return _xhr[prop]; }
-            });
-          });
-        return _self;
-      }
-      _PatchedXHR.prototype = _OrigXHR.prototype;
-      window.XMLHttpRequest = _PatchedXHR;
-    })();
 
     // ── AudioContext ──────────────────────────────────────────────────────────
     try {
@@ -293,14 +258,10 @@
         if (playerReady) schedulePlay();
       }
       if (d.type === 'sid-subsong' && typeof d.index === 'number') {
-        try {
-          if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index);
-        } catch(e) {}
+        try { if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
       }
       if (d.type === 'subsong' && typeof d.index === 'number') {
-        try {
-          if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index);
-        } catch(e) {}
+        try { if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
       }
       if (d.type === 'voicemask' && d.mask) {
         try {
