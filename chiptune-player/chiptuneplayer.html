@@ -34,28 +34,80 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
-    // SF2 local — sempre usa este arquivo independente do nome pedido pelo bundle
+    // SF2 local — único soundfont disponível
     var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
 
+    // Detecta se uma URL é pedido de soundfont
+    function _isSoundfont(url) {
+      return url.indexOf('.sf2') !== -1
+          || url.indexOf('soundfont') !== -1
+          || url.indexOf('Soundfont') !== -1
+          || url.indexOf('gifx.co/soundfonts') !== -1;
+    }
+
+    // Detecta se é recurso do chiptune.app que NÃO é soundfont
+    function _isBlockedExternal(url) {
+      return url.indexOf('chiptune.app/') !== -1 && !_isSoundfont(url);
+    }
+
+    // ── Intercepta fetch ──────────────────────────────────────────────────────
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
-      var url = (typeof input === 'string') ? input : (input.url || '');
-
-      // Redireciona QUALQUER pedido de soundfont para o SF2 local,
-      // independente do nome do arquivo solicitado pelo bundle
-      if (url.indexOf('gifx.co/soundfonts/') !== -1 ||
-          (url.indexOf('/soundfonts/') !== -1 && url.indexOf('.sf2') !== -1)) {
-        return _origFetch.call(this, SF2_LOCAL, init);
-      }
-
-      // Bloqueia recursos externos do chiptune.app (evita calls desnecessários)
-      if (url.indexOf('chiptune.app/') !== -1) {
-        return Promise.reject(new Error('blocked'));
-      }
-
+      var url = (typeof input === 'string') ? input : (input && input.url) || '';
+      if (_isSoundfont(url))       return _origFetch.call(this, SF2_LOCAL, init);
+      if (_isBlockedExternal(url)) return Promise.reject(new Error('blocked'));
       return _origFetch.apply(this, arguments);
     };
 
+    // ── Intercepta XMLHttpRequest ─────────────────────────────────────────────
+    (function() {
+      var _OrigXHR = window.XMLHttpRequest;
+      function _PatchedXHR() {
+        var _xhr = new _OrigXHR();
+        var _self = this;
+        ['open','send','abort','setRequestHeader',
+         'getResponseHeader','getAllResponseHeaders','overrideMimeType']
+          .forEach(function(m) {
+            _self[m] = function() { return _xhr[m].apply(_xhr, arguments); };
+          });
+        // Intercepta open() para trocar a URL se for soundfont
+        _self.open = function(method, url, async, user, pass) {
+          if (_isSoundfont(url)) url = SF2_LOCAL;
+          else if (_isBlockedExternal(url)) {
+            // Simula erro sem fazer request real
+            setTimeout(function() {
+              Object.defineProperty(_xhr, 'status', { value: 0 });
+              if (_self.onerror) _self.onerror(new Error('blocked'));
+            }, 0);
+            return;
+          }
+          _xhr.open(method, url,
+            async !== undefined ? async : true,
+            user, pass);
+        };
+        // Proxy de eventos e propriedades
+        ['onload','onerror','onabort','onprogress','onreadystatechange',
+         'responseType','withCredentials','timeout']
+          .forEach(function(prop) {
+            Object.defineProperty(_self, prop, {
+              get: function() { return _xhr[prop]; },
+              set: function(v) { _xhr[prop] = v; }
+            });
+          });
+        ['status','statusText','response','responseText','responseXML',
+         'readyState','upload']
+          .forEach(function(prop) {
+            Object.defineProperty(_self, prop, {
+              get: function() { return _xhr[prop]; }
+            });
+          });
+        return _self;
+      }
+      _PatchedXHR.prototype = _OrigXHR.prototype;
+      window.XMLHttpRequest = _PatchedXHR;
+    })();
+
+    // ── AudioContext ──────────────────────────────────────────────────────────
     try {
       var _OrigCSP = AudioContext.prototype.createScriptProcessor
                   || AudioContext.prototype.createJavaScriptNode;
@@ -98,6 +150,7 @@
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
+    // ── Visualização ──────────────────────────────────────────────────────────
     var _visTimer = null;
     function startVisTimer() {
       if (_visTimer) return;
@@ -116,9 +169,6 @@
           window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
         } catch(e) {}
       }, 33);
-    }
-    function stopVisTimer() {
-      if (_visTimer) { clearInterval(_visTimer); _visTimer = null; }
     }
 
     function doFadeOut() {
@@ -202,9 +252,7 @@
             var mask = p.getVoiceMask();
             names = names.slice(0, mask.length);
             if (names.length > 0) {
-              window.parent.postMessage({
-                type: 'voices', names: names, mask: mask, groups: groups
-              }, '*');
+              window.parent.postMessage({ type: 'voices', names: names, mask: mask, groups: groups }, '*');
             }
           }
           if (p && p.getNumSubtunes) {
@@ -212,8 +260,7 @@
             if (num > 1) {
               var durs = p.subtuneDurations || [];
               window.parent.postMessage({
-                type: 'sid-subsongs',
-                count: num,
+                type: 'sid-subsongs', count: num,
                 current: p.getSubtune(),
                 durations: Array.prototype.slice.call(durs)
               }, '*');
@@ -225,7 +272,6 @@
       _posTimer = setInterval(function() {
         if (!_ctx || _ctx.state !== 'running') return;
         if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; startVisTimer(); }
-
         var posMs = 0, durMs = 0;
         var p = player();
         if (_isVGM) {
@@ -234,7 +280,6 @@
           if (p && p.getPositionMs) try { posMs = p.getPositionMs(); } catch(e) {}
         }
         if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
-
         try { window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*'); } catch(e) {}
         checkSilence();
       }, 250);
@@ -250,7 +295,6 @@
       if (d.type === 'sid-subsong' && typeof d.index === 'number') {
         try {
           if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index);
-          else if (window.ChipPlayer.prevSubtune) window.ChipPlayer.nextSubtune();
         } catch(e) {}
       }
       if (d.type === 'subsong' && typeof d.index === 'number') {
