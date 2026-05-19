@@ -277,6 +277,43 @@
       if (d.type === 'volume' && typeof d.level === 'number') {
         if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
       }
+      // Metadados vindos do gadget → atualiza Media Session do iframe (tem o áudio real)
+      if (d.type === 'mediainfo') {
+        if ('mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title:  d.title  || '',
+              artist: d.artist || '',
+              album:  d.album  || 'Registro Gamer'
+            });
+            // Delega ações ao pai (que controla a playlist)
+            var _ms = navigator.mediaSession;
+            _ms.setActionHandler('nexttrack',     function(){ parent.postMessage({type:'ms-action',action:'next'},  '*'); });
+            _ms.setActionHandler('previoustrack', function(){ parent.postMessage({type:'ms-action',action:'prev'},  '*'); });
+            _ms.setActionHandler('play',          function(){ parent.postMessage({type:'ms-action',action:'play'},  '*'); });
+            _ms.setActionHandler('pause',         function(){ parent.postMessage({type:'ms-action',action:'pause'},'*'); });
+            _ms.playbackState = 'playing';
+          } catch(e) {}
+        }
+      }
+      // Position state → barra de progresso na notificação
+      if (d.type === 'positioninfo' && d.duration > 0) {
+        if ('mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration:     d.duration,
+              playbackRate: 1,
+              position:     Math.min(Math.max(0, d.position || 0), d.duration)
+            });
+          } catch(e) {}
+        }
+      }
+      // playbackState sync
+      if (d.type === 'ms-state') {
+        if ('mediaSession' in navigator) {
+          try { navigator.mediaSession.playbackState = d.state; } catch(e) {}
+        }
+      }
       if (d.type === 'pause')   { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
       if (d.type === 'resume')  { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
       if (d.type === 'fadeout') { doFadeOut(); }
