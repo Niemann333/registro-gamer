@@ -1,12 +1,16 @@
 <!-- GADGET MOBILE - Registro Gamer -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Registro Gamer</title>
+  <style>html,body{margin:0;padding:0;background:#000;overflow:hidden;width:100%;height:100%}</style>
+</head>
+<body>
 <script>
 
-function _rgmInit(){
-  if(!/Mobi|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)) return;
-
-  var vp=document.querySelector('meta[name="viewport"]');
-  if(vp){vp.setAttribute('content','width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no');}
-  else{var mv=document.createElement('meta');mv.name='viewport';mv.content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no';document.head.appendChild(mv);}
+(function(){
 
   var style=document.createElement('style');
   style.textContent='html{overflow:hidden!important;}body{width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;}.main-outer,.header-outer,.tabs-outer,#rg-shelf,.widget.Blog,.footer-outer{display:none!important;}#rg-mobile{display:block!important;}';
@@ -491,6 +495,7 @@ function _rgmInit(){
 
 
   })();
-}
-if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_rgmInit);}else{_rgmInit();}
+})();
 </script>
+</body>
+</html>
