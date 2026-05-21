@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Media Session Test</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#000;color:#fff;font-family:monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;padding:20px}
+    h1{font-size:14px;letter-spacing:2px;color:#39ff14;text-align:center}
+    #status{font-size:11px;color:#666;text-align:center;letter-spacing:1px}
+    button{padding:16px 32px;font-size:16px;font-family:monospace;background:#0a2010;border:2px solid #39ff14;color:#39ff14;border-radius:8px;cursor:pointer}
+    button:active{background:#0d3018}
+  </style>
+</head>
+<body>
+  <h1>MEDIA SESSION TEST</h1>
+  <div id="status">Pressione PLAY</div>
+  <button id="btn">▶ PLAY</button>
+
+  <audio id="audio" loop preload="auto">
+    <source src="https://raw.githubusercontent.com/Niemann333/registro-gamer/main/September_Cry_for_You.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    var audio = document.getElementById('audio');
+    var btn   = document.getElementById('btn');
+    var status = document.getElementById('status');
+    var playing = false;
+
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) {
+        status.textContent = 'Media Session não suportado';
+        return;
+      }
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'September (Cry for You)',
+        artist: 'September',
+        album: 'Registro Gamer Test',
+        artwork: [
+          { src: 'https://niemann333.github.io/registro-gamer/chiptune-player/favicon.ico', sizes: '48x48', type: 'image/x-icon' }
+        ]
+      });
+      navigator.mediaSession.setActionHandler('play', function() {
+        audio.play();
+        navigator.mediaSession.playbackState = 'playing';
+        btn.textContent = '⏸ PAUSE';
+        status.textContent = 'TOCANDO — verifique a notificação!';
+      });
+      navigator.mediaSession.setActionHandler('pause', function() {
+        audio.pause();
+        navigator.mediaSession.playbackState = 'paused';
+        btn.textContent = '▶ PLAY';
+        status.textContent = 'Pausado';
+      });
+      navigator.mediaSession.playbackState = 'playing';
+      status.textContent = 'TOCANDO — minimize o Chrome e veja a barra de notificações!';
+    }
+
+    btn.addEventListener('click', function() {
+      if (!playing) {
+        audio.play().then(function() {
+          playing = true;
+          btn.textContent = '⏸ PAUSE';
+          setupMediaSession();
+        }).catch(function(e) {
+          status.textContent = 'Erro: ' + e.message;
+        });
+      } else {
+        audio.pause();
+        playing = false;
+        btn.textContent = '▶ PLAY';
+        navigator.mediaSession.playbackState = 'paused';
+        status.textContent = 'Pausado';
+      }
+    });
+  </script>
+</body>
+</html>
