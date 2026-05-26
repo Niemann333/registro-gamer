@@ -34,42 +34,33 @@
     var _calibrated = false;
     var _silenceDisabled = false;
 
-    // SF2 local
     var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
 
-    // ── Stub requestMIDIAccess para evitar SecurityError em iframe ─────────────
     try {
       if (navigator.requestMIDIAccess) {
         Object.defineProperty(navigator, 'requestMIDIAccess', {
           value: function() {
             return Promise.resolve({
-              inputs: { size: 0, forEach: function(){}, get: function(){}, has: function(){}, keys: function(){ return [][Symbol.iterator](); }, values: function(){ return [][Symbol.iterator](); }, entries: function(){ return [][Symbol.iterator](); } },
-              outputs: { size: 0, forEach: function(){}, get: function(){}, has: function(){}, keys: function(){ return [][Symbol.iterator](); }, values: function(){ return [][Symbol.iterator](); }, entries: function(){ return [][Symbol.iterator](); } },
-              onstatechange: null,
-              sysexEnabled: false
+              inputs:  { size:0, forEach:function(){}, get:function(){}, has:function(){}, keys:function(){ return [][Symbol.iterator](); }, values:function(){ return [][Symbol.iterator](); }, entries:function(){ return [][Symbol.iterator](); } },
+              outputs: { size:0, forEach:function(){}, get:function(){}, has:function(){}, keys:function(){ return [][Symbol.iterator](); }, values:function(){ return [][Symbol.iterator](); }, entries:function(){ return [][Symbol.iterator](); } },
+              onstatechange:null, sysexEnabled:false
             });
-          },
-          writable: true, configurable: true
+          }, writable:true, configurable:true
         });
       }
     } catch(e) {}
 
-    // ── Intercepta fetch ──────────────────────────────────────────────────────
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
       var url = (typeof input === 'string') ? input : (input && input.url) || '';
-      if (url.indexOf('.sf2') !== -1 ||
-          url.indexOf('soundfont') !== -1 ||
-          url.indexOf('gifx.co/soundfonts') !== -1) {
+      if (url.indexOf('.sf2') !== -1 || url.indexOf('soundfont') !== -1 || url.indexOf('gifx.co/soundfonts') !== -1) {
         return _origFetch.call(this, SF2_LOCAL, init);
       }
       return _origFetch.apply(this, arguments);
     };
 
-    // ── AudioContext ──────────────────────────────────────────────────────────
     try {
-      var _OrigCSP = AudioContext.prototype.createScriptProcessor
-                  || AudioContext.prototype.createJavaScriptNode;
+      var _OrigCSP = AudioContext.prototype.createScriptProcessor || AudioContext.prototype.createJavaScriptNode;
       if (_OrigCSP) {
         AudioContext.prototype.createScriptProcessor =
         AudioContext.prototype.createJavaScriptNode = function() {
@@ -97,19 +88,6 @@
                 _gainNode.gain.value = 1.0;
                 _oc.call(_analyser, _gainNode);
                 _oc.call(_gainNode, _ctx.destination);
-                // Rota o áudio para um <audio> element real para manter
-                // a thread de áudio viva no Android com a tela apagada.
-                // O OS trata um HTMLAudioElement como mídia real e não throttlea.
-                try {
-                  var _msd = _ctx.createMediaStreamDestination();
-                  _oc.call(_gainNode, _msd);
-                  var _bgA = document.createElement('audio');
-                  _bgA.srcObject = _msd.stream;
-                  _bgA.volume = 0.001;
-                  _bgA.autoplay = true;
-                  document.body.appendChild(_bgA);
-                  _bgA.play().catch(function(){});
-                } catch(_e) {}
               }
               return _oc.call(this, _analyser, a, b);
             }
@@ -122,7 +100,6 @@
       window.AudioContext = window.webkitAudioContext = _Wrap;
     }
 
-    // ── Visualização ──────────────────────────────────────────────────────────
     var _visTimer = null;
     function startVisTimer() {
       if (_visTimer) return;
@@ -138,7 +115,7 @@
           var step = Math.floor(osc.length / 256);
           for (var i = 0; i < 256; i++) oscOut[i] = osc[i * step];
           for (var i = 0; i < 128; i++) fftOut[i] = fft[Math.floor(i * fft.length / 128)];
-          window.parent.postMessage({ type: 'visdata', osc: oscOut, fft: fftOut }, '*');
+          window.parent.postMessage({ type:'visdata', osc:oscOut, fft:fftOut }, '*');
         } catch(e) {}
       }, 33);
     }
@@ -173,48 +150,29 @@
         if (rms < 0.001) { _silCount++; } else { _silCount = 0; }
         if (_silCount >= 6) {
           _endedSent = true;
-          try { window.parent.postMessage({ type: 'songEnded' }, '*'); } catch(e) {}
+          try { window.parent.postMessage({ type:'songEnded' }, '*'); } catch(e) {}
         }
       } catch(e) {}
     }
 
     function player() {
       try {
-        return window.ChipPlayer && window.ChipPlayer.sequencer
-          ? window.ChipPlayer.sequencer.getPlayer()
-          : null;
+        return window.ChipPlayer && window.ChipPlayer.sequencer ? window.ChipPlayer.sequencer.getPlayer() : null;
       } catch(e) { return null; }
     }
 
-    var songUrl = null, playerReady = false;
-
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('url')) {
-      songUrl = decodeURIComponent(params.get('url'));
-    }
-
-    function seq() {
-      if (window.ChipPlayer && window.ChipPlayer.sequencer) return window.ChipPlayer.sequencer;
-      if (window.ChipPlayer && window.ChipPlayer.playContext) return window.ChipPlayer;
-      return null;
-    }
-    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
-
-    // Extensões que usam amostras PCM (tracker modules + WAV)
+    // Formatos que usam amostras PCM internas — desliga interpolação
     var PCM_EXTS = /\.(mod|s3m|xm|it|wav|669|amf|ams|dbm|dmf|dsm|far|gdm|med|mtm|okt|ptm|stm|ult)$/i;
 
     function setNoInterpolation() {
-      // Tenta desligar interpolação via APIs conhecidas do ChipPlayer/libopenmpt
       setTimeout(function(){
         try {
           var p = player();
           if (!p) return;
-          // libopenmpt style
           if (p.ctl_set) {
             try { p.ctl_set('render.interpolation.quality', '0'); } catch(e) {}
             try { p.ctl_set('interpolation.quality',        '0'); } catch(e) {}
           }
-          // direct property
           if (typeof p.interpolation !== 'undefined') p.interpolation = 0;
           if (p.setInterpolationType) p.setInterpolationType(0);
           if (p.setInterpolation)     p.setInterpolation(0);
@@ -223,42 +181,39 @@
       }, 600);
     }
 
+    var songUrl = null, playerReady = false;
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('url')) songUrl = decodeURIComponent(params.get('url'));
+
+    function seq() {
+      if (window.ChipPlayer && window.ChipPlayer.sequencer) return window.ChipPlayer.sequencer;
+      if (window.ChipPlayer && window.ChipPlayer.playContext) return window.ChipPlayer;
+      return null;
+    }
+    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
+
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
-      _isVGM      = !!isVGM;
-      _ctxStart   = 0;
-      _calibrated = false;
-      _endedSent  = false;
-      _silCount   = 0;
-      _scpFading  = false;
-      _silenceDisabled = false;
+      _isVGM = !!isVGM; _ctxStart = 0; _calibrated = false;
+      _endedSent = false; _silCount = 0; _scpFading = false; _silenceDisabled = false;
 
       setTimeout(function() {
         try {
           var p = window.ChipPlayer.sequencer.player;
           if (p && p.getVoiceName) {
             var names = [], groups = [];
-            for (var i = 0; i < 64; i++) {
-              var n = p.getVoiceName(i);
-              if (!n) break;
-              names.push(n);
-            }
+            for (var i = 0; i < 64; i++) { var n = p.getVoiceName(i); if (!n) break; names.push(n); }
             try { groups = p.getVoiceGroups() || []; } catch(e) {}
             var mask = p.getVoiceMask();
             names = names.slice(0, mask.length);
-            if (names.length > 0) {
-              window.parent.postMessage({ type: 'voices', names: names, mask: mask, groups: groups }, '*');
-            }
+            if (names.length > 0) window.parent.postMessage({ type:'voices', names:names, mask:mask, groups:groups }, '*');
           }
           if (p && p.getNumSubtunes) {
             var num = p.getNumSubtunes();
             if (num > 1) {
               var durs = p.subtuneDurations || [];
-              window.parent.postMessage({
-                type: 'sid-subsongs', count: num,
-                current: p.getSubtune(),
-                durations: Array.prototype.slice.call(durs)
-              }, '*');
+              window.parent.postMessage({ type:'sid-subsongs', count:num, current:p.getSubtune(), durations:Array.prototype.slice.call(durs) }, '*');
             }
           }
         } catch(e) {}
@@ -269,13 +224,10 @@
         if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; startVisTimer(); }
         var posMs = 0, durMs = 0;
         var p = player();
-        if (_isVGM) {
-          posMs = Math.round((_ctx.currentTime - _ctxStart) * 1000);
-        } else {
-          if (p && p.getPositionMs) try { posMs = p.getPositionMs(); } catch(e) {}
-        }
+        if (_isVGM) { posMs = Math.round((_ctx.currentTime - _ctxStart) * 1000); }
+        else { if (p && p.getPositionMs) try { posMs = p.getPositionMs(); } catch(e) {} }
         if (p && p.getDurationMs) try { durMs = p.getDurationMs(); } catch(e) {}
-        try { window.parent.postMessage({ type: 'position', posMs: posMs, durMs: durMs }, '*'); } catch(e) {}
+        try { window.parent.postMessage({ type:'position', posMs:posMs, durMs:durMs }, '*'); } catch(e) {}
         checkSilence();
       }, 250);
     }
@@ -310,11 +262,7 @@
       if (d.type === 'mediainfo') {
         if ('mediaSession' in navigator) {
           try {
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title:  d.title  || '',
-              artist: d.artist || '',
-              album:  d.album  || 'Registro Gamer'
-            });
+            navigator.mediaSession.metadata = new MediaMetadata({ title:d.title||'', artist:d.artist||'', album:d.album||'Registro Gamer' });
             var _ms = navigator.mediaSession;
             _ms.setActionHandler('nexttrack',     function(){ parent.postMessage({type:'ms-action',action:'next'},  '*'); });
             _ms.setActionHandler('previoustrack', function(){ parent.postMessage({type:'ms-action',action:'prev'},  '*'); });
@@ -327,18 +275,12 @@
       if (d.type === 'positioninfo' && d.duration > 0) {
         if ('mediaSession' in navigator) {
           try {
-            navigator.mediaSession.setPositionState({
-              duration:     d.duration,
-              playbackRate: 1,
-              position:     Math.min(Math.max(0, d.position || 0), d.duration)
-            });
+            navigator.mediaSession.setPositionState({ duration:d.duration, playbackRate:1, position:Math.min(Math.max(0, d.position||0), d.duration) });
           } catch(e) {}
         }
       }
       if (d.type === 'ms-state') {
-        if ('mediaSession' in navigator) {
-          try { navigator.mediaSession.playbackState = d.state; } catch(e) {}
-        }
+        if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = d.state; } catch(e) {} }
       }
       if (d.type === 'pause')   { try { if (_ctx && _ctx.state === 'running')   _ctx.suspend(); } catch(e) {} }
       if (d.type === 'resume')  { try { if (_ctx && _ctx.state === 'suspended') _ctx.resume();  } catch(e) {} }
@@ -350,11 +292,7 @@
     });
 
     var _playRetries = 0;
-    function schedulePlay() {
-      _playRetries = 0;
-      if (seq()) { startPlay(); }
-      else { _retryPlay(); }
-    }
+    function schedulePlay() { _playRetries = 0; if (seq()) startPlay(); else _retryPlay(); }
     function _retryPlay() {
       if (_playRetries++ > 20) { setStatus('Player não pronto.', 'error'); return; }
       setTimeout(function() { if (seq()) startPlay(); else _retryPlay(); }, 300);
@@ -368,11 +306,9 @@
       try { n = decodeURIComponent(n); } catch(e) {}
       setStatus('\u266A ' + n, 'playing');
       try {
-        if (cp && cp.sequencer) {
-          cp.sequencer.playSonglist([songUrl]);
-        } else if (cp && cp.playContext) {
-          cp.playContext.call(cp, [{ url: songUrl, title: n }]);
-        } else { _retryPlay(); return; }
+        if (cp && cp.sequencer) { cp.sequencer.playSonglist([songUrl]); }
+        else if (cp && cp.playContext) { cp.playContext.call(cp, [{ url:songUrl, title:n }]); }
+        else { _retryPlay(); return; }
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
         if (PCM_EXTS.test(songUrl)) setNoInterpolation();
@@ -399,7 +335,7 @@
           tries++;
           if (seq()) {
             clearInterval(iv); playerReady = true;
-            try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(e) {}
+            try { window.parent.postMessage({ type:'ready' }, '*'); } catch(e) {}
             if (songUrl) schedulePlay(); else setStatus('Pronto.', '');
           } else if (tries > 100) { clearInterval(iv); setStatus('Timeout.', 'error'); }
         }, 300);
