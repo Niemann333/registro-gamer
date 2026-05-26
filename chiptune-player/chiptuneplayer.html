@@ -97,6 +97,19 @@
                 _gainNode.gain.value = 1.0;
                 _oc.call(_analyser, _gainNode);
                 _oc.call(_gainNode, _ctx.destination);
+                // Rota o áudio para um <audio> element real para manter
+                // a thread de áudio viva no Android com a tela apagada.
+                // O OS trata um HTMLAudioElement como mídia real e não throttlea.
+                try {
+                  var _msd = _ctx.createMediaStreamDestination();
+                  _oc.call(_gainNode, _msd);
+                  var _bgA = document.createElement('audio');
+                  _bgA.srcObject = _msd.stream;
+                  _bgA.volume = 0.001;
+                  _bgA.autoplay = true;
+                  document.body.appendChild(_bgA);
+                  _bgA.play().catch(function(){});
+                } catch(_e) {}
               }
               return _oc.call(this, _analyser, a, b);
             }
