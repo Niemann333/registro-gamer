@@ -38,8 +38,6 @@
     var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
 
     // ── Stub requestMIDIAccess para evitar SecurityError em iframe ─────────────
-    // O bundle usa MIDI API → falha em iframe → stub retorna dispositivos vazios
-    // assim o bundle cai no fallback SF2
     try {
       if (navigator.requestMIDIAccess) {
         Object.defineProperty(navigator, 'requestMIDIAccess', {
@@ -60,15 +58,11 @@
     var _origFetch = window.fetch;
     window.fetch = function(input, init) {
       var url = (typeof input === 'string') ? input : (input && input.url) || '';
-
-      // Redireciona qualquer pedido de soundfont para o SF2 local
       if (url.indexOf('.sf2') !== -1 ||
           url.indexOf('soundfont') !== -1 ||
           url.indexOf('gifx.co/soundfonts') !== -1) {
         return _origFetch.call(this, SF2_LOCAL, init);
       }
-
-      // Permite TUDO o resto (inclusive chiptune.app — necessário para MIDI)
       return _origFetch.apply(this, arguments);
     };
 
@@ -78,8 +72,11 @@
                   || AudioContext.prototype.createJavaScriptNode;
       if (_OrigCSP) {
         AudioContext.prototype.createScriptProcessor =
-        AudioContext.prototype.createJavaScriptNode = function() {
-          var node = _OrigCSP.apply(this, arguments);
+        AudioContext.prototype.createJavaScriptNode = function(bufferSize, numIn, numOut) {
+          // Força buffer de 8192 amostras (~186ms a 44100Hz) para sobreviver
+          // ao throttle do Android Chrome quando a tela está apagada.
+          // O bundle original usa buffer pequeno (~512) que esgota com JS throttleado.
+          var node = _OrigCSP.call(this, 8192, numIn, numOut);
           _scp = node;
           return node;
         };
@@ -277,7 +274,6 @@
       if (d.type === 'volume' && typeof d.level === 'number') {
         if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
       }
-      // Metadados vindos do gadget → atualiza Media Session do iframe (tem o áudio real)
       if (d.type === 'mediainfo') {
         if ('mediaSession' in navigator) {
           try {
@@ -286,7 +282,6 @@
               artist: d.artist || '',
               album:  d.album  || 'Registro Gamer'
             });
-            // Delega ações ao pai (que controla a playlist)
             var _ms = navigator.mediaSession;
             _ms.setActionHandler('nexttrack',     function(){ parent.postMessage({type:'ms-action',action:'next'},  '*'); });
             _ms.setActionHandler('previoustrack', function(){ parent.postMessage({type:'ms-action',action:'prev'},  '*'); });
@@ -296,7 +291,6 @@
           } catch(e) {}
         }
       }
-      // Position state → barra de progresso na notificação
       if (d.type === 'positioninfo' && d.duration > 0) {
         if ('mediaSession' in navigator) {
           try {
@@ -308,7 +302,6 @@
           } catch(e) {}
         }
       }
-      // playbackState sync
       if (d.type === 'ms-state') {
         if ('mediaSession' in navigator) {
           try { navigator.mediaSession.playbackState = d.state; } catch(e) {}
