@@ -72,11 +72,8 @@
                   || AudioContext.prototype.createJavaScriptNode;
       if (_OrigCSP) {
         AudioContext.prototype.createScriptProcessor =
-        AudioContext.prototype.createJavaScriptNode = function(bufferSize, numIn, numOut) {
-          // Força buffer de 8192 amostras (~186ms a 44100Hz) para sobreviver
-          // ao throttle do Android Chrome quando a tela está apagada.
-          // O bundle original usa buffer pequeno (~512) que esgota com JS throttleado.
-          var node = _OrigCSP.call(this, 8192, numIn, numOut);
+        AudioContext.prototype.createJavaScriptNode = function() {
+          var node = _OrigCSP.apply(this, arguments);
           _scp = node;
           return node;
         };
