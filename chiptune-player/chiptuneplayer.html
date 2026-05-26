@@ -200,6 +200,29 @@
     }
     function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
 
+    // Extensões que usam amostras PCM (tracker modules + WAV)
+    var PCM_EXTS = /\.(mod|s3m|xm|it|wav|669|amf|ams|dbm|dmf|dsm|far|gdm|med|mtm|okt|ptm|stm|ult)$/i;
+
+    function setNoInterpolation() {
+      // Tenta desligar interpolação via APIs conhecidas do ChipPlayer/libopenmpt
+      setTimeout(function(){
+        try {
+          var p = player();
+          if (!p) return;
+          // libopenmpt style
+          if (p.ctl_set) {
+            try { p.ctl_set('render.interpolation.quality', '0'); } catch(e) {}
+            try { p.ctl_set('interpolation.quality',        '0'); } catch(e) {}
+          }
+          // direct property
+          if (typeof p.interpolation !== 'undefined') p.interpolation = 0;
+          if (p.setInterpolationType) p.setInterpolationType(0);
+          if (p.setInterpolation)     p.setInterpolation(0);
+          if (p.setResampleMode)      p.setResampleMode(0);
+        } catch(e) {}
+      }, 600);
+    }
+
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
       _isVGM      = !!isVGM;
@@ -352,6 +375,7 @@
         } else { _retryPlay(); return; }
         var isVGM = /\.(vgm|vgz)$/i.test(songUrl);
         startPoller(isVGM);
+        if (PCM_EXTS.test(songUrl)) setNoInterpolation();
       } catch(ex) {
         if (_playRetries < 5) { setStatus('Tentando...', ''); _retryPlay(); }
         else { setStatus('Erro: ' + ex.message, 'error'); }
