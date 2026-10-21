@@ -33,6 +33,16 @@
     var _isVGM     = false;
     var _calibrated = false;
     var _silenceDisabled = false;
+    // Detector de fim por silêncio — com carência para intros silenciosas e carregamento lento
+    var _heardSound = false;   // já tocou som de verdade nesta faixa?
+    var _silRef     = 0;       // referência de tempo (segundos do AudioContext)
+    var SIL_GRACE   = 4;       // ignora silêncio nos primeiros 4 s
+    var SIL_POLLS   = 12;      // 12 × 250 ms = 3 s de silêncio contínuo
+    var SIL_NOSOUND = 15;      // se nunca tocar nada em 15 s, considera faixa vazia
+    function resetSilence() {
+      _endedSent = false; _silCount = 0; _heardSound = false;
+      _silRef = _ctx ? _ctx.currentTime : 0;
+    }
 
     var SF2_LOCAL = 'https://niemann333.github.io/registro-gamer/chiptune-player/soundfonts/gmgsx-plus.sf2';
 
@@ -147,8 +157,15 @@
         var rms = 0;
         for (var i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
         rms = Math.sqrt(rms / buf.length);
-        if (rms < 0.001) { _silCount++; } else { _silCount = 0; }
-        if (_silCount >= 6) {
+
+        if (rms < 0.001) { _silCount++; } else { _silCount = 0; _heardSound = true; }
+
+        var elapsed = _ctx.currentTime - _silRef;   // não conta enquanto pausado
+        if (elapsed < SIL_GRACE) return;            // período de carência
+
+        var fim = (_heardSound && _silCount >= SIL_POLLS) ||
+                  (!_heardSound && elapsed >= SIL_NOSOUND);
+        if (fim) {
           _endedSent = true;
           try { window.parent.postMessage({ type:'songEnded' }, '*'); } catch(e) {}
         }
@@ -221,7 +238,7 @@
 
       _posTimer = setInterval(function() {
         if (!_ctx || _ctx.state !== 'running') return;
-        if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; startVisTimer(); }
+        if (!_calibrated) { _calibrated = true; _ctxStart = _ctx.currentTime; resetSilence(); startVisTimer(); }
         var posMs = 0, durMs = 0;
         var p = player();
         if (_isVGM) { posMs = Math.round((_ctx.currentTime - _ctxStart) * 1000); }
@@ -241,9 +258,11 @@
       }
       if (d.type === 'sid-subsong' && typeof d.index === 'number') {
         try { if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
+        resetSilence();
       }
       if (d.type === 'subsong' && typeof d.index === 'number') {
         try { if (window.ChipPlayer.sequencer) window.ChipPlayer.sequencer.playSubtune(d.index); } catch(e) {}
+        resetSilence();
       }
       if (d.type === 'voicemask' && d.mask) {
         try {
@@ -288,6 +307,7 @@
       if (d.type === 'seek' && typeof d.ms === 'number') {
         var p = player();
         if (p && p.seekMs) try { p.seekMs(d.ms); if (_ctx) _ctxStart = _ctx.currentTime - d.ms / 1000; } catch(e) {}
+        resetSilence();
       }
     });
 
