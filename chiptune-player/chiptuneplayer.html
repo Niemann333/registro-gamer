@@ -96,8 +96,18 @@
                 _linked = true;
                 _gainNode = _ctx.createGain();
                 _gainNode.gain.value = 1.0;
+                // Limitador suave: linear até 0.8, depois arredonda até 1.0 (evita estalo/clipping com o auto volume)
+                var _lim = _ctx.createWaveShaper();
+                var N = 4096, curve = new Float32Array(N);
+                for (var k = 0; k < N; k++) {
+                  var x = k * 2 / (N - 1) - 1, ax = Math.abs(x), T = 0.8;
+                  var y = ax <= T ? ax : T + (1 - T) * Math.tanh((ax - T) / (1 - T));
+                  curve[k] = x < 0 ? -y : y;
+                }
+                _lim.curve = curve; _lim.oversample = '2x';
                 _oc.call(_analyser, _gainNode);
-                _oc.call(_gainNode, _ctx.destination);
+                _oc.call(_gainNode, _lim);
+                _oc.call(_lim, _ctx.destination);
               }
               return _oc.call(this, _analyser, a, b);
             }
@@ -276,7 +286,11 @@
         _silenceDisabled = !!d.hasMute;
       }
       if (d.type === 'volume' && typeof d.level === 'number') {
-        if (_gainNode) _gainNode.gain.value = Math.max(0, d.level);
+        if (_gainNode) {
+          var _v = Math.max(0, d.level);
+          try { _gainNode.gain.setTargetAtTime(_v, _ctx.currentTime, 0.04); }  // transição suave, sem "zipper"
+          catch(e) { _gainNode.gain.value = _v; }
+        }
       }
       if (d.type === 'mediainfo') {
         if ('mediaSession' in navigator) {
