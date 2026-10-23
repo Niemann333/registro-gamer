@@ -23,6 +23,7 @@
 (function () {
   'use strict';
 
+  var RG_VERSION = '4';
   var BASE = location.href.split('?')[0].replace(/[^\/]*$/, '');
   self.RG_PLAYER_BASE = BASE;
   window.WASM_SEARCH_PATH = BASE;
@@ -61,7 +62,7 @@
   var statusEl = null;
   function status(t, cls) {
     if (!statusEl) statusEl = document.getElementById('status');
-    if (statusEl) { statusEl.textContent = t; statusEl.className = cls || ''; }
+    if (statusEl) { statusEl.textContent = 'v' + RG_VERSION + ' ' + t; statusEl.className = cls || ''; }
   }
   function loadScript(src) {
     return new Promise(function (res, rej) {
