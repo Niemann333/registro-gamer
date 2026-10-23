@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  var RG_VERSION = '4';
+  var RG_VERSION = '5';
   var BASE = location.href.split('?')[0].replace(/[^\/]*$/, '');
   self.RG_PLAYER_BASE = BASE;
   window.WASM_SEARCH_PATH = BASE;
@@ -62,7 +62,7 @@
   var statusEl = null;
   function status(t, cls) {
     if (!statusEl) statusEl = document.getElementById('status');
-    if (statusEl) { statusEl.textContent = 'v' + RG_VERSION + ' ' + t; statusEl.className = cls || ''; }
+    if (statusEl) { statusEl.textContent = t; statusEl.className = cls || ''; }
   }
   function loadScript(src) {
     return new Promise(function (res, rej) {
@@ -244,7 +244,7 @@
       t.renderedMs += ms;
       if (!silent) { t.heard = true; t.silentMs = 0; } else t.silentMs += ms;
       // KSS: muitas faixas do arquivo são mudas — pula para a próxima que tiver som
-      if (t.engine.type === 'nez' && !t.heard && t.renderedMs > 2500 && t.engine.subtune() < 60) {
+      if (t.engine.type === 'nez' && !t.overrideMs && !t.heard && t.renderedMs > 2500 && t.engine.subtune() < 60) {
         ringPush(l, r);
         t.switching = true;
         Promise.resolve(t.engine.playSubtune(t.engine.subtune() + 1)).then(function () {
@@ -597,7 +597,7 @@
   }
 
   var pendingSeek = null;     // seek pedido enquanto a faixa ainda carregava
-  function loadTrack(url, loops, sub) {
+  function loadTrack(url, loops, sub, overrideMs) {
     var token = ++loadToken;
     pendingSeek = null;
     ensureCtx(); resumeCtx(); startVis();
@@ -641,6 +641,7 @@
     }).then(function () {
       if (token !== loadToken) throw 'stale';
       var t = newTrackState(engine, url, loops);
+      t.overrideMs = overrideMs > 0 ? overrideMs : 0;
       cur = t;
       if (engine.kind === 'ring') {
         if (sub && engine.numSubtunes() > 1) engine.playSubtune(sub);
@@ -673,6 +674,9 @@
   function applyDuration() {
     var t = cur; if (!t) return;
     var info = t.engine.durInfo(t.loops);
+    if (t.overrideMs > 0) {          // duração vinda do mapa de subfaixas (.m3u)
+      info = { durMs: t.overrideMs * Math.max(1, t.loops), own: true, report: t.overrideMs * Math.max(1, t.loops) + FADE_MS, fadeMs: FADE_MS };
+    }
     t.durMs = info.durMs || 0;
     t.ownDuration = !!info.own;
     t.reportDurMs = info.report || 0;
@@ -695,7 +699,7 @@
     if (!d || typeof d !== 'object' || !d.type) return;
     switch (d.type) {
       case 'load':
-        if (d.url) loadTrack(d.url, Math.max(1, d.loops || 1), d.sub || 0);
+        if (d.url) loadTrack(d.url, Math.max(1, d.loops || 1), d.sub || 0, d.durMs || 0);
         break;
       case 'pause':
         try { if (ctx && ctx.state === 'running') ctx.suspend(); } catch (x) {}
@@ -723,6 +727,7 @@
       case 'subtune':
         if (cur && typeof d.index === 'number') {
           var tt = cur;
+          tt.overrideMs = d.durMs > 0 ? d.durMs : 0;
           tt.fading = false; tt.endFrame = -1; tt.endedSent = false; tt.heard = false; tt.silentMs = 0; tt.renderedMs = 0; tt.clockMs = 0;
           setFade(1, 0); resumeCtx();
           Promise.resolve(tt.engine.playSubtune(d.index)).then(function () {
