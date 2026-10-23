@@ -1,0 +1,9 @@
+Como o chip-players.js foi gerado (só é preciso se um dia quiser recompilar):
+
+  git clone --depth 1 https://github.com/mmontag/chip-player-js.git
+  npm init -y && npm install esbuild auto-bind@5 pathe events lodash redaxios fili utf-8
+  node build.mjs          -> out/chip-players.js  (copiar para chiptune-player/)
+
+São os players do Chip Player JS (Matt Montag, licença GPL-3.0) empacotados sem a interface
+do site. O motor (rg-core.js + rg-core.wasm) é o mesmo chip-core que já estava em static/js/,
+só com outro nome.
