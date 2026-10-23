@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  var RG_VERSION = '5';
+  var RG_VERSION = '6';
   var BASE = location.href.split('?')[0].replace(/[^\/]*$/, '');
   self.RG_PLAYER_BASE = BASE;
   window.WASM_SEARCH_PATH = BASE;
@@ -109,8 +109,10 @@
     limiter.curve = curve; limiter.oversample = '2x';
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.8;
-    bus.connect(fadeGain); fadeGain.connect(volGain); volGain.connect(limiter);
-    limiter.connect(analyser); analyser.connect(ctx.destination);
+    bus.connect(fadeGain); fadeGain.connect(volGain); volGain.connect(limiter); limiter.connect(ctx.destination);
+    // O analisador mede o som ANTES do volume: o auto volume do gadget precisa do nível original da música
+    // (se medisse depois, ele "corrigiria" o próprio ganho e o volume que você escolheu)
+    fadeGain.connect(analyser);
     return ctx;
   }
   function resumeCtx() { try { if (ctx && ctx.state !== 'running') ctx.resume(); } catch (e) {} }
