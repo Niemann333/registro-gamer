@@ -523,13 +523,19 @@
   // puxamos as amostras dele para o mesmo buffer de ~1 s dos outros formatos.
   function hookWothkePlayer() {
     var p = window.player; if (!p) return;
-    if (p._rgHooked) return;
-    p._rgHooked = true;
-    try { p._producerNode.onaudioprocess = null; } catch (e) {}
-    try { p._producerNode.disconnect(); } catch (e) {}
-    try { p._gainNode.disconnect(); } catch (e) {}
-    try { if (p._tickerNode) p._tickerNode.disconnect(); } catch (e) {}
+    // O ScriptProcessor dele só é criado no primeiro loadMusicFromURL: desliga sempre que existir um novo
+    var node = p._producerNode;
+    if (node && !node._rgOff) {
+      node._rgOff = true;
+      try { node.onaudioprocess = null; } catch (e) {}
+      try { node.disconnect(); } catch (e) {}
+    }
+    var gn = p._gainNode;
+    if (gn && !gn._rgOff) { gn._rgOff = true; try { gn.disconnect(); } catch (e) {} }
+    var tk = p._tickerNode;
+    if (tk && !tk._rgOff) { tk._rgOff = true; try { tk.onaudioprocess = null; tk.disconnect(); } catch (e) {} }
   }
+
   function makeWothkeEngine(type) {
     var opts = {}, track = 0, durMs = 0, fadeMs = FADE_MS, ended = false;
     var L = null, R = null;
@@ -544,7 +550,9 @@
         ended = false;
         opts = type === 'nez' ? { track: track, timeout: 0 } : {};
         wothkeEndCb = function () { ended = true; };
-        return ScriptNodePlayer.loadMusicFromURL(url, opts).then(function () {
+        var pr = ScriptNodePlayer.loadMusicFromURL(url, opts);
+        hookWothkePlayer();          // o processador dele acabou de ser criado: desliga já
+        return pr.then(function () {
           var p = window.player;
           hookWothkePlayer();
           try { p.setVolume(1); } catch (e) {}
