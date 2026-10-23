@@ -1,0 +1,66 @@
+name: Analisar volume dos chiptunes
+
+# Roda sozinho quando você envia chiptunes novos para a pasta Chiptunes/,
+# e também pode ser disparado à mão na aba Actions (opção "reanalisar tudo").
+on:
+  push:
+    paths:
+      - 'Chiptunes/**'
+      - 'tools/analisar_ganhos.py'
+  workflow_dispatch:
+    inputs:
+      tudo:
+        description: 'Reanalisar todas as faixas (não só as novas)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ganhos-chiptune
+  cancel-in-progress: false
+
+jobs:
+  analisar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar ffmpeg, numpy e scipy
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg python3-numpy python3-scipy cmake zlib1g-dev
+          ffmpeg -hide_banner -formats | grep -E "libgme|libopenmpt"
+
+      - name: Cache do vgm2wav
+        id: cache-vgm
+        uses: actions/cache@v4
+        with:
+          path: ~/vgm2wav
+          key: vgm2wav-libvgm-v1
+
+      - name: Compilar vgm2wav (libvgm)
+        if: steps.cache-vgm.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/ValleyBell/libvgm.git /tmp/libvgm
+          cmake -S /tmp/libvgm -B /tmp/libvgm/build -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_PLAYER=OFF -DBUILD_VGM2WAV=ON \
+            -DAUDIODRV_LIBAO=OFF -DAUDIODRV_PULSE=OFF -DAUDIODRV_ALSA=OFF
+          cmake --build /tmp/libvgm/build -j 4
+          mkdir -p ~/vgm2wav && cp /tmp/libvgm/build/bin/vgm2wav ~/vgm2wav/
+
+      - name: Analisar faixas
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.tudo }}" = "true" ]; then ARGS="--tudo"; fi
+          python3 tools/analisar_ganhos.py --vgm2wav ~/vgm2wav/vgm2wav $ARGS
+
+      - name: Salvar ganhos.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chiptune-player/ganhos.json
+          git diff --staged --quiet && echo "Nada mudou" || \
+            (git commit -m "ganhos: atualiza volume dos chiptunes" && git pull --rebase && git push)
