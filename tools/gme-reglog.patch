@@ -1,0 +1,198 @@
+diff --git a/gme/Ay_Emu.cpp b/gme/Ay_Emu.cpp
+index af290fb..a4ebc89 100644
+--- a/gme/Ay_Emu.cpp
++++ b/gme/Ay_Emu.cpp
+@@ -337,6 +337,7 @@ enable_cpc:
+ void ay_cpu_out( Ay_Cpu* cpu, cpu_time_t time, unsigned addr, int data )
+ {
+ 	Ay_Emu& emu = STATIC_CAST(Ay_Emu&,*cpu);
++	RG_W( 0x10000 | (addr & 0xFFFF), data );
+ 
+ 	if ( (addr & 0xFF) == 0xFE && !emu.cpc_mode )
+ 	{
+@@ -379,6 +380,7 @@ blargg_err_t Ay_Emu::run_clocks( blip_time_t& duration, int )
+ 
+ 		if ( time() >= next_play )
+ 		{
++			RG_F( next_play );
+ 			next_play += play_period;
+ 
+ 			if ( r.iff1 )
+diff --git a/gme/Classic_Emu.cpp b/gme/Classic_Emu.cpp
+index 518dd9b..7b1b5db 100644
+--- a/gme/Classic_Emu.cpp
++++ b/gme/Classic_Emu.cpp
+@@ -117,6 +117,7 @@ blargg_err_t Classic_Emu::play_( long count, sample_t* out )
+ 			int msec = buf->length();
+ 			blip_time_t clocks_emulated = (int32_t) msec * clock_rate_ / 1000;
+ 			RETURN_ERR( run_clocks( clocks_emulated, msec ) );
++			rg_rl_base += clocks_emulated; rg_rl_rate = clock_rate_;
+ 			assert( clocks_emulated );
+ 			buf->end_frame( clocks_emulated );
+ 		}
+diff --git a/gme/Classic_Emu.h b/gme/Classic_Emu.h
+index ea8ff36..434bdb8 100644
+--- a/gme/Classic_Emu.h
++++ b/gme/Classic_Emu.h
+@@ -115,6 +115,7 @@ public:
+ 	}
+ };
+ 
++#include "rg_reglog.h"
+ #ifndef GME_APU_HOOK
+ 	#define GME_APU_HOOK( emu, addr, data ) ((void) 0)
+ #endif
+diff --git a/gme/Gbs_Emu.cpp b/gme/Gbs_Emu.cpp
+index 3e2a7ea..9378e87 100644
+--- a/gme/Gbs_Emu.cpp
++++ b/gme/Gbs_Emu.cpp
+@@ -262,6 +262,7 @@ blargg_err_t Gbs_Emu::run_clocks( blip_time_t& duration, int )
+ 
+ 				if ( cpu_time < next_play )
+ 					cpu_time = next_play;
++				RG_F( cpu_time );
+ 				next_play += play_period;
+ 				cpu_jsr( get_le16( header_.play_addr ) );
+ 				GME_FRAME_HOOK( this );
+diff --git a/gme/Kss_Emu.cpp b/gme/Kss_Emu.cpp
+index a683418..e93e4a3 100644
+--- a/gme/Kss_Emu.cpp
++++ b/gme/Kss_Emu.cpp
+@@ -314,12 +314,14 @@ void Kss_Emu::cpu_write( unsigned addr, int data )
+ void kss_cpu_write( Kss_Cpu* cpu, unsigned addr, int data )
+ {
+ 	*cpu->write( addr ) = data;
++	if ( (addr & STATIC_CAST(Kss_Emu&,*cpu).scc_enabled) == 0x8000 && ((addr & 0xDFFF) ^ 0x9800) < 0x100 ) RG_W( addr, data );
+ 	if ( (addr & STATIC_CAST(Kss_Emu&,*cpu).scc_enabled) == 0x8000 )
+ 		STATIC_CAST(Kss_Emu&,*cpu).cpu_write( addr, data );
+ }
+ 
+ void kss_cpu_out( Kss_Cpu* cpu, cpu_time_t time, unsigned addr, int data )
+ {
++	RG_W( 0x10000 | (addr & 0xFF), data );
+ 	data &= 0xFF;
+ 	Kss_Emu& emu = STATIC_CAST(Kss_Emu&,*cpu);
+ 	switch ( addr & 0xFF )
+@@ -392,6 +394,7 @@ blargg_err_t Kss_Emu::run_clocks( blip_time_t& duration, int )
+ 
+ 		if ( time() >= next_play )
+ 		{
++			RG_F( next_play );
+ 			next_play += play_period;
+ 			if ( r.pc == idle_addr )
+ 			{
+diff --git a/gme/Music_Emu.cpp b/gme/Music_Emu.cpp
+index c42f9ad..0002ed7 100644
+--- a/gme/Music_Emu.cpp
++++ b/gme/Music_Emu.cpp
+@@ -1,6 +1,7 @@
+ // Game_Music_Emu https://bitbucket.org/mpyne/game-music-emu/
+ 
+ #include "Music_Emu.h"
++#include "rg_reglog.h"
+ 
+ #include "Multi_Buffer.h"
+ #include <string.h>
+@@ -182,6 +183,7 @@ blargg_err_t Music_Emu::start_track( int track )
+ 				break;
+ 		}
+ 
++		rg_rl_skip = emu_time - buf_remain;
+ 		emu_time        = buf_remain;
+ 		out_time        = 0;
+ 		out_time_scaled = 0;
+diff --git a/gme/Nsf_Emu.cpp b/gme/Nsf_Emu.cpp
+index 796de61..00affd8 100644
+--- a/gme/Nsf_Emu.cpp
++++ b/gme/Nsf_Emu.cpp
+@@ -646,6 +646,7 @@ blargg_err_t Nsf_Emu::run_clocks( blip_time_t& duration, int )
+ 
+ 		if ( time() >= next_play )
+ 		{
++			RG_F( next_play );
+ 			nes_time_t period = (play_period + play_extra) / clock_divisor;
+ 			play_extra = play_period - period * clock_divisor;
+ 			next_play += period;
+diff --git a/gme/Sap_Emu.cpp b/gme/Sap_Emu.cpp
+index c1a2c87..f6e2c55 100644
+--- a/gme/Sap_Emu.cpp
++++ b/gme/Sap_Emu.cpp
+@@ -423,6 +423,7 @@ blargg_err_t Sap_Emu::run_clocks( blip_time_t& duration, int )
+ 			if ( next_play <= duration )
+ 			{
+ 				set_time( next_play );
++				RG_F( next_play );
+ 				next_play += play_period();
+ 				call_play();
+ 				GME_FRAME_HOOK( this );
+diff --git a/gme/gb_cpu_io.h b/gme/gb_cpu_io.h
+index 8bd69aa..01142e5 100644
+--- a/gme/gb_cpu_io.h
++++ b/gme/gb_cpu_io.h
+@@ -19,6 +19,7 @@ int Gbs_Emu::cpu_read( gb_addr_t addr )
+ 
+ void Gbs_Emu::cpu_write( gb_addr_t addr, int data )
+ {
++	if ( (addr >= 0xFF10 && addr < 0xFF40) || addr == 0xFF06 || addr == 0xFF07 ) RG_W( addr, data );
+ 	unsigned offset = addr - ram_addr;
+ 	if ( offset <= 0xFFFF - ram_addr )
+ 	{
+diff --git a/gme/nes_cpu_io.h b/gme/nes_cpu_io.h
+index 6f8b08f..56c7b83 100644
+--- a/gme/nes_cpu_io.h
++++ b/gme/nes_cpu_io.h
+@@ -55,6 +55,7 @@ exit:
+ 
+ void Nsf_Emu::cpu_write( nes_addr_t addr, int data )
+ {
++	if ( (addr >= 0x4000 && addr < 0x6000) || addr >= 0x8000 ) RG_W( addr, data );
+ 	{
+ 		nes_addr_t offset = addr ^ sram_addr;
+ 		if ( offset < sizeof sram )
+diff --git a/gme/rg_reglog.cpp b/gme/rg_reglog.cpp
+new file mode 100644
+index 0000000..b421273
+--- /dev/null
++++ b/gme/rg_reglog.cpp
+@@ -0,0 +1,8 @@
++#include "rg_reglog.h"
++extern "C" {
++void (*rg_rl_w)(unsigned, int) = 0;
++void (*rg_rl_f)(long) = 0;
++long long rg_rl_base = 0;
++long rg_rl_rate = 0;
++long rg_rl_skip = 0;
++}
+diff --git a/gme/rg_reglog.h b/gme/rg_reglog.h
+new file mode 100644
+index 0000000..fbb9eb8
+--- /dev/null
++++ b/gme/rg_reglog.h
+@@ -0,0 +1,12 @@
++#ifndef RG_REGLOG_H
++#define RG_REGLOG_H
++extern "C" {
++extern void (*rg_rl_w)(unsigned addr, int data);
++extern void (*rg_rl_f)(long t);
++extern long long rg_rl_base;
++extern long rg_rl_rate;
++extern long rg_rl_skip;
++}
++#define RG_W(a,d) do{ if(rg_rl_w) rg_rl_w((unsigned)(a),(int)(d)&0xFF); }while(0)
++#define RG_F(t) do{ if(rg_rl_f) rg_rl_f((long)(t)); }while(0)
++#endif
+diff --git a/gme/sap_cpu_io.h b/gme/sap_cpu_io.h
+index 3103ecd..71a09b2 100644
+--- a/gme/sap_cpu_io.h
++++ b/gme/sap_cpu_io.h
+@@ -9,7 +9,10 @@ void Sap_Emu::cpu_write( sap_addr_t addr, int data )
+ {
+ 	mem.ram [addr] = data;
+ 	if ( (addr >> 8) == 0xD2 )
++	{
++		RG_W( addr, data );
+ 		cpu_write_( addr, data );
++	}
+ }
+ 
+ #ifdef NDEBUG

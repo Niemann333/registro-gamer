@@ -1,0 +1,15 @@
+diff --git a/src/sidemu.cpp b/src/sidemu.cpp
+index 2ff4951..cc43cd7 100644
+--- a/src/sidemu.cpp
++++ b/src/sidemu.cpp
+@@ -29,8 +29,10 @@ const char sidemu::ERR_UNSUPPORTED_FREQ[] = "Unable to set desired output freque
+ const char sidemu::ERR_INVALID_SAMPLING[] = "Invalid sampling method.";
+ const char sidemu::ERR_INVALID_CHIP[]     = "Invalid chip model.";
+ 
++extern "C" { void (*rg_sid_w)(unsigned long long clk, int addr, int data) = 0; }
+ void sidemu::writeReg(uint_least8_t addr, uint8_t data)
+ {
++    if (rg_sid_w && eventScheduler) rg_sid_w((unsigned long long)eventScheduler->getTime(EVENT_CLOCK_PHI1), addr, data);
+     switch (addr)
+     {
+     case 0x04:
