@@ -14,7 +14,10 @@ on:
       - 'Chiptunes/**.ay'
       - 'Chiptunes/**.sid'
       - 'tools/gerar_loops.py'
-      - 'tools/rgloop/**'
+      - 'tools/compilar.sh'
+      - 'tools/rgloop.cpp'
+      - 'tools/gme-reglog.patch'
+      - 'tools/sidplayfp-reglog.patch'
   workflow_dispatch:
     inputs:
       tudo:
@@ -46,12 +49,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/rgloop-bin
-          key: rgloop-${{ hashFiles('tools/rgloop/**') }}
+          key: rgloop-${{ hashFiles('tools/compilar.sh', 'tools/rgloop.cpp', 'tools/gme-reglog.patch', 'tools/sidplayfp-reglog.patch') }}
 
       - name: Compilar rgloop (Game_Music_Emu + libsidplayfp com registro de escritas)
         if: steps.cache-rgloop.outputs.cache-hit != 'true'
         run: |
-          sh tools/rgloop/compilar.sh /tmp/rgloop-build
+          sh tools/compilar.sh /tmp/rgloop-build
           mkdir -p ~/rgloop-bin && cp /tmp/rgloop-build/rgloop ~/rgloop-bin/
 
       - name: Medir loops
