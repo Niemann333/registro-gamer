@@ -202,6 +202,36 @@
   }
 
   // ───────────────────────── estado da faixa ─────────────────────────
+  // ───────────────────────── mapa de loops (loops.json) ─────────────────────────
+  // Para NSF/GBS/SID/KSS/SAP o loop não vem no arquivo: ele foi medido antes
+  // (tools/rgloop), observando os comandos enviados ao chip quadro a quadro.
+  //   "Chiptunes/.../jogo.nsf": { "3": [introMs, loopMs], "7": [fimMs] }
+  var loopMap = null, loopMapPromise = null;
+  function loadLoopMap() {
+    if (!loopMapPromise) {
+      loopMapPromise = fetch(BASE + 'loops.json').then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
+        .then(function (j) { loopMap = j || {}; return loopMap; });
+    }
+    return loopMapPromise;
+  }
+  function loopInfoFor(url, sub) {
+    if (!loopMap) return null;
+    var u = String(url || '');
+    try { u = decodeURIComponent(u); } catch (e) {}
+    u = u.split('?')[0];
+    var i = u.indexOf('Chiptunes/');
+    if (i < 0) return null;
+    var e = loopMap[u.slice(i)];
+    var v = e && e[String(sub || 0)];
+    return (v && v.length) ? v : null;
+  }
+  // índice que o mapa usa: o do player (SID: a música que está tocando de fato)
+  function loopSubOf(engine, sub) {
+    if (engine.cls === 'SIDPlayer') { try { return engine.subtune(); } catch (e) {} }
+    return sub || 0;
+  }
+
   var cur = null;        // { engine, url, loops, endFrame, ended, ... }
   var loadToken = 0;
   var lastPosSent = 0;
@@ -246,7 +276,7 @@
       t.renderedMs += ms;
       if (!silent) { t.heard = true; t.silentMs = 0; } else t.silentMs += ms;
       // KSS: muitas faixas do arquivo são mudas — pula para a próxima que tiver som
-      if (t.engine.type === 'nez' && !t.overrideMs && !t.heard && t.renderedMs > 2500 && t.engine.subtune() < 60) {
+      if (t.engine.type === 'nez' && !t.overrideMs && !t.loopInfo && !t.heard && t.renderedMs > 2500 && t.engine.subtune() < 60) {
         ringPush(l, r);
         t.switching = true;
         Promise.resolve(t.engine.playSubtune(t.engine.subtune() + 1)).then(function () {
@@ -601,6 +631,7 @@
   var pendingSeek = null;     // seek pedido enquanto a faixa ainda carregava
   function loadTrack(url, loops, sub, overrideMs) {
     var token = ++loadToken;
+    var lmP = loadLoopMap();
     pendingSeek = null;
     ensureCtx(); resumeCtx(); startVis();
     stopCurrent();
@@ -640,19 +671,21 @@
         if (token !== loadToken) throw 'stale';
         return engine.load(new Uint8Array(buf), name, url, sub);
       });
-    }).then(function () {
+    }).then(function () { return lmP; }).then(function () {
       if (token !== loadToken) throw 'stale';
       var t = newTrackState(engine, url, loops);
       t.overrideMs = overrideMs > 0 ? overrideMs : 0;
       cur = t;
       if (engine.kind === 'ring') {
-        if (sub && engine.numSubtunes() > 1) engine.playSubtune(sub);
+        // SID: a faixa 0 é a música 1 (sem isso tocaria a "música inicial" do arquivo)
+        if ((sub || engine.cls === 'SIDPlayer') && engine.numSubtunes() > 1) engine.playSubtune(sub);
         ringFlush();
       }
+      t.loopInfo = loopInfoFor(url, loopSubOf(engine, sub));
       applyDuration();
       resumeCtx();
       var v = engine.voices();
-      var info = engine.durInfo(loops);
+      var info = t.lastInfo || engine.durInfo(loops);
       send({
         type: 'loaded',
         durMs: Math.round(t.reportDurMs || 0),
@@ -676,9 +709,24 @@
   function applyDuration() {
     var t = cur; if (!t) return;
     var info = t.engine.durInfo(t.loops);
-    if (t.overrideMs > 0) {          // duração vinda do mapa de subfaixas (.m3u)
+    var li = t.loopInfo;
+    if (li && li.length >= 2 && li[1] > 0) {
+      // loop medido: introdução + N voltas, e o fade começa exatamente no fim da última volta
+      var d = li[0] + li[1] * Math.max(1, t.loops);
+      info = { durMs: d, own: true, report: d + FADE_MS, fadeMs: FADE_MS, hasLoop: true, introMs: li[0], loopMs: li[1] };
+    } else if (li && li[0] > 0) {
+      // a música termina sozinha: toca até o fim, sem repetir
+      info = { durMs: li[0], own: true, report: li[0] + 600, fadeMs: 600 };
+    } else if (t.overrideMs > 0) {          // duração vinda do mapa de subfaixas (.m3u)
       info = { durMs: t.overrideMs * Math.max(1, t.loops), own: true, report: t.overrideMs * Math.max(1, t.loops) + FADE_MS, fadeMs: FADE_MS };
     }
+    t.lastInfo = info;
+    // o GMEPlayer tem um fade interno no "play_length" (2:30 por padrão): quando a
+    // duração é nossa, ele tem que tocar sem parar para o nosso fade valer
+    try {
+      var gp = t.engine.player;
+      if (gp && t.engine.cls === 'GMEPlayer') { gp.params = gp.params || {}; gp.params.indefinitePlayback = !!info.own; }
+    } catch (e) {}
     t.durMs = info.durMs || 0;
     t.ownDuration = !!info.own;
     t.reportDurMs = info.report || 0;
@@ -735,8 +783,10 @@
           Promise.resolve(tt.engine.playSubtune(d.index)).then(function () {
             if (tt !== cur) return;
             if (tt.engine.kind === 'ring') ringFlush();
+            tt.loopInfo = loopInfoFor(tt.url, loopSubOf(tt.engine, d.index));
             applyDuration();
-            send({ type: 'duration', durMs: Math.round(tt.reportDurMs || 0) });
+            var li2 = tt.lastInfo || {};
+            send({ type: 'duration', durMs: Math.round(tt.reportDurMs || 0), hasLoop: !!li2.hasLoop, introMs: li2.introMs || 0, loopMs: li2.loopMs || 0 });
             if (tt.engine.kind === 'ring') pump();
           });
         }
