@@ -1,0 +1,69 @@
+name: Medir loops dos chiptunes
+
+# Roda sozinho quando você envia NSF/GBS/KSS/SAP/SID novos para a pasta Chiptunes/,
+# e também pode ser disparado à mão na aba Actions (opção "reanalisar tudo").
+on:
+  push:
+    paths:
+      - 'Chiptunes/**.nsf'
+      - 'Chiptunes/**.NSF'
+      - 'Chiptunes/**.nsfe'
+      - 'Chiptunes/**.gbs'
+      - 'Chiptunes/**.kss'
+      - 'Chiptunes/**.sap'
+      - 'Chiptunes/**.ay'
+      - 'Chiptunes/**.sid'
+      - 'tools/gerar_loops.py'
+      - 'tools/rgloop/**'
+  workflow_dispatch:
+    inputs:
+      tudo:
+        description: 'Reanalisar todos os arquivos (não só os novos)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loops-chiptune
+  cancel-in-progress: false
+
+jobs:
+  medir:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar compiladores
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q cmake g++ make autoconf automake libtool zlib1g-dev
+
+      - name: Cache do rgloop
+        id: cache-rgloop
+        uses: actions/cache@v4
+        with:
+          path: ~/rgloop-bin
+          key: rgloop-${{ hashFiles('tools/rgloop/**') }}
+
+      - name: Compilar rgloop (Game_Music_Emu + libsidplayfp com registro de escritas)
+        if: steps.cache-rgloop.outputs.cache-hit != 'true'
+        run: |
+          sh tools/rgloop/compilar.sh /tmp/rgloop-build
+          mkdir -p ~/rgloop-bin && cp /tmp/rgloop-build/rgloop ~/rgloop-bin/
+
+      - name: Medir loops
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.tudo }}" = "true" ]; then ARGS="--tudo"; fi
+          python3 tools/gerar_loops.py --rgloop ~/rgloop-bin/rgloop --jobs 4 $ARGS
+
+      - name: Salvar loops.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chiptune-player/loops.json
+          git diff --staged --quiet && echo "Nada mudou" || \
+            (git commit -m "loops: atualiza o mapa de loops dos chiptunes" && git pull --rebase && git push)
