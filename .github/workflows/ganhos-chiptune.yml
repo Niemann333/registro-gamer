@@ -1,16 +1,21 @@
 name: Analisar volume dos chiptunes
 
-# Roda sozinho quando você envia chiptunes novos para a pasta Chiptunes/,
-# e também pode ser disparado à mão na aba Actions (opção "reanalisar tudo").
+# Mede o volume de cada faixa (e de cada subsom de NSF/GBS/KSS/SID) com o próprio
+# player do blog, num navegador sem tela, e grava chiptune-player/ganhos.json.
+# Roda sozinho quando você envia chiptunes novos; também dá para disparar à mão
+# na aba Actions (opção "medir tudo de novo").
 on:
   push:
     paths:
       - 'Chiptunes/**'
-      - 'tools/analisar_ganhos.py'
+      - 'tools/medir_volume.py'
+  workflow_run:
+    workflows: ['Gerar índice de Chiptunes']   # depois que o mapa de subfaixas é atualizado
+    types: [completed]
   workflow_dispatch:
     inputs:
       tudo:
-        description: 'Reanalisar todas as faixas (não só as novas)'
+        description: 'Medir tudo de novo (não só as faixas novas)'
         type: boolean
         default: false
 
@@ -22,45 +27,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  analisar:
+  medir:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
-
-      - name: Instalar ffmpeg, numpy e scipy
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q ffmpeg python3-numpy python3-scipy cmake zlib1g-dev
-          ffmpeg -hide_banner -formats | grep -E "libgme|libopenmpt"
-
-      - name: Cache do vgm2wav
-        id: cache-vgm
-        uses: actions/cache@v4
         with:
-          path: ~/vgm2wav
-          key: vgm2wav-libvgm-v1
+          ref: main
 
-      - name: Compilar vgm2wav (libvgm)
-        if: steps.cache-vgm.outputs.cache-hit != 'true'
+      - name: Instalar o navegador sem tela
         run: |
-          git clone --depth 1 https://github.com/ValleyBell/libvgm.git /tmp/libvgm
-          cmake -S /tmp/libvgm -B /tmp/libvgm/build -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_PLAYER=OFF -DBUILD_VGM2WAV=ON \
-            -DAUDIODRV_LIBAO=OFF -DAUDIODRV_PULSE=OFF -DAUDIODRV_ALSA=OFF
-          cmake --build /tmp/libvgm/build -j 4
-          mkdir -p ~/vgm2wav && cp /tmp/libvgm/build/bin/vgm2wav ~/vgm2wav/
+          pip install playwright
+          python -m playwright install --with-deps chromium
 
-      - name: Analisar faixas
+      - name: Medir o volume das faixas novas
         run: |
           ARGS=""
           if [ "${{ github.event.inputs.tudo }}" = "true" ]; then ARGS="--tudo"; fi
-          python3 tools/analisar_ganhos.py --vgm2wav ~/vgm2wav/vgm2wav $ARGS
+          python3 tools/medir_volume.py --jobs 4 $ARGS
 
       - name: Salvar ganhos.json
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add chiptune-player/ganhos.json
+          git add chiptune-player/ganhos.json chiptune-player/ganhos-hash.json
           git diff --staged --quiet && echo "Nada mudou" || \
-            (git commit -m "ganhos: atualiza volume dos chiptunes" && git pull --rebase && git push)
+            (git commit -m "ganhos: atualiza o volume dos chiptunes" && git pull --rebase && git push)
