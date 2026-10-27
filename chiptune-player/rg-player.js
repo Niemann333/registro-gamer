@@ -404,11 +404,24 @@
     var st = { ended: false };
     // Quem decide a próxima faixa é o gadget: o player só avisa que terminou
     player.handleSongEnd = function () { st.ended = true; };
-    var vgm = null;
+    var vgm = null, sidData = null, sidPath = '', sidSong = 0;
+    // SID: o motor só toca a "música inicial" do cabeçalho (trocar de música depois de
+    // carregar não funciona). Então a música escolhida vira a inicial e o arquivo é recarregado.
+    function sidWithSong(data, i) {
+      var d = new Uint8Array(data);
+      var magic = String.fromCharCode(d[0], d[1], d[2], d[3]);
+      if ((magic === 'PSID' || magic === 'RSID') && d.length > 0x11) {
+        var n = (d[0x0E] << 8) | d[0x0F];
+        var song = Math.max(1, Math.min(n || 1, i + 1));
+        d[0x10] = song >> 8; d[0x11] = song & 0xFF;
+      }
+      return d;
+    }
     var eng = {
       kind: 'ring', player: player, cls: cls,
-      load: function (data, path) {
+      load: function (data, path, url, sub) {
         st.ended = false;
+        if (cls === 'SIDPlayer') { sidData = data; sidPath = path; sidSong = sub || 0; data = sidWithSong(data, sidSong); }
         var r = player.loadData(data, path, {});
         return Promise.resolve(r).then(function () {
           if (cls === 'VGMPlayer') {
@@ -457,7 +470,11 @@
       },
       numSubtunes: function () { try { return player.getNumSubtunes() || 1; } catch (e) { return 1; } },
       subtune: function () { try { return player.getSubtune() || 0; } catch (e) { return 0; } },
-      playSubtune: function (i) { st.ended = false; try { player.playSubtune(i); } catch (e) {} },
+      playSubtune: function (i) {
+        st.ended = false;
+        if (cls === 'SIDPlayer') { if (i === sidSong) return; sidSong = i; try { player.loadData(sidWithSong(sidData, i), sidPath, {}); } catch (e) {} return; }
+        try { player.playSubtune(i); } catch (e) {}
+      },
       title: function () { try { var m = player.getMetadata(); return m && (m.title || ''); } catch (e) { return ''; } },
       stop: function () { st.ended = true; try { player.stop(); } catch (e) {} }
     };
@@ -684,8 +701,7 @@
       t.overrideMs = overrideMs > 0 ? overrideMs : 0;
       cur = t;
       if (engine.kind === 'ring') {
-        // SID: a faixa 0 é a música 1 (sem isso tocaria a "música inicial" do arquivo)
-        if ((sub || engine.cls === 'SIDPlayer') && engine.numSubtunes() > 1) engine.playSubtune(sub);
+        if (sub && engine.numSubtunes() > 1) engine.playSubtune(sub);
         ringFlush();
       }
       t.loopInfo = loopInfoFor(url, loopSubOf(engine, sub));
@@ -847,7 +863,7 @@
     return openEngine(url, sub || 0, function () { return token !== loadToken; }).then(function (e) {
       engine = e; return lmP;
     }).then(function () {
-      if (engine.kind === 'ring' && (sub || engine.cls === 'SIDPlayer') && engine.numSubtunes() > 1) engine.playSubtune(sub);
+      if (engine.kind === 'ring' && sub && engine.numSubtunes() > 1) engine.playSubtune(sub);
       try { if (engine.player && engine.cls === 'GMEPlayer') { engine.player.params = engine.player.params || {}; engine.player.params.indefinitePlayback = true; } } catch (x) {}
       // quanto medir: até o fim do 1º loop (ou o fim da música), no máximo maxMs
       var li = loopInfoFor(url, engine.cls === 'SIDPlayer' ? engine.subtune() : (sub || 0));
