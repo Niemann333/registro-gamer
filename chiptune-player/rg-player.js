@@ -23,7 +23,6 @@
 (function () {
   'use strict';
 
-  var RG_VERSION = '6';
   var BASE = location.href.split('?')[0].replace(/[^\/]*$/, '');
   self.RG_PLAYER_BASE = BASE;
   window.WASM_SEARCH_PATH = BASE;
@@ -628,18 +627,9 @@
     ringFlush();
   }
 
-  var pendingSeek = null;     // seek pedido enquanto a faixa ainda carregava
-  function loadTrack(url, loops, sub, overrideMs) {
-    var token = ++loadToken;
-    var lmP = loadLoopMap();
-    pendingSeek = null;
-    ensureCtx(); resumeCtx(); startVis();
-    stopCurrent();
-    setFade(1, 0);
-    voiceMuted = false;
+  // Cria o motor certo para o formato e carrega o arquivo (usado para tocar e para medir o volume)
+  function openEngine(url, sub, stale) {
     var name = fileName(url), ext = (name.split('.').pop() || '').toLowerCase();
-    status('Carregando ' + name.replace(/\.[^.]+$/, '') + '...', '');
-
     var wtype = null;
     for (var k in EXT_WOTHKE) if (EXT_WOTHKE[k].test(name)) wtype = k;
 
@@ -659,8 +649,7 @@
     var engine;
     return enginePromise.then(function (e) {
       engine = e;
-      if (token !== loadToken) throw 'stale';
-      // Players do Wothke buscam o arquivo (e as libs) sozinhos
+      if (stale()) throw 'stale';
       if (engine.type) return engine.load(null, url, url, sub);   // Wothke busca o arquivo (e as libs) sozinho
       // Os outros: o pausado do Wothke precisa parar
       try { if (window.player && window.player.pause) window.player.pause(); } catch (x) {}
@@ -668,9 +657,27 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.arrayBuffer();
       }).then(function (buf) {
-        if (token !== loadToken) throw 'stale';
+        if (stale()) throw 'stale';
         return engine.load(new Uint8Array(buf), name, url, sub);
       });
+    }).then(function () { return engine; });
+  }
+
+  var pendingSeek = null;     // seek pedido enquanto a faixa ainda carregava
+  function loadTrack(url, loops, sub, overrideMs) {
+    var token = ++loadToken;
+    var lmP = loadLoopMap();
+    pendingSeek = null;
+    ensureCtx(); resumeCtx(); startVis();
+    stopCurrent();
+    setFade(1, 0);
+    voiceMuted = false;
+    var name = fileName(url);
+    status('Carregando ' + name.replace(/\.[^.]+$/, '') + '...', '');
+
+    var engine;
+    return openEngine(url, sub, function () { return token !== loadToken; }).then(function (e) {
+      engine = e;
     }).then(function () { return lmP; }).then(function () {
       if (token !== loadToken) throw 'stale';
       var t = newTrackState(engine, url, loops);
@@ -816,8 +823,86 @@
     }
   });
 
+  // ───────────────────── medição de volume (análise prévia) ─────────────────────
+  // Usada pela ferramenta tools/medir_volume.py (navegador sem tela): toca a faixa
+  // "no silêncio", o mais rápido possível, com o MESMO motor do site, e mede o
+  // volume das partes altas (loudness K-weighted, janelas de 3 s, percentil 90).
+  // Como é o próprio player que mede, o número já vem na escala certa do site.
+  function kFilter() {   // ITU-R BS.1770 (shelf +4 dB @1681 Hz e passa-altas @38 Hz), 44,1 kHz
+    function biq(b0, b1, b2, a1, a2) { var x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      return function (x) { var y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x; y2 = y1; y1 = y; return y; }; }
+    function sh() { var G = 3.99984385397, Q = 0.7071752369554193, fc = 1681.9744509555319, K = Math.tan(Math.PI * fc / SR);
+      var Vh = Math.pow(10, G / 20), Vb = Math.pow(Vh, 0.499666774155), a0 = 1 + K / Q + K * K;
+      return biq((Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0); }
+    function hp() { var Q = 0.5003270373253953, fc = 38.13547087613982, K = Math.tan(Math.PI * fc / SR), d = 1 + K / Q + K * K;
+      return biq(1, -2, 1, 2 * (K * K - 1) / d, (1 - K / Q + K * K) / d); }
+    var a = sh(), b = hp();
+    return function (x) { return b(a(x)); };
+  }
+  function measureTrack(url, sub, maxMs) {
+    var token = ++loadToken;
+    stopCurrent();
+    ensureCtx();
+    var lmP = loadLoopMap(), engine;
+    return openEngine(url, sub || 0, function () { return token !== loadToken; }).then(function (e) {
+      engine = e; return lmP;
+    }).then(function () {
+      if (engine.kind === 'ring' && (sub || engine.cls === 'SIDPlayer') && engine.numSubtunes() > 1) engine.playSubtune(sub);
+      try { if (engine.player && engine.cls === 'GMEPlayer') { engine.player.params = engine.player.params || {}; engine.player.params.indefinitePlayback = true; } } catch (x) {}
+      // quanto medir: até o fim do 1º loop (ou o fim da música), no máximo maxMs
+      var li = loopInfoFor(url, engine.cls === 'SIDPlayer' ? engine.subtune() : (sub || 0));
+      var lim = maxMs || 150000;
+      if (li && li.length >= 2 && li[1] > 0) lim = Math.min(lim, li[0] + li[1] + 1000);
+      else if (li && li[0] > 0) lim = Math.min(lim, li[0] + 500);
+      // MIDI: o banco de sons (soundfont) carrega em segundo plano; espera ele antes de medir
+      if (engine.cls === 'MIDIPlayer') return new Promise(function (ok) { setTimeout(ok, 5000); }).then(function () { return lim; });
+      return lim;
+    }).then(function (lim) {
+      var fL = kFilter(), fR = kFilter();
+      var secPow = [], acc = 0, accN = 0, peak = 0, done = 0, total = Math.ceil(lim / 1000 * SR);
+      var l = new Float32Array(CHUNK), r = new Float32Array(CHUNK), silentMs = 0, heard = false, t0 = Date.now();
+      return new Promise(function (resolve) {
+        function step() {
+          if (token !== loadToken) return resolve(null);
+          var end = false;
+          for (var k = 0; k < 40 && !end; k++) {
+            var res;
+            try { res = engine.render(l, r, CHUNK); } catch (x) { res = { ended: true }; }
+            var s = 0;
+            for (var i = 0; i < CHUNK; i++) {
+              var a = l[i], b = r[i];
+              if (a > peak) peak = a; else if (-a > peak) peak = -a;
+              if (b > peak) peak = b; else if (-b > peak) peak = -b;
+              var x = fL(a), y = fR(b);
+              acc += x * x + y * y; accN++;
+              if (accN >= SR) { secPow.push(acc / accN); acc = 0; accN = 0; }
+              s += a * a + b * b;
+            }
+            if (Math.sqrt(s / (2 * CHUNK)) < 0.0008) silentMs += CHUNK / SR * 1000; else { heard = true; silentMs = 0; }
+            done += CHUNK;
+            if ((res && res.ended) || done >= total || (heard && silentMs > SILENCE_END_MS) || (!heard && done > SR * 20)) end = true;
+          }
+          if (!end) return setTimeout(step, 0);
+          try { engine.stop(); } catch (x) {}
+          if (accN > SR / 4) secPow.push(acc / accN);
+          var st = [];
+          for (var j = 0; j + 3 <= secPow.length || (j === 0 && secPow.length); j++) {
+            var w = secPow.slice(j, j + 3), m = 0; w.forEach(function (v) { m += v; }); m /= w.length;
+            var lu = -0.691 + 10 * Math.log10(m + 1e-20);
+            if (lu > -70) st.push(lu);
+            if (j + 3 > secPow.length) break;
+          }
+          st.sort(function (a, b) { return a - b; });
+          var p90 = st.length ? st[Math.min(st.length - 1, Math.floor(st.length * 0.9))] : null;
+          resolve({ p90: p90, peakDb: 20 * Math.log10(peak + 1e-9), secs: done / SR, ms: Date.now() - t0 });
+        }
+        step();
+      });
+    }).catch(function (e) { return { erro: String(e && e.message || e) }; });
+  }
+
   // Diagnóstico (console): RG.state()
-  window.RG = { state: function () { return { cur: cur, ring: { rendered: ring.rendered, played: ring.played, under: ring.under }, ctx: ctx && ctx.state }; },
+  window.RG = { measure: measureTrack, state: function () { return { cur: cur, ring: { rendered: ring.rendered, played: ring.played, under: ring.under }, ctx: ctx && ctx.state }; },
                 level: function () { if (!analyser) return 0; var b = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(b); var s = 0; for (var i = 0; i < b.length; i++) s += b[i] * b[i]; return Math.sqrt(s / b.length); } };
 
   // Remove o service worker antigo (ele redirecionava o chip-core.wasm para um arquivo inexistente)
