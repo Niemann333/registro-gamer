@@ -426,8 +426,10 @@
    "d": 110000
   },
   {
-   "p": "Chiptunes/Chiptunes de Games/Game Boy Color (GBS) (VGM)/Action Man - Search for Base X/Action Man - Search for Base X (VGM)/15 Moon Base 1.vgz",
-   "n": "15 Moon Base 1.vgz"
+   "p": "Chiptunes/Chiptunes de Games/Game Boy Color (GBS) (VGM)/Action Man - Search for Base X/CGB-BAXE-USA.gbs",
+   "n": "CGB-BAXE-USA.gbs",
+   "s": 19,
+   "l": "Moon Base 1 (Boss Battle)"
   },
   {
    "p": "Chiptunes/Chiptunes de Games/Game Boy Advance (GSF)/Pokémon Emerald/Pokemon Emerald - Slateport City.minigsf",
