@@ -248,6 +248,10 @@
   function pump() {
     var t = cur;
     if (!t || t.engine.kind !== 'ring' || t.endFrame >= 0) { checkRingEnd(); return; }
+    if (t.engine.seeking && t.engine.seeking()) {   // ainda avançando até o ponto pedido
+      if (!pump.espera) pump.espera = setTimeout(function () { pump.espera = 0; pump(); }, 30);
+      return;
+    }
     var guard = 0;
     while (!t.switching && ring.rendered - ring.played < AHEAD && guard++ < 16) {
       var l = new Float32Array(CHUNK), r = new Float32Array(CHUNK);
@@ -449,6 +453,10 @@
         return { durMs: dd, own: false, report: dd ? dd + fade : 0 };
       },
       seek: function (ms) { try { player.seekMs(ms); } catch (e) {} },
+      // SPC (Super Nintendo) não tem como pular direto: o motor avança a música em blocos
+      // e, enquanto isso, toca em velocidade dobrada. Aqui o som fica parado até chegar
+      // no ponto escolhido, e a música continua de lá em velocidade normal.
+      seeking: function () { return cls === 'GMEPlayer' && player.seekTargetMs != null; },
       voices: function () {
         var mask = [], names = [], groups = [];
         try { mask = (player.getVoiceMask() || []).slice(); } catch (e) {}
