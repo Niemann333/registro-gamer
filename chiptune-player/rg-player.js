@@ -452,7 +452,34 @@
         if (!dd || dd <= 0) dd = 0;
         return { durMs: dd, own: false, report: dd ? dd + fade : 0 };
       },
-      seek: function (ms) { try { player.seekMs(ms); } catch (e) {} },
+      seek: function (ms) {
+        try { player.seekMs(ms); } catch (e) {}
+        // O motor original avança o SPC só quando o navegador está "ocioso" (requestIdleCallback),
+        // o que numa página cheia pode levar segundos. Aqui o avanço é feito direto, em fatias
+        // curtas (sem travar a página), até chegar no ponto pedido.
+        if (cls === 'GMEPlayer' && player.seekTargetMs != null && player.core && player.gmeCtx) {
+          try { cancelIdleCallback(player.seekRequestId); } catch (e) {}
+          var core = player.core, alvo = player.seekTargetMs, id = {};
+          st.seekId = id;
+          var pos = 0; try { pos = player.getPositionMs() || 0; } catch (e) {}
+          (function passo() {
+            if (st.seekId !== id || player.seekTargetMs !== alvo) return;   // outro seek ou outra faixa
+            var t0 = Date.now();
+            try {
+              while (Date.now() - t0 < 30) {
+                pos = Math.min(pos + 5000, alvo);
+                core._gme_seek_scaled(player.gmeCtx, pos);
+                if (pos >= alvo) {
+                  core._gme_set_tempo(player.gmeCtx, player.tempo || 1);
+                  player.seekTargetMs = null; player.seekRequestId = null;
+                  return;
+                }
+              }
+            } catch (e) { player.seekTargetMs = null; return; }
+            setTimeout(passo, 0);
+          })();
+        }
+      },
       // SPC (Super Nintendo) não tem como pular direto: o motor avança a música em blocos
       // e, enquanto isso, toca em velocidade dobrada. Aqui o som fica parado até chegar
       // no ponto escolhido, e a música continua de lá em velocidade normal.
