@@ -38,7 +38,7 @@ TEMPO_LIMITE = 240 # s por faixa antes de desistir
 
 EXTS = {'vgm', 'vgz', 'gym', 'spc', 'nsf', 'nsfe', 'gbs', 'ay', 'hes', 'mod', 's3m', 'xm', 'it', 'mptm',
         'sid', 'mid', 'midi', 'psf', 'minipsf', 'psf2', 'minipsf2', 'gsf', 'minigsf', 'usf', 'miniusf',
-        '2sf', 'mini2sf', 'kss', 'sap'}
+        '2sf', 'mini2sf', 'kss', 'sap', 'ahx', 'thx'}
 MULTI = {'nsf', 'nsfe', 'gbs', 'ay', 'hes', 'kss', 'sap', 'sid'}   # vários subsons num arquivo
 
 
