@@ -7,6 +7,14 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+
+# Vários envios seguidos disparam várias execuções ao mesmo tempo; sem isto elas
+# brigavam para gravar o mesmo arquivo e o push falhava. Agora rodam uma de cada vez
+# e, se chegar um envio novo, a execução antiga é cancelada (a nova já inclui tudo).
+concurrency:
+  group: chiptune-index
+  cancel-in-progress: true
+
 jobs:
   build-index:
     runs-on: ubuntu-latest
@@ -55,7 +63,37 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add chiptune-player/chiptunes-index.json chiptune-player/subfaixas.json
-          git diff --staged --quiet || git commit -m "ci: atualiza índice de chiptunes [skip ci]"
-          git pull --rebase || true
-          git push
+          # O índice é gerado a partir das pastas: se o main mudou no meio do caminho,
+          # em vez de tentar mesclar o JSON, pega o main novo e gera de novo.
+          for tentativa in 1 2 3 4 5; do
+            git add chiptune-player/chiptunes-index.json chiptune-player/subfaixas.json
+            if git diff --staged --quiet; then echo "Nada mudou"; exit 0; fi
+            git commit -q -m "ci: atualiza índice de chiptunes [skip ci]"
+            if git push; then exit 0; fi
+            echo "O main mudou durante a execução; refazendo ($tentativa)..."
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            python3 - << 'EOF'
+          import os, json
+          EXT = ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay','.gbs','.hes','.kss','.sap','.sid',
+                 '.mod','.s3m','.xm','.it','.mid','.midi','.gsf','.minigsf','.2sf','.psf','.ssf',
+                 '.dsf','.usf','.miniusf','.mini2sf']
+          def scan(path):
+              result = []
+              try:
+                  entries = sorted(os.scandir(path), key=lambda e: (e.is_file(), e.name))
+              except Exception:
+                  return result
+              for entry in entries:
+                  if entry.is_dir():
+                      result.append({"name": entry.name, "type": "dir", "path": entry.path, "children": scan(entry.path)})
+                  elif os.path.splitext(entry.name)[1].lower() in EXT:
+                      result.append({"name": entry.name, "type": "file", "path": entry.path})
+              return result
+          with open("chiptune-player/chiptunes-index.json", "w", encoding="utf-8") as f:
+              json.dump(scan("Chiptunes"), f, ensure_ascii=False)
+          EOF
+            python3 tools/gerar_subfaixas.py
+            sleep $((tentativa * 5))
+          done
+          echo "Não consegui gravar o índice depois de 5 tentativas"; exit 1
