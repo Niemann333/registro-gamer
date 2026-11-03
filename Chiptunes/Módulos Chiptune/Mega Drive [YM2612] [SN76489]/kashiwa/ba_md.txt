@@ -1,0 +1,25 @@
+CSM 版について。
+
+本来は CSM 音声合成モードを使うところなのですが、メガドライブは
+Timer割り込みが無いため活用できません。
+
+そこで、効果音モードを使っています。
+
+CSM_A は音程などが変わっても発声をリセットしないバージョン。
+CSM_B は1フレームごとに発声をリセットしているバージョンです。
+
+B の方が発音は聞き取りやすいですが、ノイジーかな。
+
+
+  Originally I would use the CSM text-to-speech mode, but the Mega Drive doesn't have a Timer interrupt, so I can't make use of it.
+
+  So I use the sound effect mode.
+
+  CSM_A is a version that does not reset the voice when the pitch changes.
+  CSM_B is the version that resets the sound effect every frame.
+
+  B is easier to hear, but noisier.
+
+---
+
+I chose the B version because it was infact slightly better to hear. You can check out both versions yourself, I've linked the page in the Origin section.
