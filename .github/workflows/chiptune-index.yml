@@ -41,8 +41,8 @@ jobs:
                   else:
                       ext = os.path.splitext(entry.name)[1].lower()
                       if ext in ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay',
-                                 '.gbs','.hes','.kss','.sap','.sid','.mod','.s3m',
-                                 '.xm','.it','.mid','.midi','.gsf','.minigsf',
+                                 '.gbs','.hes','.kss','.sap','.ahx','.thx','.sid','.mod','.s3m',
+                                 '.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf',
                                  '.2sf','.psf','.ssf','.dsf','.usf','.miniusf','.2sf','.mini2sf']:
                           result.append({
                               "name": entry.name,
@@ -75,8 +75,8 @@ jobs:
             git reset -q --hard origin/main
             python3 - << 'EOF'
           import os, json
-          EXT = ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay','.gbs','.hes','.kss','.sap','.sid',
-                 '.mod','.s3m','.xm','.it','.mid','.midi','.gsf','.minigsf','.2sf','.psf','.ssf',
+          EXT = ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay','.gbs','.hes','.kss','.sap','.ahx','.thx','.sid',
+                 '.mod','.s3m','.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf','.2sf','.psf','.ssf',
                  '.dsf','.usf','.miniusf','.mini2sf']
           def scan(path):
               result = []
