@@ -55,6 +55,7 @@
     nez: /\.kss$/i
   };
   var EXT_SAP = /\.sap$/i;
+  var EXT_AHX = /\.(ahx|thx)$/i;
 
   // ───────────────────────── utilidades ─────────────────────────
   function send(m) { try { parent.postMessage(m, '*'); } catch (e) {} }
@@ -572,6 +573,108 @@
     };
   }
 
+  // ───────────────────────── motor: AHX (Amiga, Abyss' Highest eXperience) ─────────────────────────
+  // O replayer (ahx.js) só calcula o estado dos 4 canais a cada quadro do Amiga (50 Hz);
+  // a mistura é feita aqui, em estéreo como no Amiga (canais 1 e 4 à esquerda, 2 e 3 à direita,
+  // com um pouco de cada lado para não cansar no fone).
+  var ahxPromise = null;
+  function loadAhx() {
+    if (!ahxPromise) ahxPromise = loadScript(BASE + 'ahx.js?v=1');
+    return ahxPromise;
+  }
+  function makeAhxEngine() {
+    var song = null, pl = null, frameLen = 0, fl = null, fr = null, fill = 0, fpos = 0;
+    var pos = [0, 0, 0, 0], mask = [true, true, true, true], irqs = 0, info = null;
+    var PAN = [0.8, 0.2, 0.2, 0.8];           // parte que vai para a esquerda, por canal
+    var waves = null;
+    function novoPlayer() {
+      var p = AHXPlayer(waves); p.InitSong(song); p.InitSubsong(0); return p;
+    }
+    function irqMs() { return 20 / (song.SpeedMultiplier || 1); }
+    // Simula a música sem gerar som para achar a introdução e o tamanho do loop
+    function medir() {
+      var p = novoPlayer(), n = 0, max = Math.round(15 * 60 * 1000 / irqMs()), loopIrq = -1;
+      var restart = song.Restart || 0;
+      while (n < max) {
+        if (loopIrq < 0 && p.PosNr === restart && p.NoteNr === 0 && p.GetNewPosition) loopIrq = n;
+        p.PlayIRQ(); n++;
+        if (p.SongEndReached) break;
+      }
+      var total = n * irqMs();
+      if (n >= max || total <= 0) return { durMs: DEFAULT_LEN_MS, hasLoop: false, introMs: 0, loopMs: 0, totalMs: DEFAULT_LEN_MS };
+      var intro = loopIrq > 0 ? loopIrq * irqMs() : 0;
+      return { hasLoop: true, introMs: intro, loopMs: Math.max(1, total - intro), totalMs: total };
+    }
+    function quadro() {          // gera 1 quadro do Amiga (1/50 s) em fl/fr
+      var per = Math.floor(frameLen / song.SpeedMultiplier), k = 0;
+      for (var i = 0; i < frameLen; i++) { fl[i] = 0; fr[i] = 0; }
+      for (var f = 0; f < song.SpeedMultiplier; f++) {
+        pl.PlayIRQ(); irqs++;
+        var n = (f === song.SpeedMultiplier - 1) ? frameLen - k : per;
+        for (var v = 0; v < 4; v++) {
+          var vo = pl.Voices[v], vol = vo.VoiceVolume, prd = vo.VoicePeriod, buf = vo.VoiceBuffer;
+          if (!vol || !prd || !mask[v] || !buf || !buf.length) continue;
+          var delta = Math.floor(3579545.25 / prd * 65536 / SR), p = pos[v], lim = buf.length << 16;
+          var gl = PAN[v] * vol / 64, gr = (1 - PAN[v]) * vol / 64;
+          for (var i = 0; i < n; i++) {
+            if (p >= lim) p -= lim;
+            var smp = buf[p >> 16] | 0;
+            fl[k + i] += smp * gl; fr[k + i] += smp * gr;
+            p += delta;
+          }
+          pos[v] = p;
+        }
+        k += n;
+      }
+      for (var j = 0; j < frameLen; j++) { fl[j] /= 320; fr[j] /= 320; }   // folga para não estourar
+      fill = frameLen; fpos = 0;
+    }
+    return {
+      kind: 'ring',
+      load: function (data) {
+        var str = '';
+        for (var i = 0; i < data.length; i += 8192) str += String.fromCharCode.apply(null, data.subarray(i, i + 8192));
+        var ds = new dataType(); ds.data = str;
+        song = new AHXSong(); song.InitSong(ds);
+        if (!song.PositionNr || !song.Positions.length) throw new Error('AHX inválido');
+        waves = waves || new AHXWaves();
+        pl = novoPlayer();
+        frameLen = Math.round(SR / 50); fl = new Float32Array(frameLen); fr = new Float32Array(frameLen);
+        fill = 0; fpos = 0; irqs = 0; pos = [0, 0, 0, 0];
+        info = medir();
+      },
+      render: function (l, r, n) {
+        for (var i = 0; i < n; i++) {
+          if (fpos >= fill) quadro();
+          l[i] = fl[fpos]; r[i] = fr[fpos]; fpos++;
+        }
+        return { ended: false };
+      },
+      posMs: function () { return irqs * irqMs(); },
+      durInfo: function (loops) {
+        if (!info.hasLoop) return { durMs: info.durMs, own: true, report: info.durMs + FADE_MS };
+        var d = info.introMs + info.loopMs * loops;
+        return { durMs: d, own: true, report: d + FADE_MS, hasLoop: true, introMs: info.introMs, loopMs: info.loopMs, totalMs: info.totalMs };
+      },
+      seek: function (ms) {          // AHX é leve: refaz do começo sem gerar som até o ponto pedido
+        pl = novoPlayer(); irqs = 0; pos = [0, 0, 0, 0]; fill = 0; fpos = 0;
+        var alvo = Math.floor(Math.max(0, ms) / irqMs());
+        while (irqs < alvo) { pl.PlayIRQ(); irqs++; }
+      },
+      voices: function () {
+        var names = ['Ch 1', 'Ch 2', 'Ch 3', 'Ch 4'];
+        return { names: names, mask: mask.slice(), groups: [{ name: 'Paula (AHX)', voices: names.map(function (x, i) { return { idx: i, name: x }; }) }] };
+      },
+      setVoiceMask: function (m) { for (var i = 0; i < 4; i++) mask[i] = m[i] !== false; },
+      numSubtunes: function () { return 1; },
+      subtune: function () { return 0; },
+      durations: function () { return [info ? (info.hasLoop ? info.introMs + info.loopMs : info.durMs) : 0]; },
+      playSubtune: function () {},
+      title: function () { return (song && song.Name) || ''; },
+      stop: function () {}
+    };
+  }
+
   // ───────────────────────── motor: Wothke (PSF/GSF/USF/2SF/KSS) ─────────────────────────
   var spPromise = null, wothkeAdapters = {}, wothkeActive = null, wothkeScripts = {};
   var WOTHKE = {
@@ -690,6 +793,8 @@
       enginePromise = ensureRing().then(function () { return makeWothkeEngine(wtype); });
     } else if (EXT_SAP.test(name)) {
       enginePromise = ensureRing().then(function () { return makeSapEngine(); });
+    } else if (EXT_AHX.test(name)) {
+      enginePromise = Promise.all([ensureRing(), loadAhx()]).then(function () { return makeAhxEngine(); });
     } else if (EXT_CHIP.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadChipCore(), loadChipPlayers()]).then(function (a) {
         return makeChipEngine(a[1], a[2], chipClassFor(ext), ext);
