@@ -29,6 +29,9 @@ PASTA = os.path.join(RAIZ, 'Chiptunes')
 SAIDA = os.path.join(RAIZ, 'chiptune-player', 'ganhos.json')
 SUBS = os.path.join(RAIZ, 'chiptune-player', 'subfaixas.json')
 HASH = os.path.join(RAIZ, 'chiptune-player', 'ganhos-hash.json')   # só para saber o que mudou (o blog não baixa)
+# Quando o motor de um formato muda, a marca abaixo muda e as faixas desse formato são medidas
+# de novo (o som pode mudar). mptm: passou do libxmp para o libopenmpt (tempo certo).
+MOTOR = {'mptm': ':ompt1'}
 
 ALVO = -16.0       # loudness das partes altas (escala do player do site)
 MAX_UP, MAX_DOWN = 15.0, -15.0
@@ -140,7 +143,7 @@ def main():
     novo_g, novo_h, fila_l = {}, {}, []
     for rel in arquivos:
         ext = rel.rsplit('.', 1)[-1].lower()
-        h = sha1(os.path.join(RAIZ, rel))
+        h = sha1(os.path.join(RAIZ, rel)) + MOTOR.get(ext, '')
         novo_h[rel] = h
         v = g_ant.get(rel)
         mudou = rel in h_ant and h_ant[rel] != h
