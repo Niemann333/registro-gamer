@@ -56,6 +56,8 @@
   };
   var EXT_SAP = /\.sap$/i;
   var EXT_AHX = /\.(ahx|thx)$/i;
+  var EXT_OMPT = /\.mptm$/i;                 // OpenMPT: só o libopenmpt toca certo (tempo moderno, swing...)
+  var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
 
   // ───────────────────────── utilidades ─────────────────────────
   function send(m) { try { parent.postMessage(m, '*'); } catch (e) {} }
@@ -675,6 +677,86 @@
     };
   }
 
+  // ───────────────────────── motor: libopenmpt (MPTM e módulos que o libxmp não abre) ─────────────────────────
+  // libopenmpt.js é o build WebAssembly do libopenmpt do pacote chiptune3 (DrSnuggles, licença MIT).
+  var omptPromise = null;
+  function loadOmpt() {
+    if (!omptPromise) {
+      // import() montado em tempo de execução: navegadores antigos (TVs) que não conhecem import()
+      // continuam lendo este arquivo normalmente; só o MPTM deixa de tocar neles.
+      var importar;
+      try { importar = new Function('u', 'return import(u)'); } catch (e) { return Promise.reject(e); }
+      omptPromise = importar(BASE + 'libopenmpt.js?v=1').then(function (m) { return m.default(); })
+        .catch(function (e) { omptPromise = null; throw e; });
+    }
+    return omptPromise;
+  }
+  function makeOmptEngine(lib) {
+    var mod = 0, pL = 0, pR = 0, cap = 0, posSmp = 0, durS = 0, introS = 0, ended = false, loopsSet = -1;
+    function cstr(txt) { var n = lib.lengthBytesUTF8(txt) + 1, p = lib._malloc(n); lib.stringToUTF8(txt, p, n); return p; }
+    function meta(k) {
+      try { var kp = cstr(k), rp = lib._openmpt_module_get_metadata(mod, kp); lib._free(kp);
+        var t = rp ? lib.UTF8ToString(rp) : ''; if (rp) lib._openmpt_free_string(rp); return t; } catch (e) { return ''; }
+    }
+    function liberar() {
+      if (mod) { try { lib._openmpt_module_destroy(mod); } catch (e) {} mod = 0; }
+      if (pL) { lib._free(pL); lib._free(pR); pL = pR = 0; cap = 0; }
+    }
+    return {
+      kind: 'ring',
+      load: function (data) {
+        liberar();
+        var p = lib._malloc(data.length); lib.HEAPU8.set(data, p);
+        mod = lib._openmpt_module_create_from_memory2(p, data.length, 0, 0, 0, 0, 0, 0, 0);
+        lib._free(p);
+        if (!mod) throw new Error('libopenmpt não abriu o arquivo');
+        durS = lib._openmpt_module_get_duration_seconds(mod) || 0;
+        // onde o loop recomeça (ordem/linha de reinício): o que vem antes é introdução
+        try {
+          var ro = lib._openmpt_module_get_restart_order(mod, 0), rr = lib._openmpt_module_get_restart_row(mod, 0);
+          var t = lib._openmpt_module_get_time_at_position(mod, ro, rr);
+          introS = (t > 0 && t < durS) ? t : 0;
+        } catch (e) { introS = 0; }
+        lib._openmpt_module_set_repeat_count(mod, 0);
+        posSmp = 0; ended = false; loopsSet = -1;
+      },
+      render: function (l, r, n) {
+        if (ended || !mod) { l.fill(0); r.fill(0); return { ended: true }; }
+        if (cap < n) { if (pL) { lib._free(pL); lib._free(pR); } pL = lib._malloc(n * 4); pR = lib._malloc(n * 4); cap = n; }
+        var got = lib._openmpt_module_read_float_stereo(mod, SR, n, pL, pR);
+        l.set(lib.HEAPF32.subarray(pL >> 2, (pL >> 2) + got));
+        r.set(lib.HEAPF32.subarray(pR >> 2, (pR >> 2) + got));
+        if (got < n) { l.fill(0, got); r.fill(0, got); ended = true; }
+        posSmp += got;
+        return { ended: ended };
+      },
+      posMs: function () { return posSmp * 1000 / SR; },
+      durInfo: function (loops) {
+        loops = Math.max(1, loops || 1);
+        if (mod && loopsSet !== loops) { lib._openmpt_module_set_repeat_count(mod, loops - 1); loopsSet = loops; }
+        if (!durS) return { durMs: 0, own: false, report: 0 };
+        var intro = introS * 1000, loopMs = (durS - introS) * 1000, d = intro + loopMs * loops;
+        return { durMs: d, own: false, report: d, hasLoop: true, introMs: intro, loopMs: loopMs, totalMs: durS * 1000 };
+      },
+      seek: function (ms) {
+        if (!mod || !durS) return;
+        var s = Math.max(0, ms / 1000), loopS = durS - introS;
+        // depois da 1a passada, o ponto equivalente dentro do trecho que repete
+        var dentro = s < durS ? s : introS + ((s - introS) % (loopS || durS));
+        lib._openmpt_module_set_position_seconds(mod, dentro);
+        posSmp = Math.round(s * SR); ended = false;
+      },
+      voices: function () { return { names: [], mask: [], groups: [] }; },
+      setVoiceMask: function () {},
+      numSubtunes: function () { return 1; },
+      subtune: function () { return 0; },
+      durations: function () { return [durS * 1000]; },
+      playSubtune: function () {},
+      title: function () { return mod ? meta('title') : ''; },
+      stop: function () { liberar(); }
+    };
+  }
+
   // ───────────────────────── motor: Wothke (PSF/GSF/USF/2SF/KSS) ─────────────────────────
   var spPromise = null, wothkeAdapters = {}, wothkeActive = null, wothkeScripts = {};
   var WOTHKE = {
@@ -795,6 +877,8 @@
       enginePromise = ensureRing().then(function () { return makeSapEngine(); });
     } else if (EXT_AHX.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadAhx()]).then(function () { return makeAhxEngine(); });
+    } else if (EXT_OMPT.test(name)) {
+      enginePromise = Promise.all([ensureRing(), loadOmpt()]).then(function (a) { return makeOmptEngine(a[1]); });
     } else if (EXT_CHIP.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadChipCore(), loadChipPlayers()]).then(function (a) {
         return makeChipEngine(a[1], a[2], chipClassFor(ext), ext);
@@ -803,7 +887,7 @@
       enginePromise = Promise.reject(new Error('Formato não suportado'));
     }
 
-    var engine;
+    var engine, bytes = null;
     return enginePromise.then(function (e) {
       engine = e;
       if (stale()) throw 'stale';
@@ -815,7 +899,17 @@
         return r.arrayBuffer();
       }).then(function (buf) {
         if (stale()) throw 'stale';
-        return engine.load(new Uint8Array(buf), name, url, sub);
+        bytes = new Uint8Array(buf);
+        return engine.load(bytes, name, url, sub);
+      });
+    }).catch(function (err) {
+      // Módulo que o libxmp não abre (ex.: variantes do StarTrekker): tenta o libopenmpt
+      if (err === 'stale' || !bytes || !EXT_MOD_FALLBACK.test(name)) throw err;
+      try { if (engine && engine.stop) engine.stop(); } catch (x) {}
+      return Promise.all([ensureRing(), loadOmpt()]).then(function (a) {
+        if (stale()) throw 'stale';
+        engine = makeOmptEngine(a[1]);
+        return engine.load(bytes, name, url, sub);
       });
     }).then(function () { return engine; });
   }
