@@ -1,0 +1,65 @@
+# Compila o app Registro Gamer para Android TV / Google TV sempre que algo em app-tv/ muda.
+# O APK pronto fica em app-tv/dist/registro-gamer-tv.apk (e também como artefato da execução).
+name: Compilar app de TV
+
+on:
+  push:
+    paths:
+      - 'app-tv/**'
+      - '!app-tv/dist/**'
+      - '.github/workflows/app-tv.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-tv
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar o APK
+        run: gradle -p app-tv assembleRelease --no-daemon --stacktrace
+
+      - name: Guardar o APK como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: registro-gamer-tv
+          path: app-tv/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publicar o APK no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for tentativa in 1 2 3 4 5; do
+            mkdir -p app-tv/dist
+            cp app-tv/app/build/outputs/apk/release/app-release.apk app-tv/dist/registro-gamer-tv.apk
+            git add app-tv/dist/registro-gamer-tv.apk
+            if git diff --staged --quiet; then echo "APK igual ao anterior"; exit 0; fi
+            git commit -q -m "ci: novo APK do app de TV [skip ci]"
+            if git push; then exit 0; fi
+            echo "O main mudou durante a execução; tentando de novo ($tentativa)..."
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            sleep $((tentativa * 5))
+          done
+          echo "Não consegui publicar o APK"; exit 1
