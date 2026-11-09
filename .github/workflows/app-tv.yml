@@ -21,16 +21,19 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # o pacote antigo "tools" (padrão desta ação) não existe mais no repositório do Google
+          packages: 'platform-tools platforms;android-35 build-tools;34.0.0'
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
