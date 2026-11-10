@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.niemann333.registrogamer.tv'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.niemann333.registrogamer.tv'
+        minSdk 23
+        targetSdk 35
+        versionCode 2
+        versionName '1.1'
+    }
+
+    // Chave fixa: assim cada versão nova instala por cima da anterior (sem desinstalar).
+    signingConfigs {
+        rg {
+            storeFile file('registro-gamer-tv.keystore')
+            storePassword 'registrogamer'
+            keyAlias 'registrogamer'
+            keyPassword 'registrogamer'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.rg
+        }
+        debug {
+            signingConfig signingConfigs.rg
+        }
+    }
+
+    // O app não vai para a Play Store: a checagem de publicação não deve travar a compilação
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
