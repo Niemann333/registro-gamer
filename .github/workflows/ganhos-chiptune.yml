@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  actions: write      # para se disparar de novo quando o tempo de uma execução não basta
 
 concurrency:
   group: ganhos-chiptune
@@ -31,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 340
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
 
@@ -41,16 +42,24 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Medir o volume das faixas novas
+        id: medir
         run: |
           ARGS=""
           if [ "${{ github.event.inputs.tudo }}" = "true" ]; then ARGS="--tudo"; fi
-          python3 tools/medir_volume.py --jobs 4 $ARGS
+          python3 tools/medir_volume.py --jobs 4 --minutos 300 $ARGS
 
       - name: Salvar ganhos.json
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add chiptune-player/ganhos.json chiptune-player/ganhos-hash.json
+          git add chiptune-player/ganhos.json chiptune-player/ganhos-hash.json chiptune-player/ganhos-medidas.json
           git diff --staged --quiet && echo "Nada mudou" || \
             (git commit -m "ganhos: atualiza o volume dos chiptunes" && git pull --rebase && git push)
+
+      # Medição grande (ex.: mudou o nível de referência): continua sozinha numa nova execução
+      - name: Continuar de onde parou
+        if: steps.medir.outputs.continua == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ganhos-chiptune.yml --ref main
