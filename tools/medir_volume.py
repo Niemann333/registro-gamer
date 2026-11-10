@@ -29,11 +29,15 @@ PASTA = os.path.join(RAIZ, 'Chiptunes')
 SAIDA = os.path.join(RAIZ, 'chiptune-player', 'ganhos.json')
 SUBS = os.path.join(RAIZ, 'chiptune-player', 'subfaixas.json')
 HASH = os.path.join(RAIZ, 'chiptune-player', 'ganhos-hash.json')   # só para saber o que mudou (o blog não baixa)
+# Medidas de cada faixa (loudness das partes altas e pico). Com elas, mudar o ALVO não exige medir de novo.
+MEDIDAS = os.path.join(RAIZ, 'chiptune-player', 'ganhos-medidas.json')
 # Quando o motor de um formato muda, a marca abaixo muda e as faixas desse formato são medidas
 # de novo (o som pode mudar). mptm: passou do libxmp para o libopenmpt (tempo certo).
 MOTOR = {'mptm': ':ompt1'}
 
-ALVO = -16.0       # loudness das partes altas (escala do player do site)
+# Nível de referência: -13,5 nas partes altas dá ~ -14 LUFS na música inteira, o mesmo nível em que o
+# YouTube toca as músicas (antes era -16, uns 2,5 dB abaixo).
+ALVO = -13.5       # loudness das partes altas (escala do player do site)
 MAX_UP, MAX_DOWN = 15.0, -15.0
 TETO_PICO = 1.5    # dB que o pico pode passar de 0 dBFS (o limitador suave absorve)
 MAX_MS = 150000    # no máximo 2,5 min por faixa (ou até o fim do 1º loop)
@@ -64,8 +68,11 @@ def servidor():
     return srv, 'http://127.0.0.1:%d/' % srv.server_address[1]
 
 
+PRAZO = [0]
+
+
 def ganho(r):
-    if not r or r.get('p90') is None:
+    if not r or r.get('p90') is None or r.get('peakDb') is None:
         return None
     g = ALVO - r['p90']
     g = min(g, TETO_PICO - r['peakDb'])        # não estoura o pico
@@ -89,6 +96,8 @@ async def trabalhador(nome, base, fila, res, total, feitos):
 
         await abrir()
         while True:
+            if PRAZO[0] and time.time() > PRAZO[0]:
+                break                               # acabou o tempo desta execução: o resto fica para a próxima
             try:
                 rel, sub = fila.get_nowait()
             except Exception:
@@ -113,6 +122,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--tudo', action='store_true', help='mede tudo de novo')
     ap.add_argument('--jobs', type=int, default=2, help='navegadores em paralelo')
+    ap.add_argument('--minutos', type=float, default=0, help='para de medir depois desse tempo (continua na próxima execução)')
     a = ap.parse_args()
 
     antigo = {'g': {}, 'h': {}}
@@ -132,6 +142,26 @@ def main():
         except ValueError:
             pass
     subs = json.load(open(SUBS, encoding='utf-8')) if os.path.exists(SUBS) else {}
+    med_ant = {}
+    if os.path.exists(MEDIDAS) and not a.tudo:
+        try:
+            med_ant = json.load(open(MEDIDAS, encoding='utf-8'))
+        except ValueError:
+            pass
+    novo_med = {}
+    # faixas medidas com outro ALVO (antes das medidas existirem): ganho provisório = antigo + diferença,
+    # até a faixa ser medida de novo
+    delta = ALVO - float(antigo.get('alvo', ALVO))
+    def provisorio(x):
+        return round(max(MAX_DOWN, min(MAX_UP, x + delta)), 1)
+    def chave(rel, sub):
+        return rel if sub is None else '%s#%d' % (rel, sub)
+    def de_medida(rel, sub):
+        m = med_ant.get(chave(rel, sub))
+        if not m:
+            return None
+        novo_med[chave(rel, sub)] = m
+        return ganho({'p90': m[0], 'peakDb': m[1]})
 
     arquivos = []
     for dp, _, fs in os.walk(PASTA):
@@ -151,14 +181,22 @@ def main():
             pasta, nome = rel.rsplit('/', 1)
             lista = [s[0] for s in subs.get(pasta, {}).get(nome, [])] or [0]
             ja = v if isinstance(v, dict) and not mudou else {}
-            novo_g[rel] = {k: x for k, x in ja.items() if int(k) in lista}
+            novo_g[rel] = {}
             for s in lista:
-                if str(s) not in novo_g[rel]:
-                    fila_l.append((rel, s))
+                g = None if mudou else de_medida(rel, s)
+                if g is not None:
+                    novo_g[rel][str(s)] = g
+                    continue
+                if str(s) in ja and isinstance(ja[str(s)], (int, float)):
+                    novo_g[rel][str(s)] = provisorio(ja[str(s)])    # vale até medir de novo
+                fila_l.append((rel, s))
         else:
-            if isinstance(v, (int, float)) and not mudou:
-                novo_g[rel] = v
+            g = None if mudou else de_medida(rel, None)
+            if g is not None:
+                novo_g[rel] = g
             else:
+                if isinstance(v, (int, float)) and not mudou:
+                    novo_g[rel] = provisorio(v)                     # vale até medir de novo
                 fila_l.append((rel, None))
 
     print('%d arquivos, %d faixas/subsons para medir' % (len(arquivos), len(fila_l)), flush=True)
@@ -172,7 +210,8 @@ def main():
             pasta, nome = rel.rsplit('/', 1)
             agrup.setdefault(pasta, {})[nome] = v
         out = {'v': 2, 'alvo': ALVO, 'g': agrup}
-        for caminho, dados in ((SAIDA, out), (HASH, {k: novo_h[k] for k in sorted(novo_h)})):
+        for caminho, dados in ((SAIDA, out), (HASH, {k: novo_h[k] for k in sorted(novo_h)}),
+                               (MEDIDAS, {k: novo_med[k] for k in sorted(novo_med)})):
             tmp = caminho + '.tmp'
             with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(dados, f, ensure_ascii=False, separators=(',', ':'))
@@ -202,6 +241,7 @@ def main():
                 g = ganho(r)
                 if g is None:
                     continue
+                novo_med[chave(rel, sub)] = [round(r['p90'], 2), round(r['peakDb'], 2)]
                 if sub is None:
                     novo_g[rel] = g
                 else:
@@ -209,9 +249,17 @@ def main():
                         novo_g[rel] = {}
                     novo_g[rel][str(sub)] = g
 
+        if a.minutos:
+            PRAZO[0] = time.time() + a.minutos * 60
         asyncio.run(tudo())
         aplicar()
         srv.shutdown()
+        if not fila.empty():
+            print('Tempo esgotado: %d faixas ficam para a próxima execução' % fila.qsize(), flush=True)
+            sai = os.environ.get('GITHUB_OUTPUT')
+            if sai:
+                with open(sai, 'a') as f:
+                    f.write('continua=1\n')
 
     gravar()
     n = sum(len(v) if isinstance(v, dict) else 1 for v in novo_g.values() if v not in (None, {}))
