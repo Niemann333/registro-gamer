@@ -1057,7 +1057,9 @@
       case 'mediainfo':
         if ('mediaSession' in navigator) {
           try {
-            navigator.mediaSession.metadata = new MediaMetadata({ title: d.title || '', artist: d.artist || '', album: d.album || 'Registro Gamer' });
+            var md = { title: d.title || '', artist: d.artist || '', album: d.album || 'Registro Gamer' };
+            if (d.artwork && d.artwork.length) md.artwork = d.artwork;   // capa animada da notificação (4 quadros)
+            navigator.mediaSession.metadata = new MediaMetadata(md);
             var ms = navigator.mediaSession;
             ms.setActionHandler('nexttrack', function () { send({ type: 'ms-action', action: 'next' }); });
             ms.setActionHandler('previoustrack', function () { send({ type: 'ms-action', action: 'prev' }); });
