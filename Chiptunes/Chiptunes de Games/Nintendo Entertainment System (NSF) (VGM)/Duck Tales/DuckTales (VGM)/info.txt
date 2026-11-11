@@ -1,0 +1,23 @@
+Jogo: Duck Tales
+Versão: DuckTales (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1989
+Desenvolvedora: Capcom
+Compositor(es): Hiroshige Tonomura
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening
+02. Land Select
+03. The Amazon
+04. Transylvania
+05. African Mines
+06. The Himalayas
+07. The Moon
+08. Launchpad Copter
+09. Boss Battle
+10. Item
+11. Invincibility
+12. Lost a Life
+13. Game Over

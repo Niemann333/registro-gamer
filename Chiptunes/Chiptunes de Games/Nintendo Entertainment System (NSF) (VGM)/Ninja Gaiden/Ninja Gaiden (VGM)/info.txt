@@ -1,0 +1,40 @@
+Jogo: Ninja Gaiden
+Versão: Ninja Gaiden (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Tecmo
+Compositor(es): Keiji Yamagishi, Ryuichi Nitta
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Moonlight Duel  — Compositor: Keiji Yamagishi
+02. Determination: Father's Message  — Compositor: Keiji Yamagishi
+03. The Dragon Ninja  — Compositor: Ryuichi Nitta
+04. Mysterious Woman  — Compositor: Keiji Yamagishi
+05. Bravery: On the Clutches  — Compositor: Ryuichi Nitta
+06. Reminiscence  — Compositor: Keiji Yamagishi
+07. A Sudden Development  — Compositor: Keiji Yamagishi
+08. Like a Howling Gale  — Compositor: Keiji Yamagishi
+09. In Hiding: Pursuing the Nightmare  — Compositor: Ryuichi Nitta
+10. Eyecatch  — Compositor: Keiji Yamagishi
+11. The CIA  — Compositor: Ryuichi Nitta
+12. The Sanctuary of Shadows  — Compositor: Keiji Yamagishi
+13. The Amazing Ryu  — Compositor: Keiji Yamagishi
+14. Crisis  — Compositor: Keiji Yamagishi
+15. Surprise Attack: The Wicked God's Secret Maneuvers  — Compositor: Keiji Yamagishi
+16. Malth the Crimson Terror  — Compositor: Keiji Yamagishi
+17. The Truth Concealed  — Compositor: Keiji Yamagishi
+18. Melancholy Destiny  — Compositor: Keiji Yamagishi
+19. Requiem  — Compositor: Keiji Yamagishi
+20. The Truth Concealed (Reprise)  — Compositor: Keiji Yamagishi
+21. The Menace of Jaquio  — Compositor: Keiji Yamagishi
+22. Showdown: At the Portal of Death (Battlefield)  — Compositor: Keiji Yamagishi
+23. The Demon's Incantation  — Compositor: Keiji Yamagishi
+24. In A Pinch: The Ordeal of Battle  — Compositor: Keiji Yamagishi
+25. At The End of the Battle  — Compositor: Keiji Yamagishi
+26. Irene: Overture of Dawn (Prelude)  — Compositor: Keiji Yamagishi
+27. Credits  — Compositor: Keiji Yamagishi
+28. Game Over  — Compositor: Keiji Yamagishi
+29. Cinema Display Sound Attack 1  — Compositor: Keiji Yamagishi
+30. Cinema Display Sound Attack 2  — Compositor: Keiji Yamagishi

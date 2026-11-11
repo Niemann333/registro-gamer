@@ -1,0 +1,14 @@
+Jogo: Road Fighter
+Versão: Road Fighter (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1985
+Desenvolvedora: Konami
+Compositor(es): Yoshinori Sasaki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Game Start
+02. Check Point
+03. Goal
+04. Game Over

@@ -1,0 +1,13 @@
+Jogo: Cheetahmen II
+Versão: Cheetahmen II (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1992
+Desenvolvedora: Active Enterprises
+Compositor(es): Ed Bogas, Javier Perez, Mario Gonzalez
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Main Theme
+03. Death

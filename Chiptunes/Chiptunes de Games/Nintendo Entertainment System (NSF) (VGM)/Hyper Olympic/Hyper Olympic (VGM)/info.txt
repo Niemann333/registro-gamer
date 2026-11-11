@@ -1,0 +1,21 @@
+Jogo: Hyper Olympic
+Versão: Hyper Olympic (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1985
+Desenvolvedora: Konami
+Compositor(es): Shokichi Ishihara, Vangelis
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen  — Compositor: Vangelis, Shokichi Ishihara
+02. Event Start  — Compositor: Shokichi Ishihara
+03. World Record  — Compositor: Shokichi Ishihara
+04. Event Clear  — Compositor: Shokichi Ishihara
+05. Game Over  — Compositor: Shokichi Ishihara
+06. Event Start  — Compositor: Shokichi Ishihara
+07. World Record  — Compositor: Shokichi Ishihara
+08. Event Clear  — Compositor: Shokichi Ishihara
+09. Event Miss  — Compositor: Shokichi Ishihara
+10. Commendation  — Compositor: Shokichi Ishihara
+11. Game Over  — Compositor: Shokichi Ishihara

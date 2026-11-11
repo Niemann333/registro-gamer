@@ -1,0 +1,17 @@
+Jogo: Duck Hunt
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Hirokazu Tanaka
+Fonte: etiquetas da pasta "Duck Hunt (VGM)"
+Status: OK
+
+Faixas:
+[Duck Hunt.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Duck Hunt (VGM)")
+01. Faixa 1
+02. Faixa 2
+03. Faixa 5
+04. Faixa 4
+05. Faixa 7
+06. Faixa 13
+07. Faixa 3
+08. Faixa 16

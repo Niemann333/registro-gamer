@@ -1,0 +1,31 @@
+Jogo: Super Mario Bros
+Versão: Super Mario Bros. (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1985
+Desenvolvedora: Nintendo EAD
+Compositor(es): Koji Kondo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Running About
+02. Underground
+03. Swimming Around
+04. Bowser's Castle
+05. Invincible
+06. Level Complete
+07. Bowser's Castle Complete
+08. Miss
+09. Game Over
+10. Into the Pipe
+11. Saved the Princess
+12. Running About (Hurry!)
+13. Underground (Hurry!)
+14. Swimming Around (Hurry!)
+15. Bowser's Castle (Hurry!)
+16. Invincible (Hurry!)
+17. Into the Pipe (Hurry!)
+18. Saved the Princess
+19. Name Entry
+20. Saved the Princess
+21. Unused

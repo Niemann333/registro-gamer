@@ -1,0 +1,25 @@
+Jogo: The Legend of Zelda
+Versão: The Legend of Zelda (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Nintendo EAD
+Compositor(es): Koji Kondo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title BGM
+02. Overworld BGM
+03. Underworld BGM
+04. Item Jingle
+05. Discovery Jingle
+06. Secret Jingle
+07. Catch Treasure Fanfare
+08. Flute
+09. Catch Triforce Fanfare
+10. Dead
+11. Game Over
+12. Death Mountain BGM
+13. When Ganon Appears and Is Defeated Fanfare
+14. When Zelda Is Rescued Fanfare
+15. Ending Theme

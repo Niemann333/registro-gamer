@@ -1,0 +1,36 @@
+Jogo: Mega Man 2
+Versão: Mega Man 2 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Capcom
+Compositor(es): Takashi Tateishi, Manami Matsumae
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening  — Compositor: Takashi Tateishi, Manami Matsumae
+02. Title  — Compositor: Takashi Tateishi
+03. Pass Word  — Compositor: Takashi Tateishi
+04. Stage Select  — Compositor: Takashi Tateishi
+05. Game Start  — Compositor: Manami Matsumae
+06. Metal Man Stage  — Compositor: Takashi Tateishi
+07. Air Man Stage  — Compositor: Takashi Tateishi, Manami Matsumae
+08. Bubble Man Stage  — Compositor: Takashi Tateishi
+09. Quick Man Stage  — Compositor: Takashi Tateishi
+10. Crash Man Stage  — Compositor: Takashi Tateishi
+11. Flash Man Stage  — Compositor: Takashi Tateishi
+12. Heat Man Stage  — Compositor: Takashi Tateishi
+13. Wood Man Stage  — Compositor: Takashi Tateishi
+14. Stage Clear  — Compositor: Takashi Tateishi
+15. Get A Weapon  — Compositor: Takashi Tateishi
+16. Dr. Wily UFO SE  — Compositor: Takashi Tateishi
+17. Dr. Wily Map  — Compositor: Takashi Tateishi
+18. Dr. Wily Stage 1  — Compositor: Takashi Tateishi
+19. Dr. Wily Stage 2  — Compositor: Takashi Tateishi
+20. Last Stage  — Compositor: Takashi Tateishi
+21. Boss  — Compositor: Takashi Tateishi
+22. Clear Demo  — Compositor: Takashi Tateishi
+23. All Stage Clear  — Compositor: Takashi Tateishi
+24. Ending  — Compositor: Takashi Tateishi
+25. Credit Roll  — Compositor: Takashi Tateishi
+26. Game Over  — Compositor: Takashi Tateishi

@@ -1,0 +1,26 @@
+Jogo: Legacy of the Wizard
+Versão: Legacy of The Wizard (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Nihon Falcom, Compile
+Compositor(es): Yuzo Koshiro, Mieko Ishikawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. Theme of Inn & Home
+03. Select Scene
+04. Ground Theme
+05. All Together Now
+06. Theme of Shop
+07. Xemn Worzen
+08. Mid Boss
+09. Pochi
+10. Lyll Worzen
+11. Mayna Worzen
+12. Dilgyos
+13. Ending Theme
+14. Theme of Death
+15. Treasure Chest
+16. Roas Worzen (Unused)

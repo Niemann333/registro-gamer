@@ -1,0 +1,30 @@
+Jogo: Battletoads
+Versão: Battletoads (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1991
+Desenvolvedora: Rare
+Compositor(es): David Wise
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Interlude
+03. Ragnarok's Canyon
+04. Level Complete
+05. Wookie Hole
+06. Turbo Tunnel
+07. Turbo Tunnel Bike Race
+08. Arctic Caverns
+09. Surf CIty & Terra Tubes
+10. Karnath's Lair
+11. Volkmire's Inferno
+12. Jet Turbo
+13. Intruder Excluder
+14. Rat Race
+15. Clinger-Winger
+16. The Revolution
+17. Boss Battle, Armageddon & Ending
+18. Unused
+19. Continue & Game Over
+20. Pause Beat

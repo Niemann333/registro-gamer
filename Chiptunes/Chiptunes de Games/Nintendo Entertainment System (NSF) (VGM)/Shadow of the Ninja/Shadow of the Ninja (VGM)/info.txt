@@ -1,0 +1,22 @@
+Jogo: Shadow of the Ninja
+Versão: Shadow of the Ninja (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1990
+Desenvolvedora: Natsume
+Compositor(es): Iku Mizutani, Koichi Yamanishi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening
+02. Stage Start
+03. Stage 1
+04. Boss
+05. Stage Clear
+06. Stage 2
+07. Stage 3
+08. Stage 4
+09. Stage 5
+10. Final Boss
+11. Ending
+12. Game Over

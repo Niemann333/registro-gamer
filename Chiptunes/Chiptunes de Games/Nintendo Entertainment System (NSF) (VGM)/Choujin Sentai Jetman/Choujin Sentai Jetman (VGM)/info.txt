@@ -1,0 +1,28 @@
+Jogo: Choujin Sentai Jetman
+Versão: Choujin Sentai Jetman (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1991
+Desenvolvedora: Natsume
+Compositor(es): Hiroyuki Iwatsuki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Area Select
+03. Area A
+04. Area B
+05. Area C
+06. Area D
+07. Area E
+08. Boss Intro
+09. Transformation
+10. Boss
+11. Area Clear
+12. Last Area Intro
+13. Last Area
+14. Final Boss
+15. Ending
+16. Game Over
+17. Battle Mode Win
+18. Battle Mode Loss

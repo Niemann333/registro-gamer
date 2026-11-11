@@ -1,0 +1,13 @@
+Jogo: Yie Ar Kung-Fu
+Versão: Yie Ar Kung Fu (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1985
+Desenvolvedora: Konami (AC / FC)
+Compositor(es): Miki Higashino
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Main BGM
+02. You Win
+03. Game Over

@@ -1,0 +1,40 @@
+Jogo: Mega Man 4
+Versão: Mega Man 4 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1991
+Desenvolvedora: Capcom
+Compositor(es): Minae Fujii, Takashi Tateishi, Manami Matsumae, Yasuaki Fujita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening  — Compositor: Minae Fujii
+02. Opening 2  — Compositor: Minae Fujii
+03. Title  — Compositor: Minae Fujii
+04. Pass Word  — Compositor: Minae Fujii
+05. Stage Select  — Compositor: Minae Fujii
+06. Game Start  — Compositor: Manami Matsumae
+07. Bright Man Stage  — Compositor: Minae Fujii
+08. Toad Man Stage  — Compositor: Minae Fujii
+09. Drill Man Stage  — Compositor: Minae Fujii
+10. Pharaoh Man Stage  — Compositor: Minae Fujii
+11. Ring Man Stage  — Compositor: Minae Fujii
+12. Dust Man Stage  — Compositor: Minae Fujii
+13. Dive Man Stage  — Compositor: Minae Fujii
+14. Skull Man Stage  — Compositor: Minae Fujii
+15. Get Items  — Compositor: Minae Fujii
+16. Boss  — Compositor: Minae Fujii
+17. Stage Clear  — Compositor: Takashi Tateishi
+18. Get A Weapon  — Compositor: Minae Fujii
+19. Dr. Cossack Stage Map  — Compositor: Minae Fujii
+20. Dr. Cossack Stage 1  — Compositor: Minae Fujii
+21. Dr. Cossack Stage 2  — Compositor: Minae Fujii
+22. Dr. Wily Stage Map  — Compositor: Minae Fujii
+23. Dr. Wily Stage 1  — Compositor: Minae Fujii
+24. Dr. Wily Stage 2  — Compositor: Minae Fujii
+25. Last Boss  — Compositor: Minae Fujii
+26. All Stage Clear  — Compositor: Minae Fujii
+27. Ending  — Compositor: Minae Fujii
+28. Credit Roll  — Compositor: Takashi Tateishi
+29. Game Over  — Compositor: Minae Fujii
+30. Proto Man  — Compositor: Yasuaki Fujita

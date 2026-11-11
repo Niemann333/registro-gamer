@@ -1,0 +1,14 @@
+Jogo: Cheetahmen II
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Ed Bogas, Javier Perez, Mario Gonzalez
+Fonte: etiquetas da pasta "Cheetahmen II (VGM)"
+Status: OK
+
+Faixas:
+[Cheetahmen II.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Cheetahmen II (VGM)")
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5

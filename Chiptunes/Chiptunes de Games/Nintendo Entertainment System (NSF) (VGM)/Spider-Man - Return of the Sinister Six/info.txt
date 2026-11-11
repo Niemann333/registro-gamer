@@ -1,0 +1,13 @@
+Jogo: Spider-Man - Return of the Sinister Six
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): David Whittaker
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[Spider-Man - Return of the Sinister Six.nsf]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5

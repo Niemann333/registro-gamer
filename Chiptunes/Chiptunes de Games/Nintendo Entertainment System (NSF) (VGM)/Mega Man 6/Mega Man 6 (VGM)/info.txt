@@ -1,0 +1,47 @@
+Jogo: Mega Man 6
+Versão: Mega Man 6 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1993
+Desenvolvedora: Capcom
+Compositor(es): Yuko Takehara, Takashi Tateishi, Yasuaki Fujita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Capcom Logo  — Compositor: Yuko Takehara
+02. Opening  — Compositor: Yuko Takehara
+03. Title  — Compositor: Yuko Takehara
+04. Pass Word  — Compositor: Yuko Takehara
+05. Stage Select  — Compositor: Yuko Takehara
+06. Game Start  — Compositor: Yuko Takehara
+07. Blizzard Man Stage  — Compositor: Yuko Takehara
+08. Centaur Man Stage  — Compositor: Yuko Takehara
+09. Flame Man Stage  — Compositor: Yuko Takehara
+10. Knight Man Stage  — Compositor: Yuko Takehara
+11. Plant Man Stage  — Compositor: Yuko Takehara
+12. Tomahawk Man Stage  — Compositor: Yuko Takehara
+13. Wind Man Stage  — Compositor: Yuko Takehara
+14. Yamato Man Stage  — Compositor: Yuko Takehara
+15. Boss  — Compositor: Yuko Takehara
+16. Stage Clear  — Compositor: Takashi Tateishi
+17. Get A Weapon  — Compositor: Yuko Takehara
+18. Mr. X Stage Map  — Compositor: Yuko Takehara
+19. Mr. X Stage  — Compositor: Yuko Takehara
+20. Dr. Wily Stage Map  — Compositor: Yuko Takehara
+21. Dr. Wily Stage  — Compositor: Yuko Takehara
+22. Last Boss  — Compositor: Yuko Takehara
+23. All Stage Clear  — Compositor: Yuko Takehara
+24. Ending (Intro)  — Compositor: Yuko Takehara
+25. Ending (Blizzard Man)  — Compositor: Yuko Takehara
+26. Ending (Centaur Man)  — Compositor: Yuko Takehara
+27. Ending (Flame Man)  — Compositor: Yuko Takehara
+28. Ending (Knight Man)  — Compositor: Yuko Takehara
+29. Ending (Plant Man)  — Compositor: Yuko Takehara
+30. Ending (Tomahawk Man)  — Compositor: Yuko Takehara
+31. Ending (Wind Man)  — Compositor: Yuko Takehara
+32. Ending (Yamato Man)  — Compositor: Yuko Takehara
+33. Ending (Credit Roll)  — Compositor: Yuko Takehara
+34. Game Over  — Compositor: Yuko Takehara
+35. Rockman 6 - Opening  — Compositor: Yuko Takehara
+36. Ending (OST Edit)  — Compositor: Yuko Takehara
+37. Proto Man  — Compositor: Yasuaki Fujita

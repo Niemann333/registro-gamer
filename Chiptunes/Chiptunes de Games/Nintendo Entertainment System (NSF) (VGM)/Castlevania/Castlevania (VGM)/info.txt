@@ -1,0 +1,26 @@
+Jogo: Castlevania
+Versão: Castlevania (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Konami
+Compositor(es): Kinuyo Yamashita, Satoe Terashima
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Prologue  — Compositor: Kinuyo Yamashita
+02. Vampire Killer  — Compositor: Satoe Terashima
+03. Stalker  — Compositor: Satoe Terashima
+04. Wicked Child  — Compositor: Kinuyo Yamashita
+05. Walking On the Edge  — Compositor: Kinuyo Yamashita
+06. Heart of Fire  — Compositor: Kinuyo Yamashita
+07. Out of Time  — Compositor: Satoe Terashima
+08. Poison Mind  — Compositor: Kinuyo Yamashita
+09. Player Miss  — Compositor: Kinuyo Yamashita
+10. Game Over  — Compositor: Kinuyo Yamashita
+11. Stage Clear  — Compositor: Kinuyo Yamashita
+12. Name Entry  — Compositor: Satoe Terashima
+13. Nothing to Lose  — Compositor: Kinuyo Yamashita
+14. Black Night  — Compositor: Kinuyo Yamashita
+15. All Clear  — Compositor: Kinuyo Yamashita
+16. Voyager  — Compositor: Satoe Terashima

@@ -1,0 +1,37 @@
+Jogo: Mega Man 5
+Versão: Mega Man 5 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1992
+Desenvolvedora: Capcom
+Compositor(es): Mari Yamaguchi, Yasuaki Fujita, Takashi Tateishi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening  — Compositor: Mari Yamaguchi
+02. Title  — Compositor: Mari Yamaguchi
+03. Pass Word  — Compositor: Mari Yamaguchi
+04. Stage Select  — Compositor: Mari Yamaguchi
+05. Game Start  — Compositor: Mari Yamaguchi
+06. Gravity Man Stage  — Compositor: Mari Yamaguchi
+07. Wave Man Stage  — Compositor: Mari Yamaguchi
+08. Stone Man Stage  — Compositor: Mari Yamaguchi
+09. Gyro Man Stage  — Compositor: Mari Yamaguchi
+10. Star Man Stage  — Compositor: Mari Yamaguchi
+11. Charge Man Stage  — Compositor: Mari Yamaguchi
+12. Napalm Man Stage  — Compositor: Mari Yamaguchi
+13. Crystal Man Stage  — Compositor: Mari Yamaguchi
+14. Boss  — Compositor: Mari Yamaguchi
+15. Stage Clear  — Compositor: Takashi Tateishi
+16. Get A Weapon  — Compositor: Mari Yamaguchi
+17. Dark Man Stage Map  — Compositor: Mari Yamaguchi
+18. Dark Man Stage  — Compositor: Mari Yamaguchi
+19. Dr. Wily Stage Map  — Compositor: Mari Yamaguchi
+20. Dr. Wily Stage  — Compositor: Mari Yamaguchi
+21. Last Boss  — Compositor: Mari Yamaguchi
+22. All Stage Clear  — Compositor: Mari Yamaguchi
+23. Escape  — Compositor: Mari Yamaguchi
+24. Ending  — Compositor: Mari Yamaguchi
+25. Game Over  — Compositor: Mari Yamaguchi
+26. Dark Man  — Compositor: Yasuaki Fujita
+27. Proto Man  — Compositor: Yasuaki Fujita

@@ -1,0 +1,26 @@
+Jogo: Shatterhand
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Iku Mizutani
+Fonte: etiquetas da pasta "Shatterhand (VGM)"
+Status: OK
+
+Faixas:
+[Shatterhand.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Shatterhand (VGM)")
+01. Faixa 10
+02. Faixa 11
+03. Faixa 1
+04. Faixa 3
+05. Faixa 5
+06. Faixa 2
+07. Faixa 6
+08. Faixa 7
+09. Faixa 8
+10. Faixa 4
+11. Faixa 13
+12. Faixa 12
+13. Faixa 9
+[Tokkyuu Shirei Solbrain.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Shatterhand (VGM)")
+14. Faixa 10
+15. Faixa 5

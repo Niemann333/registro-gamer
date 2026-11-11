@@ -1,0 +1,26 @@
+Jogo: Mega Man
+Versão: Mega Man (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Capcom
+Compositor(es): Manami Matsumae
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Stage Select
+02. Game Start
+03. Cutman Stage
+04. Gutsman Stage
+05. Iceman Stage
+06. Bombman Stage
+07. Fireman Stage
+08. Elecman Stage
+09. Boss
+10. Stage Clear
+11. Dr. Wily Stage 1
+12. Dr. Wily Stage 2
+13. Dr. Wily Stage Boss
+14. All Stage Clear
+15. Ending
+16. Game Over

@@ -1,0 +1,19 @@
+Jogo: Tetris
+Versão: Tetris (Tengen) (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1989
+Desenvolvedora: Atari Games (AC);
+Compositor(es): Brad Fuller
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Loginska
+03. Bradinsky
+04. Kalinka
+05. Troika
+06. Level Up
+07. Celebration
+08. Game Over
+09. Unused

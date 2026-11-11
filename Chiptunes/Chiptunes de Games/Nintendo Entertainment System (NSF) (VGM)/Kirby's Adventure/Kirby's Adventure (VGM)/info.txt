@@ -1,0 +1,52 @@
+Jogo: Kirby's Adventure
+Versão: Kirby's Adventure (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM) — Nintendo Enterainment
+Ano: 1993
+Desenvolvedora: HAL Laboratory
+Compositor(es): Hirokazu Ando, Jun Ishikawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Drawing Song  — Compositor: Hirokazu Ando
+02. Title Screen ~ Demo  — Compositor: Hirokazu Ando
+03. Plains Level  — Compositor: Hirokazu Ando
+04. Invincibility  — Compositor: Hirokazu Ando, Jun Ishikawa
+05. Level Map Select of LEVEL 1  — Compositor: Hirokazu Ando
+06. Underground Level  — Compositor: Hirokazu Ando
+07. Boss  — Compositor: Hirokazu Ando
+08. Level Cleared Dance  — Compositor: Hirokazu Ando, Jun Ishikawa
+09. Sea and Ship Level  — Compositor: Hirokazu Ando
+10. Level Map Select of LEVEL 2  — Compositor: Hirokazu Ando
+11. Museum and Star Riding Place  — Compositor: Hirokazu Ando
+12. Castle Level  — Compositor: Hirokazu Ando
+13. Forest Level  — Compositor: Hirokazu Ando, Jun Ishikawa
+14. Level Map Select of LEVEL 3  — Compositor: Hirokazu Ando
+15. Cloud Level  — Compositor: Hirokazu Ando
+16. Crane Fever  — Compositor: Hirokazu Ando
+17. Level Map Select of LEVEL 4  — Compositor: Hirokazu Ando
+18. Mountain Level  — Compositor: Hirokazu Ando
+19. Expert Bonus Level  — Compositor: Hirokazu Ando
+20. Level Map Select of LEVEL 5  — Compositor: Hirokazu Ando
+21. Underwater Level  — Compositor: Hirokazu Ando
+22. Level Map Select of LEVEL 6  — Compositor: Hirokazu Ando
+23. Dream and Cold Level  — Compositor: Hirokazu Ando
+24. Level Map Select of LEVEL 7  — Compositor: Hirokazu Ando
+25. Black and White Plains Level  — Compositor: Hirokazu Ando, Jun Ishikawa
+26. Beginning of Level 8  — Compositor: Hirokazu Ando
+27. Final Boss  — Compositor: Hirokazu Ando
+28. Ending Demo  — Compositor: Hirokazu Ando
+29. Game Over  — Compositor: Hirokazu Ando
+30. Level Clear  — Compositor: Hirokazu Ando, Jun Ishikawa
+31. Level Cleared Dance (Short)  — Compositor: Hirokazu Ando, Jun Ishikawa
+32. Crane Fever (faster)  — Compositor: Hirokazu Ando
+33. Quick Draw  — Compositor: Hirokazu Ando, Jun Ishikawa
+34. Quick Draw Miss  — Compositor: Hirokazu Ando, Jun Ishikawa
+35. No Bonus  — Compositor: Hirokazu Ando, Jun Ishikawa
+36. Bonus  — Compositor: Hirokazu Ando, Jun Ishikawa
+37. Perfect Bonus  — Compositor: Hirokazu Ando, Jun Ishikawa
+38. Miss  — Compositor: Hirokazu Ando, Jun Ishikawa
+39. Nightmare Emerges  — Compositor: Hirokazu Ando, Jun Ishikawa
+40. Nightmare's Power Orb  — Compositor: Hirokazu Ando, Jun Ishikawa
+41. Nightmare Wizard  — Compositor: Hirokazu Ando, Jun Ishikawa
+42. Kirby's Dream Land Title Screen  — Compositor: Hirokazu Ando, Jun Ishikawa

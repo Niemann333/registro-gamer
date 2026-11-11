@@ -1,0 +1,45 @@
+Jogo: Mega Man 9
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): DESCONHECIDO
+Arranjo: Mathew Valente (versão NSF)
+Fonte: etiqueta traz só quem fez o NSF; compositores do Mega Man 9 não conferidos
+Status: CONFERIR
+
+Faixas:
+[Mega Man 9.nsfe]
+01. Opening 1
+02. Opening 2
+03. Opening 3
+04. Title
+05. Menu
+06. Stage Select
+07. Game Start
+08. Concrete Jungle (Concrete Man)
+09. Thunder Tornado (Tornado Man)
+10. Splash Blue (Splash Woman)
+11. Plug Electric (Plug Man)
+12. Jewel Temptation (Jewel Man)
+13. Hornet Dance (Hornet Man)
+14. Magma Burning (Magma Man) Non-NES style
+15. Magma Burning (Magma Man) NES-Style
+16. Galaxy Fantasy (Galaxy Man)
+17. Boss
+18. Stage Clear
+19. Get a Weapon
+20. Shop
+21. Rush Jet
+22. Suspense
+23. Dr. Wily UFO
+24. Dr. Wily Castle
+25. Flash in the Dark (Dr. Wily Stage 1)
+26. We're The Robots (Dr. Wily Stage 2) Wii
+27. Faixa 27
+28. Faixa 28
+29. Faixa 29
+30. Faixa 30
+31. Faixa 31
+32. Faixa 32
+33. Faixa 33
+34. Faixa 34
+35. Faixa 35
+36. Faixa 36

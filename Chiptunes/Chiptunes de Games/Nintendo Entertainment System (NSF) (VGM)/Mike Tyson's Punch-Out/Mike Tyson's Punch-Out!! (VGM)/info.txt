@@ -1,0 +1,30 @@
+Jogo: Mike Tyson's Punch-Out
+Versão: Mike Tyson's Punch-Out!! (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Nintendo IRD (AC / NES)
+Compositor(es): Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka, Koji Kondo, Claude Joseph Rouget de Lisle, Richard Wagner, Georges Bizet
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title  — Compositor: Koji Kondo, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+02. Introduction  — Compositor: Koji Kondo, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+03. Glass Joe ~ Mr. Sand Man  — Compositor: Claude Joseph Rouget de Lisle, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+04. Round Start ~ Great Tiger ~ Bald Bull ~ Mike Tyson ~ Mr. Dream  — Compositor: Koji Kondo, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+05. Boxing  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+06. Opponent Is Down  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+07. You Won  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+08. Von Kaiser ~ Super Macho Man  — Compositor: Richard Wagner, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+09. Title Bout!!  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+10. Piston Honda  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+11. Get Up!  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+12. We Have a New Champion!!  — Compositor: Akito Nakatsuka
+13. Training ~ Credits  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+14. Don Flamenco  — Compositor: Georges Bizet, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+15. King Hippo  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+16. Let's Rematch!  — Compositor: Koji Kondo, Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+17. Soda Popinski  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+18. New Champ!  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+19. The Dream Fight!!  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka
+20. Game Over  — Compositor: Kenji Yamamoto, Akito Nakatsuka, Yukio Kaneoka

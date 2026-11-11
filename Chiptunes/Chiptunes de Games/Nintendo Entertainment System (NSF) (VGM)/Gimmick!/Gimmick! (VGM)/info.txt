@@ -1,0 +1,30 @@
+Jogo: Gimmick!
+Versão: Gimmick! (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM) — Family Computer
+Ano: 1992
+Desenvolvedora: Sunsoft
+Compositor(es): Masashi Kageyama
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Good Morning (Opening)
+02. No Limits (Map)
+03. Happy Birthday (Stage 1)
+04. Good Weather (Stage 2)
+05. Paradox (Stage 3 Underground)
+06. Slow Illusion (Stage 3 Aboveground)
+07. Paradigm (Stage 4)
+08. Lion Heart (Stage 5)
+09. Cadbury (Stage 6 Interior)
+10. Innocent (Stage 6 Exterior)
+11. Aporia (Boss)
+12. Identity Believer (Boss Serious Mode)
+13. Siesta (Normal End)
+14. Just Friends (Secret Item Stage)
+15. Sophia (Stage 7)
+16. Evidence of My Life (Last Battle Part 1)
+17. Long Tomorrow (Last Battle Part 2)
+18. Good Night (True End)
+19. Strange Memories of Death (Unused)
+20. Cadbury (Alt)

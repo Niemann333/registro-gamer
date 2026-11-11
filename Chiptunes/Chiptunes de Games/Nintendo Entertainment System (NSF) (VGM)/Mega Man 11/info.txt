@@ -1,0 +1,17 @@
+Jogo: Mega Man 11
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Marika Suzuki
+Arranjo: M.T (versão NSF)
+Fonte: etiqueta: "Marika Suzuki; arr. by M.T"
+Status: CONFERIR
+
+Faixas:
+01. DWN.081-BlockMan
+02. DWN.082-FuseMan
+03. DWN.083-BlastMan
+04. DWN.084-AcidMan
+05. DWN.085-TundraMan
+06. DWN.086-TorchMan
+07. DWN.087-ImpactMan;PileMan
+08. DWN.088-BounceMan;RubberMan
+09. GearFortressStage

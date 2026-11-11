@@ -1,0 +1,19 @@
+Jogo: Castlevania II - Simons Quest
+Versão: Castlevania II - Simons Quest (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Konami
+Compositor(es): Kenichi Matsubara, Satoe Terashima
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Silence of The Daylight
+02. Bloody Tears
+03. Monster Dance
+04. Dwelling of Doom
+05. Within These Castle Walls
+06. Last Boss
+07. Game Over
+08. Message of Darkness
+09. A Requiem

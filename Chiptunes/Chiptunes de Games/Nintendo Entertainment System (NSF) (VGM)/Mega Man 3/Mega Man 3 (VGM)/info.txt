@@ -1,0 +1,34 @@
+Jogo: Mega Man 3
+Versão: Mega Man 3 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1990
+Desenvolvedora: Capcom
+Compositor(es): Yasuaki Fujita, Harumi Fujita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title  — Compositor: Yasuaki Fujita
+02. Pass Word  — Compositor: Yasuaki Fujita
+03. Stage Select  — Compositor: Yasuaki Fujita
+04. Game Start  — Compositor: Yasuaki Fujita
+05. Needle Man Stage  — Compositor: Harumi Fujita
+06. Magnet Man Stage  — Compositor: Yasuaki Fujita
+07. Gemini Man Stage  — Compositor: Harumi Fujita
+08. Hard Man Stage  — Compositor: Yasuaki Fujita
+09. Top Man Stage  — Compositor: Yasuaki Fujita
+10. Snake Man Stage  — Compositor: Yasuaki Fujita
+11. Spark Man Stage  — Compositor: Yasuaki Fujita
+12. Shadow Man Stage  — Compositor: Yasuaki Fujita
+13. Proto Man  — Compositor: Yasuaki Fujita
+14. Boss  — Compositor: Yasuaki Fujita
+15. Stage Clear  — Compositor: Yasuaki Fujita
+16. Get A Weapon  — Compositor: Yasuaki Fujita
+17. Dr. Wily Stage Map  — Compositor: Yasuaki Fujita
+18. Dr. Wily Stage 1  — Compositor: Yasuaki Fujita
+19. Dr. Wily Stage 2  — Compositor: Yasuaki Fujita
+20. Dr. Wily Stage 3  — Compositor: Yasuaki Fujita
+21. Dr. Wily Stage Boss  — Compositor: Yasuaki Fujita
+22. All Stage Clear  — Compositor: Yasuaki Fujita
+23. Ending  — Compositor: Yasuaki Fujita
+24. Credit Roll  — Compositor: Harumi Fujita

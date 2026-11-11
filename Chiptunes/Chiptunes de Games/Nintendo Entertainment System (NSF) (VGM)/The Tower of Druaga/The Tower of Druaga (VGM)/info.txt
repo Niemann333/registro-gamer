@@ -1,0 +1,21 @@
+Jogo: The Tower of Druaga
+Versão: The Tower of Druaga (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1985
+Desenvolvedora: Namco (AC / FC)
+Compositor(es): Junko Ozawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Round Start
+02. Main Music
+03. Round Clear
+04. Music When a Dragon Appears
+05. Player Killed
+06. Music When Druaga Appears
+07. Zapped
+08. Music When Princess Appears
+09. Congratulant Fanfare
+10. Name Entry ~ Congratulant Message
+11. Game Over

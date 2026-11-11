@@ -1,0 +1,17 @@
+Jogo: Tetris
+Versão: Tetris (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Bullet-Proof Software
+Compositor(es): Hiroshi Suzuki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Peddler
+02. Technotris
+03. Kalinka
+04. Troika
+05. Celebration 1
+06. Celebration 2
+07. Heroes

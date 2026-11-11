@@ -1,0 +1,15 @@
+Jogo: Duck Hunt
+Versão: Duck Hunt (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1984
+Desenvolvedora: Nintendo R&D1
+Compositor(es): Hirokazu Tanaka
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Game A & B Start
+03. Round Clear
+04. Game Over
+05. Game C Start

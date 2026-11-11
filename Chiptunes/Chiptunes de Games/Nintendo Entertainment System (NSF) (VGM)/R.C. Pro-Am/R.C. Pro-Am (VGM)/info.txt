@@ -1,0 +1,16 @@
+Jogo: R.C. Pro-Am
+Versão: R.C. Pro-Am (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Rare
+Compositor(es): David Wise
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Race Begins
+03. Race Ends
+04. Trophy Room
+05. High Score Entry
+06. Game Over

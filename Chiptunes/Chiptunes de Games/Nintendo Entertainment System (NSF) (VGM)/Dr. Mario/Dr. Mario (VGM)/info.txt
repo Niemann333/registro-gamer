@@ -1,0 +1,21 @@
+Jogo: Dr. Mario
+Versão: Dr. Mario (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1990
+Desenvolvedora: Nintendo R&D1
+Compositor(es): Hirokazu Tanaka
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Options Screen
+03. Fever
+04. Chill
+05. Fever Clear
+06. Chill Clear
+07. Game Over
+08. Level 20 Clear
+09. Ending
+10. Vs. Mode Clear
+11. Unknown

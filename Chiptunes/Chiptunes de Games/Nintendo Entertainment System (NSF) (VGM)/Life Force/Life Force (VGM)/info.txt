@@ -1,0 +1,21 @@
+Jogo: Life Force
+Versão: Life Force (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1987
+Desenvolvedora: Konami
+Compositor(es): Miki Higashino, Shinya Sakamoto, Satoe Terashima, Hidenori Maezawa, Atsushi Fujio
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Coin
+02. Power of Anger
+03. Poison of Snake
+04. Thunderbolt
+05. Planet Ratis
+06. Starfield
+07. Burn the Wind
+08. Destroy Them All
+09. Aircraft Carrier
+10. Peace Again
+11. Crystal Forever

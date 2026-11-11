@@ -1,0 +1,26 @@
+Jogo: Teenage Mutant Ninja Turtles
+Versão: Teenage Mutant Ninja Turtles (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1989
+Desenvolvedora: Konami
+Compositor(es): Jun Funahashi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title, Opening & Cutscene
+02. Areas 1-4 Overworld (Streets)
+03. Areas 1-1, 3-2 & 4 Stage Theme
+04. Areas 1-2, 2-2, 3-1 & 6 Stage Theme
+05. Mini-Boss Battle
+06. Mini-Boss Clear
+07. Boss Battle
+08. Area Clear
+09. Area 2-1 - Underwater
+10. Area 2-1 - Hurry
+11. Area 2-1 - Hurry!!
+12. Area 5 Overworld (FootClan Base)
+13. Area 5 - FootClan Caverns
+14. Life Lost
+15. Game Over
+16. Ending

@@ -1,0 +1,32 @@
+Jogo: Chaos World
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Iku Mizutani, Hiroyuki Iwatsuki
+Fonte: etiquetas da pasta "Chaos World (VGM)"
+Status: OK
+
+Faixas:
+[Chaos World.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Chaos World (VGM)")
+01. Faixa 12
+02. Faixa 13
+03. Faixa 15
+04. Faixa 21
+05. Faixa 4
+06. Faixa 16
+07. Faixa 8
+08. Faixa 10
+09. Faixa 1
+10. Faixa 22
+11. Faixa 3
+12. Faixa 7
+13. Faixa 19
+14. Faixa 20
+15. Faixa 2
+16. Faixa 17
+17. Faixa 9
+18. Faixa 5
+19. Faixa 14
+20. Faixa 18
+21. Faixa 23
+22. Faixa 6
+23. Faixa 11

@@ -1,0 +1,12 @@
+Jogo: Yie Ar Kung-Fu
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Miki Higashino
+Fonte: etiquetas da pasta "Yie Ar Kung Fu (VGM)"
+Status: OK
+
+Faixas:
+[Yie Ar Kung-Fu.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Yie Ar Kung Fu (VGM)")
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3

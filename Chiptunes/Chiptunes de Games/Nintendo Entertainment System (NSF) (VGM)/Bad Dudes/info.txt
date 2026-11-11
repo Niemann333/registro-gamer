@@ -1,0 +1,14 @@
+Jogo: Bad Dudes
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): DESCONHECIDO
+Fonte: etiqueta só com sobrenomes da Data East: "Saki, Miura, Suzuki, Takahama, ..."
+Status: CONFERIR
+
+Faixas:
+[Bad Dudes.nsf]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
+06. Faixa 6

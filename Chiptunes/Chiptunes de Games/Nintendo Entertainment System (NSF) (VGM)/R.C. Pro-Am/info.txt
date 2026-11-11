@@ -1,0 +1,15 @@
+Jogo: R.C. Pro-Am
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): David Wise
+Fonte: etiquetas da pasta "R.C. Pro-Am (VGM)"
+Status: OK
+
+Faixas:
+[R.C. Pro-Am.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "R.C. Pro-Am (VGM)")
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
+06. Faixa 6

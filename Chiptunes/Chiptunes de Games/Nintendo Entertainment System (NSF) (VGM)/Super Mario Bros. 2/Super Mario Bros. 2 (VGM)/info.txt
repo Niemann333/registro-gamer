@@ -1,0 +1,26 @@
+Jogo: Super Mario Bros. 2
+Versão: Super Mario Bros. 2 (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Nintendo EAD
+Compositor(es): Koji Kondo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Player Select
+03. Overworld
+04. Underworld
+05. Subspace
+06. Power-Up Fanfare
+07. Birdo
+08. Victory
+09. World Clear
+10. Invincible
+11. Wart
+12. Ending
+13. Miss
+14. Game Over
+15. Underworld (Prototype)
+16. Invincible (Prototype)

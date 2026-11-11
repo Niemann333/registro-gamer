@@ -1,0 +1,25 @@
+Jogo: Shatterhand
+Versão: Shatterhand (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1991
+Desenvolvedora: Natsume
+Compositor(es): Iku Mizutani
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Intro
+02. Game Start
+03. Area A
+04. Boss
+05. Area Clear
+06. Stage Select
+07. Area B
+08. Area C
+09. Area C, Area F (JP)
+10. Area D
+11. Area E, Area F
+12. Area G
+13. Ending
+14. Ranking
+15. Game Over

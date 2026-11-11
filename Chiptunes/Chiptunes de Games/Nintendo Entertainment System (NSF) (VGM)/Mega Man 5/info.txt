@@ -1,0 +1,33 @@
+Jogo: Mega Man 5
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Mari Yamaguchi, Yasuaki Fujita, Takashi Tateishi
+Fonte: etiquetas da pasta "Mega Man 5 (VGM)"
+Status: OK
+
+Faixas:
+[Mega Man 5.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Mega Man 5 (VGM)")
+01. Faixa 12
+02. Faixa 74
+03. Faixa 1
+04. Faixa 2
+05. Faixa 3
+06. Faixa 4
+07. Faixa 5
+08. Faixa 6
+09. Faixa 7
+10. Faixa 8
+11. Faixa 9
+12. Faixa 10
+13. Faixa 11
+14. Faixa 13
+15. Faixa 14
+16. Faixa 15
+17. Faixa 16
+18. Faixa 17
+19. Faixa 18
+20. Faixa 19
+21. Faixa 20
+22. Faixa 21
+23. Faixa 22
+24. Faixa 23

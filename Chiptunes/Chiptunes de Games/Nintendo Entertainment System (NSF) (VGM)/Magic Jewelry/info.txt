@@ -1,0 +1,12 @@
+Jogo: Magic Jewelry
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Hwang Shinwei
+Fonte: etiqueta do NSF (jogo não licenciado)
+Status: CONFERIR
+
+Faixas:
+[Magic Jewelry.nsf]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4

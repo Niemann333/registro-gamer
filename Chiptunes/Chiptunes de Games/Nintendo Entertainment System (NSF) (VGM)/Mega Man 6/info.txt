@@ -1,0 +1,42 @@
+Jogo: Mega Man 6
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Compositor(es): Yuko Takehara, Takashi Tateishi, Yasuaki Fujita
+Fonte: etiquetas da pasta "Mega Man 6 (VGM)"
+Status: OK
+
+Faixas:
+[Mega Man 6.nsf]
+(o arquivo não traz nomes; os nomes estão na pasta "Mega Man 6 (VGM)")
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
+06. Faixa 6
+07. Faixa 7
+08. Faixa 8
+09. Faixa 9
+10. Faixa 10
+11. Faixa 11
+12. Faixa 12
+13. Faixa 13
+14. Faixa 14
+15. Faixa 16
+16. Faixa 17
+17. Faixa 18
+18. Faixa 19
+19. Faixa 20
+20. Faixa 21
+21. Faixa 22
+22. Faixa 23
+23. Faixa 24
+24. Faixa 25
+25. Faixa 26
+26. Faixa 28
+27. Faixa 29
+28. Faixa 30
+29. Faixa 31
+30. Faixa 32
+31. Faixa 33
+32. Faixa 34
+33. Faixa 35

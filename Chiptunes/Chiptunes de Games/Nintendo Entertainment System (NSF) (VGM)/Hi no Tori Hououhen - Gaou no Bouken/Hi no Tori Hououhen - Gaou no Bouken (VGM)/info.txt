@@ -1,0 +1,21 @@
+Jogo: Hi no Tori Hououhen - Gaou no Bouken
+Versão: Hi no Tori Hououhen - Gaou no Bouken (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM) — Family Computer
+Ano: 1987
+Desenvolvedora: Konami
+Compositor(es): Kinuyo Yamashita, Hidenori Maezawa, Iku Mizutani, Fumio Miyashita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Game Start  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+02. Yamato Stage  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+03. Ancient Stage  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+04. Afterlife Stage  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+05. Yamato Stage 8 (Volcano)  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+06. Boss  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+07. Stage Clear  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+08. Stage Clear Demo  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+09. Hi no Tori (Ending)  — Compositor: Fumio Miyashita
+10. Miss  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani
+11. Game Over  — Compositor: Kinuyo Yamashita, Hidenori Maezawa ,Iku Mizutani

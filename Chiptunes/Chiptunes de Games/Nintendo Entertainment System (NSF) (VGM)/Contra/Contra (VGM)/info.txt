@@ -1,0 +1,23 @@
+Jogo: Contra
+Versão: Contra (VGM)
+Plataforma: Nintendo Entertainment System (NSF) (VGM)
+Ano: 1988
+Desenvolvedora: Konami
+Compositor(es): Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Contra (Title)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+02. Introduction  — Compositor: Hidenori Maezawa, Kiyohiro Sada
+03. Jungle Battle (Stage 1, 7)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+04. Triumphant Return 1 (Stage Clear)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+05. Maze Fortress 1 (Stage 2, 4)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+06. Maze Fortress 2 (Stage 2, 4 Boss)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+07. Waterfall of Bloodshed (Stage 3)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+08. Fortress of Ice (Stage 5)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+09. Fortress of Flame (Stage 6)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+10. Horrible Heartbeat (Stage 8)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+11. Triumphant Return 2 (All Stage Clear)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+12. Sandinista (Ending)  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
+13. Game Over  — Compositor: Kazuki Muraoka, Hidenori Maezawa, Kiyohiro Sada
