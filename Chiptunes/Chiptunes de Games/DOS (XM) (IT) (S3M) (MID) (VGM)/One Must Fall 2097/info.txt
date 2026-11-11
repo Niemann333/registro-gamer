@@ -1,33 +1,16 @@
-Archive created by -=MIRSOFT=-
-Look for game MODs at http://go.to/gamemods
+Jogo: One Must Fall 2097
+Plataforma: DOS (XM) (IT) (S3M) (MID) (VGM)
+Compositor(es): Kenny Chou
+Fonte: conhecimento geral (créditos do jogo)
+Status: OK
 
-*** Archive info ***
-Archiver: Mirsoft, mirwais57
-Type: Game rip
-Format: MOD, S3M
-Original Composer: Kenny Chou
-Tracker: Kenny Chou
-Num of tunes: 8
-Complete:
-
-*** Game info ***
-Name: One Must Fall 2097
-Platform: PC
-Year: 1994
-Genre: Beat'em up
-Publisher: Epic Megagames
-Developer: Diversions Entertainment
-
-*** Additional info ***
-Update: Now contains the ending music, and the menu is in the right key.
-
-Original info:
-"There are some oddities in this archive. 
-
-Firstly, I don't know if tunes 01-PRELUDE.MOD and 02-INTRO.MOD really belong to the game, because there is no sign of playing them anywhere.
-
-Secondly, there is missing the tune that plays in the order screen of some of the Epic Megagames titles e.g. Jazz Jackrabbit in addition to OMF itself. However, in OMF the very same tune is also used as the tournament and single player ending music, so I think it should come with the game due to that.
-
-And thirdly, I'm not sure if the correct composer name is Kenny Chou or Kenny Chow.
-
-Any help resolving these three issues is greatly appreciated :)"
+Faixas:
+01. 01-PRELUDE
+02. 02-INTRO
+03. 03-MENU
+04. 04-ARENA0
+05. 05-ARENA1
+06. 06-ARENA2
+07. 07-ARENA3
+08. 08-ARENA4
+09. 09-END

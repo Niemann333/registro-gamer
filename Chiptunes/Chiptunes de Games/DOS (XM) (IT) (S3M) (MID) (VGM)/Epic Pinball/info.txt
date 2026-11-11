@@ -1,30 +1,23 @@
-Archive created by DEATH ADDER
-http://www.superfighter.com
+Jogo: Epic Pinball
+Plataforma: DOS (XM) (IT) (S3M) (MID) (VGM)
+Compositor(es): Robert A. Allen
+Fonte: conhecimento geral (créditos do jogo)
+Status: CONFERIR
 
-*** Archive info ***
-Archiver: Death Adder ##5, jagossel
-Type: Game rip
-Format: S3M
-Original Composer: Robert Allen
-Tracker: Robert Allen
-Num of tunes: 16
-Complete: 100%
-
-*** Game info ***
-Name: Epic Pinball
-Platform: PC
-Year: 1994
-Genre: Pinball
-Publisher: Epic Megagames
-Developer: James Schmalz
-
-*** Additional info ***
-Thanks to Death Adder who sent me this great archive and also to Jagossel who
-sent me additional Android song and Credits song from the shareware version
-(files SONG1a.S3M and SONG00.S3M).
-
-It seems that different versions of the game use different songs e.g. at the
-Android table (seems that V2.1 uses SONG1.S3M, where V2.0 uses SONG1a.S3M)
-- however, I cannot confirm it; so if someone has complete knowledge about this
-and can rename the files correctly to reflect versions of the game, it would
-be great if he could submit this info ;)
+Faixas:
+01. Epic Pinball - 01 - Title
+02. Epic Pinball - 02 - Android
+03. Epic Pinball - 03 - Pot of Gold
+04. Epic Pinball - 04 - Excalibur
+05. Epic Pinball - 05 - Crash and Burn
+06. Epic Pinball - 06 - Magic
+07. Epic Pinball - 07 - Jungle Pinball
+08. Epic Pinball - 08 - Deep Sea
+09. Epic Pinball - 09 - Enigma
+10. Epic Pinball - 10 - Super Android
+11. Epic Pinball - 11 - Cyborgirl
+12. Epic Pinball - 12 - Pangaea
+13. Epic Pinball - 13 - Space Journey
+14. Epic Pinball - 14 - Toy Factory
+15. Epic Pinball - 15 - African Safari
+16. Epic Pinball - 16 - Shareware Message

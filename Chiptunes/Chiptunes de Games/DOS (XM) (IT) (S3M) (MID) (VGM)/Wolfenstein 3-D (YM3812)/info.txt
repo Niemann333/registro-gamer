@@ -1,0 +1,36 @@
+Jogo: Wolfenstein 3-D (YM3812)
+Plataforma: DOS (XM) (IT) (S3M) (MID) (VGM) — IBM PC/AT
+Ano: 1992
+Desenvolvedora: iD Software
+Compositor(es): Robert Prince
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Horst-Wessel-Lied
+02. Wondering About My Loved Ones
+03. Get Them Before They Get You
+04. Searching For the Enemy
+05. P.O.W.
+06. Suspense
+07. The March to War
+08. Enemy Around the Corner
+09. Nazi Anthem
+10. Lurking...
+11. Going After Hitler
+12. Pounding Headache
+13. Into the Dungeons
+14. Kill the S.O.B.
+15. The Nazi Rap
+16. Twelfth Hour
+17. Zero Hour
+18. The Ultimate Challenge
+19. Wolf Pac
+20. Funk You!
+21. End of Level
+22. U R A Hero
+23. Roster
+24. Hitler Waltz
+25. Salute
+26. Victors
+27. Victory March

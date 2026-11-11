@@ -1,0 +1,32 @@
+Jogo: Doom (YMF262)
+Plataforma: DOS (XM) (IT) (S3M) (MID) (VGM) — IBM PC/AT
+Ano: 1993
+Desenvolvedora: id Software
+Compositor(es): Robert Prince
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. At Doom's Gate
+03. The Imp's Song
+04. Dark Halls
+05. Kitchen Ace (and Taking Names)
+06. Suspense
+07. On the Hunt
+08. Demons on the Prey
+09. Sign of Evil
+10. Hiding the Secrets
+11. I Sawed the Demons
+12. The Demons from Adrian's Pen
+13. They're Going to Get You
+14. Sinister
+15. Waltz of the Demons
+16. Nobody Told Me About id
+17. Untitled
+18. Donna to the Rescue
+19. Deep into the Code
+20. Facing the Spider
+21. Intermission from Doom
+22. The End of Doom
+23. Sweet Little Dead Bunny
