@@ -1,0 +1,21 @@
+Jogo: Pitfall II - Lost Caverns
+Plataforma: Arcade (VGM) — Sega System 1
+Ano: 1985
+Desenvolvedora: Activision / Sega
+Compositor(es): DESCONHECIDO
+Fonte: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
+Status: CONFERIR
+
+Faixas:
+01. Credit
+02. Scene 1 (Forest)
+03. Scene 2 (Ice)
+04. Balloon BGM
+05. Scene 3 (Digging Underground)
+06. Scene 3 (Trocco)
+07. Scene 4 (The Last Stage)
+08. Congratulations
+09. Miss 1 (Enemy)
+10. Miss 2 (Trap)
+11. Game Over
+12. Name Regist

@@ -1,0 +1,17 @@
+Jogo: Super Monaco GP
+Plataforma: Arcade (VGM) — Sega X
+Ano: 1989
+Desenvolvedora: Sega
+Compositor(es): Koichi Namiki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. F1 Grand Prix
+02. Extreme Tension
+03. Qualify
+04. The Checker Flag
+05. A Break
+06. Super License
+07. The Heat Waves
+08. At a Loss

@@ -1,0 +1,23 @@
+Jogo: Contra
+Plataforma: Arcade (VGM) — Arcade Machine
+Ano: 1987
+Desenvolvedora: Konami
+Compositor(es): Kazuki Muraoka
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Contra
+02. Coin
+03. Battle in the Jungle
+04. Labyrinthine Fortress 1
+05. Labyrinthine Fortress 2
+06. Triumphal Return 1
+07. Bloody Sault
+08. Fortress in the Ice
+09. Fortress in the Fire
+10. Pulse of the Shudder
+11. Triumphal Return 2
+12. Sandinista
+13. Game Over
+14. Ranking

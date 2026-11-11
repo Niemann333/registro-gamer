@@ -1,0 +1,17 @@
+Jogo: Track & Field
+Plataforma: Arcade (VGM) — Arcade Machine
+Ano: 1983
+Desenvolvedora: Konami
+Compositor(es): Shigeru Fukutake
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Coin
+02. Game Start
+03. Name Entry
+04. Event Start
+05. Best of 4 Players
+06. World Record
+07. Ranking
+08. Game Over

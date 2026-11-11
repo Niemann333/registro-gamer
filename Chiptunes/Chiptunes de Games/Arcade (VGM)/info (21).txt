@@ -1,0 +1,16 @@
+Jogo: Super Hang-On
+Plataforma: Arcade (VGM) — Arcade Machine
+Ano: 1987
+Desenvolvedora: Sega
+Compositor(es): Koichi Namiki, Katsuhiro Hayashi, Shigeru Ohwada
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening  — Compositor: Koichi Namiki
+02. Hard Road  — Compositor: Shigeru Ohwada
+03. Outride A Crisis  — Compositor: Katsuhiro Hayashi
+04. Sprinter  — Compositor: Katsuhiro Hayashi
+05. Winning Run  — Compositor: Koichi Namiki
+06. Goal  — Compositor: Katsuhiro Hayashi
+07. Name Entry  — Compositor: Koichi Namiki
