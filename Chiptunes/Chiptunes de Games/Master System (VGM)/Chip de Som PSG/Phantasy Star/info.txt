@@ -1,0 +1,28 @@
+Jogo: Phantasy Star
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1987
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Intro
+03. Town
+04. Shop
+05. Palma
+06. Battle
+07. Cave
+08. Church
+09. Vehicle
+10. Story
+11. Motavia
+12. Boss Dungeon
+13. Village
+14. Dezoris
+15. Medusa
+16. Lassic
+17. Dark Falz
+18. Game Over
+19. Ending

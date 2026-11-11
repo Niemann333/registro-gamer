@@ -1,0 +1,23 @@
+Jogo: Do The Same
+Chip: PSG
+Plataforma: Master System (VGM)
+Compositor(es): Tobikomi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Correcting Name
+02. Flower Level
+03. Fruit Level
+04. Game Over
+05. Insect Level
+06. Intro Jingle
+07. Level Complete
+08. Menu
+09. Name Confirmed
+10. Navigation Up Down
+11. Retrying The Level
+12. Rotation SFX
+13. Select Letter
+14. Select Level
+15. Stage Complete

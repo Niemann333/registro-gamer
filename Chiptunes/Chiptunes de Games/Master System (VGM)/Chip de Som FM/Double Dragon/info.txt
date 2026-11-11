@@ -1,0 +1,19 @@
+Jogo: Double Dragon
+Chip: FM
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1988
+Desenvolvedora: Arc System Works
+Compositor(es): Kazunaka Yamane
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Mission 1
+03. Mission 2
+04. Mission 3
+05. Mission 4
+06. Boss
+07. Last Boss
+08. Mission Complete
+09. Ending

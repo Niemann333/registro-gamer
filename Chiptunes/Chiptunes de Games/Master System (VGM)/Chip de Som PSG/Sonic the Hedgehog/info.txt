@@ -1,0 +1,24 @@
+Jogo: Sonic the Hedgehog
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System /
+Ano: 1991
+Compositor(es): Yuzo Koshiro, Masato Nakamura
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen  — Compositor: Masato Nakamura; Yuzo Koshiro
+02. Act Start  — Compositor: Yuzo Koshiro
+03. Green Hill Zone  — Compositor: Masato Nakamura; Yuzo Koshiro
+04. Invincible  — Compositor: Masato Nakamura; Yuzo Koshiro
+05. Bridge Zone  — Compositor: Yuzo Koshiro
+06. Chaos Emerald  — Compositor: Yuzo Koshiro
+07. Jungle Zone  — Compositor: Yuzo Koshiro
+08. Bonus Zone  — Compositor: Yuzo Koshiro
+09. Labyrinth Zone  — Compositor: Yuzo Koshiro
+10. Act Complete  — Compositor: Masato Nakamura; Yuzo Koshiro
+11. Scrap Brain Zone  — Compositor: Yuzo Koshiro
+12. Sky Base Zone  — Compositor: Yuzo Koshiro
+13. Boss Theme  — Compositor: Yuzo Koshiro
+14. Death  — Compositor: Yuzo Koshiro
+15. Ending  — Compositor: Yuzo Koshiro

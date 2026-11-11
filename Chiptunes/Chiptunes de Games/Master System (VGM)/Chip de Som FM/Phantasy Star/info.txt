@@ -1,0 +1,31 @@
+Jogo: Phantasy Star
+Chip: FM
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1987
+Desenvolvedora: Sega RD4
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Intro
+03. Town
+04. Shop
+05. Palma
+06. Battle
+07. Cave
+08. Church
+09. Vehicle
+10. Story / Conversations
+11. Motavia
+12. Final Dungeon
+13. Village
+14. Dezoris
+15. Tower
+16. La Shiec
+17. Dark Falz
+18. Ending
+19. Game Over
+20. Airplane SFX
+21. Vehicle (with Airplane SFX)

@@ -1,0 +1,19 @@
+Jogo: Alex Kidd in Miracle World
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1986
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Level Start
+03. Main Theme
+04. Underwater
+05. Sukopako Motorcycle
+06. Janken
+07. Peticopter
+08. Castle
+09. Ending
+10. Game Over

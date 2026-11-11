@@ -1,0 +1,40 @@
+Jogo: Golvellius
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1988
+Desenvolvedora: Sega
+Compositor(es): Myam, Shant, Shin-kun, Pazu
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Intro
+03. Overworld 1
+04. First Cave
+05. Old Woman
+06. Fairy
+07. Randar
+08. Vertical Scrolling Cave
+09. First Boss - Despa
+10. Victory
+11. Enny
+12. Winkle
+13. Horizontal Scrolling Cave
+14. Second Boss - Rolick
+15. Overworld 2
+16. Overworld 3
+17. Third Boss - Bachular
+18. Dina
+19. Fourth Boss - Fosbus
+20. Fifth Boss - Warlic
+21. Overworld 4
+22. Overworld 5
+23. Sixth Boss - Crawky
+24. Seventh Boss - Haidee
+25. Final Cave
+26. Final Boss - Golvellius
+27. Ending
+28. Input Password
+29. Game Over
+30. Unknown

@@ -1,0 +1,21 @@
+Jogo: Hokuto no Ken, Black Belt
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System
+Ano: 1986
+Compositor(es): Katsuhiro Hayashi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen (Hokuto no Ken)
+02. Title Screen (Black Belt)
+03. Start
+04. BGM (Hokuto no Ken)
+05. Boss (Hokuto no Ken)
+06. BGM (Black Belt)
+07. Boss (Black Belt)
+08. Powerup
+09. Clear
+10. Ending
+11. Miss
+12. Game Over

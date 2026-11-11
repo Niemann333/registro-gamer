@@ -1,0 +1,15 @@
+Jogo: Spider-Man - Return of the Sinister Six
+Chip: PSG
+Plataforma: Master System (VGM) — Sega Master System/Sega Game Gear
+Ano: 1992
+Desenvolvedora: B.I.T.S.
+Compositor(es): David Whittaker
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Main Theme
+02. Level Theme 1
+03. Level Theme 2
+04. Level Complete
+05. Spidey Loses
