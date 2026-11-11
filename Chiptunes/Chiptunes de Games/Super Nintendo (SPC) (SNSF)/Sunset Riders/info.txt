@@ -29,3 +29,13 @@ Faixas:
 22. Ending
 23. Continue
 24. Game Over
+
+========== Informações originais do pacote ==========
+
+Sunset Riders
+Dumped by: Guy, thelogician
+ID666 tags by: Datschge
+Downloaded from: http://snesmusic.org/
+
+Update:
+-Two missing songs added.

@@ -7,3 +7,13 @@ Status: OK
 Faixas:
 01. Las Vegas is My Lady!
 02. Wandering the Casino Floor
+
+========== Informações originais do pacote ==========
+
+Super Caesar's Palace
+Dumped by: Slick Mandela, KungFuFurby
+ID666 tags by: Slick Mandela, Datschge
+Downloaded from: http://snesmusic.org
+
+Update:
+-Track 1 redumped and retimed.

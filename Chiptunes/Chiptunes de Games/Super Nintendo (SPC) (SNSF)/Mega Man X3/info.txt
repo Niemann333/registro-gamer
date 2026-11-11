@@ -37,3 +37,16 @@ Faixas:
 30. Kaiser Sigma
 31. Ending
 32. Credits
+
+========== Informações originais do pacote ==========
+
+Mega Man X3
+Dumped by: Deuce
+ID666 tags by: Datschge
+Downloaded from: http://snesmusic.org
+
+Update 2:
+-Composer info added.
+
+Update:
+-Capcom logo jingle added.

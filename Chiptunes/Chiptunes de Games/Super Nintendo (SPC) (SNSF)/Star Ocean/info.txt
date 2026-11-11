@@ -71,3 +71,16 @@ Faixas:
 64. Trombone 2
 65. Violin 1
 66. Violin 2
+
+========== Informações originais do pacote ==========
+
+Star Ocean
+Dumped by: Kazamit, Datschge
+ID666 tags by: Datschge
+Downloaded from: http://modz.lalula.de/snesamp
+
+Perfect dump by Kazamit
+
+Setting:
+Surround (out of St/Mono/Surround)
+Arena (out of Flat/B.Boost/Arena)

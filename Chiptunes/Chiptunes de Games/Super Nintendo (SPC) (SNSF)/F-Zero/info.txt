@@ -22,3 +22,18 @@ Faixas:
 15. Zoom  — Compositor: Yumiko Kanki
 16. Start  — Compositor: Yumiko Kanki
 17. Lost Life  — Compositor: Yumiko Kanki
+
+========== Informações originais do pacote ==========
+
+F-Zero
+Dumped by: Datschge, nensondubois
+ID666 tags by: Datschge
+Downloaded from: http://snesmusic.org/
+
+Update:
+-Alternate noiseless version of Death Wind added.
+
+Version: v1.2
+New set now using the extended id666 tag format
+	 v1.1
+Thanks to Hitori for infos on the composers

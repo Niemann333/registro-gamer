@@ -37,3 +37,17 @@ Faixas:
 30. Judgement Day
 31. The Wake of Destruction
 32. Hail the Conquering Hero
+
+========== Informações originais do pacote ==========
+
+Mega Man X2
+Dumped by: The StarCreator
+ID666 tags by: SonicPanda, Datschge
+Downloaded from: http://snesmusic.org
+
+Update 2:
+-Composer info added.
+-Minor timer tweaks.
+
+Update:
+-Capcom logo jingle added.

@@ -18,3 +18,13 @@ Faixas:
 11. Combat Menu
 12. Mission Complete
 13. Game Over
+
+========== Informações originais do pacote ==========
+
+Metal Warriors
+Dumped by: YK
+ID666 tags by: YK
+Downloaded from: http://snesmusic.org
+
+Update:
+-Minor nitpicky timing/tagging tweaks.

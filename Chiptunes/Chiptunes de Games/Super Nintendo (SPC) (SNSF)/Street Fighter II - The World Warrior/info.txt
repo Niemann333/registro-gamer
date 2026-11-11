@@ -38,3 +38,10 @@ Faixas:
 31. Zangief's Ending
 32. Dhalsim's Ending
 33. Credits
+
+========== Informações originais do pacote ==========
+
+Street Fighter 2
+Dumped by: Daniel Kalabakov
+ID666 tags by: Daniel Kalabakov
+Downloaded from: http://modz.lalula.de/snesamp
