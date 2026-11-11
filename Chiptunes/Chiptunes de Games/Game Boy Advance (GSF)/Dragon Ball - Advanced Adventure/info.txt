@@ -1,0 +1,39 @@
+Jogo: Dragon Ball - Advanced Adventure
+Plataforma: Game Boy Advance (GSF)
+Ano: 2004
+Compositor(es): Atsuyoshi Isemura
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Mystical Adventure [Title Screen US]
+02. Mystical Adventure [Title Screen Japanese]
+03. Choose a Game [Data & Game Menu]
+04. Once Upon a Time, Deep in the Mountains... [Opening]
+05. In Search of the Dragon Balls [World Map]
+06. The Adventure Starts! [Ready. Go!]
+07. An Unexpected Beginning [Goku's House]
+08. Flying Nimbus! [Oolong's Village]
+09. I'll Get Them Back for Sure! [Pilaf's Castle]
+10. Rescuing the Major [Muscle Tower]
+11. Drum and Tambourines [Chow Castle]
+12. Fighting Mercenary Tao [Land of Korin]
+13. The Story Continues [Cut Scene]
+14. Teach Us Some Martial Arts! [Rock Crushing Intro]
+15. Teach Us Some Martial Arts! [Rock Crushing]
+16. Please Begin the First Match! [World Tournament Arena]
+17. Fighting for Fun [One On One]
+18. Delicious Looking Sea Turtle [Before Bear Bandit Battle]
+19. Boaring Trouble [Fighting Lord Yao, the Bear Bandit]
+20. I've Come to Knock You Flat! [Conversation with Piccolo]
+21. Struggle Between Arch Enemies [Fighting Piccolo]
+22. The Demon King is Gone at Last [King Piccolo is Defeated!]
+23. You Did It! [Area Clear!]
+24. Cherishing Treasures [Collection Menu]
+25. The Story ends Here... [Game Over]
+26. Senzu Bean [Continue]
+27. Looking Forward to the Next Adventure [Staff Roll]
+28. Looking Forward to the Next Adventure [Staff Roll Japanese]
+29. Okay then, Begin the Final Match! [Fighting Jackie Chun Japanese]
+30. Fighting for Fun [One On One, Shorter]
+31. Unknown Song

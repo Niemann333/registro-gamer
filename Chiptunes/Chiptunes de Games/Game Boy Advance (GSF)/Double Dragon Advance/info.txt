@@ -1,0 +1,21 @@
+Jogo: Double Dragon Advance
+Plataforma: Game Boy Advance (GSF)
+Ano: 2003
+Compositor(es): Yoko Mizumoto, Takafumi Wada
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. BGM #01
+02. BGM #02
+03. BGM #03
+04. BGM #04
+05. BGM #05
+06. BGM #06
+07. BGM #07
+08. BGM #08
+09. BGM #09
+10. BGM #10
+11. BGM #11
+12. BGM #12
+13. Jingle #01

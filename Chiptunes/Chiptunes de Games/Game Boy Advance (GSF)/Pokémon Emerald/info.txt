@@ -1,0 +1,216 @@
+Jogo: Pokémon Emerald
+Plataforma: Game Boy Advance (GSF)
+Compositor(es): Go Ichinose, Morikazu Aoki, Junichi Masuda
+Fonte: conhecimento geral (créditos do jogo)
+Status: OK
+
+Faixas:
+01. A Faraway Place
+02. Ancient Braille Caves
+03. Aqua Hideout
+04. Awakening an Ancient Pokemon
+05. Battle Arena
+06. Battle Dome 1
+07. Battle Dome 2
+08. Battle Factory
+09. Battle Frontier
+10. Battle Palace
+11. Battle Pike
+12. Battle Points Get!
+13. Battle Pyramid 1
+14. Battle Pyramid 2
+15. Battle Symbol Get!
+16. Battle Tower
+17. Battle! Ancient Pokemon
+18. Battle! Deoxys
+19. Battle! Elite Four
+20. Battle! Frontier Brain
+21. Battle! Gym Leader
+22. Battle! Mew
+23. Battle! Pokemon Trainer
+24. Battle! Rival
+25. Battle! Team Magma-Aqua Grunt
+26. Battle! Team Leader
+27. Battle! The Three Regis
+28. Battle! Wild Pokemon
+29. Bicycling
+30. Caves and Darkness
+31. Champion Wallace
+32. Sight - Cooltrainer
+33. Battle! Champion Wallace
+34. Dewford Town
+35. Elite 4 Defeat
+36. Ever Grande City
+37. Fallarbor Town
+38. Fanfare - Berry Get!
+39. Fanfare - Evolution Ends
+40. Fanfare - Evolution Start!
+41. Fanfare - Evolution and Pokemon Trading
+42. Fanfare - Gym Badge Get!
+43. Fanfare - Item Get
+44. Fanfare - Level Up!
+45. Fanfare - Match Call Registration
+46. Fanfare - Move Delete Successful
+47. Fanfare - Paid no Attention...
+48. Fanfare - Pokemon Healed
+49. Fanfare - Reel Time!
+50. Fanfare - Slots - Big Money!
+51. Fanfare - Slots - Win
+52. Fortree City
+53. Game Corner
+54. Got a TM!
+55. Gym Leader Defeat
+56. Hall of Fame Room
+57. Help Me!
+58. Inside the Cable Car
+59. Just Follow My Lead!
+60. Lilycove City and Pacifidlog Town
+61. Lilycove Museum of Classical Art
+62. Littleroot Town
+63. Meteor Falls - Cave of Origin
+64. Mt. Chimney - Desert Underpass
+65. Mt. Pyre - Inner
+66. Mt. Pyre - Outer
+67. Oldale Town
+68. Petalburg City
+69. Pokemon Center
+70. Pokemon Contest Hall
+71. Pokemon Contest Results
+72. Pokemon Contest Win!
+73. Pokemon Contest!
+74. Pokemon Gym
+75. Pokemon League
+76. Pokemon Mart
+77. Pokemon Trainer's School
+78. Prof. Birch's Pokemon Lab
+79. Rayquaza's Entrance
+80. Route Theme 1
+81. Route Theme 2
+82. Route Theme 3
+83. Route Theme 4
+84. Route Theme 5
+85. Route Theme 6
+86. Rustboro City
+87. S.S. Tidal
+88. Safari Zone
+89. Sight - Brendan
+90. Sight - Bug Maniac
+91. Sight - Camper
+92. Sight - Deoxys
+93. Sight - Elite Four
+94. Sight - Gentleman
+95. Sight - Hiker
+96. Sight - Lass
+97. Sight - May
+98. Sight - Pokefan
+99. Sight - Psychic
+100. Sight - Swimmer
+101. Sight - Team Aqua
+102. Sight - Team Magma
+103. Sight - Youngster
+104. Slateport City
+105. Slateport Museum
+106. Sootopolis City
+107. Staff Credits
+108. Surfing
+109. Team Magma-Aqua Defeat
+110. The End!
+111. The Flood
+112. The Sandy Desert
+113. Title Demo 1 - Departure from Hoenn District
+114. Title Demo 2 - Battle of Legends
+115. Title Demo 3 - Title ~Main Theme~
+116. Trainer Defeated
+117. Trainer Hill
+118. Trick House
+119. Underwater Dive
+120. Unused - Battle! Ancient Pokemon (duplicate)
+121. Unused - Battle! Legendary Pokemon
+122. Unused - Littleroot Town (beta)
+123. Unused - Pokemon Communication Center
+124. Unused - Pokemon Contest! (brass)
+125. Unused - Pokemon Contest! (electric grand piano)
+126. Unused - Pokemon Contest! (gbc-ish)
+127. Unused - Pokemon Contest! (marching band and gbc-ish)
+128. Unused - Route 38
+129. Unused - Saffron City
+130. Unused - The Drought
+131. Verdanturf Town
+132. Welcome to the World of Pokemon!
+133. What's on TV?
+134. Wild Pokemon Caught
+135. Wild Pokemon Defeat
+136. You're in the Hall of Fame!
+137. Battle! Gym Leader
+138. Battle! Mewtwo
+139. Battle! Pokemon Trainer
+140. Battle! The Legendary Pokemon
+141. Battle! Vs Rival
+142. Battle! Wild Pokemon
+143. Bicycling
+144. Boy Encounter
+145. Caves and Darkness 2
+146. Caves and Darkness 3
+147. Caves and Darkness
+148. Celadon City
+149. Cerulean and Fuchsia Cities
+150. Cinnibar Island
+151. Credits
+152. Evil Lurks...
+153. Follow Me!
+154. Game Corner (Wireless variation 1)
+155. Game Corner (Wireless variation 2)
+156. Game Corner (Wireless variation 3)
+157. Game Corner
+158. Game Explanation pt. 1
+159. Game Explanation pt. 2
+160. Game Explanation pt. 3
+161. GameFreak
+162. Gary's Theme (intro)
+163. Gary's Theme
+164. Girl Encounter
+165. Gym Leader Defeat
+166. Indigo Plateau
+167. Item Get!
+168. Jigglypuff's Song
+169. Lavender Town
+170. Mystery Gift
+171. Navel Rock 1
+172. Navel Rock 2
+173. Opening Demo
+174. Pallet Town ~fame mix~
+175. Pallet Town
+176. Poke Flute
+177. Pokemon Catch Fanfare
+178. Pokemon Center
+179. Pokemon Gym
+180. Pokemon Network Center
+181. Pokemon Print!
+182. Pokemon Tower
+183. Power Plant
+184. Prof. Oak's Pokemon Lab
+185. Route Theme 1
+186. Route Theme 2
+187. Route Theme 3
+188. S. S. Anne
+189. Sevii Islands 1, 2, and 3
+190. Sevii Islands 4 and 5
+191. Sevii Islands 6 and 7
+192. Sight - Legendary Pokemon
+193. Silph Company Building
+194. Surf's Up!
+195. Teachy TV - Menu
+196. Teachy TV - The Poke Dude Show
+197. Team Rocket Encounter
+198. Trainer Defeated
+199. Trainer Tower
+200. Unused - Pokemon Healing (old)
+201. Vermilion City
+202. Viridian City
+203. Wait! Don't go out there!
+204. Welcome to the World of Pokemon!
+205. Wild Pokemon Caught
+206. Wild Pokemon Defeated
+207. Work on your Pokedex a Little Harder
+208. You're in the Hall of Fame!
+209. ~Opening~

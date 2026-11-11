@@ -1,0 +1,92 @@
+Jogo: Pokémon FireRed & LeafGreen
+Plataforma: Game Boy Advance (GSF)
+Ano: 2004
+Compositor(es): Go Ichinose, Junichi Masuda, Mori'ichi Aoki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. GameFreak Logo
+02. Opening Demo
+03. ~Opening~
+04. Game Explanation (Part 1)
+05. Game Explanation (Part 2)
+06. Welcome to the World of Pokemon!
+07. Pallet Town Theme
+08. Prof. Oak
+09. Oak Research Institute
+10. Fanfare Pokemon Acquisition
+11. Rival Appears
+12. Rival Appears (No Intro)
+13. Battle (VS Trainer)
+14. Victory (VS Trainer)
+15. Road to Viridian City - From Pallet Town
+16. Fanfare Item Get 1
+17. Pewter City Theme
+18. Teach TV Menu
+19. Viridian Forest
+20. Battle (VS Wild Pokemon)
+21. Victory (VS Wild Pokemon)
+22. Victory (VS Wild Pokemon) (No Intro)
+23. Trainer Appears (Boy Version)
+24. Pokemon Center
+25. Jigglypuff's Song
+26. Pokemon Recovery
+27. Pokemon Recovery (Unused)
+28. Guidance
+29. Pokemon Gym
+30. Tense Competition!
+31. Battle (VS Gym Leader)
+32. Victory (VS Gym Leader)
+33. Fanfare Badge Get
+34. Evolution
+35. Fanfare Evolution Congratulations
+36. Road to Cerulean City - From Mt. Moon
+37. Trainer Appears (Girl Version)
+38. Mt. Moon
+39. Vermilion City Theme
+40. S.S. Anne
+41. Cycling
+42. Lavender Town Theme
+43. Pokemon Tower
+44. Celadon City Theme
+45. Game Corner
+46. Fanfare Success!
+47. Fanfare Big Success!
+48. Pokemon Print
+49. Team Rocket Hideout
+50. Trainer Appears (Bad Guys Version)
+51. Silph Co.
+52. Road to Fuchsia City - From Lavender Town
+53. PokeFlute
+54. Fuchsia City Theme
+55. Forget Skill
+56. Surfing
+57. Battle (VS Legendary Pokemon)
+58. Fanfare Pokemon Captured
+59. Cinnabar Island Theme
+60. Pokemon Mansion
+61. Pokemon Network Center
+62. Fanfare Pokedex Evaluation
+63. Sevii Islands - Floe & Chrono Islands
+64. Jumping With Mini Pokemon
+65. Dodrio's Green Power
+66. Bad Luck
+67. Sevii Islands
+68. Sevii Islands - Fortune & Quest Islands
+69. Union Room
+70. Mysterious Presnt
+71. Fanfare Item Get 2
+72. Battle (VS Mewtwo)
+73. The Last Road
+74. The Last Battle (VS Rival)
+75. Epilogue
+76. Induction Into the Hall of Fame
+77. ~Ending~
+78. Deoxys' Appearance
+79. Battle (VS Deoxys)
+80. Pokemon Institute (RS)
+81. Battle (VS Trainer) (RS)
+82. Battle (VS Gym Leader) (RS)
+83. Fanfare Berry Get (RS)
+84. Fanfare TM/HM Get (RS)
