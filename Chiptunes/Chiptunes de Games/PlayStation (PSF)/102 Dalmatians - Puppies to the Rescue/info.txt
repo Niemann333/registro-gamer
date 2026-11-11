@@ -1,0 +1,52 @@
+Jogo: 102 Dalmatians - Puppies to the Rescue
+Plataforma: PlayStation (PSF)
+Ano: 2000
+Compositor(es): Burke Trieschmann, Camille Saint-Saëns
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Cruella I  — Compositor: Burke Trieschmann
+02. BadnTrap (Unused)  — Compositor: Burke Trieschmann
+03. Big Ben  — Compositor: Burke Trieschmann
+04. Cruella III  — Compositor: Burke Trieschmann
+05. Carnival  — Compositor: Burke Trieschmann, Camille Saint-Saëns
+06. Ancient Castle  — Compositor: Burke Trieschmann
+07. Checkers  — Compositor: Burke Trieschmann
+08. Countryside  — Compositor: Burke Trieschmann
+09. Credits  — Compositor: Burke Trieschmann
+10. Dig Dog  — Compositor: Burke Trieschmann
+11. END1a  — Compositor: Burke Trieschmann
+12. END1b  — Compositor: Burke Trieschmann
+13. END1e  — Compositor: Burke Trieschmann
+14. END1f  — Compositor: Burke Trieschmann
+15. End1c  — Compositor: Burke Trieschmann
+16. Cruella IV  — Compositor: Burke Trieschmann
+17. Toy Factory  — Compositor: Burke Trieschmann
+18. Barnyard  — Compositor: Burke Trieschmann
+19. Spooky Forest  — Compositor: Burke Trieschmann
+20. De Vil Mansion  — Compositor: Burke Trieschmann
+21. Hedge Maze  — Compositor: Burke Trieschmann
+22. Title Screen  — Compositor: Burke Trieschmann
+23. Lumber Mill  — Compositor: Burke Trieschmann
+24. Cruella II  — Compositor: Burke Trieschmann
+25. Mini-Golf  — Compositor: Burke Trieschmann
+26. Royal Museum  — Compositor: Burke Trieschmann
+27. Regent's Park  — Compositor: Burke Trieschmann
+28. Piccadilly  — Compositor: Burke Trieschmann
+29. SEQ2  — Compositor: Burke Trieschmann
+30. SEQ3  — Compositor: Burke Trieschmann
+31. SEQ4  — Compositor: Burke Trieschmann
+32. SEQVAR1  — Compositor: Burke Trieschmann
+33. Stickers Album  — Compositor: Burke Trieschmann
+34. Segue1  — Compositor: Burke Trieschmann
+35. Segue1b  — Compositor: Burke Trieschmann
+36. Segue2  — Compositor: Burke Trieschmann
+37. Segue2b  — Compositor: Burke Trieschmann
+38. Segue3  — Compositor: Burke Trieschmann
+39. Segue3b  — Compositor: Burke Trieschmann
+40. Segue3c  — Compositor: Burke Trieschmann
+41. Underground  — Compositor: Burke Trieschmann
+42. Tilt Maze  — Compositor: Burke Trieschmann
+43. Toy Store  — Compositor: Burke Trieschmann
+44. Ice Festival  — Compositor: Burke Trieschmann

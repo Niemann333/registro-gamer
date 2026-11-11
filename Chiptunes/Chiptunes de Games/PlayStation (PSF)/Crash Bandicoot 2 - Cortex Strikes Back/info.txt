@@ -1,0 +1,41 @@
+Jogo: Crash Bandicoot 2 - Cortex Strikes Back
+Plataforma: PlayStation (PSF)
+Ano: 1997
+Compositor(es): Josh Mancell
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Warp Room
+03. Jungle
+04. Ice
+05. Jetski
+06. Chase
+07. Ride
+08. Sewers
+09. Ruins
+10. Bees
+11. Dynamo
+12. Space
+13. Boss 1 - Ripper Roo
+14. Boss 2 - Komodo Bros
+15. Boss 3 - Tiny Tiger
+16. Boss 4 - N.Gin
+17. Boss 5 - Dr. Neo Cortex
+18. Jungle (Bonus)
+19. Ice (Bonus)
+20. Jetski (Bonus)
+21. Chase (Bonus)
+22. Sewers (Bonus)
+23. Ruins (Bonus)
+24. Bees (Bonus)
+25. Dynamo (Bonus)
+26. Jungle (Special)
+27. Ice (Special)
+28. Jetski (Special)
+29. Chase (Special)
+30. Sewers (Special)
+31. Ruins (Special)
+32. Bees (Special)
+33. Dynamo (Special)

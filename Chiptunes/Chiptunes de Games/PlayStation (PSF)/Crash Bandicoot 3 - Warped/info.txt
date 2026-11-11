@@ -1,0 +1,36 @@
+Jogo: Crash Bandicoot 3 - Warped
+Plataforma: PlayStation (PSF)
+Ano: 1998
+Compositor(es): Josh Mancell
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Warp Room
+03. Knight
+04. Underwater
+05. Chinese Wall
+06. Prehistoric
+07. Waves
+08. Arabian
+09. Ride
+10. Pyramid
+11. Plane (Bye Bye Blimps)
+12. Future
+13. Plane (Mad Bombers)
+14. Rings of Power
+15. Boss 1 - Tiny Tiger
+16. Boss 2 - Dingodile
+17. Boss 3 - N.Tropy
+18. Boss 4 - N.Gin
+19. Boss 5 - Dr. Neo Cortex
+20. Knight (Bonus)
+21. Prehistoric (Bonus)
+22. Arabian (Bonus)
+23. Pyramid (Bonus)
+24. Future (Bonus)
+25. Prehistoric (Special)
+26. Arabian (Special)
+27. Pyramid (Special)
+28. Future (Special)
