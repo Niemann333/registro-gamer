@@ -1,0 +1,14 @@
+Jogo: Jazz Jackrabbit 2
+Versão: Unused Tracks
+Plataforma: Windows (XM) (IT) (S3M) (MID) (VGM)
+Compositor(es): Alexander Brandon, Robert A. Allen, Sean Hiler
+Fonte: VGMPF (Alexander Brandon) — divisão por faixa não confirmada
+Status: CONFERIR
+
+Faixas:
+01. Atlantis
+02. Dreamland
+03. Menu2
+04. jaz27~
+05. jaz30
+06. jazcast

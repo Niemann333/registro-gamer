@@ -1,0 +1,28 @@
+Jogo: Jazz Jackrabbit 2
+Versão: Prerelease Tracks
+Plataforma: Windows (XM) (IT) (S3M) (MID) (VGM)
+Compositor(es): Alexander Brandon, Robert A. Allen, Sean Hiler
+Fonte: VGMPF (Alexander Brandon) — divisão por faixa não confirmada
+Status: CONFERIR
+
+Faixas:
+01. BEACH
+02. CARROTUS
+03. CASTLE
+04. COLON2
+05. COLONY
+06. DANG
+07. DIAMOND
+08. ENDING
+09. FASTRACK
+10. FREEZE
+11. FUNKYG
+12. HELL
+13. INTRO
+14. JAZ26
+15. JAZ27
+16. JUNGLE
+17. LABRAT
+18. MEDIVO2
+19. TUBELEC
+20. WATER
