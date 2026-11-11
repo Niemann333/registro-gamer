@@ -1,0 +1,41 @@
+Jogo: Puggsy
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. World Map
+03. The Beach
+04. World Guardians
+05. The Cove
+06. Polly Pirate
+07. Stage Clear
+08. Meanwhile...
+09. The Red Woods
+10. Redwood Keep
+11. The Emperor's Old Clothes
+12. The Light House
+13. A Hidden Place
+14. Angeltier Falls
+15. Star Fall Lake
+16. Splinter Town
+17. Badger Mill
+18. Flour Power
+19. Pyramids
+20. So Pharaoh, So Good
+21. Darkblade Forest
+22. Diamond Mines
+23. Darkskull Castle
+24. Fire Heart
+25. Halitosis the Dragon
+26. Aztec Temple
+27. Racrock Forge
+28. Raclantis Docks
+29. If Looks Could Kill!
+30. Ending Theme
+31. Extra Ending
+32. Game Over
+33. Unknown Track

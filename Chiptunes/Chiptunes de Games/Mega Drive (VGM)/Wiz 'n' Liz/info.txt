@@ -1,0 +1,37 @@
+Jogo: Wiz 'n' Liz
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Stage Select
+03. Home
+04. Lunar Land
+05. Grass Land
+06. Desert Land
+07. Wood Land
+08. Mine Land
+09. Temple Land
+10. Snow Land
+11. Dead Land
+12. Stage Clear
+13. Time Up
+14. Player Down
+15. Color of Magic
+16. The Freaky Flower
+17. Snake Eyes
+18. The Creepy Clock
+19. The Savage Pumpkin
+20. The Evil Oak
+21. The Gate Keeper
+22. The Deadly Dragon
+23. Boss Clear 1
+24. Boss Clear 2
+25. Ending
+26. Name Entry
+27. Unknown Track 1
+28. Unknown Track 2
+29. Unknown Track 3

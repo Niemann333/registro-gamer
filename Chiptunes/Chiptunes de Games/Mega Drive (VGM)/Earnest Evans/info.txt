@@ -1,0 +1,25 @@
+Jogo: Earnest Evans
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Motoi Sakuraba
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening
+02. Stage 1
+03. Boss
+04. Stage Clear
+05. Stage 2
+06. Stage 3
+07. Stage 4
+08. Stage 5
+09. Stage 6
+10. Stage 7
+11. Stage 8
+12. Stage 9
+13. Last Stage
+14. Last Boss
+15. Ending
+16. Continue
+17. Game Over

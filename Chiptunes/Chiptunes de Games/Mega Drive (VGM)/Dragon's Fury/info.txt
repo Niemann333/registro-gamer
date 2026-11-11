@@ -1,0 +1,30 @@
+Jogo: Dragon's Fury
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Compositor(es): Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai, Toshiaki Sakoda, Tomomi Otani, Tomomi Ootani
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+02. Password Entry Screen  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+03. Main Table  — Compositor: Toshiaki Sakoda
+04. Bonus Table 1  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+05. Bonus Table 2  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+06. Bonus Table 3  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+07. Bonus Table 4  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+08. Bonus Table 5  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+09. Bonus Table 6  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+10. Bonus Table 7  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+11. Bonus Table 8  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+12. Score Tally 1  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+13. Score Tally 2  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+14. Score Tally 3  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+15. High Score Table  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+16. Ending Story  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+17. Staff Roll  — Compositor: Toshiharu Yamanishi, Takeshi Yoshida, Naosuke Arai
+18. OMAKEBGM00 (Thunder Force II: Knights of Legend)  — Compositor: Tomomi Otani
+19. OMAKEBGM01 (Herzog Zwei: A Breach of Contract)  — Compositor: Naosuke Arai, Tomomi Otani
+20. OMAKEBGM02 (Thunder Force III: Venus Fire)  — Compositor: Toshiharu Yamanishi
+21. OMAKEBGM03 (Elemental Master: Blood-Stained Lake)  — Compositor: Toshiharu Yamanishi
+22. OMAKEBGM04 (Shin Kyuugyokuden: Etude of Wind)  — Compositor: Toshiharu Yamanishi, Tomomi Ootani, Naosuke Arai

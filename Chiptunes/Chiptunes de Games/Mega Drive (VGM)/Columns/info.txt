@@ -1,0 +1,15 @@
+Jogo: Columns
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Filthy (Select)
+02. Quagmire (Start)
+03. Clotho (BGM 1)
+04. Lathesis (BGM 2)
+05. Atropos (BGM 3)
+06. Concilation (Game Over)
+07. Boy Wonder (Name Entry)

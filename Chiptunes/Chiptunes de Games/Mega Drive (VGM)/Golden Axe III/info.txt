@@ -1,0 +1,34 @@
+Jogo: Golden Axe III
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Naofumi Hataya, Tatsuyuki Maeda, Haruyo Oguro, Tomonori Sawada
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme ~ Title
+02. Character Select
+03. The Vast Field (Stage 1)
+04. Boss Theme
+05. Campsite
+06. Map Screen
+07. Ancient Mound (Stage 2A)
+08. Tender Hamlet (Stage 2B)
+09. Dim Jungle (Stage 3A)
+10. Cave of Crystal (Stage 3B)
+11. The Scorching Sand (Stage 4A)
+12. Bloody Street (Stage 4B)
+13. Death Mountain (Stage 5A)
+14. A Voyage to Castle (Stage 5B)
+15. Fight with Adversary
+16. Ride the Whirlwind (Stage 6A)
+17. Cursed City (Stage 6B)
+18. The Gate of Fate (Stage 7)
+19. Castle (Stage 8)
+20. Final Boss
+21. Victory
+22. Is the Battle Won?
+23. Ending ~ Staff Roll
+24. Game Over
+25. VS Mode Victory
+26. Title Theme (Skip)

@@ -1,0 +1,16 @@
+Jogo: After Burner II
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Hiroshi Kawaguchi, Noriyuki Iwadare
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Maximum Power
+02. Final Take Off
+03. Red Out
+04. Super Stripe
+05. After Burner
+06. City 202
+07. Final Take Off (No Loop)
+08. After Burner (No Loop)

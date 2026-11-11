@@ -1,0 +1,31 @@
+Jogo: El Viento
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Desenvolvedora: Wolf Team
+Compositor(es): Motoi Sakuraba
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. Main Theme
+03. Stage 1: New York City
+04. Intermission 1
+05. Stage 2: Park
+06. Stage 3: Bar
+07. Boss Theme (Stages 1-3)
+08. Stage 4: Factory
+09. Stage 5: Temple
+10. Boss Theme (Stages 4-5)
+11. Stage 6: Detroit Car Factory
+12. Intermission 2
+13. Stage 7: High Sky
+14. Boss Theme (Stages 6-7)
+15. Stage 8: Empire State Building
+16. Final Battle
+17. Stage Clear
+18. Ending Theme
+19. Game Over
+20. Staff Roll
+21. Unknown Track 1
+22. Unknown Track 2

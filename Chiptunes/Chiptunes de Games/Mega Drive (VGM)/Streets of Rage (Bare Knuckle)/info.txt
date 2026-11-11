@@ -1,0 +1,25 @@
+Jogo: Streets of Rage (Bare Knuckle)
+Plataforma: Mega Drive (VGM) — Sega Genesis
+Ano: 1991
+Desenvolvedora: Sega
+Compositor(es): Yuzo Koshiro
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Street of Rage
+02. Player Select
+03. Fighting in the Street
+04. Dilapidated Town
+05. Moon Beach
+06. Keep the Groovin'
+07. Beatnik on the Ship
+08. Stealthy Steps
+09. Violent Breathing
+10. The Last Soul
+11. Level Clear
+12. Attack the Barbarian
+13. Big Boss
+14. Game Over
+15. You Became the Bad Guy!
+16. Good Ending

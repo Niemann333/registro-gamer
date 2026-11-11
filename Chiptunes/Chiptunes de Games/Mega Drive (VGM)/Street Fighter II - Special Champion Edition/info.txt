@@ -1,0 +1,43 @@
+Jogo: Street Fighter II - Special Champion Edition
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Yoko Shimomura, Isao Abe
+Arranjo: Alph-Lyra
+Fonte: etiquetas creditam o arranjo (Alph-Lyra); compositores do original de Arcade
+Status: OK
+
+Faixas:
+01. Capcom Logo
+02. Opening Theme
+03. Player Select
+04. VS Screen
+05. Ryu's Theme
+06. E. Honda's Theme
+07. Blanka's Theme
+08. Guile's Theme
+09. Bonus Stage
+10. A New Challenger
+11. Ken's Theme
+12. Chun Li's Theme
+13. Zangief's Theme
+14. Dhalsim's Theme
+15. Balrog's Theme
+16. Vega's Theme
+17. Sagat's Theme
+18. M. Bison's Theme
+19. Stage End
+20. Ryu's Ending
+21. E. Honda's Ending
+22. Blanka's Ending
+23. Guile's Ending
+24. Ken's Ending I
+25. Ken's Ending II
+26. Chun Li's Ending I
+27. Chun Li's Ending II
+28. Zangief's Ending
+29. Dhalsim's Ending
+30. Boss Character's Ending
+31. Staff Roll
+32. Continue?
+33. Game Over
+34. Ranking

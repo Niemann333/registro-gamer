@@ -1,0 +1,90 @@
+Jogo: Mega Man - The Wily Wars
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Takashi Tateishi, Yasuaki Fujita, Kinuyo Yamashita, Manami Matsumae, Harumi Fujita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening  — Compositor: Kinuyo Yamashita
+02. Title  — Compositor: Kinuyo Yamashita
+03. File Select  — Compositor: Kinuyo Yamashita
+04. Game Select / Dr. Light Lab  — Compositor: Kinuyo Yamashita
+05. Mega Man: Stage Select  — Compositor: Manami Matsumae
+06. Mega Man: Game Start  — Compositor: Manami Matsumae
+07. Mega Man: Cut Man Stage  — Compositor: Manami Matsumae
+08. Mega Man: Guts Man Stage  — Compositor: Manami Matsumae
+09. Mega Man: Ice Man Stage  — Compositor: Manami Matsumae
+10. Mega Man: Bomb Man Stage  — Compositor: Manami Matsumae
+11. Mega Man: Fire Man Stage  — Compositor: Manami Matsumae
+12. Mega Man: Elec Man Stage  — Compositor: Manami Matsumae
+13. Mega Man: Boss  — Compositor: Manami Matsumae
+14. Mega Man: Stage Clear  — Compositor: Manami Matsumae
+15. Mega Man: Dr. Wily Stage 1  — Compositor: Manami Matsumae
+16. Mega Man: Dr. Wily Stage 2  — Compositor: Manami Matsumae
+17. Mega Man: Dr. Wily Stage Boss  — Compositor: Manami Matsumae
+18. Mega Man: Ending  — Compositor: Manami Matsumae
+19. Mega Man: Game Over  — Compositor: Manami Matsumae
+20. Mega Man 2: Opening  — Compositor: Takashi Tateishi
+21. Mega Man 2: Title  — Compositor: Takashi Tateishi
+22. Mega Man 2: Continue  — Compositor: Takashi Tateishi
+23. Mega Man 2: Stage Select  — Compositor: Takashi Tateishi
+24. Mega Man 2: Game Start  — Compositor: Takashi Tateishi
+25. Mega Man 2: Metal Man Stage  — Compositor: Takashi Tateishi
+26. Mega Man 2: Air Man Stage  — Compositor: Takashi Tateishi
+27. Mega Man 2: Bubble Man Stage  — Compositor: Takashi Tateishi
+28. Mega Man 2: Quick Man Stage  — Compositor: Takashi Tateishi
+29. Mega Man 2: Crash Man Stage  — Compositor: Takashi Tateishi
+30. Mega Man 2: Flash Man Stage  — Compositor: Takashi Tateishi
+31. Mega Man 2: Heat Man Stage  — Compositor: Takashi Tateishi
+32. Mega Man 2: Wood Man Stage  — Compositor: Takashi Tateishi
+33. Mega Man 2: Stage Clear  — Compositor: Takashi Tateishi
+34. Mega Man 2: Get a Weapon  — Compositor: Takashi Tateishi
+35. Mega Man 2: Dr. Wily Stage Map  — Compositor: Takashi Tateishi
+36. Mega Man 2: Dr. Wily Stage 1  — Compositor: Takashi Tateishi
+37. Mega Man 2: Dr. Wily Stage 2  — Compositor: Takashi Tateishi
+38. Mega Man 2: Boss  — Compositor: Takashi Tateishi
+39. Mega Man 2: All Stages Clear  — Compositor: Takashi Tateishi
+40. Mega Man 2: Ending  — Compositor: Takashi Tateishi
+41. Mega Man 2: Staff Roll  — Compositor: Takashi Tateishi
+42. Mega Man 2: Game Over  — Compositor: Takashi Tateishi
+43. Mega Man 3: Proto Man  — Compositor: Yasuaki Fujita
+44. Mega Man 3: Title  — Compositor: Yasuaki Fujita
+45. Mega Man 3: Game Over / Continue  — Compositor: Yasuaki Fujita
+46. Mega Man 3: Stage Select  — Compositor: Yasuaki Fujita
+47. Mega Man 3: Game Start  — Compositor: Yasuaki Fujita
+48. Mega Man 3: Needle Man Stage  — Compositor: Yasuaki Fujita
+49. Mega Man 3: Magnet Man Stage  — Compositor: Harumi Fujita
+50. Mega Man 3: Gemini Man Stage  — Compositor: Harumi Fujita
+51. Mega Man 3: Hard Man Stage  — Compositor: Yasuaki Fujita
+52. Mega Man 3: Top Man Stage  — Compositor: Yasuaki Fujita
+53. Mega Man 3: Snake Man Stage  — Compositor: Yasuaki Fujita
+54. Mega Man 3: Spark Man Stage  — Compositor: Yasuaki Fujita
+55. Mega Man 3: Shadow Man Stage  — Compositor: Yasuaki Fujita
+56. Mega Man 3: Boss  — Compositor: Yasuaki Fujita
+57. Mega Man 3: Stage Clear  — Compositor: Yasuaki Fujita
+58. Mega Man 3: Get a Weapon  — Compositor: Yasuaki Fujita
+59. Mega Man 3: Dr. Wily Stage Map  — Compositor: Yasuaki Fujita
+60. Mega Man 3: Dr. Wily Stage 1  — Compositor: Yasuaki Fujita
+61. Mega Man 3: Dr. Wily Stage 2  — Compositor: Yasuaki Fujita
+62. Mega Man 3: Dr. Wily Stage 3  — Compositor: Yasuaki Fujita
+63. Mega Man 3: Dr. Wily Boss  — Compositor: Yasuaki Fujita
+64. Mega Man 3: All Stages Clear  — Compositor: Yasuaki Fujita
+65. Mega Man 3: Ending  — Compositor: Yasuaki Fujita
+66. Mega Man 3: Staff Roll  — Compositor: Yasuaki Fujita, Harumi Fujita
+67. Wily Tower: Stage Select  — Compositor: Kinuyo Yamashita
+68. Wily Tower: Game Start  — Compositor: Kinuyo Yamashita
+69. Wily Tower: Buster Rod G Stage  — Compositor: Kinuyo Yamashita
+70. Wily Tower: Mega Water S Stage  — Compositor: Kinuyo Yamashita
+71. Wily Tower: Hyper Storm H Stage  — Compositor: Kinuyo Yamashita
+72. Wily Tower: Boss  — Compositor: Kinuyo Yamashita
+73. Wily Tower: Stage Clear  — Compositor: Kinuyo Yamashita
+74. Wily Tower: Wily Tower Map  — Compositor: Kinuyo Yamashita
+75. Wily Tower: Wily Tower Stage 1  — Compositor: Kinuyo Yamashita
+76. Wily Tower: Wily Tower Stage 2  — Compositor: Kinuyo Yamashita
+77. Wily Tower: Wily Tower Stage 3  — Compositor: Kinuyo Yamashita
+78. Wily Tower: Wily Tower Stage 4  — Compositor: Kinuyo Yamashita
+79. Wily Tower: All Stages Clear  — Compositor: Kinuyo Yamashita
+80. Wily Tower: Ending Theme  — Compositor: Kinuyo Yamashita
+81. Wily Tower: Game Over  — Compositor: Kinuyo Yamashita
+82. Unused  — Compositor: Kinuyo Yamashita

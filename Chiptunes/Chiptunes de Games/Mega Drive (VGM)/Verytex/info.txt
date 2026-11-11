@@ -1,0 +1,20 @@
+Jogo: Verytex
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Compositor(es): Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+02. Act 1: The Void of Space  — Compositor: Hitoshi Sakimoto
+03. Act 2: Border Region  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+04. Act 3: Ruined Area  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+05. Act 4: Planetary Orbit  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+06. Act 5: Inner Lining of the Planet  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+07. Act 6: Inside Planet Shirakusa  — Compositor: Masaharu Iwata
+08. Boss Theme 1  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+09. Boss Theme 2  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+10. Stage Clear  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+11. Ending Theme  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa
+12. Game Over  — Compositor: Hitoshi Sakimoto, Masaharu Iwata, Yoshio Furukawa

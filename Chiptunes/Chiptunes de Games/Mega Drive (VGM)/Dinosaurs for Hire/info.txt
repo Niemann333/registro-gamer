@@ -1,0 +1,19 @@
+Jogo: Dinosaurs for Hire
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1996
+Compositor(es): Paul Gadbois, David Delia
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Stage BGM 1
+03. Boss Theme
+04. Victory
+05. Interlude
+06. Stage BGM 2
+07. Game Over
+08. Unknown (Sound Test 02)
+09. Unknown (Sound Test 03)
+10. Unknown (Sound Test 08)
+11. Unknown (Sound Test 09)

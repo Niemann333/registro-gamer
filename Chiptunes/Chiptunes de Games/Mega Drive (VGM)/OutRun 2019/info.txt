@@ -1,0 +1,22 @@
+Jogo: OutRun 2019
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Shigeki Sako
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Hot Fire (Title)
+02. Stage Select
+03. Feel The Beat (Stage 1)
+04. Goal
+05. Next Stage (Short Version)
+06. Running Pleasure (Stage 2)
+07. Game Over
+08. Try Again (Short Version)
+09. Steal Into The Night (Stage 3)
+10. Next Stage (Long Version)
+11. Relight My Fire (Stage 4)
+12. Try Again (Long Version)
+13. Records
+14. Victorious (Ending)

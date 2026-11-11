@@ -1,0 +1,32 @@
+Jogo: Elemental Master
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Toshiharu Yamanishi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Great Spirit Overture (Opening Theme)
+02. Cursed Destiny (Visual Scene 1)
+03. Temptation of the Devil (Stage Select)
+04. Dance of Flame (Stage 1)
+05. Avatar of Flame (Stage 1 Boss)
+06. Spirit of Light (Visual Scene 2)
+07. Like the Wind (Stage 2)
+08. Roar of the Monster (Stage 2 Boss)
+09. Until the End of the Earth (Stage 3)
+10. Evil Beat (Stage 3 Boss)
+11. Blood-Stained Lake (Stage 4)
+12. Specter Living in the Water (Stage 4 Boss)
+13. Terror of the Glacier (Stage 5)
+14. Calling on the Dark Dragon King (Stage 5 Boss)
+15. Ring of Light (Visual Scene 3)
+16. Den of Evil (Stage 6)
+17. Suspicious Beauty (Stage 6 Boss)
+18. Shudder of Darkness (Stage 7)
+19. Fate (Stage 7 Boss)
+20. King Garia's Revival (Final Boss)
+21. Sorrowful Requiem (Ending Theme)
+22. Setting Out (Staff Roll)
+23. Ghost Story of Hell (Continue)
+24. Like a Nightmare (Game Over)

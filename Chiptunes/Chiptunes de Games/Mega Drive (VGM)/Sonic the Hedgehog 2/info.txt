@@ -1,0 +1,39 @@
+Jogo: Sonic the Hedgehog 2
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Masato Nakamura, Izuho Takeuchi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. Options
+03. Emerald Hill Zone
+04. Act Clear
+05. Chemical Plant Zone
+06. Drowning
+07. Aquatic Ruin Zone
+08. Casino Night Zone
+09. Hill Top Zone
+10. Mystic Cave Zone
+11. Oil Ocean Zone
+12. Metropolis Zone
+13. Sky Chase Zone
+14. Wing Fortress Zone
+15. Death Egg Zone
+16. Dr. Robotnik's Theme
+17. Final Boss
+18. Continue?
+19. Ending Theme
+20. Staff Roll
+21. Game Over
+22. Invincibility
+23. Super Sonic
+24. Extra Life
+25. 2 Player Results
+26. Emerald Hill (2 Player)
+27. Casino Night (2 Player)
+28. Mystic Cave (2 Player)
+29. Special Stage
+30. Chaos Emerald
+31. Unused (Sound Test 10)

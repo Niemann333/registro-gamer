@@ -1,0 +1,26 @@
+Jogo: Atomic Runner (Chelnov)
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Masaaki Iwasaki, Azusa Hara, Tatsuya Kiuchi, Hiroaki Yoshida
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme, Stage Clear
+02. Game Start
+03. Introduction
+04. Chelnov Theme (Stage 1)
+05. Boss Theme
+06. Let's Go Go
+07. Stage 2
+08. Stage 3
+09. Stage 4
+10. Stage 5
+11. Stage 6
+12. Keep Running (Stage 7)
+13. Ribigal
+14. Ending Theme
+15. Extra Life
+16. Game Over
+17. Unknown (Sound Test 10)
+18. Unknown (Sound Test 11)

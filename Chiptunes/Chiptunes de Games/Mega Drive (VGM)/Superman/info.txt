@@ -1,0 +1,25 @@
+Jogo: Superman
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Kenji Yamazaki, Junichi Ueda, Hiroshi Tsukamoto
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Round Start BGM 1
+03. Round 1
+04. Boss BGM 1
+05. Round Clear
+06. Round 2
+07. Round 3
+08. Continue
+09. Game Over
+10. Round Start BGM 2
+11. Round 4
+12. Boss BGM 2
+13. Round Start BGM 3
+14. Round 5
+15. Boss BGM 3
+16. Ending 1
+17. Ending 2

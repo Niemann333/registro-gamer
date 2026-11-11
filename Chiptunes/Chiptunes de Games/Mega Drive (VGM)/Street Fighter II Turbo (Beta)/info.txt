@@ -1,0 +1,55 @@
+Jogo: Street Fighter II Turbo (Beta)
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Yoko Shimomura, Isao Abe
+Arranjo: Alph-Lyra
+Fonte: etiquetas creditam o arranjo (Alph-Lyra); compositores do original de Arcade
+Status: OK
+
+Faixas:
+01. Capcom Logo
+02. Title Theme
+03. Player Select
+04. VS Screen
+05. Ryu's Stage
+06. Ryu's Stage ~ Critical
+07. Stage End
+08. E. Honda's Stage
+09. E. Honda's Stage ~ Critical
+10. Blanka's Stage
+11. Blanka's Stage ~ Critical
+12. Guile's Stage
+13. Guile's Stage ~ Critical
+14. Bonus Stage
+15. A New Challenger
+16. Ken's Stage
+17. Ken's Stage ~ Critical
+18. Chun Li's Stage
+19. Chun Li's Stage ~ Critical
+20. Zangief's Stage
+21. Zangief's Stage ~ Critical
+22. Dhalsim's Stage
+23. Dhalsim's Stage ~ Critical
+24. Balrog's Stage
+25. Balrog's Stage ~ Critical
+26. Vega's Stage
+27. Vega's Stage ~ Critical
+28. Sagat's Stage
+29. Sagat's Stage ~ Critical
+30. M. Bison's Stage
+31. M. Bison's Stage ~ Critical
+32. Ryu's Ending
+33. E. Honda's Ending
+34. Blanka's Ending
+35. Guile's Ending
+36. Ken's Ending 1
+37. Ken's Ending 2
+38. Chun Li's Ending 1
+39. Chun Li's Ending 2
+40. Zangief's Ending
+41. Dhalsim's Ending
+42. Boss Character's Ending
+43. Staff Roll
+44. Continue
+45. Game Over
+46. Rankings

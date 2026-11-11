@@ -1,0 +1,48 @@
+Jogo: Michael Jackson's Moonwalker
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Michael Jackson, Hiroshi Kubota
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen  — Compositor: Hiroshi Kubota
+02. Round 1 Start  — Compositor: Hiroshi Kubota
+03. Smooth Criminal  — Compositor: Michael Jackson, Hiroshi Kubota
+04. Round Clear  — Compositor: Michael Jackson, Hiroshi Kubota
+05. Round 2 Start  — Compositor: Michael Jackson, Hiroshi Kubota
+06. Beat It  — Compositor: Michael Jackson, Hiroshi Kubota
+07. Boss Theme  — Compositor: Hiroshi Kubota
+08. Round 3 Start  — Compositor: Hiroshi Kubota
+09. Another Part of Me  — Compositor: Michael Jackson, Hiroshi Kubota
+10. Round 4 Start  — Compositor: Michael Jackson, Hiroshi Kubota
+11. Billie Jean  — Compositor: Michael Jackson, Hiroshi Kubota
+12. Round 5 Start  — Compositor: Michael Jackson, Hiroshi Kubota
+13. Bad  — Compositor: Michael Jackson, Hiroshi Kubota
+14. Final Boss Demo  — Compositor: Hiroshi Kubota
+15. Mr. Big  — Compositor: Hiroshi Kubota
+16. Dance Attack 1  — Compositor: Michael Jackson, Hiroshi Kubota
+17. Dance Attack 2  — Compositor: Michael Jackson, Hiroshi Kubota
+18. Dance Attack 3  — Compositor: Michael Jackson, Hiroshi Kubota
+19. Dance Attack 4  — Compositor: Michael Jackson, Hiroshi Kubota
+20. Dance Attack 5  — Compositor: Michael Jackson, Hiroshi Kubota
+21. Dance Attack 6  — Compositor: Michael Jackson, Hiroshi Kubota
+22. Dance Attack 7  — Compositor: Michael Jackson, Hiroshi Kubota
+23. Dance Attack 8  — Compositor: Michael Jackson, Hiroshi Kubota
+24. Dance Attack 9  — Compositor: Michael Jackson, Hiroshi Kubota
+25. Dance Attack 10  — Compositor: Michael Jackson, Hiroshi Kubota
+26. Dance Attack 11  — Compositor: Michael Jackson, Hiroshi Kubota
+27. Dance Attack 12  — Compositor: Michael Jackson, Hiroshi Kubota
+28. Game Over  — Compositor: Hiroshi Kubota
+29. Dance Attack 1 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+30. Dance Attack 2 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+31. Dance Attack 3 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+32. Dance Attack 4 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+33. Dance Attack 5 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+34. Dance Attack 6 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+35. Dance Attack 7 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+36. Dance Attack 8 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+37. Dance Attack 9 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+38. Dance Attack 10 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+39. Dance Attack 11 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota
+40. Dance Attack 12 (with voice)  — Compositor: Michael Jackson, Hiroshi Kubota

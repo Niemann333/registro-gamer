@@ -1,0 +1,47 @@
+Jogo: Saturday Night Slam Masters
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Masaki Izutani, Toshio Kajino, Syun Nishigaki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Capcom Logo
+02. Title
+03. Tokyo
+04. Moscow
+05. Hanover
+06. London
+07. New York
+08. Calgary
+09. Los Angeles
+10. Mexico
+11. Sydney
+12. Theme of Biff
+13. Theme of Gunloc
+14. Theme of Oni
+15. Theme of Titan
+16. Theme of Stingr
+17. Theme of Haggar
+18. Theme of Grater
+19. Theme of Rasta
+20. Theme of Jumbo
+21. Theme of Scorp
+22. Player Select
+23. Game Select (Unused?)
+24. Vs
+25. New Challenger
+26. New Challenger Player Select
+27. Ranking
+28. Continue
+29. Game Over
+30. Match Result
+31. Player Selected
+32. Ending 1
+33. Ending 2
+34. Staff Roll
+35. Start
+36. Score 1
+37. Score 2
+38. Score 3
+39. Pause

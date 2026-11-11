@@ -1,0 +1,16 @@
+Jogo: Bubble and Squeak
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Allister Brimble
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening & Ending Theme
+02. The Stardust Caverns
+03. The Neverglades
+04. The Diamond Foundry
+05. The Sandcastle Desert
+06. Neon City
+07. Lagoon
+08. Bonus Level

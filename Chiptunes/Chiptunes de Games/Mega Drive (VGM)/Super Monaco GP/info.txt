@@ -1,0 +1,23 @@
+Jogo: Super Monaco GP
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Extreme Tension
+02. The Checker Flag
+03. The Heat Waves
+04. A Break
+05. Qualify
+06. F1 Grand Prix
+07. At a Loss
+08. Super License
+09. Exhaust Fumes
+10. Concentration
+11. The Bitterness
+12. Impatience
+13. Contentment
+14. Hold in Check
+15. Theme of Monaco

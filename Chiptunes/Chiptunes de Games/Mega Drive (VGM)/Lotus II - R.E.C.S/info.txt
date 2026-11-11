@@ -1,0 +1,15 @@
+Jogo: Lotus II - R.E.C.S
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Patrick Phelan, Sound Images
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Main Theme
+02. Breathless (BGM 1)
+03. BGM 2
+04. Shamrip (BGM 3)
+05. Results
+06. Game Over
+07. Miami Ice (Unused)

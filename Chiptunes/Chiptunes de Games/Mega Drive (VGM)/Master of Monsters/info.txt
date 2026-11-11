@@ -1,0 +1,19 @@
+Jogo: Master of Monsters
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Compositor(es): Hayato Matsuo, Hitoshi Sakimoto, Koichi Sugiyama
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Intro
+02. Black Dignity (Title Screen)
+03. Purple Time (Menu)
+04. Golden Warrior (BGM 01)
+05. Yellow Robe (BGM 02)
+06. We Will Conquer the Crimson Valley (BGM 03)
+07. Large Green Meadow (BGM 04)
+08. Standing in the White Fortress (BGM 05)
+09. Into the Deep Blue Sky (BGM 06)
+10. Black Demise (Ending)
+11. Game Over

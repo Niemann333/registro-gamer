@@ -1,0 +1,21 @@
+Jogo: Batman - Revenge of the Joker
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): David Whittaker
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening ~Main Theme~
+02. Demo BGM
+03. Stages 1 & 6 ~Gotham in Danger~
+04. Demo
+05. Stages 2-1 & 5-1 ~High Above and Deep Below~
+06. Stages 2-2 & 5-2 ~Urgent Situation~
+07. Stage 3 ~Dangerous Ways~
+08. Stage 4 ~Snowy Night~
+09. Stage 7 ~Decisive Fight~
+10. VS Boss
+11. Boss ~Joker's Minon~
+12. Stage Clear
+13. Game Over

@@ -1,0 +1,40 @@
+Jogo: Sonic & Knuckles
+Plataforma: Mega Drive (VGM) — Sega Genesis
+Ano: 1994
+Compositor(es): Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi, Masaru Setsumaru, Howard Drossin, Jun Senoue, Yukifumi Makino, Masayuki Nagao, Yoshiaki Kashima
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen  — Compositor: Masaru Setsumaru, Howard Drossin
+02. Knuckles' Theme  — Compositor: Masaru Setsumaru, Howard Drossin
+03. Mushroom Hill Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+04. Mushroom Hill Zone Act 2  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+05. Flying Battery Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+06. Flying Battery Zone Act 2  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+07. Sandopolis Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+08. Sandopolis Zone Act 2  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+09. Lava Reef Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+10. Lava Reef Zone Act 2  — Compositor: Masayuki Nagao, Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+11. Sky Sanctuary Zone  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+12. Death Egg Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+13. Death Egg Zone Act 2  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+14. The Doomsday Zone  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+15. Bonus Stage 1 (Magnetic Orbs)  — Compositor: Jun Senoue
+16. Bonus Stage 2 (Slot Machine)  — Compositor: Jun Senoue
+17. Special Stage (Blue Spheres)  — Compositor: Yoshiaki Kashima
+18. Act Complete  — Compositor: Jun Senoue
+19. Miniboss  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+20. Robotnik  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+21. No Way!  — Compositor: Jun Senoue
+22. Staff Roll  — Compositor: Masaru Setsumaru
+23. Game Complete  — Compositor: Masaru Setsumaru, Howard Drossin
+24. Invincibility  — Compositor: Masaru Setsumaru, Howard Drossin
+25. 1-Up  — Compositor: Masaru Setsumaru, Howard Drossin
+26. Drowning  — Compositor: Yukifumi Makino
+27. Game Over  — Compositor: Jun Senoue
+28. Continue  — Compositor: Yukifumi Makino
+29. Chaos Emerald  — Compositor: Yukifumi Makino
+30. All Chaos Emeralds  — Compositor: Tatsuyuki Maeda
+31. Title Screen (Beta)  — Compositor: Masaru Setsumaru, Howard Drossin
+32. Game Complete (Beta)  — Compositor: Masaru Setsumaru, Howard Drossin

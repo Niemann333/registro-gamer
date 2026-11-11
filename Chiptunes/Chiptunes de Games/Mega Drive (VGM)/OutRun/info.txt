@@ -1,0 +1,13 @@
+Jogo: OutRun
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Compositor(es): Hiroshi Kawaguchi, T's Music
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Magical Sound Shower  — Compositor: Hiroshi Kawaguchi & T's Music
+02. Splash Wave  — Compositor: Hiroshi Kawaguchi & T's Music
+03. Passing Breeze  — Compositor: Hiroshi Kawaguchi & T's Music
+04. Last Wave  — Compositor: Hiroshi Kawaguchi & T's Music
+05. Step on Beat  — Compositor: T's Music

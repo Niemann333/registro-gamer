@@ -1,0 +1,14 @@
+Jogo: Robocop 3
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Bonus Screen
+03. In Game 1
+04. In Game 2
+05. End of Level
+06. Game Over

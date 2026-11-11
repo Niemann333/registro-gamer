@@ -1,0 +1,35 @@
+Jogo: Sunset Riders
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Masahiro Ikariko, H. Inoue
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Konami Logo
+02. Escape (Title)
+03. Time to Set Off (Player Select)
+04. Gunfight at the Sunset Corral (Town Stage 1)
+05. Yuppie! (Stage Clear)
+06. Wanted! (Boss Introduction)
+07. Face With Courage (Town Stage 2, Forest Stage 1)
+08. It's Time to Pay (Simon Greedwell)
+09. Quick Draw (Bonus Stage)
+10. Butch Cassidy and Sunset Riders (Train Stage 1)
+11. Train Stage 2
+12. Ay, Chihuahua (Paco Loco)
+13. The Rosy Setting Sun (Mountain Stage 1)
+14. Mountain Stage 2
+15. Me Ready for Pow-Wow (Chief Scalpen)
+16. Please Help my Friends (Chief Scalpen Clear)
+17. Draw Your Gun! (Forest Stage 2)
+18. The Great Petal (Sir Richard Rose)
+19. The Magnificent Four (Sir Richard Rose Part 2)
+20. Continue of Sorrow (Continue)
+21. Hic Jacet (Game Over)
+22. Dance Over Night (Easy Game Clear)
+23. The Big Win (Staff Roll)
+24. Looking Up at the Stars (Name Entry)
+25. You and He, Big Trouble (Versus Mode: Round 1)
+26. Adios, Amigo (Versus Mode: Round 2)
+27. We're Gonna Blow You Away! (Versus Mode: Round 3)

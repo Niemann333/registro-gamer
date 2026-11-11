@@ -1,0 +1,28 @@
+Jogo: Dahna - Megami Tanjou
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Desenvolvedora: IGS
+Compositor(es): T's Music
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. Stage 1-1
+03. Stage 1-2
+04. Stage 2
+05. Stage 3-1
+06. Stage 3-2
+07. Stage 4
+08. Stage 5-1
+09. Stage 5-2
+10. Stage 6
+11. Stage 7-1
+12. Stage 7-2
+13. Boss Theme
+14. Stage Clear
+15. All Stages Clear
+16. Ending Theme
+17. Game Over
+18. Continue
+19. Unknown (Sound Test 12)

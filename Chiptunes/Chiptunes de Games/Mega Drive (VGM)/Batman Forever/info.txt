@@ -1,0 +1,18 @@
+Jogo: Batman Forever
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1995
+Compositor(es): Tim Follin, Andy Brock
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme ~Batman Forever~
+02. Title Theme ~Criminal Activity~
+03. Stages 1 & 6 ~Arkham Asylum~
+04. Stages 2 & 5 ~Second Bank of Gotham~
+05. Stage 3 ~Hippodrome Circus~
+06. Stages 4 & 8 ~Warehouse - Claw Island~
+07. Stage 7 ~Ruins of the Batcave~
+08. Stage Clear
+09. Ending Theme
+10. Game Over

@@ -1,0 +1,40 @@
+Jogo: Mortal Kombat II
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Dan Forden, Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Character Select
+03. Selected
+04. Your Destiny
+05. The Dead Pool
+06. The Dead Pool ~ Critical
+07. The Dead Pool ~ Over
+08. The Tomb - Special Portal
+09. The Tomb ~ Critical
+10. The Tomb ~ Over
+11. Wasteland - The Pit II - Kahn's Arena
+12. Wasteland ~ Critical
+13. Wasteland ~ Over
+14. Cloud Room - Portal
+15. Cloud Room ~ Critical
+16. Cloud Room ~ Over
+17. Living Forest
+18. Living Forest ~ Critical
+19. Living Forest ~ Over
+20. Armoury
+21. Armoury ~ Critical
+22. Armoury ~ Over
+23. Finish Him!
+24. Fatality!
+25. Babality!
+26. Friendship!
+27. Liu Kang's Friendship Dance
+28. Shao Kahn Defeated
+29. Ending Theme
+30. Unknown (Sound Code 57)
+31. Unknown (Sound Code 6B)
+32. Unknown (Sound Code 88)

@@ -1,0 +1,22 @@
+Jogo: Golden Axe
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1989
+Desenvolvedora: Sega
+Compositor(es): Tohru Nakabayashi, Y. Takada
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Battle  — Compositor: Tohru Nakabayashi
+02. Wilderness  — Compositor: Y. Takada
+03. Battle Field  — Compositor: Tohru Nakabayashi
+04. Theme of Thief  — Compositor: Tohru Nakabayashi
+05. Old Map  — Compositor: Tohru Nakabayashi
+06. Turtle Village 1  — Compositor: Tohru Nakabayashi
+07. Path of Fiend  — Compositor: Tohru Nakabayashi
+08. Turtle Village 2  — Compositor: Tohru Nakabayashi
+09. Death Adder  — Compositor: Tohru Nakabayashi
+10. Showdown  — Compositor: Tohru Nakabayashi
+11. Conclusion  — Compositor: Tohru Nakabayashi
+12. Sutakora, Sassa!  — Compositor: Tohru Nakabayashi
+13. Game Over  — Compositor: Tohru Nakabayashi

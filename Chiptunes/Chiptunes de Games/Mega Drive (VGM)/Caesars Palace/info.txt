@@ -1,0 +1,10 @@
+Jogo: Caesars Palace
+Plataforma: Mega Drive (VGM) — Sega Genesis
+Ano: 1993
+Compositor(es): Tommy Tallarico, Steve Henifin
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Casino Theme

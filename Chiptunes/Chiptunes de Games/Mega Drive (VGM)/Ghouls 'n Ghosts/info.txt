@@ -1,0 +1,35 @@
+Jogo: Ghouls 'n Ghosts
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1989
+Desenvolvedora: Sega
+Compositor(es): Tamayo Kawamoto
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Main Theme
+02. Menu
+03. Options
+04. Level Start
+05. Level 1, The Hill of Torture
+06. Level 1 Boss (Shielder)
+07. Level Complete
+08. Level 2, The Village of Decay and Destruction
+09. Level 2 Boss (Cerberus)
+10. Level 3, Baron Rankle's Tower
+11. Level 3 Boss (Gassuto)
+12. Level 4, The Crystal Forest
+13. Level 4 Boss (Ohme)
+14. Level 5, The Castle
+15. Level 5 Boss (Beelzebub)
+16. Arthur Must Return
+17. Final Boss (Loki)
+18. Ending
+19. Time Running Out
+20. Death
+21. Continue
+22. Game Over
+23. Unused (Name Entry, 2nd or Below)
+24. Unused (Name Entry Complete, 1st)
+25. Unused (Name Entry Complete, 2nd or Below)
+26. Unused (Zap)

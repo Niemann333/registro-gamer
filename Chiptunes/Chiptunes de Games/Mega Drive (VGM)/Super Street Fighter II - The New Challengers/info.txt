@@ -1,0 +1,58 @@
+Jogo: Super Street Fighter II - The New Challengers
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Yoko Shimomura, Isao Abe, Syun Nishigaki
+Arranjo: Alph-Lyra
+Fonte: etiquetas creditam o arranjo (Alph-Lyra); compositores do original de Arcade
+Status: OK
+
+Faixas:
+01. Capcom Logo
+02. Opening Theme
+03. Main Theme ~ Options
+04. Player Select
+05. Tournament
+06. VS Screen
+07. Ryu's Theme
+08. E. Honda's Theme
+09. Blanka's Theme
+10. Guile's Theme
+11. Bonus Stage
+12. Ken's Theme
+13. Chun Li's Theme
+14. Zangief's Theme
+15. Dhalsim's Theme
+16. Stage End
+17. A New Challenger
+18. Fei Long's Theme
+19. Cammy's Theme
+20. Dee Jay's Theme
+21. T. Hawk's Theme
+22. Balrog's Theme
+23. Vega's Theme
+24. Sagat's Theme
+25. M. Bison's Theme
+26. Congratulations
+27. Ryu's Ending
+28. E. Honda's Ending
+29. Blanka's Ending
+30. Guile's Ending
+31. Ken's Ending 1
+32. Ken's Ending 2
+33. Chun Li's Ending 1
+34. Chun Li's Ending 2
+35. Chun Li's Ending 3
+36. Zangief's Ending
+37. Dhalsim's Ending
+38. Fei Long's Ending
+39. Cammy's Ending
+40. Dee Jay's Ending
+41. T. Hawk's Ending
+42. Balrog's Ending
+43. Vega's Ending
+44. Sagat's Ending
+45. M. Bison's Ending
+46. Staff Roll
+47. Continue
+48. Game Over
+49. Ranking Display

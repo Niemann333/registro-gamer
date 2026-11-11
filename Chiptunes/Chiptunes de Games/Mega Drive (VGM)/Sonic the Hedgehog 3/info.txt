@@ -1,0 +1,46 @@
+Jogo: Sonic the Hedgehog 3
+Plataforma: Mega Drive (VGM) — Sega Genesis
+Ano: 1994
+Compositor(es): Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi, Michael Jackson, Brad Buxer, Jun Senoue, Yukifumi Makino, Tomonori Sawada, Miyoko Takaoka, Masaru Setsumaru, Masayuki Nagao, Yoshiaki Kashima
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen  — Compositor: Tomonori Sawada
+02. Data Select  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+03. Angel Island Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+04. Angel Island Zone Act 2  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+05. Hydrocity Zone Act 1  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+06. Hydrocity Zone Act 2  — Compositor: Masayuki Nagao, Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+07. Marble Garden Zone Act 1  — Compositor: Miyoko Takaoka
+08. Marble Garden Zone Act 2  — Compositor: Miyoko Takaoka
+09. Carnival Night Zone Act 1  — Compositor: Michael Jackson, Brad Buxer
+10. Carnival Night Zone Act 2  — Compositor: Michael Jackson, Brad Buxer
+11. IceCap Zone Act 1  — Compositor: Brad Buxer
+12. IceCap Zone Act 2  — Compositor: Brad Buxer
+13. Launch Base Zone Act 1  — Compositor: Michael Jackson, Brad Buxer
+14. Launch Base Zone Act 2  — Compositor: Michael Jackson, Brad Buxer
+15. Bonus Stage (Gumball Machine)  — Compositor: Jun Senoue
+16. Special Stage (Blue Spheres)  — Compositor: Yoshiaki Kashima
+17. Act Complete  — Compositor: Jun Senoue
+18. Competition Menu  — Compositor: Michael Jackson, Brad Buxer
+19. Azure Lake  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+20. Balloon Park  — Compositor: Jun Senoue
+21. Chrome Gadget  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+22. Desert Palace  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+23. Endless Mine  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+24. Results (Vs. Mode)  — Compositor: Jun Senoue
+25. Miniboss  — Compositor: Michael Jackson, Brad Buxer
+26. Robotnik  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+27. Final Boss (Big Arms)  — Compositor: Tatsuyuki Maeda, Sachio Ogawa, Masanori Hikichi
+28. Staff Roll (Unreleased)  — Compositor: Masaru Setsumaru
+29. Staff Roll  — Compositor: Michael Jackson, Brad Buxer
+30. Game Complete  — Compositor: Masaru Setsumaru, Tomonori Sawada
+31. Knuckles' Theme  — Compositor: Michael Jackson, Brad Buxer
+32. Invincibility  — Compositor: Tomonori Sawada
+33. 1-Up  — Compositor: Masaru Setsumaru, Tomonori Sawada
+34. Drowning  — Compositor: Yukifumi Makino
+35. Game Over  — Compositor: Jun Senoue
+36. Continue  — Compositor: Yukifumi Makino
+37. Chaos Emerald  — Compositor: Yukifumi Makino
+38. All Chaos Emeralds  — Compositor: Tatsuyuki Maeda

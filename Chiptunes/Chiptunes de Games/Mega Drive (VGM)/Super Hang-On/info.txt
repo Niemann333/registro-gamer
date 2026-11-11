@@ -1,0 +1,16 @@
+Jogo: Super Hang-On
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1989
+Compositor(es): Katsuhiro Hayashi, Kouichi Namiki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Select Your Class
+02. Outride a Crisis
+03. Sprinter
+04. Winning Run
+05. Hard Road
+06. Finished
+07. Enter Your Name
+08. Winner (Shop BGM)

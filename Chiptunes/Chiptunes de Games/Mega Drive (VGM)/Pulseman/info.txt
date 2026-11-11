@@ -1,0 +1,41 @@
+Jogo: Pulseman
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Compositor(es): Junichi Masuda
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Neo Tokyo
+02. Integrated City
+03. Blank Structure
+04. Stereo Protect
+05. Cycle Partition
+06. Real Overflow
+07. CL Architecture
+08. Shutdown 2
+09. Kernel Pages
+10. Technology
+11. Halt 16 Voice
+12. Brain Wash
+13. Brain Voice
+14. Piston Power
+15. Rebooting
+16. Boot Sequence
+17. Remounting
+18. Voltage Algorithm
+19. Metamorphoser
+20. Dead Dimension
+21. End Traceback
+22. Run Command
+23. Stop Program
+24. Swap Area
+25. Port 1
+26. Memory Static
+27. Bad Trap
+28. File Systems
+29. Accelerator
+30. Shutdown
+31. Electrace Man
+32. Super Target
+33. Dump Succeeded
+34. Amabilis

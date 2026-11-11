@@ -1,0 +1,12 @@
+Jogo: Top Gear 2
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Ashley Bennet, Paul Bennet, Neil Biggin, Patrick Phelan
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme  — Compositor: Neil Biggin
+02. Canterbury Plains  — Compositor: Ashley Bennet, Paul Bennet, Neil Biggin, Patrick Phelan
+03. Ayers Rock  — Compositor: Ashley Bennet, Paul Bennet, Neil Biggin, Patrick Phelan
+04. Auckland  — Compositor: Ashley Bennet, Paul Bennet, Neil Biggin, Patrick Phelan

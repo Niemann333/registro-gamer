@@ -1,0 +1,18 @@
+Jogo: Lotus Turbo Challenge
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Barry Leitch, Shaun Southern
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Forest
+03. Night
+04. Fog
+05. Snow
+06. Desert
+07. Interstate
+08. Marsh
+09. Storm
+10. Ending

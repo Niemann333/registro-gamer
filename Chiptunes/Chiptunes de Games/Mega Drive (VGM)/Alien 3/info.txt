@@ -1,0 +1,24 @@
+Jogo: Alien 3
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Main Title Part 1
+02. Main Title Part 2
+03. Meet the Alien
+04. Stage One
+05. Stage Two
+06. Stage Three
+07. Stage Four
+08. Stage Five
+09. Get Ready
+10. Level Guardian
+11. You Failed
+12. Level Complete
+13. Ending Theme
+14. Game Over
+15. High Score
+16. Fox Fanfare (Unused)

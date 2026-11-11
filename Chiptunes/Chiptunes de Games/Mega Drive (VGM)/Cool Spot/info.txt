@@ -1,0 +1,24 @@
+Jogo: Cool Spot
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Tommy Tallarico
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Wipeout Tune
+02. Beach Music
+03. Jazzy Tune
+04. Wall Tune
+05. Groovie Tune
+06. Play da Blues
+07. Western Tune
+08. Parade Tune
+09. Rave Dancetune
+10. 7 Cool Points
+11. Replenish
+12. 1-Up
+13. Getting Letter
+14. Flag Rising
+15. Spot Fall Over
+16. Game Over Tune

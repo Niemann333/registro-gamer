@@ -1,0 +1,21 @@
+Jogo: International Superstar Soccer Deluxe
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1996
+Compositor(es): Chris Hülsbeck
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Konami Logo
+02. Opening Theme
+03. Menu Theme
+04. Training Mode Select
+05. Training Mode
+06. Short League, Short Tournament
+07. Scenario Mode
+08. Scenario Mode Ending
+09. International
+10. World Series
+11. Championship
+12. World Series Ending
+13. Game Over

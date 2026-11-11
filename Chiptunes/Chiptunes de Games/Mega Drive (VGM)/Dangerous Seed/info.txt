@@ -1,0 +1,27 @@
+Jogo: Dangerous Seed
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Yoshiki Nishimura, Akihito Hayashi, Yoko Shimokawa, Totsukurzwell
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Departure
+02. Stage Intro
+03. Stage 1: 1st Tube
+04. Stage 1 Boss: Triple Eye
+05. Stage 2: 2nd Tube
+06. Stage 2 Boss: Strike Ants
+07. Stage 3: 3rd Tube
+08. Stage 3 Boss: Roller Snail
+09. Stage 4: 4th Tube
+10. Stage 4 Boss: Hunter Moth
+11. Stage 5: Mars
+12. Stage 5 Boss: Multi-Squid
+13. Stage 6: Jupiter
+14. Stage 6 Boss: Shark Mouth
+15. Stage 7: Uranus
+16. Stage 7 Boss: Twin Claw
+17. Ending Theme
+18. Count Down
+19. Game Over

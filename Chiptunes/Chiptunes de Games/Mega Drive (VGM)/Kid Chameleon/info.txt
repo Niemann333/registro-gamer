@@ -1,0 +1,36 @@
+Jogo: Kid Chameleon
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Mark Miller
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme / Ice Area
+02. Options Theme / City Area
+03. Woods Area
+04. Mountain Area
+05. Cave Area
+06. Fantasy Area
+07. Ruins Area
+08. Island Area
+09. Swamp Area
+10. Pyramid Area
+11. Chase Scene
+12. Transformation: Kid Chameleon
+13. Transformation: Iron Knight
+14. Transformation: Red Stealth
+15. Transformation: Berzerker
+16. Transformation: Maniaxe
+17. Transformation: Juggernaut
+18. Transformation: MicroMax
+19. Transformation: EyeClops
+20. Transformation: Skycutter
+21. Transformation: Cyclone
+22. Stage Clear
+23. Extra Life
+24. Continue
+25. Ending Theme
+26. Swamp Area (Unused Variation)
+27. Unknown (Sound Code 18)
+28. Unknown (Sound Code 21)

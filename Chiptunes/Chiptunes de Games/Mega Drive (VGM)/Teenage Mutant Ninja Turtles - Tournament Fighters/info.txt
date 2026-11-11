@@ -1,0 +1,31 @@
+Jogo: Teenage Mutant Ninja Turtles - Tournament Fighters
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Miki Higashino
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Konami Logo
+02. Title Theme
+03. Prologue
+04. Introduction
+05. Character Select
+06. Leonardo's Stage
+07. Donatello's Stage
+08. Raphael's Stage
+09. Michaelangelo's Stage
+10. Casey Jones' Stage
+11. Ray Fillet's Stage
+12. April O'Neil's Stage
+13. Sisyphus' Stage
+14. Triceraton's Stage
+15. Krang's Stage 1
+16. Krang's Stage 2
+17. Kirai 1
+18. Kirai 2
+19. Ending Theme
+20. Continue
+21. Heroes in a Half Shell
+22. Story Sequence A
+23. Story Sequence B

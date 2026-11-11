@@ -1,0 +1,23 @@
+Jogo: Ayrton Senna's Super Monaco GP II
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): DESCONHECIDO
+Fonte: versão de Master System é de Tokuhiko Uwabo e Masaru Setsumaru (MobyGames); a de Mega Drive não confirmada
+Status: CONFERIR
+
+Faixas:
+01. Title Theme
+02. Menu Theme
+03. Senna GP
+04. Starting Grid
+05. Race Results
+06. World Championship
+07. Free Practice
+08. Unknown (Sound Test 06)
+09. Unknown (Sound Test 07)
+10. Unknown (Sound Test 09)
+11. Unknown (Sound Test 10)
+12. Unknown (Sound Test 11)
+13. Unknown (Sound Test 12)
+14. Unknown (Sound Test 13)
+15. Unknown (Sound Test 14)

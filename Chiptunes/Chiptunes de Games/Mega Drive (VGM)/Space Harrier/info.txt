@@ -1,0 +1,22 @@
+Jogo: Space Harrier
+Plataforma: Mega Drive (VGM) — Sega 32X
+Ano: 1994
+Compositor(es): Hiroshi Kawaguchi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Sega Logo
+02. Credit
+03. Theme
+04. Squilla
+05. Ida
+06. Godarni
+07. Wiwi Jumbo
+08. Battle Field (Bonus Stage)
+09. Syura
+10. Valda
+11. Stanray
+12. Lake Side Memory (Ending)
+13. Winner's Song (Name Entry)
+14. Theme (With Voice)

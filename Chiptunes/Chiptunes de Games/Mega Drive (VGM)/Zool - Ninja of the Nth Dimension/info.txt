@@ -1,0 +1,19 @@
+Jogo: Zool - Ninja of the Nth Dimension
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1993
+Compositor(es): Matt Furniss, Patrick Phelan
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme  — Compositor: Patrick Phelan, Matt Furniss
+02. Level Start  — Compositor: Matt Furniss
+03. Let's Go  — Compositor: Matt Furniss
+04. Worlds 1, 5, & 7 (Sweets ~ Toys ~ Island)  — Compositor: Matt Furniss
+05. Boss Theme  — Compositor: Matt Furniss
+06. Level Complete  — Compositor: Matt Furniss
+07. Worlds 2 & 6 (Music ~ Carnival)  — Compositor: Matt Furniss
+08. World 3 (Fruits and Vegetables) - Staff Roll  — Compositor: Matt Furniss
+09. World 4 (Tools)  — Compositor: Matt Furniss
+10. Game Over  — Compositor: Matt Furniss
+11. Unknown (Sound Code 74)  — Compositor: Matt Furniss

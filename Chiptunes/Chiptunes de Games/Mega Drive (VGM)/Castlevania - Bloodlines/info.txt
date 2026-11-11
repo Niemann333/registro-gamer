@@ -1,0 +1,39 @@
+Jogo: Castlevania - Bloodlines
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1994
+Compositor(es): Michiru Yamane
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Konami Logo
+02. The Beating in Darkness (Title Theme)
+03. A Vision of Dark Secrets (Opening Theme)
+04. Bonds of Brave Men (Character Selection)
+05. Arduous Journey (Map Theme)
+06. Reincarnated Soul, Part 1 (Introduction)
+07. Reincarnated Soul, Part 2 (Stage 1)
+08. The Sinking Old Sanctuary (Stage 2)
+09. The Discolored Wall (Stage 3)
+10. Beginning (Classic Tune 1)
+11. Bloody Tears (Classic Tune 2)
+12. Vampire Killer (Classic Tune 3)
+13. After the Good Fight (Game Over)
+14. Mysterious Curse (Password)
+15. Iron-Blue Intention (Stage 4)
+16. The Prayer of a Tragic Queen (Stage 5)
+17. Calling From Heaven (Stage 6)
+18. Pressure (Invincibility)
+19. Messenger From Devil (Area Boss Theme)
+20. Nothing to Lose (Stage 1D)
+21. The Six Servants of the Devil (Stage Boss Theme)
+22. Theme of Simon (Classic Tune 4)
+23. The Vampire's Stomach (Final Boss Theme)
+24. Stage Clear
+25. Orb
+26. Energy Orb
+27. Dracula Orb
+28. All Clear
+29. Together Forever (Ending Theme)
+30. Requiem for the Nameless Victims (Staff Roll)
+31. Death

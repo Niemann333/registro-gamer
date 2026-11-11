@@ -1,0 +1,28 @@
+Jogo: Sonic the Hedgehog
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1991
+Desenvolvedora: Sega
+Compositor(es): Masato Nakamura, Yukifumi Makino
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme  — Compositor: Masato Nakamura
+02. Green Hill Zone  — Compositor: Masato Nakamura
+03. Marble Zone  — Compositor: Masato Nakamura
+04. Spring Yard Zone  — Compositor: Masato Nakamura
+05. Labyrinth Zone  — Compositor: Masato Nakamura
+06. Star Light Zone  — Compositor: Masato Nakamura
+07. Scrap Brain Zone  — Compositor: Masato Nakamura
+08. Special Stage  — Compositor: Masato Nakamura
+09. Robotnik  — Compositor: Masato Nakamura
+10. Final Zone  — Compositor: Masato Nakamura
+11. Stage Clear  — Compositor: Masato Nakamura
+12. Ending Theme  — Compositor: Masato Nakamura
+13. Staff Roll  — Compositor: Masato Nakamura
+14. Invincibility  — Compositor: Masato Nakamura
+15. 1-up  — Compositor: Masato Nakamura
+16. Chaos Emerald  — Compositor: Yukifumi Makino
+17. Drowning  — Compositor: Yukifumi Makino
+18. Continue?  — Compositor: Masato Nakamura
+19. Game Over  — Compositor: Masato Nakamura

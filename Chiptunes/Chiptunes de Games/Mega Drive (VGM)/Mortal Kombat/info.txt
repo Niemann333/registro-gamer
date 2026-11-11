@@ -1,0 +1,24 @@
+Jogo: Mortal Kombat
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1992
+Compositor(es): Dan Forden, Matt Furniss
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Theme
+02. Test Your Might, Fatality
+03. Courtyard
+04. Courtyard Victory
+05. Warrior's Shrine
+06. Warrior's Shrine Victory
+07. The Pit
+08. The Pit Victory
+09. Hall
+10. Hall Victory
+11. Goro's Lair
+12. Goro's Lair Victory
+13. Entrance
+14. Entrance Victory
+15. 2-Player vs.
+16. Unknown (Sound Test 15)

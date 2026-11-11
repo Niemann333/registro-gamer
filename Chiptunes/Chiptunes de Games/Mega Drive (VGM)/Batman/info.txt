@@ -1,0 +1,21 @@
+Jogo: Batman
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Naoki Kodaka
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Introduction
+03. Stage 1 ~Gotham City Streets 1~
+04. Boss Theme
+05. Stage Clear
+06. Stage 2 ~Axis Chemical Factory~
+07. Stage 3 ~Flugelheim Museum~
+08. Stage 4-1 ~Gotham City Streets 2~ & Stage 5 ~ In the Sky Over Gotham City~
+09. Stage 4-2 ~Gotham City Streets 3~ & Stage 6-2 ~Gotham Cathedral 2~
+10. Stage 6-1 ~Gotham Cathedral 1~
+11. Final Boss ~The Joker~
+12. Ending Theme
+13. Game Over

@@ -1,0 +1,16 @@
+Jogo: Sega Soccer
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1989
+Compositor(es): DESCONHECIDO
+Fonte: jogo: World Championship Soccer; compositor não encontrado
+Status: CONFERIR
+
+Faixas:
+01. Title Theme
+02. Menu Theme
+03. Game BGM 1
+04. Game BGM 2
+05. Game BGM 2
+06. Game BGM 3
+07. Ending Theme
+08. Game Over

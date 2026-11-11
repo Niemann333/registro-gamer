@@ -1,0 +1,30 @@
+Jogo: Thunder Force III
+Plataforma: Mega Drive (VGM) — Sega Mega Drive
+Ano: 1990
+Compositor(es): Toshiharu Yamanishi, Tomomi Ootani, Naosuke Arai
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Wind Blew All Day Long (Opening Theme)  — Compositor: Naosuke Arai, Tomomi Ootani
+02. Beyond the Peace (Stage Select)  — Compositor: Tomomi Ootani
+03. Back to the Fire (Stage 1: Hydra)  — Compositor: Toshiharu Yamanishi
+04. Gargoyle (Stage 1 Boss)  — Compositor: Toshiharu Yamanishi
+05. Venus Fire (Stage 2: Gorgon)  — Compositor: Toshiharu Yamanishi
+06. Twin Vulcan (Stage 2 Boss)  — Compositor: Tomomi Ootani
+07. The Grubby Dark Blue (Stage 3: Seiren)  — Compositor: Toshiharu Yamanishi
+08. King Fish (Stage 3 Boss)  — Compositor: Tomomi Ootani
+09. Truth (Stage 4: Haides)  — Compositor: Toshiharu Yamanishi
+10. G Lobster (Stage 4 Boss)  — Compositor: Tomomi Ootani
+11. Final Take a Chance (Stage 5: Ellis)  — Compositor: Toshiharu Yamanishi
+12. Mobile Fort (Stage 5 Boss)  — Compositor: Tomomi Ootani
+13. His Behavior Inspired Us With Distrust (Stage 6: Cerberus)  — Compositor: Tomomi Ootani
+14. Hunger Made Them Desperate (Stage 7: Orn Base)  — Compositor: Tomomi Ootani
+15. Off Luck (Stage 7 Boss)  — Compositor: Tomomi Ootani
+16. Final Moment (Stage 8: Orn Core)  — Compositor: Toshiharu Yamanishi
+17. Be Menaced by Orn (Stage 8 Boss)  — Compositor: Tomomi Ootani
+18. Stage Clear  — Compositor: Toshiharu Yamanishi
+19. A War Without the End (Ending)  — Compositor: Toshiharu Yamanishi
+20. Present (Staff Roll)  — Compositor: Toshiharu Yamanishi
+21. Continue  — Compositor: Toshiharu Yamanishi
+22. Game Over  — Compositor: Toshiharu Yamanishi
