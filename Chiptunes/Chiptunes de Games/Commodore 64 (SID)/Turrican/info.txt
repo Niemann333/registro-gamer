@@ -1,0 +1,14 @@
+Jogo: Turrican
+Plataforma: Commodore 64 (SID)
+Compositor(es): R.Vaca, C.Hülsbeck, S.Hartwig
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[Turrican.sid]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
+06. Faixa 6
