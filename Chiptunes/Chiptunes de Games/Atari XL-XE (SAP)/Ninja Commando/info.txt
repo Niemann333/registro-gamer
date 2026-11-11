@@ -1,0 +1,13 @@
+Jogo: Ninja Commando
+Plataforma: Atari XL-XE (SAP)
+Compositor(es): Adam Gilmore
+Fonte: etiqueta do arquivo SAP
+Status: OK
+
+Faixas:
+[Ninja Commando.sap]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
