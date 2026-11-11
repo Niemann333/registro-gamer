@@ -1,0 +1,21 @@
+Jogo: Bosconian
+Plataforma: Sharp X68000 (VGM)
+Ano: 1988
+Desenvolvedora: Dempa
+Compositor(es): Yuzo Koshiro, Hideya Nagata
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Little Wave
+02. Red Alert
+03. Good Morning
+04. Blast Off !!
+05. Get "Lady"
+06. Excellence
+07. Battle Was Gone
+08. Dusk...
+09. Space Hibabango
+10. Blast Power !
+11. Flash Flash Flash
+12. Asteroid Memory

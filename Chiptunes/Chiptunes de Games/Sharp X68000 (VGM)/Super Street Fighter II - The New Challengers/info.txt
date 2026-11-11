@@ -1,0 +1,72 @@
+Jogo: Super Street Fighter II - The New Challengers
+Plataforma: Sharp X68000 (VGM)
+Ano: 1994
+Desenvolvedora: Capcom
+Compositor(es): Yoko Shimomura, Isao Abe, Syun Nishigaki, Felix Mendelssohn
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening Demo  — Compositor: Isao Abe, Syun Nishigaki
+02. Player Select  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+03. Tournament  — Compositor: Isao Abe, Syun Nishigaki
+04. VS.  — Compositor: Isao Abe
+05. Ken Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+06. Ken Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+07. Ryu Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+08. Ryu Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+09. E. Honda Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+10. E. Honda Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+11. Chun-Li Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+12. Chun-Li Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+13. Blanka Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+14. Blanka Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+15. Zangief Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+16. Zangief Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+17. Guile Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+18. Guile Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+19. Dhalsim Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+20. Dhalsim Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+21. Fei Long Stage 1  — Compositor: Syun Nishigaki
+22. Fei Long Stage 2  — Compositor: Syun Nishigaki
+23. Cammy Stage 1  — Compositor: Syun Nishigaki
+24. Cammy Stage 2  — Compositor: Syun Nishigaki
+25. T. Hawk Stage 1  — Compositor: Isao Abe
+26. T. Hawk Stage 2  — Compositor: Isao Abe
+27. Dee Jay Stage 1  — Compositor: Isao Abe
+28. Dee Jay Stage 2  — Compositor: Isao Abe
+29. Stage-End  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+30. Bonus Stage  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+31. Balrog Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+32. Balrog Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+33. Vega Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+34. Vega Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+35. Sagat Stage 1  — Compositor: Isao Abe
+36. Sagat Stage 2  — Compositor: Isao Abe
+37. M. Bison Stage 1  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+38. M. Bison Stage 2  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+39. Here Comes the New Challenger  — Compositor: Isao Abe
+40. Ken Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+41. Ken Ending 2  — Compositor: Felix Mendelssohn, Yoko Shimomura, Isao Abe, Syun Nishigaki
+42. Ryu Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+43. E. Honda Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+44. Chun-Li Ending  — Compositor: Isao Abe, Syun Nishigaki
+45. Chun-Li Ending 2  — Compositor: Isao Abe, Syun Nishigaki
+46. Chun-Li Ending 3  — Compositor: Isao Abe, Syun Nishigaki
+47. Blanka Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+48. Zangief Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+49. Guile Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+50. Dhalsim Ending  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+51. Fei Long Ending  — Compositor: Isao Abe, Syun Nishigaki
+52. Cammy Ending  — Compositor: Isao Abe, Syun Nishigaki
+53. T. Hawk Ending  — Compositor: Isao Abe, Syun Nishigaki
+54. Dee Jay Ending  — Compositor: Isao Abe, Syun Nishigaki
+55. Balrog Ending  — Compositor: Isao Abe, Syun Nishigaki
+56. Vega Ending  — Compositor: Isao Abe, Syun Nishigaki
+57. Sagat Ending  — Compositor: Isao Abe, Syun Nishigaki
+58. M. Bison Ending  — Compositor: Isao Abe, Syun Nishigaki
+59. Congratulations!  — Compositor: Isao Abe, Syun Nishigaki
+60. Staff Roll  — Compositor: Isao Abe, Syun Nishigaki
+61. Continue  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+62. Game Over  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
+63. Ranking Display  — Compositor: Yoko Shimomura, Isao Abe, Syun Nishigaki
