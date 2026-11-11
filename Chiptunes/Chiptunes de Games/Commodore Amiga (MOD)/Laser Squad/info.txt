@@ -1,0 +1,9 @@
+Jogo: Laser Squad
+Plataforma: Commodore Amiga (MOD)
+Compositor(es): Matt Furniss
+Fonte: Exotica (UnExoticA)
+Status: OK
+
+Faixas:
+01. lazer squad
+02. lazer-intro

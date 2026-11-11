@@ -1,0 +1,15 @@
+Jogo: Bubble and Squeak
+Plataforma: Commodore Amiga (MOD)
+Compositor(es): Allister Brimble
+Fonte: texto dentro do próprio arquivo MOD
+Status: OK
+
+Faixas:
+01. Bubble & Squeak - Bonus
+02. Bubble & Squeak - City
+03. Bubble & Squeak - Factory
+04. Bubble & Squeak - Sandcastles
+05. Bubble & Squeak - Submar
+06. Bubble & Squeak - Swamp
+07. Bubble & Squeak - Title
+08. Bubble & Squeak - Underground

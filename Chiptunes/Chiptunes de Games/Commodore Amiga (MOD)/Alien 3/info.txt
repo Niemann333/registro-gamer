@@ -1,19 +1,13 @@
-Archive created by -=MIRSOFT=-
-Look for game MODs at http://go.to/gamemods
+Jogo: Alien 3
+Plataforma: Commodore Amiga (MOD)
+Compositor(es): Matt Furniss
+Fonte: Exotica (UnExoticA)
+Status: OK
 
-*** Archive info ***
-Archiver: UnExoticA
-Type: Game rip
-Format: MOD
-Original Composer: Matt Furniss
-Tracker: Matt Furniss
-Num of tunes: 6
-Complete: 
-
-*** Game info ***
-Name: Alien 3
-Platform: Amiga
-Year: 1992
-Genre: Action
-Publisher: Virgin
-Developer: Acclaim
+Faixas:
+01. Alien 3 - Boss
+02. Alien 3 - Level 1
+03. Alien 3 - Level 2
+04. Alien 3 - Level 3
+05. Alien 3 - Level 4
+06. Alien 3 - Level 5
