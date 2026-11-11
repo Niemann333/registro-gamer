@@ -1,0 +1,28 @@
+Jogo: Dragon Slayer IV - Drasle Family
+Plataforma: MSX (KSS) (SCC) (VGM)
+Compositor(es): Yuzo Koshiro, Mieko Ishikawa
+Fonte: mesma trilha de Legacy of the Wizard (NES), etiquetas da pasta VGM
+Status: OK
+
+Faixas:
+[Dragon Slayer IV - Drasle Family.kss]
+01. Opening Theme
+02. Theme of Inn and Home
+03. Select Screen
+04. Ground Theme
+05. All Together Now
+06. Shop Theme
+07. Xemn Worzen
+08. Taratunes
+09. Pochi
+10. Erebone
+11. Lyll Worzen
+12. Archwinger
+13. Maia Worzen
+14. Rockgaea
+15. Treasure Chest
+16. Dilguios
+17. Theme of Death
+18. Ending Theme
+19. Tea Time
+20. Wall Break

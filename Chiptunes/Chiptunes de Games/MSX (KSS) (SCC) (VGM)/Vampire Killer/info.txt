@@ -1,0 +1,23 @@
+Jogo: Vampire Killer
+Plataforma: MSX (KSS) (SCC) (VGM)
+Compositor(es): Kinuyo Yamashita, Satoe Terashima
+Fonte: palpite: mesma equipe de Castlevania (NES); não confirmado
+Status: CONFERIR
+
+Faixas:
+[Vampire Killer.kss]
+01. Prologue
+02. Vampire Killer
+03. Stalker
+04. Wicked Child
+05. Out of Time
+06. Heart of Fire
+07. Walking on the Edge
+08. Nothing to Lose
+09. Poison Mind
+10. Black Night
+11. Miss
+12. Game Over
+13. Stage Clear
+14. All Clear
+15. ???

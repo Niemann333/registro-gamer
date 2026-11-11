@@ -1,0 +1,16 @@
+Jogo: Columns
+Plataforma: MSX (KSS) (SCC) (VGM) — MSX2
+Ano: 1990
+Desenvolvedora: Compile
+Compositor(es): Tokuhiko Uwabo
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Filthy
+02. Quagmire
+03. Clotho
+04. Lathesis
+05. Atropos
+06. Boy Wonder
+07. Concilation

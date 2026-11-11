@@ -1,0 +1,109 @@
+Jogo: Golvellius II
+Plataforma: MSX (KSS) (SCC) (VGM)
+Compositor(es): DESCONHECIDO
+Fonte: não encontrado
+Status: CONFERIR
+
+Faixas:
+[Golvellius II (Fm-pac & Psg).kss]
+01. Kelesis Theme
+02. Overworld 2
+03. Death Of A Hero
+04. Overworld 1
+05. Wise Woman
+06. Enny The Fairy
+07. Overworld 3
+08. And Your Name Is ?
+09. Randar Theme
+10. Dina The Fairy
+11. Rio The Fairy
+12. Winkle The Fairy
+13. Overworld 4
+14. Entering Cave To Valley Of Doom
+15. 21
+16. 22
+17. 23
+18. The City
+19. 27
+20. sfx00
+21. sfx28
+22. sfx2a
+23. sfx32
+24. sfx33
+25. sfx34
+26. sfx35
+27. sfx36
+28. sfx37
+29. sfx38
+30. sfx39
+31. sfx3a
+32. sfx3b
+33. sfx3c
+34. sfx3d
+35. sfx3e
+36. sfx3f
+37. sfx40
+38. sfx41
+39. sfx42
+40. sfx43
+41. sfx44
+42. sfx45
+43. sfx46
+44. sfx47
+45. sfx48
+46. sfx49
+47. sfx4a
+48. sfx4b
+49. sfx4c
+50. sfx4d
+51. sfx4e
+52. Kelesis Theme
+53. Overworld 2
+54. Death Of A Hero
+55. Overworld 1
+56. Wise Woman
+57. Enny The Fairy
+58. Overworld 3
+59. And Your Name Is ?
+60. Randar Theme
+61. Dina The Fairy
+62. Rio The Fairy
+63. Winkle The Fairy
+64. Overworld 4
+65. Entering Cave To Valley Of Doom
+66. 92
+67. 93
+68. The City
+69. 97
+70. sfx80
+71. sfxa8
+72. sfxaa
+73. sfxb2
+74. sfxb3
+75. sfxb4
+76. sfxb5
+77. sfxb6
+78. sfxb7
+79. sfxb8
+80. sfxb9
+81. sfxba
+82. sfxbb
+83. sfxbc
+84. sfxbd
+85. sfxbe
+86. sfxbf
+87. sfxc0
+88. sfxc1
+89. sfxc2
+90. sfxc3
+91. sfxc4
+92. sfxc5
+93. sfxc6
+94. sfxc7
+95. sfxc8
+96. sfxc9
+97. sfxca
+98. sfxcb
+99. sfxcc
+100. sfxcd
+101. sfxce

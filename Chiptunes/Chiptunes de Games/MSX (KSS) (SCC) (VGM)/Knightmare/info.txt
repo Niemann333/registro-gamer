@@ -1,0 +1,30 @@
+Jogo: Knightmare
+Plataforma: MSX (KSS) (SCC) (VGM)
+Compositor(es): DESCONHECIDO
+Fonte: não encontrado (Konami)
+Status: CONFERIR
+
+Faixas:
+[Knightmare (Special Konami Soundchip).kss]
+01. Game Start
+02. Main BGM 1
+03. Boss BGM 1
+04. Main BGM 2
+05. Boss BGM 2
+06. Power Up
+07. ???
+08. Miss
+09. Game Over
+10. ???
+[Knightmare.kss]
+11. Introduction
+12. Level 1
+13. Level 1 Boss
+14. Level 2
+15. Level 2 Boss
+16. Power up
+17. Pause
+18. Dead
+19. Exit warp
+20. Rescue Aphrodite
+21. Game Over

@@ -1,0 +1,13 @@
+Jogo: Pitfall II - The Lost Caverns
+Plataforma: MSX (KSS) (SCC) (VGM)
+Ano: 1984
+Desenvolvedora: Activision (A26);
+Compositor(es): DESCONHECIDO
+Fonte: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
+Status: CONFERIR
+
+Faixas:
+01. Game Start ~ Main BGM
+02. Main BGM
+03. Miss ~ Main BGM
+04. Balloon BGM

@@ -1,0 +1,73 @@
+Jogo: Golvellius
+Plataforma: MSX (KSS) (SCC) (VGM)
+Compositor(es): Myam, Shant, Shin-kun, Pazu
+Fonte: palpite: mesma equipe da versão Master System (Compile); não confirmado
+Status: CONFERIR
+
+Faixas:
+[Golvellius PSG.kss]
+01. First Cave
+02. Overworld 1
+03. 03
+04. Kelesis Theme
+05. Death Of A Hero
+06. 06
+07. Heading Into Battle 1
+08. Demon Rolick
+09. Wise Woman
+10. Demon Haidee ?
+11. Enny The Fairy
+12. 0C
+13. Password
+14. Randar Theme
+15. Dina The Fairy
+16. Rio The Fairy
+17. Heading Into Battle 2
+18. Cave Of Demon Golvellius ?
+19. Demon Bachular
+20. A Hero's Queste Is Complete
+21. Cave To Valley Of Doom
+22. Demon Fosbus
+23. Winkle The Fairy
+24. 18
+25. 19
+26. Demon Warlick
+27. 1B
+28. Demon Despa
+29. COMPILE Tune
+30. Demon Defeated
+31. Overworld 3
+32. Entering The Cave To Valley Of Doom
+33. sfx21
+34. sfx22
+35. sfx23
+36. sfx24
+37. sfx25
+38. sfx26
+39. sfx27
+40. sfx28
+41. sfx29
+42. sfx2A
+43. sfx2B
+44. sfx2C
+45. sfx2D
+46. sfx2E
+47. sfx2F
+48. sfx30
+49. sfx31
+50. sfx32
+51. sfx33
+52. sfx34
+53. sfx35
+54. sfx36
+55. sfx37
+56. sfx38
+57. sfx39
+58. sfx3A
+59. sfx3B
+60. sfx3C
+61. sfx3D
+62. sfx3E
+63. sfx3F
+64. sfx40
+65. sfx41
