@@ -1,0 +1,17 @@
+Jogo: Lethal Xcess - Wings of Death II
+Plataforma: Atari ST (SC68) (VGM)
+Ano: 1991
+Desenvolvedora: X-Troll
+Compositor(es): Jochen Hippel
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Menu
+03. Stage 1: Ruins of Methallycha
+04. Stage 2: Desert of No Return
+05. Stage 3: The Evil Garden
+06. Stage 4: Vulcanic Plateaus
+07. Stage 5: Fortress of Methallycha
+08. Ending

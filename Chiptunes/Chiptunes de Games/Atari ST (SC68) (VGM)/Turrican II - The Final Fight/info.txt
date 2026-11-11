@@ -1,0 +1,47 @@
+Jogo: Turrican II - The Final Fight
+Plataforma: Atari ST (SC68) (VGM)
+Ano: 1991
+Desenvolvedora: Factor 5
+Compositor(es): Chris Hülsbeck, Jochen Hippel
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Final Fight
+02. Loader
+03. The Desert Rocks
+04. Hi GI Joe!
+05. Traps
+06. Space Patrol
+07. Warhead
+08. Level Complete 1 A
+09. Level Complete 1 B
+10. Secret Dungeons
+11. The Great Bath
+12. Check The Gripper
+13. Metal Stars
+14. Quickdrive To Hell
+15. Rock N Roll Balance
+16. Level Complete 2 A
+17. Level Complete 2 B
+18. Concerto For Laser And Enemies
+19. Take A Look
+20. Unidirectional Fight
+21. Go For The Gunhed
+22. Powerslide
+23. Hypercycle Drive
+24. Level Complete 3 A
+25. Level Complete 3 B
+26. The Wall
+27. Dragonfight
+28. Mr. Walker And His Factory
+29. Level Complete 4 A
+30. Level Complete 4 B
+31. Danger Ahead
+32. The Final Challenge
+33. Go For The Nuke!
+34. Yeeaah, Done It!
+35. Level Complete 5 A
+36. Level Complete 5 B
+37. Freedom
+38. The Hero
