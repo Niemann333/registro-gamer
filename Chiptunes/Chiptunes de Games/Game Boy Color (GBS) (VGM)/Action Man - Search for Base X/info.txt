@@ -1,0 +1,31 @@
+Jogo: Action Man - Search for Base X
+Plataforma: Game Boy Color (GBS) (VGM)
+Compositor(es): Iku Mizutani
+Fonte: etiquetas da pasta "Action Man - Search for Base X (VGM)"
+Status: OK
+
+Faixas:
+[CGB-BAXE-USA.gbs]
+01. BGM #01
+02. BGM #02
+03. BGM #03
+04. BGM #04
+05. BGM #05
+06. BGM #06
+07. BGM #07
+08. BGM #08
+09. BGM #09
+10. BGM #10
+11. BGM #11
+12. BGM #12
+13. BGM #13
+14. BGM #14
+15. BGM #15
+16. BGM #16
+17. BGM #17
+18. BGM #18
+19. BGM #19
+20. BGM #20
+21. BGM #21
+22. Jingle #01
+23. Jingle #02

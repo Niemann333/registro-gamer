@@ -1,0 +1,22 @@
+Jogo: Pokémon Crystal
+Plataforma: Game Boy Color (GBS) (VGM)
+Compositor(es): J. Masuda, M. Aoki, G. Ichinose
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[Pokémon Crystal.gbs]
+01. Title
+02. Route 1
+03. Routes 3-10 & 16-22
+04. Routes 11-15
+05. Magnet Train
+06. Gym Leader Battle (Kanto)
+07. Trainer Battle (Kanto)
+08. Wild Pokémon Battle (Kanto)
+09. Pokémon Center
+10. Trainers' Eyes Meet - Hiker / Biker / Fisherman
+11. Trainers' Eyes Meet - Lass
+12. Trainers' Eyes Meet - Youngster 2 / Officer
+13. Healing Pokemon
+14. Surfing

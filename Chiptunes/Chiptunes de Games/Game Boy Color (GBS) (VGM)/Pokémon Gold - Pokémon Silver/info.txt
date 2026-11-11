@@ -1,0 +1,100 @@
+Jogo: Pokémon Gold - Pokémon Silver
+Plataforma: Game Boy Color (GBS) (VGM)
+Compositor(es): Junichi Masuda, Go Ichinose
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[DMG-AAUJ-JPN.gbs]
+01. Pokemon GS Intro 1
+02. Pokemon GS Intro 2
+03. Pokemon GS Main Theme
+04. Main Menu
+05. New Bark Town's Theme
+06. Mom's Theme
+07. Elm Research Institute
+08. Road to Cherrygrove City ~ from New Bark Town
+09. Battle vs Wild Pokemon
+10. Battle vs Wild Pokemon (alt)
+11. Victory vs Wild Pokemon
+12. Evolution
+13. Cherrygrove City's Theme
+14. Pokemon Center
+15. Pokemon Recovery
+16. Guide
+17. Road to Violet City ~ from Cherrygrove City
+18. Prof. Oak's Theme
+19. Rival's Theme
+20. Battle vs Rival
+21. Rival's Theme 2
+22. Captured Wild Pokemon
+23. Trainer Intro (Boy)
+24. Battle vs Trainer
+25. Victory vs Trainer
+26. Dark Cave
+27. Violet City's Theme
+28. Sprout Tower
+29. Trainer Intro (Sage)
+30. Pokemon Gym
+31. Battle vs Gym Leader
+32. Victory vs Gym Leader
+33. Ruins of Alph
+34. Unown Frequency
+35. Trainer Intro (Girl)
+36. Trainer Intro (Man)
+37. Union Cave
+38. Azalea Town's Theme
+39. Trainer Intro (Rocket)
+40. Battle vs Rocket
+41. Road to Goldenrod City ~ from Azalea Town
+42. Trainer Intro (Officer)
+43. Goldenrod City's Theme
+44. Game Corner
+45. Pokemon Channel
+46. Pokemon Lullaby
+47. Pokemon March
+48. Trainer Intro (Maniac)
+49. Bicycle
+50. National Park
+51. Bug Catching Contest Begins
+52. Bug Catching Contest
+53. Ecruteak City's Theme
+54. Ecruteak Dance Theater
+55. Trainer Intro (Kimono Girls)
+56. Burned Tower
+57. Tin Tower
+58. Road to Olivine City ~ from Ecruteak City
+59. Trainer Intro (Woman)
+60. Olivine Lighthouse
+61. Surfing
+62. Game Boy Printer
+63. Road to Mahogany Town ~ from Ecruteak City
+64. Mysterious Waves
+65. Rocket Hideout
+66. Team Rocket's Theme
+67. Dragon's Den
+68. Road to Indigo Plateau ~ from Tohjo Falls
+69. Victory Road
+70. Indigo Plateau -GS ver.-
+71. Battle vs Champion
+72. Entering the Hall of Fame
+73. Staff Roll
+74. The End
+75. Fast Ship S.S. Aqua
+76. Vermilion City's Theme -GS ver.-
+77. Battle vs Kanto Trainer
+78. Battle vs Kanto Gym Leader
+79. Road to Cerulean City ~ from Mt. Moon -GS ver.-
+80. Battle vs Kanto Wild Pokemon
+81. Pewter City's Theme -GS ver.-
+82. Celadon City's Theme -GS ver.-
+83. Lavender Town's Theme -GS ver.-
+84. Magnet Train
+85. PokeFlute
+86. Road to Fuchsia City ~ from Lavender Town -GS ver.-
+87. Mt. Moon Cave -GS ver.-
+88. Mt. Moon
+89. Viridian Forest -GS ver.-
+90. Road to Viridian City ~ from Pallet Town -GS ver.-
+91. Pallet Town -GS Ver.-
+92. Oak Research Institute

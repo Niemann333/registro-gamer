@@ -1,0 +1,33 @@
+Jogo: Action Man - Search for Base X
+Versão: Action Man - Search for Base X (VGM)
+Plataforma: Game Boy Color (GBS) (VGM) — Nintendo Game Boy Color
+Ano: 2001
+Desenvolvedora: Natsume
+Compositor(es): Iku Mizutani
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Main Menu
+03. Password
+04. Stage Select
+05. Set Up
+06. Start Demo
+07. Jungle
+08. Mine
+09. Snow Mountain
+10. Ruins
+11. Clear Demo
+12. Mission Completed
+13. Secret Base
+14. Demo 1
+15. Moon Base 1
+16. Boss
+17. Demo 2
+18. Moon Base 2
+19. Last Boss
+20. Ending
+21. Staff Roll
+22. Continue
+23. Game Over
