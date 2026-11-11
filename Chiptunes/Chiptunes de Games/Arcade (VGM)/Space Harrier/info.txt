@@ -1,0 +1,22 @@
+Jogo: Space Harrier
+Plataforma: Arcade (VGM) — Hang-On
+Ano: 1985
+Desenvolvedora: Sega
+Compositor(es): Hiroshi Kawaguchi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Credit
+02. Theme
+03. Squilla
+04. Ida
+05. Godarni
+06. Wiwi Jumbo
+07. Battle Field (Bonus Stage)
+08. Syura
+09. Valda
+10. Stanray
+11. Lake Side Memory (Ending)
+12. Winner's Song (Name Entry)
+13. Theme (With Voice)

@@ -1,0 +1,16 @@
+Jogo: After Burner II
+Plataforma: Arcade (VGM) — Sega X
+Ano: 1987
+Desenvolvedora: Sega AM2
+Compositor(es): Hiroshi Kawaguchi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Maximum Power
+02. Final Take Off
+03. Red Out
+04. Super Stripe
+05. After Burner
+06. City 202
+07. After Burner (Extended)

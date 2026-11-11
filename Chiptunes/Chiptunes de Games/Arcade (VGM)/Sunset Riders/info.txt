@@ -1,0 +1,35 @@
+Jogo: Sunset Riders
+Plataforma: Arcade (VGM) — Konami Sunset Riders
+Ano: 1991
+Desenvolvedora: Konami
+Compositor(es): Motoaki Furukawa, Kenichiro Fukui
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. The Magnificent Four (Attract Mode)  — Compositor: Motoaki Furukawa
+02. [SFX] Shot  — Compositor: Kenichiro Fukui
+03. [Voice] Yeah-Hey!  — Compositor: Kenichiro Fukui
+04. Time to Set Off (Player Select)  — Compositor: Motoaki Furukawa
+05. Wanted! (Boss Introduction)  — Compositor: Motoaki Furukawa
+06. Gunfight at the Sunset Corral (Stage 1, 5, 8)  — Compositor: Motoaki Furukawa
+07. Butch Cassidy and Sunset Riders (Stage 2, 7)  — Compositor: Motoaki Furukawa
+08. Face with Courage (Stage 3)  — Compositor: Motoaki Furukawa
+09. The Rosy Setting Sun (Stage 6)  — Compositor: Motoaki Furukawa
+10. It's Time to Pay! (Stage 1 Boss)  — Compositor: Motoaki Furukawa
+11. Draw, Pilgrim! (Stage 2 Boss)  — Compositor: Motoaki Furukawa
+12. You and He, Big Trouble! (Stage 3 Boss)  — Compositor: Motoaki Furukawa
+13. We're Gonna Blow You Away! (Stage 4 Boss)  — Compositor: Motoaki Furukawa
+14. Adios, Amigo! (Stage 5 Boss)  — Compositor: Motoaki Furukawa
+15. Me Ready for Pow-wow! (Stage 6 Boss)  — Compositor: Motoaki Furukawa
+16. Ay, Chihuahua! (Stage 7 Boss)  — Compositor: Motoaki Furukawa
+17. The Great Petal (Stage 8 Boss)  — Compositor: Motoaki Furukawa
+18. Quick Draw (Bonus Stage)  — Compositor: Motoaki Furukawa
+19. Please Help My Friends (Stage 3 Demo)  — Compositor: Motoaki Furukawa
+20. Dance Over Night (Cancan Dance)  — Compositor: Motoaki Furukawa
+21. Escape (Stage 7 Demo)  — Compositor: Motoaki Furukawa
+22. Yuppie! (Stage Clear)  — Compositor: Motoaki Furukawa
+23. Continue of Sorrow (Continue)  — Compositor: Motoaki Furukawa
+24. Hic Jacet (Game Over)  — Compositor: Motoaki Furukawa
+25. Looking Up at the Stars (Ranking)  — Compositor: Motoaki Furukawa
+26. The Big Win (Ending)  — Compositor: Motoaki Furukawa

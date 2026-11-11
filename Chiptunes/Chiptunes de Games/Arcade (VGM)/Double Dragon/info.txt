@@ -1,0 +1,21 @@
+Jogo: Double Dragon
+Plataforma: Arcade (VGM) — Arcade Machine
+Ano: 1987
+Desenvolvedora: Technos
+Compositor(es): Yamane Kazunaka
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Double Dragon (Opening Theme)
+02. Slums (Arrival of the Black Warriors)
+03. The Entrance of Abobo the Giant
+04. Mission Complete
+05. Departure (Intermission)
+06. Industrial Area (Riot)
+07. Woods
+08. Enemy Headquarters (Old Nemesis Willy)
+09. Reunion with Marian (Ending Theme)
+10. After the Battle
+11. unused 1
+12. unused 2

@@ -1,0 +1,41 @@
+Jogo: The Tower of Druaga
+Plataforma: Arcade (VGM) — Namco Super Pacman / Other
+Ano: 1984
+Desenvolvedora: Namco
+Compositor(es): Junko Ozawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Start Music
+02. Clear Music
+03. Ending Fanfare
+04. Zap
+05. The Theme of Ishtar
+06. In-Game Music
+07. The Theme of Quox
+08. The Theme of Druaga
+09. Chime Sound
+10. Slime: Move
+11. Sorcerer Spell: Cast
+12. Fire Element: Lighting
+13. Wall: Destruction
+14. Quox: Flame-breathing
+15. Sword: Drawing
+16. Sword: Swinging
+17. Sword: Attacking
+18. Sword: Sheathing
+19. Sword: Cutting
+20. Unused Sound  #1
+21. Spell: Reflection
+22. Door: Open
+23. Treasure Box: Get #1
+24. Treasure Box: Get #2
+25. Unused Sound  #2
+26. Gil: Walk
+27. Credit Sound, Ending
+28. Miss
+29. Game Over
+30. Name Entry
+31. Extend Sound
+32. Credit Sound

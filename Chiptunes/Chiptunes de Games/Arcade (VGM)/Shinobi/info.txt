@@ -1,0 +1,19 @@
+Jogo: Shinobi
+Plataforma: Arcade (VGM) — Sega System 16A
+Ano: 1987
+Desenvolvedora: Sega
+Compositor(es): Yasuhiro Kawakami
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. BGM 1
+02. BGM 2
+03. BGM 3
+04. BGM 4
+05. Stage Clear
+06. Boss BGM 1
+07. Mission Clear
+08. Bonus Stage
+09. Boss BGM 2
+10. Continue

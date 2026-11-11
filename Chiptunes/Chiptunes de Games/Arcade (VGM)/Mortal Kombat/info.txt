@@ -1,0 +1,44 @@
+Jogo: Mortal Kombat
+Plataforma: Arcade (VGM) — Midway Y Unit,
+Ano: 1992
+Desenvolvedora: Midway
+Compositor(es): Dan Forden
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Credit
+03. In the Beginning...
+04. Battle Plan
+05. Battle Plan End
+06. The Temple Gate
+07. The Temple Gate - Loop
+08. The Temple Gate - End
+09. The Palace Gates
+10. The Palace Gates - Loop
+11. The Palace Gates - End
+12. The Bridge
+13. The Bridge - Loop
+14. The Bridge - End
+15. The Throne Room
+16. The Throne Room - Loop
+17. The Throne Room - End
+18. The Cavern
+19. The Cavern - Loop
+20. The Cavern - End
+21. Test Your Might
+22. Test Your Might - End
+23. Jingle 1
+24. Goro Lives...
+25. Goro and the Emperor
+26. The Courtyard
+27. Shang Tsung
+28. Shang Tsung - Loop
+29. Shang Tsung - End
+30. Ending
+31. Jingle 2
+32. Scrlahts
+33. Title (Short)
+34. The Palace Gates - Loop (no loop)
+35. The Cavern - Loop (no loop)
