@@ -1,0 +1,27 @@
+Jogo: Mega Man II
+Plataforma: Game Boy (GBS) (VGM)
+Compositor(es): Kenji Yamazaki
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[DMG-W2J.gbs]
+01. Title Screen & Wily's Fortress
+02. Select Stage
+03. Stage Selected
+04. Enter Password
+05. Boss
+06. Boss Defeated
+07. Get a Weapon and Password
+08. Clash Man's Stage
+09. Air Man's Stage
+10. Metal Man's Stage
+11. Hard Man's Stage
+12. Wood Man's Stage
+13. Top Man's Stage
+14. Magnet Man's Stage
+15. Needle Man's Stage
+16. Entering Wily's Fortress
+17. Quint's Theme
+18. Ending Scene & Credits
+19. Unknown Song

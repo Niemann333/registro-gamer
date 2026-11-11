@@ -1,0 +1,23 @@
+Jogo: Kirby's Dream Land
+Plataforma: Game Boy (GBS) (VGM)
+Compositor(es): Jun Ishikawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[DMG-KYJ.gbs]
+01. Title
+02. Stage 1 - Green Greens
+03. Stage 2 - Castle Lololo
+04. Stage 3 - Float Islands
+05. Stage 4 - Bubbly Clouds
+06. Stage 5 - Mt. DeDeDe
+07. Stage 5 Selection
+08. Ending
+09. Boss
+10. Spicy Food, Minty Leaf
+11. Invincible
+12. Stars
+13. Kirby Dance
+14. Lose Life
+15. Game Over

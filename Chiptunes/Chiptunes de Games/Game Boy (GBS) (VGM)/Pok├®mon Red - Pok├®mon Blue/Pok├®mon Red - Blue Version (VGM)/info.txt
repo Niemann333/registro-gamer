@@ -1,0 +1,62 @@
+Jogo: Pokémon Red - Pokémon Blue
+Versão: Pokémon Red - Blue Version (VGM)
+Plataforma: Game Boy (GBS) (VGM) — Nintendo Game Boy
+Ano: 1996
+Desenvolvedora: Game Freak
+Compositor(es): Junichi Masuda
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen (part 1)
+02. Title Screen (part 2)
+03. Pallet Town Theme
+04. Professor Oak
+05. Professor Oak's Laboratory
+06. A Rival Appears
+07. Road to Viridian City: Leaving Pallet Town
+08. Battle! (Wild Pokémon)
+09. Victory! (Wild Pokémon)
+10. Pewter City Theme
+11. Pokémon Center
+12. Pokémon Healed
+13. Viridian Forest
+14. Guide
+15. Trainer Appears (Girl Version)
+16. Battle! (Trainer Battle)
+17. Victory! (Trainer Battle)
+18. Caves of Mt. Moon
+19. Road to Cerulean City: Leaving Mt. Moon
+20. Cerulean City Theme
+21. Pokémon Gym
+22. To Bill: Leaving Cerulean City
+23. Jigglypuff's Song
+24. Vermilion City Theme
+25. The S.S. Anne
+26. Road to Lavender Town: Leaving Vermilion City
+27. The Poké Flute
+28. A Trainer Appears (Boy Version)
+29. Battle! (Gym Leader Battle)
+30. Victory! (Gym Leader Battle)
+31. Cycling
+32. Lavender Town Theme
+33. Pokémon Tower
+34. Celadon City Theme
+35. Rocket Game Corner
+36. A Trainer Appears (Bad Guy Version)
+37. Rocket Hideout
+38. Silph Co.
+39. The Sea
+40. Cinnabar Island Theme
+41. Pokémon Mansion
+42. Evolution
+43. The Final Road
+44. Final Battle! (Rival)
+45. Hall of Fame
+46. Ending Theme
+47. Item Obtained
+48. Evolution Fanfare
+49. Pokémon Captured Fanfare
+50. Key Item Obtained
+51. Level Up Fanfare
+52. Pokédex Evaluation Fanfare

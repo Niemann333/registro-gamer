@@ -1,0 +1,57 @@
+Jogo: Castlevania II - Belmont's Revenge
+Plataforma: Game Boy (GBS) (VGM)
+Compositor(es): Hidehiro Funauchi
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+[Castlevania II - Belmont's Revenge (1991)(Konami).gbs]
+01. Faixa 1
+02. Faixa 2
+03. Faixa 3
+04. Faixa 4
+05. Faixa 5
+06. Faixa 6
+07. Faixa 7
+08. Faixa 8
+09. Faixa 9
+10. Faixa 10
+11. Faixa 11
+12. Faixa 12
+13. Faixa 13
+14. Faixa 14
+15. Faixa 15
+16. Faixa 16
+17. Faixa 17
+18. Faixa 18
+19. Faixa 19
+20. Faixa 20
+21. Faixa 21
+22. Faixa 22
+23. Faixa 23
+24. Faixa 24
+25. Faixa 25
+[DMG-CWJ.gbs]
+26. Opening [Opening]
+27. Start [Start SFX]
+28. Castle [Password]
+29. Journey to Chaos [Select]
+30. New Messiah [Glass Castle]
+31. Road of Enemy #1 [Before Boss]
+32. Evil Gods [Boss]
+33. Stage Clear [Stage Clear]
+34. Game Over [Game Over]
+35. Ripe Seeds [Plant Castle]
+36. Psycho Warrior [Rock Castle]
+37. Praying Hands [Cloud Castle]
+38. Castle #2 [Stage Map]
+39. Original Sin [Dracula's Castle -First Half-]
+40. Passpied [Dracula's Castle -Second Half-]
+41. Soleiyu's Room [Soleiyu's Room]
+42. Faith [Soleiyu Demo]
+43. Chromatische Phantasie [Soleiyu Boss]
+44. Road of Enemy #2 [Before the Final Boss]
+45. Sons of Satan [Final Boss]
+46. All Clear [All Stage Clear]
+47. Union [Ending]
+48. The End of the Day [Staff Roll]
