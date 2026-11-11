@@ -1,0 +1,22 @@
+Jogo: Devil Crash
+Plataforma: TurboGrafx-16 - PC Engine (VGM) — PC Engine / TurboGrafx-16
+Ano: 1990
+Desenvolvedora: Red, Compile
+Compositor(es): Toshiaki Sakoda, Masanobu Tsukamoto
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title
+02. Main Theme
+03. Bonus Stage 1, 4
+04. Bonus Stage 2, 5
+05. Bonus Stage 3
+06. Bonus Stage 6
+07. Special Score
+08. Extra Ball
+09. Perfect
+10. Complete
+11. The Best Five!
+12. Ending
+13. Unknown

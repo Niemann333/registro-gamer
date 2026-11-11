@@ -1,0 +1,22 @@
+Jogo: The Tower of Druaga
+Plataforma: TurboGrafx-16 - PC Engine (VGM) — TurboGrafx-16 / PC Engine
+Ano: 1992
+Desenvolvedora: Namco (AC);
+Compositor(es): Junko Ozawa
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Coin
+02. Story
+03. Round Start
+04. Main Music
+05. Round Clear
+06. Music When a Dragon Appears
+07. Player Killed
+08. Music When Druaga Appears
+09. Zapped
+10. Music When Princess Appears
+11. Congratulant Fanfare
+12. Name Entry ~ Congratulant Message
+13. Game Over
