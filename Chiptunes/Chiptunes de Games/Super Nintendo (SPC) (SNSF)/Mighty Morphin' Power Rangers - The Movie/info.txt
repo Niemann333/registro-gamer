@@ -1,7 +1,25 @@
-Mighty Morphin' Power Rangers: The Movie
-Dumped by: Datschge, saito
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Mighty Morphin' Power Rangers - The Movie
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Hiroyuki Iwatsuki, Haruo Ohashi
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--One track ("Stage Clear") redumped.
+Faixas:
+01. Title
+02. Player Select
+03. Shopping Center
+04. Aircraft Carrier
+05. Frozen Mountains
+06. Cargo Train
+07. Energy Generator Lab
+08. Main Frame Centre
+09. Boss Introduction
+10. Boss Battle
+11. Stage Clear
+12. Ivan Ooze
+13. Victory
+14. Escaping
+15. Ending 1
+16. Ending 2
+17. Staff Roll
+18. Game Over

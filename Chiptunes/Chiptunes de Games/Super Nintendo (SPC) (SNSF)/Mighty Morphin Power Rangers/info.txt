@@ -1,9 +1,22 @@
-Power Rangers
-Dumped by: Datschge
-Composer: Iku Mizutani, Kinuyo Yamashita, Hiroyuki Iwatsuki
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org/
+Jogo: Mighty Morphin Power Rangers
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Iku Mizutani, Kinuyo Yamashita, Hiroyuki Iwatsuki
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--One unused jingle added.
--Timers updated.
+Faixas:
+01. Main Theme
+02. Opening
+03. Player Select
+04. City
+05. Depot
+06. Sewer
+07. Building
+08. Cave
+09. Boss
+10. Area Clear
+11. Megazord
+12. End Bosses
+13. Ending
+14. Game Over
+15. Unused Jingle

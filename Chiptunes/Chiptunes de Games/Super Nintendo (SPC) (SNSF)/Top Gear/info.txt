@@ -1,4 +1,14 @@
-Top Gear
-Dumped by: Grass-eatin'me
-ID666 tags by: Grass-eatin'me
-Downloaded from: http://snesmusic.org
+Jogo: Top Gear
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Barry Leitch
+Fonte: etiqueta dizia "Kemco sound team"; a trilha é de Barry Leitch
+Status: OK
+
+Faixas:
+01. Title
+02. Las Vegas
+03. Hiroshima
+04. Bordeaux
+05. Frankfurt
+06. Qualified
+07. Ending Theme

@@ -1,13 +1,18 @@
-Spiderman and the X-Men: Arcade's Revenge
-Dumped by: King Aleste, Slick Mandela, Shorty187
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Spider-Man And The X-Men
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Geoff, Tim Follin
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Version: v1.1
-New set now using the extended id666 tag format
-
-Version: v1.2
-Missing song added (Game Over)
-
-Update:
-Missing song added. (High Score Table)
+Faixas:
+01. Title
+02. Briefing
+03. Cyclops
+04. Gambit
+05. Spider
+06. Storm
+07. Wolverine
+08. Final Stage
+09. Ending
+10. High Score Table
+11. Game Over

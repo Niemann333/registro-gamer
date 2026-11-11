@@ -1,10 +1,39 @@
-Mega Man X3
-Dumped by: Deuce
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Mega Man X3
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Kinuyo Yamashita
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 2:
--Composer info added.
-
-Update:
--Capcom logo jingle added.
+Faixas:
+01. Capcom Logo
+02. Introduction
+03. Title
+04. Opening
+05. Zero
+06. Stage Select
+07. Stage Introduction
+08. Neon Tiger
+09. Gravity Beetle
+10. Blast Hornet
+11. Blizzard Buffalo
+12. Toxic Seahorse
+13. Tunnel Rhino
+14. Volt Catfish
+15. Crush Crawfish
+16. Maverick Introduction
+17. Maverick Battle
+18. Victory
+19. Get Weapon
+20. Password
+21. Capsule
+22. Vile
+23. Cain's Lab
+24. Doppler Stage Revealed
+25. Doppler Stage
+26. Doppler Final Stage
+27. Doppler
+28. Doppler Battle
+29. Sigma
+30. Kaiser Sigma
+31. Ending
+32. Credits

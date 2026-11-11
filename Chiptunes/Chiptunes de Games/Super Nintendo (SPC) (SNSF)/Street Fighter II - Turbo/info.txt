@@ -1,4 +1,41 @@
-Street Fighter 2 Turbo
-Dumped by: Slick Mandela
-ID666 tags by: Slick Mandela, YK
-Downloaded from: http://snesmusic.org/
+Jogo: Street Fighter II - Turbo
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yoshihiro Sakaguchi, Yoko Shimomura, Tetsuya Nishimura
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Capcom Logo
+02. The World Warrior
+03. Character Select
+04. Ryu
+05. E. Honda
+06. Blanka
+07. Ken
+08. Guile
+09. Chun Li
+10. Zangief
+11. Dhalsim
+12. Balrog
+13. Vega
+14. Sagat
+15. M. Bison
+16. Vs.
+17. Vs. End
+18. Here Comes a New Challenger!
+19. Bonus Round
+20. Continue?
+21. Game Over
+22. High Score
+23. Ryu's Ending
+24. E. Honda's Ending
+25. Blanka's Ending
+26. Ken's Ending (part 1)
+27. Ken's Ending (part 2)
+28. Guile's Ending
+29. Chun Li's Ending (part 1)
+30. Chun Li's Ending (part 2)
+31. Zangief's Ending
+32. Dhalsim's Ending
+33. Boss Character's Ending
+34. Staff Roll

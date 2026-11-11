@@ -1,4 +1,45 @@
-Mortal Kombat 3 (Ultimate Mortal Kombat)
-Dumped by: Grass-eatin'me
-ID666 tags by: Grass-eatin'me
-Downloaded from: http://snesmusic.org
+Jogo: Mortal Kombat 3 (& Ultimate MK3)
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Dan Forden
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. Player Select
+03. Battle Plan
+04. VS.
+05. The Subway
+06. Rooftop
+07. Victory
+08. The Bank
+09. The Temple
+10. The Streets
+11. The Bridge
+12. The Pit 3
+13. Soul Chamber
+14. Shao Khan Tower
+15. Animality
+16. There is No Knowledge
+17. Finish Him - Subway
+18. Finish Him - Rooftop
+19. Finish Him - Bank
+20. Finish Him - Temple
+21. Finish Him - Streets
+22. Finish Him - Bridge
+23. Finish Him - Pit
+24. Finish Him - Chamber
+25. Finish Him - Tower
+26. Victory - Subway
+27. Victory - Rooftop
+28. Victory - Bank
+29. Victory - Temple
+30. Victory - Streets
+31. Victory - Bridge
+32. Victory - Tower
+33. Victory - Pit
+34. Victory - Chamber
+35. Victory - Animality
+36. Babality
+37. Fatality
+38. Friendship

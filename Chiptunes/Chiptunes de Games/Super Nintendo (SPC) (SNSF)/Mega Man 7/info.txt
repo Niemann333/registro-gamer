@@ -1,36 +1,52 @@
-Mega Man 7
-Dumped by: Datschge, YK
-ID666 tags by: Anti Resonance
-Downloaded from: http://snesmusic.org
+Jogo: Mega Man 7
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa, Ayako Mori
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 4:
--Composer info updated.
-
-Update 3:
--Five songs from the sample/prototype version
- included. Four are rough variants of songs
- found in the final game, while one is entirely
- new and unused.
--Two extra jingles included.
--Previous "Select Jingle" renamed to
- "Special Item 1", since that's what it *is*.
--Afformentioned jingle removed from the
- standard order, and placed at the end.
-
-Update 2:
--Missing jingle added.
--Track order changed somewhat.
--Titles/timers/tags cleaned up a bit.
-
-Update:
--Capcom logo jingle added.
-
-
-Version: v1.3
-New set now using the extended id666 tag format
-	 v1.2
-Renamed file names to a more logical order
-
-	 v1.1
-Added artist... well since I don't know who did which song these tags are 
-filled with 'Capcom Sound Team'.
+Faixas:
+01. Capcom Logo  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+02. Opening (part 1)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+03. Opening (part 2)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+04. Title Screen  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+05. Ruined Highway  — Compositor: Makoto Tomozawa
+06. New Helmet?  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+07. Bass and Treble  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+08. Password  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+09. Stage Select  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+10. Stage Start  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+11. Burstman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+12. Cloudman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+13. Junkman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+14. Freezeman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+15. Slashman  — Compositor: Yuko Takehara
+16. Springman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+17. Shademan  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+18. Turboman  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+19. The Eight Robot Masters  — Compositor: Makoto Tomozawa
+20. Stage Clear  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+21. Dr. Light's Lab  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+22. New Weapon  — Compositor: Makoto Tomozawa
+23. Auto's Shop  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+24. Protoman's Whistle  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+25. Robot Museum  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+26. Remains of the Lab  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+27. Dr. Wily's Castle  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+28. Dr. Wily 1  — Compositor: Makoto Tomozawa
+29. Dr. Wily 2  — Compositor: Makoto Tomozawa
+30. Dr. Wily 3  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+31. Dr. Wily 4  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+32. Wily's Secret Weapon  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+33. Final Battle with Dr. Wily  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+34. Wily Defeated!  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+35. Staff Roll  — Compositor: Makoto Tomozawa
+36. Unused Song  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+37. New Weapon (Prototype)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+38. Dr. Wily 1 (Prototype)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+39. Dr. Wily 2 (Prototype)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+40. Protoman's Whistle (Prototype)  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+41. The Haunted Graveyard  — Compositor: Ayako Mori
+42. Enter the Graveyard!  — Compositor: Ayako Mori
+43. Selection Jingle  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+44. Special Item 1  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa
+45. Special Item 2  — Compositor: Yuko Takehara, Toshihiko Horiyama, Makoto Tomozawa

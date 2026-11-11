@@ -1,17 +1,44 @@
-Mortal Kombat 2
-Dumped by: Grass-eatin'me, Slick Mandela, KungFuFurby
-ID666 tags by: Grass-eatin'me
-Downloaded from: http://snesmusic.org
+Jogo: Mortal Kombat 2
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Dan Forden, Mark Ganus, Dean Morrell, James Hebdon, Paul Webb
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 3:
--Three additional tracks added.
-
-Update 2:
--Two missing jingles added. (Extra "Friendship" jingles);
- original "Friendship" jingle redumped and renamed.
--Two additional tracks redumped.
--Extra composer info added.
-
-Update:
--Missing "Finish Him" and "Match Over" jingles added, among others.
--Duplicate track removed and track order adjusted properly.
+Faixas:
+01. Sculptured Software
+02. Story
+03. Menu
+04. Player Select
+05. Battle Plan
+06. Vs.
+07. The Dead Pool
+08. Finish Him (The Dead Pool)
+09. Match Over (The Dead Pool)
+10. Kombat Tomb
+11. Finish Him (Kombat Tomb)
+12. Match Over (Kombat Tomb)
+13. The Tower
+14. Finish Him (The Tower)
+15. Match Over (The Tower)
+16. Living Forest
+17. Finish Him (Living Forest)
+18. Match Over (Living Forest)
+19. The Armory
+20. Finish Him (The Armory)
+21. Match Over (The Armory)
+22. The Pit II
+23. Finish Him (The Pit II)
+24. Match Over (The Pit II)
+25. Shang Tsung
+26. Finish Him (Shang Tsung)
+27. Match Over (Shang Tsung)
+28. Into the Earth
+29. Continue?
+30. Fatality
+31. Babality
+32. Showing Your Gentler Side
+33. Friendly Gift
+34. Disco with Liu Kang
+35. Secret Character Teaser
+36. Unknown Song
+37. Unknown Jingle

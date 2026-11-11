@@ -1,7 +1,31 @@
-Sunset Riders
-Dumped by: Guy, thelogician
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org/
+Jogo: Sunset Riders
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Naohisa Morota
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Two missing songs added.
+Faixas:
+01. Introduction
+02. Player Select
+03. Wanted
+04. Stage 1
+05. Simon Greedwell
+06. Stage 2
+07. Hawkeye Hank Hatfield
+08. Stage 3
+09. Dark Horse
+10. Intermezzo 1
+11. The Smith Brothers
+12. Intemezzo 2
+13. El Greco
+14. Stage 6
+15. Chief Scalpem
+16. Paco Loco
+17. Intermezzo 3
+18. Sir Richard Rose
+19. Victory
+20. Bonus
+21. Continue
+22. Ending
+23. Continue
+24. Game Over

@@ -1,4 +1,14 @@
-Brutal: Paws of Fury
-Dumped by: Datschge
-ID666 tags by: Datschge
-Downloaded from: http://modz.lalula.de/snesamp
+Jogo: Brutal - Paws of Fury
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Doug Brandon, Neil Baldwin
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Theme
+02. Menu Stuff
+03. Far East Coast
+04. Training in the Dojo
+05. Bridge in the Mountains
+06. Indochinese Jungle
+07. Game Over

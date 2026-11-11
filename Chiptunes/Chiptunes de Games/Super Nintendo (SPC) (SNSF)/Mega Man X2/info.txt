@@ -1,11 +1,39 @@
-Mega Man X2
-Dumped by: The StarCreator
-ID666 tags by: SonicPanda, Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Mega Man X2
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yuki Iwai
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 2:
--Composer info added.
--Minor timer tweaks.
-
-Update:
--Capcom logo jingle added.
+Faixas:
+01. Capcom Logo
+02. Plot of the X-Hunters
+03. Title Screen
+04. The Mavericks' Last Stand
+05. Password
+06. Second Wave
+07. Maverick Stage Intro
+08. Weather Wizard
+09. Panzer des Drachens
+10. Dangerous Reef
+11. Volcano's Fury
+12. Wasteland
+13. Red Alert
+14. Sinister Gleam
+15. Dust Devil
+16. Maverick Sighted!
+17. The Battle Ensues
+18. Mission Accomplished!
+19. The Victor's Spoils
+20. Mentor's Gift
+21. Base of Operations
+22. Final Destination
+23. Absolute Zero
+24. Deeper Into the Abyss
+25. Conspiracy to Murder
+26. Approaching Assassin
+27. Mortal Combat
+28. Zero's Rebirth
+29. Grim Vigilante
+30. Judgement Day
+31. The Wake of Destruction
+32. Hail the Conquering Hero

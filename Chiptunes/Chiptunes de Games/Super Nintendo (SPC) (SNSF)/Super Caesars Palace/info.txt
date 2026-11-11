@@ -1,7 +1,9 @@
-Super Caesar's Palace
-Dumped by: Slick Mandela, KungFuFurby
-ID666 tags by: Slick Mandela, Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Super Caesars Palace
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Tommy Tallarico, Steve Henefin
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Track 1 redumped and retimed.
+Faixas:
+01. Las Vegas is My Lady!
+02. Wandering the Casino Floor

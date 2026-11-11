@@ -1,4 +1,21 @@
-International Superstar Soccer Deluxe
-Dumped by: Datschge
-ID666 tags by: Datschge
-Downloaded from: http://modz.lalula.de/snesamp
+Jogo: International Superstar Soccer Deluxe
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Hideyuki Eto, Harumi Ueko, Tomoya Tomita
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Opening
+02. Main Menu
+03. Short League/Tournament
+04. International
+05. Victory
+06. Further Callenges
+07. World Series
+08. Scenarios
+09. Scenario Mode Solved
+10. Training
+11. Practicing
+12. Staff Roll
+13. Special Staff Roll
+14. Game Over

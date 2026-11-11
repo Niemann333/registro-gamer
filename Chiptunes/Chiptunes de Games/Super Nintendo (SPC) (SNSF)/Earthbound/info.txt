@@ -1,52 +1,213 @@
-Earthbound (Mother 2)
-Dumped by: Tomato, CoolDude, gehn, SonicPanda, YK, Osaka, nensondubois
-ID666 tags by: Adam Blake, SonicPanda, Datschge, YK, Osaka, Tanookirby
-Downloaded from: http://snesmusic.org
+Jogo: Earthbound
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Akio Ohmori, Ritsuo Kamimura, Keiichi Suzuki, Hirokazu Tanaka
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 7:
--"Complete" versions of the Sound Stone jingles added.
--"Ominous Rumbling" removed. It was just a duplicate of
- "Giygas Disintegrates" at a very low volume.
-
-Update 6:
--Yes, the biggest SPC set in existance just got bigger.
- *More* missing tracks added. Many are jingles or ambient-ish,
- and most are unused, taken from the hidden Sound Mode.
-
-Update 5:
--Total set cleanup: several tracks redumped, several additional
- variants added. Tagging and titling cleaned up somewhat, timers
- fixed, and unnecessary tracks removed. Set re-ordered to work
- in essential tracks.
-
-Update 4:
--Even *more* new missing songs and jingles added.
- Will this set ever be 100% finished?!
-
-Update 3:
--Yet *another* missing track added (Someone's Knocking at the Door).
--Three tracks redumped: 020 (A Good Night's Rest), 065 (Winters' Wake Up 
- Call), and 130d (Smiles and Tears).
--Order slightly changed. (Tracks 129 and 130 switched around.)
--Added more notes on Mother 1 remixes.
-
-Update 2:
--Even more missing tracks added. mo2-128.spc (formerly the problematic
- mo2-126.spc, rearranged due to additional tracks) fixed.
--All key sound effects, including the two mentioned in v2.0, dumped.
-
-Update:
--Missing tracks dumped, Extended info cites OST pieces and Mother 1
- remixes. Pieces with SFX embedded redumped, and whole set 
- essentially redone from the ground up.
--Two known issues: mo2-126.spc plays way too softly, and key SFX
- (such as The OK Man & Belch's Burp) couldn't be isolated to rip.
-
-Version: v1.1
-New set now using the extended id666 tag format
-
-
-
-
-
-
+Faixas:
+01. The Evil Giygas Attacks! (part 1)
+02. The Evil Giygas Attacks! (part 2)
+03. Title Screen
+04. Opening Credits
+05. Choose a File
+06. Your Name, Please
+07. Your Name, Please (Noiseless)
+08. Now, Let's Go!
+09. One Fateful Night...
+10. Unidentified Falling Object
+11. Get on the Bus
+12. Super Dry Dance
+13. The Metropolis of Fourside
+14. Topolla Theatre, Home to the One & Only Venus
+15. Runaway Five's Final Performance
+16. Venus Live!
+17. Save the Miners!
+18. Boris' Cocktail
+19. Moonside Swing
+20. Bad Morning to You
+21. Rude Awakening
+22. The Monkeys' Maze
+23. Runaway Five to the Rescue!
+24. Summers, Eternal Tourist Trap
+25. In Dalaam, There is a Warrior
+26. The Floating Kingdom of Dalaam
+27. Mu Training
+28. Pink Cloud Shrine
+29. Sailing to Scaraba
+30. The Voyage Continues
+31. Kraken of the Sea
+32. Alien Invasion 1
+33. Bazaar
+34. Morning in the Desert
+35. The Unforgiving Desert
+36. Pyramid
+37. Inside the Dungeon
+38. Megaton Walk
+39. The Submarine
+40. The Deep Darkness
+41. The Tendas' Cave
+42. Battle Against a Machine
+43. Alien Invasion 2
+44. Stonehenge Base Shuts Down
+45. Falling Underground!
+46. The Lost Underworld
+47. Lava Springs
+48. Sound Stone ~ Giant Step
+49. Sound Stone ~ Lilliput Steps
+50. Sound Stone ~ Milky Well
+51. Sound Stone ~ Rainy Circle
+52. Sound Stone ~ Magnet Hill
+53. Sound Stone ~ Pink Cloud
+54. Someone's Knocking at the Door
+55. Sound Stone ~ Lumine Hall
+56. Sound Stone ~ Fire Spring
+57. Sound Stone ~ No Sounds
+58. Sound Stone ~ Giant Step (Complete)
+59. Sound Stone ~ Lilliput Steps (Complete)
+60. Sound Stone ~ Milky Well (Complete)
+61. Sound Stone ~ Rainy Circle (Complete)
+62. Sound Stone ~ Magnet Hill (Complete)
+63. Sound Stone ~ Pink Cloud (Complete)
+64. Sound Stone ~ Lumine Hall (Complete)
+65. What an Annoying Knock!
+66. Sound Stone ~ Fire Spring (Complete)
+67. Sound Stone ~ No Sounds (Complete)
+68. Eight Melodies
+69. The Nightmare Begins...
+70. Welcome Home
+71. The Jolly Flying Man
+72. Deeper into Ness' Subconscious
+73. Sea of Eden
+74. The Power
+75. Ness Awakens from the Nightmare
+76. Whoa!
+77. Spacetoneer
+78. Phase Distorter Failed
+79. Phase Distorter Success
+80. The Cliff That Time Forgot
+81. The Place
+82. Giygas' Lair
+83. Giygas' Intro
+84. Pokey Means Business!
+85. Giygas Stirs
+86. Giygas' Intimidation
+87. Pokey
+88. Prayer for Safety
+89. Giygas is Wounded!
+90. Giygas is Fatally Wounded!
+91. Giygas Disintegrates
+92. Giygas' Static
+93. The Heroes Return (part 1)
+94. The Heroes Return (part 2)
+95. Because I Love You
+96. Good Friends, Bad Friends
+97. Smiles and Tears
+98. A Good Buddy
+99. Hidden Track
+100. Unused Pokey Jingle
+101. Unknown Jingle 1
+102. Unknown Jingle 2
+103. Mysterious Crash
+104. Onett's Trumpet Player
+105. Key Item Fanfare
+106. Spell Learned
+107. Secret Passage
+108. Spooky...
+109. Buzz Buzz's Prophecy
+110. Evil Mani Mani Statue
+111. Magic Butterfly
+112. Master of the Stars
+113. The Sphinx's Puzzle 1
+114. The Sphinx's Puzzle 2
+115. The Sphinx's Puzzle 3
+116. The Sphinx's Puzzle 4
+117. The Sphinx's Puzzle 5
+118. The Sphinx's Puzzle Solved!
+119. Teleportation
+120. Onett Night 1
+121. Teleportation End
+122. Buzz Buzz's Demise
+123. Mechanical Tinkering
+124. Drilling
+125. Phone
+126. OK 'Ssuka?
+127. Burp
+128. Onett Night 2
+129. Onett Night 3
+130. Onett Buzz Buzz 1
+131. Onett Buzz Buzz 2
+132. Onett Buzz Buzz 3
+133. Otherworldly Foe
+134. Pokey's House
+135. Pokey's House (Buzz Buzz)
+136. Sunrise & Onett Theme
+137. Onett Theme
+138. What a Great Picture!
+139. Home Sweet Home
+140. Friendly Neighbors
+141. Buy Somethin' Will Ya!
+142. Enjoy Your Stay
+143. A Good Night's Rest
+144. Bed and Breakfast
+145. Hospital
+146. Oncoming Foe
+147. Ambush!
+148. Battle Against a Weak Opponent
+149. Battle Against a Weird Opponent
+150. Battle Against a Mobile Opponent
+151. You Win!
+152. That Was Easy!
+153. You Gained a Level!
+154. Onett's Arcade
+155. Franky
+156. Battle Against an Unsettling Opponent
+157. Dangerous Caves
+158. Sanctuary Guardian's Challenge
+159. Oncoming Boss
+160. Sanctuary Guardian
+161. A Bad Dream
+162. You Defeated the Boss!
+163. Welcome to Your Sanctuary
+164. Your Sanctuary ~ Giant Step
+165. Your Sanctuary ~ Lilliput Steps
+166. Your Sanctuary ~ Milky Well
+167. Your Sanctuary ~ Rainy Circle
+168. Your Sanctuary ~ Magnet Hill
+169. Your Sanctuary ~ Pink Cloud
+170. Your Sanctuary ~ Lumine Hall
+171. Your Sanctuary ~ Fire Spring
+172. A Flash of Memory
+173. Boy Meets Girl
+174. Apple Kid's Theme
+175. Ness' Bike
+176. Paula's Theme
+177. Peaceful Rest Valley
+178. Flowing Water
+179. Happy-Happy is Blue
+180. You've Got a New Friend!
+181. Dead-End Chaos Theatre
+182. Runaway Five ~ The Daily Show
+183. Runaway Five Left the Building!
+184. Runaway Five on the Move!
+185. Threed, Zombie Central
+186. Heartless Hotel
+187. Whoops!
+188. In Winters, There is a Genius
+189. Snowman
+190. Winters White
+191. Winters Wake Up Call
+192. Tessie Has Been Sighted!
+193. Tessie!
+194. Caverns of Winters
+195. Dr. Andonuts' Lab
+196. The Sky Runner
+197. Going Down!
+198. Rough Landing
+199. Escargo Express at Your Service!
+200. Zombie Paper
+201. Saturn Valley Caverns
+202. Hi Hi Hi
+203. Belch's Factory
+204. Battle Against Belch
+205. You've Come Far, Ness
+206. Threed, Free at Last

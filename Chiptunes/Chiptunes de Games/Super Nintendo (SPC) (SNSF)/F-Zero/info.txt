@@ -1,12 +1,24 @@
-F-Zero
-Dumped by: Datschge, nensondubois
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org/
+Jogo: F-Zero
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yumiko Kanki, Naoto Ishida
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Alternate noiseless version of Death Wind added.
-
-Version: v1.2
-New set now using the extended id666 tag format
-	 v1.1
-Thanks to Hitori for infos on the composers
+Faixas:
+01. Opening Theme  — Compositor: Yumiko Kanki
+02. Big Blue  — Compositor: Naoto Ishida
+03. Red Canyon  — Compositor: Yumiko Kanki
+04. Fire Field  — Compositor: Yumiko Kanki
+05. Silence  — Compositor: Yumiko Kanki
+06. White Land I  — Compositor: Yumiko Kanki
+07. White Land II  — Compositor: Yumiko Kanki
+08. Port Town  — Compositor: Yumiko Kanki
+09. Select Time Theme  — Compositor: Yumiko Kanki
+10. Mute City  — Compositor: Yumiko Kanki
+11. Sand Ocean  — Compositor: Yumiko Kanki
+12. Death Wind  — Compositor: Yumiko Kanki
+13. Death Wind (No SFX)  — Compositor: Yumiko Kanki
+14. Ending Theme  — Compositor: Naoto Ishida
+15. Zoom  — Compositor: Yumiko Kanki
+16. Start  — Compositor: Yumiko Kanki
+17. Lost Life  — Compositor: Yumiko Kanki

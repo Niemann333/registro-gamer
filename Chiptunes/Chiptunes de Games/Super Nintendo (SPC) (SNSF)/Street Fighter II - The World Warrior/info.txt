@@ -1,4 +1,40 @@
-Street Fighter 2
-Dumped by: Daniel Kalabakov
-ID666 tags by: Daniel Kalabakov
-Downloaded from: http://modz.lalula.de/snesamp
+Jogo: Street Fighter II - The World Warrior
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yoshihiro Sakaguchi, Yoko Shimomura, Tetsuya Nishimura, Isao Abe
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Capcom Sound
+02. The World Warrior
+03. Player Select
+04. Start Battle
+05. Ryu
+06. E. Honda
+07. Blanka
+08. Guile
+09. Ken
+10. Chun Li
+11. Zangief
+12. Dhalsim
+13. End Battle
+14. Continue...?
+15. Game Over!
+16. Ranking
+17. "Here Comes A New Challanger!"
+18. Bonus Stage
+19. M. Bison (Jap)/Balrog (US, Europe)
+20. Balrog (Jap)/Vega (US, Europe)
+21. Sagat
+22. Vega (Jap)/M. Bison (US, Europe)
+23. Ryu's Ending
+24. E. Honda's Ending
+25. Blanka's Ending
+26. Guile's Ending
+27. Ken's Ending (1)
+28. Ken's Ending (2)
+29. Chun Li's Ending (1)
+30. Chun Li's Ending (2)
+31. Zangief's Ending
+32. Dhalsim's Ending
+33. Credits

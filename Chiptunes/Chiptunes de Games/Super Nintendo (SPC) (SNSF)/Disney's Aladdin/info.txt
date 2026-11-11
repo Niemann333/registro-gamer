@@ -1,9 +1,48 @@
-Aladdin
-Dumped by: Excremedies, SonicPanda
-ID666 tags by: Datschge, SonicPanda
-Downloaded from: http://snesmusic.org
+Jogo: Disney's Aladdin
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yuko Takehara, Setsuo Yamamoto
+Fonte: etiqueta abreviada "Sato, Yuko, Setsuo" — o "Sato" não foi identificado
+Status: CONFERIR
 
-Update:
--Missing song added.
--A few songs redumped properly.
--Order adjusted to work in new song.
+Faixas:
+01. "Salaam and Good Evening"
+02. "A Dark Man Waits..."
+03. The Diamond in the Rough
+04. Abu & the Lamp
+05. Chosen Destiny
+06. One Step Ahead
+07. Seeds of Love
+08. "Things Aren't Always What They Seem..."
+09. The Cave of Wonders
+10. Carpet Leads the Way
+11. Aladdin Finds the Lamp
+12. Abu Blows It
+13. "You Will Never Again See the Light of Day!"
+14. Escape of the Infidels
+15. "Direct From the Lamp..."
+16. The Genie's Lamp
+17. Raiders of the Lost Monkey
+18. Chimp in Tut's Clothing
+19. Magic Carpet Ride
+20. Storming Jafar's Palace
+21. "Perfect Timing, As Usual"
+22. "A Few Addendums..."
+23. "Only in Trouble if You Get Caught..."
+24. "I'm In Trouble"
+25. "Say the Magic Word"
+26. "Only One May Enter..."
+27. "A Snake, Am I?"
+28. "See How Snakelike I Can Be..."
+29. "You Little Fool!"
+30. "The Most Powerful Being On Earth"
+31. "Phenomenal Cosmic Power..."
+32. "...Itty-Bitty Living Space"
+33. "You'll Always Be a Prince to Me"
+34. "Group Hug!"
+35. A Whole New World
+36. It's Break Time!
+37. Got a Boost!
+38. Got an Extra Chance!
+39. Got an Extra Wish!
+40. A Moment's Rest
+41. Capcom

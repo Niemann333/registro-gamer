@@ -1,0 +1,17 @@
+Jogo: J.R.R. Tolkien's The Lord of the Rings - Vol. I
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Charles Deenen
+Fonte: etiquetas dos arquivos de música
+Status: OK
+
+Faixas:
+01. Title Screen
+02. The Shire
+03. Desolate Field
+04. Caves
+05. Moria Phase 1
+06. Moria Phase 2
+07. Moria Phase 3
+08. Moria Phase 4
+09. Ring Wraths
+10. Frodo Dies

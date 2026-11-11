@@ -1,9 +1,13 @@
-Top Gear 2
-Dumped by: Grass-eatin'me, CaitSith2
-ID666 tags by: Grass-eatin'me
-Downloaded from: http://snesmusic.org
+Jogo: Top Gear 2
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Patrick Phelan, Ashley Bennett, Paul Bennet
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Hacked to work by CaitSith2
-
-Update:
--Timers fixed.
+Faixas:
+01. Title
+02. Auckland
+03. Ayers Rock
+04. Canterbury Plains
+05. Qualified
+06. Ending Theme

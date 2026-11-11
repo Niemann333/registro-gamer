@@ -1,10 +1,73 @@
-Star Ocean
-Dumped by: Kazamit, Datschge
-ID666 tags by: Datschge
-Downloaded from: http://modz.lalula.de/snesamp
+Jogo: Star Ocean
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Motoi Sakuraba
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Perfect dump by Kazamit
-
-Setting:
-Surround (out of St/Mono/Surround)
-Arena (out of Flat/B.Boost/Arena)
+Faixas:
+01. Departures
+02. New Age
+03. Tense Atmosphere
+04. Dancin' Seord
+05. First Experience
+06. Purpose
+07. Dream and Reality
+08. New Human Race
+09. Innocence
+10. Sunny Place
+11. Secretly
+12. Calm Time
+13. What Should Be
+14. Encourage
+15. New World
+16. Tactics
+17. Next Step
+18. Space Peace
+19. One Challenge
+20. Stream of Wind
+21. Past Days
+22. Far to Get
+23. Refinement
+24. Dim
+25. Purge Thyself
+26. True Figure
+27. Crevice
+28. Labo of Tas
+29. An Ideal
+30. Immediatery Before
+31. Ambition
+32. Demand
+33. High Tension
+34. Both Side's Case
+35. Reunion
+36. Relief
+37. Ancient Ruin
+38. Separation
+39. Take a Fancy
+40. For Archive
+41. Calmness
+42. Only Warrior
+43. Calm Disrupted
+44. Flashed
+45. The Strong
+46. All for One
+47. VRSS
+48. Mother Ocean
+49. Ocarina 1
+50. Ocarina 2
+51. Trumpet 1
+52. Trumpet 2
+53. Shamisen 1
+54. Shamisen 2
+55. Clarinet 1
+56. Clarinet 1
+57. Saxophone 1
+58. Saxophone 2
+59. Guitar 1
+60. Guitar 2
+61. Harmonica 1
+62. Harmonica 2
+63. Trombone 1
+64. Trombone 2
+65. Violin 1
+66. Violin 2

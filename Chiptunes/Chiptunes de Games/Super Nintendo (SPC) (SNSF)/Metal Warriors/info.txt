@@ -1,7 +1,20 @@
-Metal Warriors
-Dumped by: YK
-ID666 tags by: YK
-Downloaded from: http://snesmusic.org
+Jogo: Metal Warriors
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): David Warhol, Erik Swanson
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Minor nitpicky timing/tagging tweaks.
+Faixas:
+01. Metal Warriors
+02. Preparing for Battle
+03. Vital Mission
+04. Defense ~ Armed Escorts
+05. Attacking the Axis Base
+06. War in the Jungle
+07. Stealth Operation
+08. The Enemy Commander
+09. Unused Jingle 1
+10. Unused Jingle 2
+11. Combat Menu
+12. Mission Complete
+13. Game Over

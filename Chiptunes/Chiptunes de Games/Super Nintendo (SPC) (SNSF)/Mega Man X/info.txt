@@ -1,15 +1,42 @@
-Megaman X
-Dumped by: Datschge
-ID666 tags by: Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Mega Man X
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Setsuo Yamamoto, Makoto Tomozawa, Capcom, Toshihiko Horiyama, Yuki Iwai, Yuko Takehara, Setsuo, Tomozou, Sato, Yuko, Kirry
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 3:
--Retagged composer fields in accordance with the Rockman X Sound Box compilation
--Assorted timer fixes.
-
-Update 2:
--Retitled and reordered songs to be brought in line with the X1~6 official soundtrack.
-Added specific composer information for the 9 songs for which it is known.
-
-Update:
--Capcom logo jingle added.
+Faixas:
+01. Capcom Logo  — Compositor: Capcom
+02. Title  — Compositor: Setsuo Yamamoto
+03. Password  — Compositor: Toshihiko Horiyama
+04. Opening Stage  — Compositor: Setsuo Yamamoto
+05. Vile 1  — Compositor: Setsuo Yamamoto
+06. Vile 2  — Compositor: Setsuo Yamamoto
+07. Zero  — Compositor: Setsuo Yamamoto
+08. Demo  — Compositor: Setsuo Yamamoto
+09. Stage Select 1  — Compositor: Setsuo Yamamoto
+10. Stage Start  — Compositor: Setsuo Yamamoto
+11. Launch Octopus  — Compositor: Setsuo Yamamoto
+12. Chill Penguin  — Compositor: Yuki Iwai
+13. Flame Mammoth  — Compositor: Setsuo Yamamoto
+14. Boomer Kuwanger  — Compositor: Yuko Takehara
+15. Sting Chameleon  — Compositor: Setsuo Yamamoto
+16. Spark Mandrill  — Compositor: Makoto Tomozawa
+17. Storm Eagle  — Compositor: Makoto Tomozawa
+18. Armored Armadillo  — Compositor: Setsuo Yamamoto
+19. Boss 1  — Compositor: Setsuo Yamamoto
+20. Boss 2  — Compositor: Setsuo Yamamoto
+21. Stage Clear  — Compositor: Setsuo Yamamoto
+22. Get a Weapon  — Compositor: Setsuo Yamamoto
+23. Stage Select 2  — Compositor: Setsuo Yamamoto
+24. Sigma Stage 1  — Compositor: Setsuo Yamamoto
+25. Sigma Stage 2  — Compositor: Setsuo Yamamoto
+26. Sigma Stage 3  — Compositor: Setsuo Yamamoto
+27. Sigma Stage 4  — Compositor: Setsuo Yamamoto
+28. Sigma 1st  — Compositor: Setsuo Yamamoto
+29. Sigma Rebirth  — Compositor: Setsuo Yamamoto
+30. Sigma 2nd  — Compositor: Setsuo Yamamoto
+31. Dr. Light  — Compositor: Setsuo Yamamoto
+32. Ending  — Compositor: Setsuo Yamamoto
+33. Cast Roll  — Compositor: Setsuo Yamamoto
+34. Staff Roll  — Compositor: Setsuo Yamamoto
+35. Test Track  — Compositor: Setsuo, Tomozou, Sato, Yuko, Kirry

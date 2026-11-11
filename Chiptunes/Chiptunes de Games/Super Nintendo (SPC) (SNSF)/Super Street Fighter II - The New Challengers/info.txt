@@ -1,15 +1,103 @@
-Super Street Fighter 2
-Dumped by: Daniel Kalabakov, Slick Mandela
-ID666 tags by: Daniel Kalabakov, Slick Mandela
-Downloaded from: http://snesmusic.org
+Jogo: Super Street Fighter II - The New Challengers
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Yoshihiro Sakaguchi, Yoko Shimomura, Tetsuya Nishimura, Isao Abe
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Entire soundtrack for American version dumped,
- as it and the Japanese versions have different
- instrument samples.
-
-Update:
--Missing track added. (Pause)
-
-Update:
--Capcom logo jingle added.
+Faixas:
+01. Capcom Logo
+02. Powering Up
+03. Player Select
+04. Begin Tournament
+05. Start Battle
+06. Ryu
+07. E. Honda
+08. Blanka
+09. Guile
+10. Balrog
+11. Ken
+12. Chun Li
+13. Zangief
+14. Dhalsim
+15. Sagat
+16. Vega
+17. T. Hawk
+18. Fei Long
+19. Dee Jay
+20. Cammy
+21. M. Bison
+22. End Battle
+23. End Tournament
+24. Continue?
+25. Game Over
+26. High Scores
+27. Here Comes a New Challenger!
+28. Break It!
+29. Ryu's Ending
+30. E. Honda's Ending
+31. Blanka's Ending
+32. Guile's Ending
+33. Balrog's Ending
+34. Ken's Ending (part 1)
+35. Ken's Ending (part 2)
+36. Chun Li's Ending (part 1)
+37. Chun Li's Ending (Choice 1)
+38. Chun Li's Ending (Choice 2)
+39. Zangief's Ending
+40. Dhalsim's Ending
+41. Sagat's Ending
+42. Vega's Ending
+43. T. Hawk's Ending
+44. Fei Long's Ending
+45. Dee Jay's Ending
+46. Cammy's Ending
+47. M. Bison's Ending
+48. Staff Roll
+49. Capcom Logo
+50. Powering Up
+51. Player Select
+52. Begin Tournament
+53. Start Battle
+54. Ryu
+55. E. Honda
+56. Blanka
+57. Guile
+58. Balrog
+59. Ken
+60. Chun Li
+61. Zangief
+62. Dhalsim
+63. Sagat
+64. Vega
+65. T. Hawk
+66. Fei Long
+67. Dee Jay
+68. Cammy
+69. M. Bison
+70. End Battle
+71. End Tournament
+72. Continue?
+73. Game Over!
+74. High Scores
+75. Here Comes a New Challenger!
+76. Break It!
+77. Ryu's Ending
+78. E. Honda's Ending
+79. Blanka's Ending
+80. Guile's Ending
+81. Balrog's Ending
+82. Ken's Ending (part 1)
+83. Ken's Ending (part 2)
+84. Chun Li's Ending (part 1)
+85. Chun Li's Ending (Choice 1)
+86. Chun Li's Ending (Choice 2)
+87. Zangief's Ending
+88. Dhalsim's Ending
+89. Sagat's Ending
+90. Vega's Ending
+91. T. Hawk's Ending
+92. Fei Long's Ending
+93. Dee Jay's Ending
+94. Cammy's Ending
+95. M. Bison's Ending
+96. Staff Roll

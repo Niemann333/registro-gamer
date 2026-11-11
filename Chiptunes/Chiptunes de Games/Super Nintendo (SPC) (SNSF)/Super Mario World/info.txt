@@ -1,32 +1,73 @@
-Super Mario World
-Dumped by: Datschge, Agustin Huambachano, nensondubois, KungFuFurby
-ID666 tags by: Datschge, Agustin Huambachano
-Downloaded from: http://snesmusic.org/
+Jogo: Super Mario World
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Koji Kondo
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 5:
--Four additional song variants added.
-
-Update 4:
--Numerous new variants (mostly of the "Hurry Up"
- variety), and a couple redumps and new jingles.
--Order changed dramatically, to work in all the
- additions from the last few updates.
-
-Update 3:
--Several tracks redumped to remove sound effects.
--"Special World" song broken into two SPCs: one
- for the main song, and one for the hidden SMB remix.
--Track titles modified to better fit the game.
--Order changed slightly.
-
-Update 2:
--"Unused Song" removed. Seems it's not located in
- the actual game's music data; it appears to be a
- corrupt version of the title theme from the
- Nintendo DS game, "New Super Mario Bros."
-
-Update:
--Six new jingles and an unused song added.
-
-Version: v1.1
-New set now using the extended id666 tag format
+Faixas:
+01. Nintendo Logo
+02. Title
+03. Yoshi's Island
+04. Wandering the Plains
+05. Vanilla Dome
+06. Forest of Illusion
+07. Bowser's Castle Emerges
+08. Valley of Bowser
+09. Star Road
+10. Special World
+11. Super Mario Bros. Remix
+12. Overworld
+13. Overworld (Yoshi)
+14. Overworld (Hurry)
+15. Overworld (Hurry Yoshi)
+16. Athletic
+17. Athletic (Yoshi)
+18. Athletic (Hurry)
+19. Athletic (Hurry Yoshi)
+20. Underground
+21. Underground (Yoshi)
+22. Underground (Hurry)
+23. Underground (Yoshi Hurry)
+24. Swimming
+25. Swimming (Yoshi)
+26. Swimming (Hurry)
+27. Swimming (Hurry Yoshi)
+28. Haunted House
+29. Haunted House (Hurry)
+30. Fortress
+31. Fortress (Hurry)
+32. P-Switch
+33. P-Switch (Cave)
+34. P-Switch (Hurry)
+35. P-Switch (Cave Hurry)
+36. Invincible
+37. Invincible (Cave)
+38. Invincible (Hurry)
+39. Invincible (Cave Hurry)
+40. Bonus Game
+41. Bonus Game (Hurry)
+42. Bonus Game Clear
+43. Boss Battle
+44. Boss Battle (Hurry)
+45. Egg is Rescued
+46. World Clear
+47. Course Clear
+48. Fade Out!
+49. Secret Exit!
+50. Fortress Clear
+51. Player Down
+52. Game Over
+53. The Evil King Bowser
+54. The Evil King Bowser (Intro)
+55. Bowser's Last Attack
+56. Bowser's Last Attack (Faster)
+57. Bowser Zoom
+58. Bowser Zoom Out
+59. Peach's Item
+60. Bowser Defeated
+61. Princess Peach is Rescued
+62. Staff Roll
+63. The Yoshis are Home
+64. Cast List
+65. Cast List (Looped)
+66. Yoshi

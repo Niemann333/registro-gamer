@@ -1,22 +1,41 @@
-Mortal Kombat
-Dumped by: Slogra, Grass-eatin'me, Slick Mandela, KungFuFurby
-ID666 tags by: Grass-eatin'me
-Downloaded from: http://snesmusic.org
+Jogo: Mortal Kombat
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Dan Forden, Mark Ganus, Kingsley Thurber, Sam Powell
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update 4:
--Five new jingles (four unused) added.
--Twelve songs redumped.
-
-Update 3:
--Four new tracks added.
--Many tracks redumped.
--Order changed to incorporate new tracks.
--Timers tweaked.
--Extra composer info added.
-
-Update 2:
--Missing "Finish Him" and "Match Over" jingles added.
--Duplicate track removed, and tracks re-ordered to compensate.
-
-Update:
--Missing jingle added.
+Faixas:
+01. Title
+02. Goro Lives
+03. Player Select
+04. Battle Plan
+05. Ready to Fight
+06. Palace Gates
+07. Finish Him (Palace Gates)
+08. Match Over (Palace Gates)
+09. Warrior Shrine
+10. Finish Him (Warrior Shrine)
+11. Match Over (Warrior Shrine)
+12. The Pit
+13. Finish Him (The Pit)
+14. Match Over (The Pit)
+15. Throne Room
+16. Finish Him (Throne Room)
+17. Match Over (Throne Room)
+18. The Courtyard
+19. Finish Him (The Courtyard)
+20. Match Over (The Courtyard)
+21. Fight Goro
+22. Finish Him (Fight Goro)
+23. Match Over (Fight Goro)
+24. Fatality
+25. Test Your Might
+26. Might Tested
+27. Might Not Tested
+28. Ending Theme
+29. Press Start to Continue
+30. Return of Kombatant
+31. High Score Table
+32. Unused Jingle 1
+33. Unused Jingle 2
+34. Unused Jingle 3

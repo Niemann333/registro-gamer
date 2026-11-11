@@ -1,10 +1,17 @@
-Barbie Super Model
-Dumped by: 004040, KungFuFurby
-ID666 tags by: 004040, Datschge
-Downloaded from: http://snesmusic.org
+Jogo: Barbie Super Model
+Plataforma: Super Nintendo (SPC) (SNSF)
+Compositor(es): Danny Toft
+Fonte: etiquetas dos arquivos de música
+Status: OK
 
-Update:
--Missing ending theme included.
--Several tracks redumped.
--Several tracknames changed to be more
- descriptive.
+Faixas:
+01. Title
+02. Changing Clothes
+03. Riding in Hollywood, CA
+04. Fashion Show
+05. Stage Cleared
+06. Roller Skating at the Beach
+07. A Cold, Snowy Day
+08. Out Biking
+09. You Are Super Model!
+10. Sorry, Barbie!
