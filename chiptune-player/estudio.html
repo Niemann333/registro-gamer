@@ -129,6 +129,17 @@ input[type=range]{accent-color:var(--ac);width:90px}
 .kbk.dn{background:linear-gradient(180deg,#7c3aed,#4c1d95);box-shadow:inset 0 -2px 0 #2e1065}
 .kbk span{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:9px;color:#8b84b3;pointer-events:none}
 /* camada inicial */
+.dlg{position:fixed;inset:0;z-index:60;display:none;place-items:center;background:rgba(8,6,14,.78);backdrop-filter:blur(4px);padding:16px}
+.dlg.show{display:grid}
+.dbox{width:min(520px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;box-shadow:0 20px 60px #000c}
+.dhd{display:flex;align-items:center;padding:14px 16px 6px;font-size:16px}.dhd .btn{margin-left:auto}
+.dsub{font-size:12px;color:var(--tx3);line-height:1.5;padding:0 16px 10px}
+.dtools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 16px 10px;font-size:12.5px;color:var(--tx2)}.dtools .tgl{margin-left:auto}
+.dlist{flex:1;overflow:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 8px;min-height:80px}
+.dch{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;font-size:13px;cursor:pointer}
+.dch:hover{background:var(--bg3)}.dch input{accent-color:var(--ac)}
+.dch .nm{flex:1}.dch .ct{font-size:11.5px;color:var(--tx3)}.dch .dr{font-size:10.5px;color:var(--ac2);border:1px solid var(--line2);border-radius:5px;padding:0 5px}
+.dft{display:flex;align-items:center;gap:10px;padding:12px 16px}.dinfo{flex:1;font-size:12px;color:var(--tx3)}
 .gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(8,6,14,.82);backdrop-filter:blur(6px)}
 .gate .box{text-align:center;padding:30px;max-width:420px}
 .gate .box .big{font-size:52px}
@@ -196,6 +207,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
           <div class="prog" id="prog"><i id="progI"></i></div>
           <div class="tm" id="tm">0:00 / 0:00</div>
           <label class="vol">🔊<input type="range" id="mVol" min="0" max="1.5" step="0.05" value="0.8"></label>
+          <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar">⬇ MIDI</button>
         </div>
         <div class="chans" id="chans"><span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span></div>
       </div>
@@ -220,6 +232,14 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   </footer>
 </div>
 
+<div class="dlg" id="midiDlg"><div class="dbox">
+  <div class="dhd"><b>Baixar em MIDI</b><button class="btn sm" id="mdX">✕</button></div>
+  <div class="dsub" id="mdSub">Cada canal do chip vira uma trilha. As notas, a afinação, o volume e o panorâmico vão junto; o timbre não (o MIDI usa instrumentos General MIDI). Ruído e samples de bateria vão para o canal 10.</div>
+  <div class="dtools"><button class="btn sm" id="mdAll">Todos</button><button class="btn sm" id="mdNone">Nenhum</button>
+    <label class="tgl" title="Detecta o andamento para as notas caírem nos compassos (bom para editar numa DAW)"><input type="checkbox" id="mdTempo" checked>Ajustar ao tempo (BPM)</label></div>
+  <div class="dlist" id="mdList"><div class="msg">Lendo as notas…</div></div>
+  <div class="dft"><span class="dinfo" id="mdInfo"></span><button class="btn pri" id="mdGo" disabled>⬇ Baixar .mid</button></div>
+</div></div>
 <div class="gate" id="gate"><div class="box"><div class="big">🎹</div><h2>Chiptune Studio</h2>
   <p>Ligue seu teclado MIDI no USB (ou use o teclado do computador; no celular, o teclado na tela) e toque com os timbres das músicas do acervo.</p>
   <button class="btn pri" id="gateBtn">Ativar o som</button></div></div>
@@ -570,8 +590,9 @@ var RGVGM = (function () {
 
   // ───────────── PSG: gravador genérico de envelopes (60 quadros/s) ─────────────
   // Cada canal informa, a cada quadro, volume (0..1), forma de onda e frequência.
-  function PSGChan(owner, label, chip) {
-    this.owner = owner; this.label = label; this.chip = chip;
+  function PSGChan(owner, label, chip, rec) {
+    this.owner = owner; this.label = label; this.chip = chip; this.REC = rec || null; this.id = chip + ' · ' + label;
+    this.mOn = false; this.mNote = 0; this.mV = 0;
     this.vol = 0; this.freq = 0; this.wave = null; this.trig = false;
     this.rec = null; this.prevVol = 0; this.prevFreq = 0;
   }
@@ -591,6 +612,23 @@ var RGVGM = (function () {
       this.finish();
       this.rec = { w: w, v: [], d: [], note: w.k === 'noise' ? (w.nrate || 0) : midiOf(f) };
     }
+    if (this.REC) {
+      // notas para o MIDI: início, fim, afinação e volume a cada quadro
+      var R = this.REC, ft = this.owner.ft;
+      if (start) {
+        if (this.mOn) R.push({ c: this.id, t: ft, k: 'off' });
+        var ev = { c: this.id, t: ft, k: 'on', n: w.k === 'noise' ? 0 : midiOf(f), v: v, pan: 64 };
+        if (w.k === 'noise') ev.noise = { ck: w.ck, r: w.nrate || 0, m: w.nmode };
+        R.push(ev); this.rec.evOn = ev;
+        this.mOn = true; this.mNote = ev.n; this.mV = v;
+      } else if (this.mOn) {
+        if (v <= 0.001) { R.push({ c: this.id, t: ft, k: 'off' }); this.mOn = false; }
+        else {
+          if (w && w.k !== 'noise' && f > 0) { var nn = midiOf(f); if (Math.abs(nn - this.mNote) > 0.02) { R.push({ c: this.id, t: ft, k: 'pitch', n: nn }); this.mNote = nn; } }
+          if (Math.abs(v - this.mV) > 0.01) { R.push({ c: this.id, t: ft, k: 'vol', v: v }); this.mV = v; }
+        }
+      }
+    }
     if (this.rec) {
       if (this.rec.v.length < 240) { this.rec.v.push(v); this.rec.d.push(w ? (w.duty == null ? -1 : w.duty) : -1); }
       if (v <= 0.001 && this.rec.v.length > 1) { var z = 0, a = this.rec.v; for (var i = a.length - 1; i >= 0 && a[i] <= 0.001; i--) z++; if (z > 12) this.finish(); }
@@ -600,7 +638,8 @@ var RGVGM = (function () {
   PSGChan.prototype.finish = function () {
     var r = this.rec; this.rec = null;
     if (!r || !r.v.length) return;
-    this.owner.addPSG(this, r);
+    var tb = this.owner.addPSG(this, r);
+    if (r.evOn && tb) r.evOn.tb = tb;
   };
 
   function q(x) { return Math.round(x * 15); }
@@ -627,13 +666,15 @@ var RGVGM = (function () {
     var key = ch.chip + '|' + w.k + '|' + (w.k === 'wave' ? w.tbl.join('') : '') + '|' + (w.nmode || '') + '|' +
       v.map(q).join(',') + '|' + d.join(',');
     var env = v.map(function (x) { return Math.round(x * 1000) / 1000; });
-    this.add(key, function () {
+    return this.add(key, function () {
       return { type: 'psg', wave: w.k, chipKind: w.ck, tbl: w.tbl || null, nmode: w.nmode || '', env: env, duty: d };
     }, ch.label, r.note, ch.chip);
   };
 
   // ───────────── leitura principal ─────────────
-  function parse(buf) {
+  function parse(buf, opts) {
+    var REC = opts && opts.events ? [] : null;   // notas no tempo, para converter em MIDI
+    var mchans = [];                            // canais encontrados (ordem de criação)
     var b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
     if (String.fromCharCode(b[0], b[1], b[2], b[3]) !== 'Vgm ') throw new Error('Arquivo não é VGM');
     var ver = u32(b, 8);
@@ -642,6 +683,8 @@ var RGVGM = (function () {
     function hclk(o) { return (o + 4 <= hdrLen) ? (u32(b, o) & 0x3FFFFFFF) : 0; }
     var info = gd3(b);
     var col = new Collector();
+    col.ft = 0;
+    function mchan(id, chip, label, kind) { if (REC) mchans.push({ id: id, chip: chip, label: label, kind: kind }); }
     var chans = [];
     var unsupported = [];
 
@@ -663,6 +706,7 @@ var RGVGM = (function () {
     if (clk.ym2203) fm.ym2203 = new FMChip('opn', 'YM2203', clk.ym2203, 3);
     if (clk.ym2608) fm.ym2608 = new FMChip('opn', 'YM2608', clk.ym2608, 6);
     if (clk.ym2610) fm.ym2610 = new FMChip('opn', 'YM2610', clk.ym2610, 6);
+    Object.keys(fm).forEach(function (k) { fm[k].mcur = []; fm[k].mseen = []; });
 
     function fmKey(chip, ch, on) {
       var snap = chip.kind === 'opm' ? chip.snapshotOPM(ch) : chip.snapshotOPN(ch);
@@ -673,7 +717,7 @@ var RGVGM = (function () {
       var key = chip.chip + '|' + snap.alg + '|' + snap.fb + '|' + snap.ams + '|' + snap.fms + '|' +
         snap.ops.map(function (o) { return [o.dt, o.mul, o.tl, o.ks, o.ar, o.am, o.d1r, o.d2r, o.sl, o.rr, o.ssg, o.dt2].join('.'); }).join('/');
       var lbl = 'FM ' + (ch + 1);
-      col.add(key, function () {
+      var tbObj = col.add(key, function () {
         // afinação: se a portadora principal soa uma oitava acima/abaixo (MUL 0, 2, 4, 8), corrige o teclado
         var best = null;
         car.forEach(function (i) { var o = snap.ops[i]; if (!best || o.tl < best.tl || (o.tl === best.tl && (o.mul || 0.5) < (best.mul || 0.5))) best = o; });
@@ -682,6 +726,48 @@ var RGVGM = (function () {
         return { type: 'fm', tune: tune, fmKind: chip.kind, clock: chip.clock, rate: chip.rate, alg: snap.alg, fb: snap.fb, ams: snap.ams, fms: snap.fms,
                  ops: snap.ops, lfo: snap.lfo, opmLfo: snap.opmLfo || null };
       }, lbl, snap.note, chip.chip);
+      if (REC) {
+        var id = chip.chip + ' · ' + lbl, st = fmState(chip, ch);
+        if (!chip.mseen[ch]) { chip.mseen[ch] = 1; mchan(id, chip.chip, lbl, 'fm'); }
+        R0push({ c: id, t: t, k: 'on', n: st.n, v: st.v, pan: st.pan, tb: tbObj });
+        chip.mcur[ch] = st;
+      }
+    }
+    function R0push(e) { REC.push(e); }
+    // estado atual de um canal FM: nota (com fração), volume (0..1) e pan (0..127)
+    function fmState(chip, ch) {
+      var R, n, alg, pan, lr;
+      if (chip.kind === 'opm') {
+        R = chip.regs[0];
+        var kc = R[0x28 + ch], kf = R[0x30 + ch] >> 2;
+        var idx = [0, 1, 2, 2, 3, 4, 5, 5, 6, 7, 8, 8, 9, 10, 11, 11][kc & 15];
+        n = 61 + 12 * (((kc >> 4) & 7) - 4) + idx + kf / 64 + 12 * Math.log2(chip.clock / 3579545);
+        alg = R[0x20 + ch] & 7; lr = R[0x20 + ch] >> 6;
+      } else {
+        var port = ch >= 3 ? 1 : 0, c = ch % 3; R = chip.regs[port];
+        var fnum = ((R[0xA4 + c] & 7) << 8) | R[0xA0 + c], block = (R[0xA4 + c] >> 3) & 7;
+        n = midiOf(fnum * chip.rate * Math.pow(2, block - 1) / 1048576);
+        alg = R[0xB0 + c] & 7; lr = R[0xB4 + c] >> 6;
+      }
+      pan = lr === 3 || lr === 0 ? 64 : (lr === 2 ? (chip.kind === 'opm' ? 127 : 0) : (chip.kind === 'opm' ? 0 : 127));
+      var minTL = 127, car = CARRIERS[alg];
+      for (var i = 0; i < car.length; i++) {
+        var o = car[i], tl = chip.kind === 'opm' ? R[0x60 + OPM_OFF[o] + ch] & 127 : R[0x40 + OPN_OFF[o] + (ch % 3)] & 127;
+        if (tl < minTL) minTL = tl;
+      }
+      return { n: n, v: Math.pow(10, -minTL * 0.75 / 20), pan: pan };
+    }
+    function fmFrame(chip) {
+      for (var ch = 0; ch < chip.nch; ch++) {
+        var cur = chip.mcur[ch]; if (!cur || !chip.keyed[ch]) continue;
+        var st = fmState(chip, ch), id = chip.chip + ' · FM ' + (ch + 1);
+        if (Math.abs(st.n - cur.n) > 0.02 && st.n > 0) { REC.push({ c: id, t: col.ft, k: 'pitch', n: st.n }); cur.n = st.n; }
+        if (Math.abs(st.v - cur.v) > 0.01) { REC.push({ c: id, t: col.ft, k: 'vol', v: st.v }); cur.v = st.v; }
+        if (st.pan !== cur.pan) { REC.push({ c: id, t: col.ft, k: 'pan', pan: st.pan }); cur.pan = st.pan; }
+      }
+    }
+    function fmOff(chip, ch) {
+      if (REC && chip.mcur[ch]) { REC.push({ c: chip.chip + ' · FM ' + (ch + 1), t: t, k: 'off' }); chip.mcur[ch] = null; }
     }
     var seenOPLL = false;
     function opnWrite(chip, port, a, d) {
@@ -693,6 +779,7 @@ var RGVGM = (function () {
         if (c === 3 || c === 7 || ch >= chip.nch) return;
         var on = (d >> 4) & 15;
         if (on && !chip.keyed[ch] && !(chip.dac && ch === 5 && chip.chip === 'YM2612')) fmKey(chip, ch);
+        if (!on && chip.keyed[ch]) fmOff(chip, ch);
         chip.keyed[ch] = on ? 1 : 0;
       }
     }
@@ -703,6 +790,7 @@ var RGVGM = (function () {
       if (a === 0x08) {
         var ch = d & 7, on = (d >> 3) & 15;
         if (on && !chip.keyed[ch]) fmKey(chip, ch);
+        if (!on && chip.keyed[ch]) fmOff(chip, ch);
         chip.keyed[ch] = on ? 1 : 0;
       }
     }
@@ -711,7 +799,7 @@ var RGVGM = (function () {
     var sn = null;
     if (clk.sn) {
       sn = { clock: clk.sn, att: [15, 15, 15, 15], per: [0, 0, 0, 0], latch: 0, ltype: 0, noise: 0, ch: [] };
-      for (var i = 0; i < 4; i++) { var pc = new PSGChan(col, i < 3 ? 'PSG ' + (i + 1) : 'Ruído', 'SN76489'); sn.ch.push(pc); chans.push(pc); }
+      for (var i = 0; i < 4; i++) { var pc = new PSGChan(col, i < 3 ? 'PSG ' + (i + 1) : 'Ruído', 'SN76489', REC); mchan(pc.id, pc.chip, pc.label, i < 3 ? 'psg' : 'noise'); sn.ch.push(pc); chans.push(pc); }
     }
     function snVol(a) { return a >= 15 ? 0 : Math.pow(10, -2 * a / 20); }
     function snUpdate() {
@@ -744,7 +832,7 @@ var RGVGM = (function () {
     var NNOISE = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068];
     if (clk.nes) {
       nes = { clock: clk.nes, r: new Uint8Array(32), en: 0, ch: [], env: [], len: [0, 0, 0, 0], lin: 0, linReload: false };
-      ['Pulso 1', 'Pulso 2', 'Triângulo', 'Ruído NES'].forEach(function (l) { var pc = new PSGChan(col, l, 'NES APU'); nes.ch.push(pc); chans.push(pc); });
+      ['Pulso 1', 'Pulso 2', 'Triângulo', 'Ruído NES'].forEach(function (l) { var pc = new PSGChan(col, l, 'NES APU', REC); mchan(pc.id, pc.chip, l, /Ruído/.test(l) ? 'noise' : 'psg'); nes.ch.push(pc); chans.push(pc); });
       for (var k = 0; k < 4; k++) nes.env.push({ v: 15, acc: 0 });
     }
     function nesWrite(a, d) {
@@ -799,7 +887,7 @@ var RGVGM = (function () {
     var gb = null;
     if (clk.gb) {
       gb = { r: new Uint8Array(0x30), ch: [], env: [], len: [0, 0, 0, 0] };
-      ['Pulso 1', 'Pulso 2', 'Onda', 'Ruído GB'].forEach(function (l) { var pc = new PSGChan(col, l, 'Game Boy'); gb.ch.push(pc); chans.push(pc); });
+      ['Pulso 1', 'Pulso 2', 'Onda', 'Ruído GB'].forEach(function (l) { var pc = new PSGChan(col, l, 'Game Boy', REC); mchan(pc.id, pc.chip, l, /Ruído/.test(l) ? 'noise' : 'psg'); gb.ch.push(pc); chans.push(pc); });
       for (var g = 0; g < 4; g++) gb.env.push({ v: 0, acc: 0, on: false });
     }
     function gbWrite(a, d) {
@@ -845,7 +933,7 @@ var RGVGM = (function () {
     // ── AY-3-8910 / SSG dos chips OPN ──
     function makeAY(clock, chipName) {
       var ay = { clock: clock, r: new Uint8Array(16), ch: [] };
-      for (var i = 0; i < 3; i++) { var pc = new PSGChan(col, 'SSG ' + 'ABC'[i], chipName); ay.ch.push(pc); chans.push(pc); }
+      for (var i = 0; i < 3; i++) { var pc = new PSGChan(col, 'SSG ' + 'ABC'[i], chipName, REC); mchan(pc.id, chipName, pc.label, 'psg'); ay.ch.push(pc); chans.push(pc); }
       return ay;
     }
     function ayFrame(ay) {
@@ -866,11 +954,21 @@ var RGVGM = (function () {
 
     // ── percorre os comandos ──
     var p = hdrLen, t = 0, nextFrame = FRAME, end = b.length, guard = 0;
+    var dacSeek = null, dacLast = -1e9, dacSeen = false, streamChip = {};
+    function dacHit(id) {
+      if (!REC || !fm.ym2612 || !fm.ym2612.dac) return;
+      if (t - dacLast < 300 && id === dacHit.last) return;
+      dacLast = t; dacHit.last = id;
+      if (!dacSeen) { dacSeen = true; mchan('YM2612 · DAC', 'YM2612', 'DAC (samples)', 'dac'); }
+      REC.push({ c: 'YM2612 · DAC', t: t, k: 'hit', id: id });
+    }
     var eofOff = u32(b, 4) + 4; if (eofOff > 4 && eofOff < end) end = eofOff;
     function advance(n) {
       t += n;
       while (t >= nextFrame) {
+        col.ft = nextFrame;
         nextFrame += FRAME;
+        if (REC) for (var fk in fm) if (fm[fk].mcur.length) fmFrame(fm[fk]);
         if (nes) nesFrame();
         if (gb) gbFrame();
         for (var a = 0; a < ays.length; a++) ayFrame(ays[a]);
@@ -896,7 +994,11 @@ var RGVGM = (function () {
         if (c === 0x62) { advance(735); p++; continue; }
         if (c === 0x63) { advance(882); p++; continue; }
         if (c >= 0x70 && c <= 0x7F) { advance((c & 15) + 1); p++; continue; }
-        if (c >= 0x80 && c <= 0x8F) { advance(c & 15); p++; continue; }
+        if (c >= 0x80 && c <= 0x8F) { if (dacSeek !== null) { dacHit('o' + dacSeek); dacSeek = null; } advance(c & 15); p++; continue; }
+        if (c === 0xE0) { dacSeek = u32(b, p + 1); p += 5; continue; }
+        if (c === 0x90) { streamChip[b[p + 1]] = b[p + 2] & 0x7F; p += 5; continue; }
+        if (c === 0x95) { if (streamChip[b[p + 1]] === 2) dacHit('b' + (b[p + 2] | (b[p + 3] << 8))); p += 5; continue; }
+        if (c === 0x93) { if (streamChip[b[p + 1]] === 2) dacHit('s' + u32(b, p + 2)); p += 11; continue; }
         if (c === 0x67) { p += 7 + u32(b, p + 3) ; p -= 0; continue; }
         if (c === 0x68) { p += 12; continue; }
         if (c >= 0x90 && c <= 0x95) { p += [5, 5, 6, 11, 2, 5][c - 0x90]; continue; }
@@ -912,6 +1014,15 @@ var RGVGM = (function () {
     } catch (e) { if (e !== 'longo') throw e; }
     advance(FRAME);
     chans.forEach(function (c) { c.finish(); });
+    if (REC) {
+      for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
+      chans.forEach(function (c) { if (c.mOn) { REC.push({ c: c.id, t: t, k: 'off' }); c.mOn = false; } });
+    }
+    // papel (Melodia/Baixo/...) de todos os timbres, inclusive os que não vão para a lista
+    col.list.forEach(function (x) {
+      x.median = x.notes.length ? x.notes.slice().sort(function (a, b2) { return a - b2; })[x.notes.length >> 1] : 60;
+      x.role = roleOf(x);
+    });
 
     // ── organiza: os mais usados primeiro, nomes amigáveis ──
     var list = col.list.filter(function (x) {
@@ -925,8 +1036,6 @@ var RGVGM = (function () {
     list.forEach(function (x) {
       num[x.chip] = (num[x.chip] || 0) + 1;
       x.n = num[x.chip];
-      x.median = x.notes.length ? x.notes.slice().sort(function (a, b2) { return a - b2; })[x.notes.length >> 1] : 60;
-      x.role = roleOf(x);
       x.chanList = Object.keys(x.chans).sort(function (a, b2) { return x.chans[b2] - x.chans[a]; });
       delete x.notes; delete x.key;
     });
@@ -934,7 +1043,13 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     if (seenOPLL || (clk.ym2413 && ver >= 0x110)) unsupported.unshift('YM2413');
     if (sn) chips.push('SN76489'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy'); if (ay) chips.push('AY-3-8910');
-    return { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
+    var res = { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
+    if (REC) {
+      // só canais que tocaram alguma nota
+      var used = {}; REC.forEach(function (e) { if (e.k === 'on' || e.k === 'hit') used[e.c] = (used[e.c] || 0) + 1; });
+      res.midi = { events: REC, chans: mchans.filter(function (m) { return used[m.id]; }).map(function (m) { m.notes = used[m.id]; return m; }) };
+    }
+    return res;
   }
 
   function roleOf(x) {
@@ -959,6 +1074,226 @@ var RGVGM = (function () {
   }
 
   return { parse: parse, inflate: inflate, CARRIERS: CARRIERS };
+})();
+
+
+// ===== Conversor VGM → MIDI (Chiptune Studio · Registro Gamer) =====
+// Usa as notas que o RGVGM registra (parse com { events: true }) e monta um .mid (formato 1).
+var RGMIDI = (function () {
+  'use strict';
+  var PPQ = 480, SR = 44100;
+  var DAC_NOTES = [36, 38, 42, 46, 49, 45, 48, 50, 39, 51, 41, 43, 47, 54, 56, 57];
+
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
+  function vel(amp) { return clamp(Math.round(127 * Math.sqrt(Math.max(0, amp))), 1, 127); }
+
+  // bateria (canal 10 do General MIDI)
+  function noiseDrum(nz, dur) {
+    var br; // brilho 0..1 (1 = chiado agudo)
+    if (nz.ck === 'sn') br = [1, 0.6, 0.3, 0.5][nz.r & 3];
+    else if (nz.ck === 'ay') br = 1 - (nz.r & 31) / 31;
+    else br = 1 - (nz.r & 15) / 15;
+    if (br > 0.65) return dur > 0.6 ? 49 : dur > 0.22 ? 46 : 42;
+    if (br > 0.35) return dur > 0.7 ? 49 : 38;
+    return 36;
+  }
+  function tonalDrum(n) { return n < 43 ? 36 : n < 55 ? 38 : n < 67 ? 47 : 42; }
+  function program(tb) {
+    if (!tb) return 80;
+    if (tb.role === 'Baixo') return 38;              // Synth Bass 1
+    if (tb.type === 'fm') return tb.role === 'Melodia' ? 81 : 62; // Lead 2 (saw) / Synth Brass 1
+    return 80;                                        // Lead 1 (square)
+  }
+
+  // ── tempo: procura o BPM em que os ataques das notas caem na grade de semicolcheias ──
+  function detectTempo(onsets) {
+    if (onsets.length < 24) return null;
+    onsets = onsets.slice(0, 4000);
+    var best = 0, scores = [];
+    for (var bpm = 70; bpm <= 180.001; bpm += 0.25) {
+      var g = 60 / bpm / 4, re = 0, im = 0;
+      for (var i = 0; i < onsets.length; i++) { var a = 2 * Math.PI * onsets[i] / g; re += Math.cos(a); im += Math.sin(a); }
+      var s = Math.sqrt(re * re + im * im) / onsets.length;
+      scores.push({ bpm: bpm, s: s, ph: Math.atan2(im, re) });
+      if (s > best) best = s;
+    }
+    if (best < 0.55) return null;
+    // entre os quase-empates, fica com o andamento mais lento (o dobro também "encaixa")
+    for (var k = 0; k < scores.length; k++) if (scores[k].s >= best * 0.97) {
+      var r = scores[k], g2 = 60 / r.bpm / 4, off = (r.ph / (2 * Math.PI)) * g2;
+      return { bpm: Math.round(r.bpm * 100) / 100, score: best, grid: g2, offset: off };
+    }
+    return null;
+  }
+
+  // ── escrita do arquivo ──
+  function vlq(n) { var b = [n & 127]; n >>= 7; while (n) { b.unshift((n & 127) | 128); n >>= 7; } return b; }
+  function utf8(s) {
+    var out = [];
+    String(s || '').split('').forEach(function (ch) {
+      var c = ch.charCodeAt(0);
+      if (c < 256) out.push(c);
+      else { var b = ch.normalize('NFD').charCodeAt(0); out.push(b < 128 ? b : 63); }
+    });
+    return out;
+  }
+  function track(evs) {
+    evs.sort(function (a, b) { return a.tick - b.tick || a.ord - b.ord; });
+    var out = [], last = 0;
+    evs.forEach(function (e) { out.push.apply(out, vlq(Math.max(0, e.tick - last))); last = Math.max(last, e.tick); out.push.apply(out, e.data); });
+    out.push(0, 0xFF, 0x2F, 0);
+    var len = out.length;
+    return [0x4D, 0x54, 0x72, 0x6B, (len >>> 24) & 255, (len >>> 16) & 255, (len >>> 8) & 255, len & 255].concat(out);
+  }
+  function meta(type, bytes) { return [0xFF, type].concat(vlq(bytes.length), bytes); }
+
+  // res: resultado de RGVGM.parse(u8, { events: true })
+  // opts: { chans: [ids] (padrão: todos), tempo: true/false }
+  function build(res, opts) {
+    opts = opts || {};
+    var M = res.midi; if (!M) throw new Error('sem eventos');
+    var want = {}; (opts.chans || M.chans.map(function (c) { return c.id; })).forEach(function (id) { want[id] = 1; });
+    var chans = M.chans.filter(function (c) { return want[c.id]; });
+
+    // 1) junta eventos em notas por canal
+    var notes = {}; chans.forEach(function (c) { notes[c.id] = []; });
+    var open = {}, dacCount = {};
+    M.events.forEach(function (e) {
+      if (!want[e.c]) return;
+      var L = notes[e.c];
+      if (e.k === 'hit') { L.push({ t: e.t, end: e.t + SR * 0.12, dac: e.id, v: 0.9, ev: [] }); dacCount[e.id] = (dacCount[e.id] || 0) + 1; return; }
+      var o = open[e.c];
+      if (e.k === 'on') {
+        if (o) { o.end = e.t; }
+        var tune = e.tb && e.tb.type === 'fm' ? -(e.tb.tune || 0) : 0; // altura real que o chip toca
+        o = { t: e.t, end: null, n: e.n + tune, tune: tune, v: e.v, pan: e.pan, tb: e.tb, noise: e.noise, ev: [] };
+        L.push(o); open[e.c] = o;
+      } else if (!o) return;
+      else if (e.k === 'off') { o.end = e.t; open[e.c] = null; }
+      else if (e.k === 'pitch') o.ev.push({ t: e.t, n: e.n + o.tune });
+      else o.ev.push(e);
+    });
+    var tEnd = res.seconds * SR;
+    Object.keys(open).forEach(function (id) { if (open[id] && open[id].end == null) open[id].end = tEnd; });
+    var dacRank = Object.keys(dacCount).sort(function (a, b) { return dacCount[b] - dacCount[a]; });
+
+    // 2) tempo
+    var onsets = [];
+    chans.forEach(function (c) { notes[c.id].forEach(function (nt) { onsets.push(nt.t / SR); }); });
+    onsets.sort(function (a, b) { return a - b; });
+    var tp = opts.tempo === false ? null : detectTempo(onsets);
+    var bpm = tp ? tp.bpm : 120, shift = 0;
+    if (tp) {
+      shift = ((-tp.offset % tp.grid) + tp.grid) % tp.grid;
+      // começo do compasso: a posição (de 16) com mais ataques graves/bumbo
+      var hist = new Array(16).fill(0);
+      chans.forEach(function (c) { notes[c.id].forEach(function (nt) {
+        var k = Math.round((nt.t / SR + shift) / tp.grid) % 16;
+        var w = (nt.dac && dacRank.indexOf(nt.dac) === 0) || (nt.n && nt.n < 48 && !nt.noise) ? 2 : (nt.noise ? 0.5 : 1);
+        hist[k] += w;
+      }); });
+      var kb = 0; for (var k = 1; k < 16; k += 1) if (hist[k] > hist[kb]) kb = k;
+      kb = kb - (kb % 4); // alinha pelo tempo mais forte do grupo de 4
+      shift += ((16 - kb) % 16) * tp.grid;
+    }
+    var spb = 60 / bpm; // segundos por semínima
+    function tick(samples) { return Math.round((samples / SR + shift) / spb * PPQ); }
+
+    // 3) canais MIDI: melodia em 1..16 (pula o 10); bateria no 10
+    var midiCh = {}, nextCh = 0;
+    chans.forEach(function (c) {
+      if (c.kind === 'noise' || c.kind === 'dac') { midiCh[c.id] = 9; return; }
+      if (nextCh === 9) nextCh++;
+      midiCh[c.id] = nextCh % 16 === 9 ? 10 : nextCh % 16; nextCh++;
+    });
+
+    // 4) trilhas
+    var title = (res.info && res.info.title) || 'Chiptune';
+    var head = [
+      { tick: 0, ord: 0, data: meta(0x03, utf8(title)) },
+      { tick: 0, ord: 1, data: meta(0x01, utf8('Convertido de VGM pelo Chiptune Studio - Registro Gamer')) },
+      { tick: 0, ord: 2, data: meta(0x51, [(Math.round(60e6 / bpm) >> 16) & 255, (Math.round(60e6 / bpm) >> 8) & 255, Math.round(60e6 / bpm) & 255]) },
+      { tick: 0, ord: 3, data: meta(0x58, [4, 2, 24, 8]) }
+    ];
+    if (res.info && res.info.game) head.push({ tick: 0, ord: 4, data: meta(0x01, utf8(res.info.game + (res.info.author ? ' - ' + res.info.author : ''))) });
+    var tracks = [track(head)], count = 0;
+
+    chans.forEach(function (c) {
+      var mc = midiCh[c.id], E = [], ord = 0;
+      function add(tk, data) { E.push({ tick: tk, ord: ord++, data: data }); }
+      add(0, meta(0x03, utf8(c.chip + ' ' + c.label)));
+      if (mc !== 9) {
+        // alcance do pitch bend = ±12 semitons
+        add(0, [0xB0 | mc, 101, 0]); add(0, [0xB0 | mc, 100, 0]); add(0, [0xB0 | mc, 6, 12]); add(0, [0xB0 | mc, 38, 0]);
+        add(0, [0xB0 | mc, 101, 127]); add(0, [0xB0 | mc, 100, 127]);
+      }
+      var prog = -1, bendNow = 8192, exprNow = 127, panNow = -1;
+      var drumOff = {}; // bateria: fim de cada peça, para não sobrepor a mesma nota
+      var LST = notes[c.id];
+      LST.forEach(function (nt, i) {
+        var t0 = tick(nt.t), t1 = Math.max(t0 + 1, tick(nt.end));
+        var nx = LST[i + 1];
+        if (nx && !nt.dac) { var tn = tick(nx.t); if (tn <= t0) return; if (t1 > tn) t1 = tn; }
+        var dur = (nt.end - nt.t) / SR;
+        var drum = mc === 9 || (nt.tb && nt.tb.role === 'Percussão');
+        if (drum) {
+          var dn = nt.dac ? DAC_NOTES[Math.min(DAC_NOTES.length - 1, dacRank.indexOf(nt.dac))] : nt.noise ? noiseDrum(nt.noise, dur) : tonalDrum(nt.n);
+          var dt1 = t0 + Math.max(12, Math.min(t1 - t0, Math.round(0.25 / spb * PPQ)));
+          var prev = drumOff[dn];
+          if (prev) { if (prev.tick > t0) prev.tick = t0; if (prev.tick <= prev.on) { prev.tick = prev.on + 1; if (prev.tick > t0) return; } }
+          add(t0, [0x99, dn, vel(nt.v)]); add(dt1, [0x89, dn, 0]); count++;
+          drumOff[dn] = E[E.length - 1]; drumOff[dn].on = t0;
+          return;
+        }
+        var pg = program(nt.tb);
+        if (pg !== prog) { add(t0, [0xC0 | mc, pg]); prog = pg; }
+        if (nt.pan !== undefined && nt.pan !== panNow) { add(t0, [0xB0 | mc, 10, nt.pan]); panNow = nt.pan; }
+        if (exprNow !== 127) { add(t0, [0xB0 | mc, 11, 127]); exprNow = 127; }
+        var key = clamp(Math.round(nt.n), 0, 127);
+        function bendFor(n) { return clamp(Math.round(8192 + (n - key) / 12 * 8192), 0, 16383); }
+        var bd = bendFor(nt.n);
+        if (Math.abs(bd - bendNow) > 3) { add(t0, [0xE0 | mc, bd & 127, bd >> 7]); bendNow = bd; }
+        add(t0, [0x90 | mc, key, vel(nt.v)]); count++;
+        var curKey = key, vOn = nt.v;
+        nt.ev.forEach(function (e) {
+          var tk = Math.min(Math.max(t0, tick(e.t)), t1);
+          if (e.n !== undefined) {
+            if (Math.abs(e.n - curKey) > 11.5) { // passou do alcance do bend: começa outra nota
+              add(tk, [0x80 | mc, curKey, 0]);
+              curKey = key = clamp(Math.round(e.n), 0, 127);
+              var b2 = bendFor(e.n); add(tk, [0xE0 | mc, b2 & 127, b2 >> 7]); bendNow = b2;
+              add(tk, [0x90 | mc, curKey, vel(vOn)]); count++;
+            } else {
+              var b = bendFor(e.n);
+              if (Math.abs(b - bendNow) > 3) { add(tk, [0xE0 | mc, b & 127, b >> 7]); bendNow = b; }
+            }
+          } else if (e.k === 'vol') {
+            var x = clamp(Math.round(127 * Math.sqrt(e.v / Math.max(vOn, 1e-4))), 0, 127);
+            if (Math.abs(x - exprNow) >= 2) { add(tk, [0xB0 | mc, 11, x]); exprNow = x; }
+          } else if (e.k === 'pan') {
+            if (e.pan !== panNow) { add(tk, [0xB0 | mc, 10, e.pan]); panNow = e.pan; }
+          }
+        });
+        add(t1, [0x80 | mc, curKey, 0]);
+      });
+      // (os eventos já entram em ordem: o fim de uma nota vem antes do início da próxima no mesmo tick)
+      tracks.push(track(E));
+    });
+
+    var hdr = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, (tracks.length >> 8) & 255, tracks.length & 255, (PPQ >> 8) & 255, PPQ & 255];
+    var total = hdr.length; tracks.forEach(function (t) { total += t.length; });
+    var out = new Uint8Array(total), pos = 0;
+    out.set(hdr, pos); pos += hdr.length;
+    tracks.forEach(function (t) { out.set(t, pos); pos += t.length; });
+    return { bytes: out, bpm: bpm, tempoDetectado: !!tp, notas: count, trilhas: chans.length };
+  }
+
+  function fileName(res, fallback) {
+    var n = (res.info && res.info.title) || fallback || 'musica';
+    return n.replace(/\.(vgm|vgz)$/i, '').replace(/[\\\/:*?"<>|]+/g, '_').trim() + '.mid';
+  }
+
+  return { build: build, fileName: fileName };
 })();
 
 
@@ -1218,6 +1553,7 @@ var RGVGM = (function () {
     return fetch(url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
       .then(function (ab) { return RGVGM.inflate(new Uint8Array(ab)); })
       .then(function (u8) {
+        keepRaw(path, u8);
         var res = RGVGM.parse(u8);
         memCache[path] = res;
         // guarda no navegador (só os timbres, poucos KB) — mantém as 40 últimas
@@ -1229,6 +1565,56 @@ var RGVGM = (function () {
         return res;
       });
   }
+  // ───────────────────── MIDI ─────────────────────
+  var memRaw = {}, memMidi = {};
+  function getRaw(path) {
+    if (memRaw[path]) return Promise.resolve(memRaw[path]);
+    var url = RAW + path.split('/').map(encodeURIComponent).join('/');
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(function (ab) { return RGVGM.inflate(new Uint8Array(ab)); })
+      .then(function (u8) { keepRaw(path, u8); return u8; });
+  }
+  function keepRaw(path, u8) { var ks = Object.keys(memRaw); if (ks.length > 3) delete memRaw[ks[0]]; memRaw[path] = u8; }
+  function openMidi() {
+    if (!cur.path) return;
+    var path = cur.path;
+    $('midiDlg').classList.add('show'); $('mdGo').disabled = true; $('mdInfo').textContent = '';
+    $('mdList').innerHTML = '<div class="msg">Lendo as notas…</div>';
+    (memMidi[path] ? Promise.resolve(memMidi[path]) : getRaw(path).then(function (u8) {
+      var r = RGVGM.parse(u8, { events: true }); memMidi = {}; memMidi[path] = r; return r;
+    })).then(function (r) {
+      if (cur.path !== path) return;
+      var ch = r.midi.chans;
+      if (!ch.length) {
+        $('mdList').innerHTML = '<div class="msg">Esta música não tem canais que dê para converter' + (r.unsupported.length ? ' (usa ' + esc(r.unsupported.join(', ')) + ', ainda não suportado)' : '') + '.</div>';
+        return;
+      }
+      $('mdList').innerHTML = ch.map(function (c) {
+        var drum = c.kind === 'noise' || c.kind === 'dac';
+        return '<label class="dch"><input type="checkbox" value="' + esc(c.id) + '" checked><span class="nm">' + esc(c.chip + ' · ' + c.label) + '</span>' +
+          (drum ? '<span class="dr">bateria</span>' : '') + '<span class="ct">' + c.notes + ' nota' + (c.notes === 1 ? '' : 's') + '</span></label>';
+      }).join('') + (r.unsupported.length ? '<div class="msg" style="padding:8px">Não entram: ' + esc(r.unsupported.join(', ')) + ' (ainda não suportado).</div>' : '');
+      $('mdGo').disabled = false;
+    }).catch(function (e) { $('mdList').innerHTML = '<div class="msg">Não consegui ler a música (' + esc(e.message || e) + ').</div>'; });
+  }
+  function midiChecks() { return Array.prototype.slice.call($('mdList').querySelectorAll('input[type=checkbox]')); }
+  $('bMidi').onclick = openMidi;
+  $('mdX').onclick = function () { $('midiDlg').classList.remove('show'); };
+  $('midiDlg').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('show'); });
+  $('mdAll').onclick = function () { midiChecks().forEach(function (c) { c.checked = true; }); };
+  $('mdNone').onclick = function () { midiChecks().forEach(function (c) { c.checked = false; }); };
+  $('mdGo').onclick = function () {
+    var r = memMidi[cur.path]; if (!r) return;
+    var ids = midiChecks().filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+    if (!ids.length) { $('mdInfo').textContent = 'Escolha pelo menos um canal.'; return; }
+    var out = RGMIDI.build(r, { chans: ids, tempo: $('mdTempo').checked });
+    var url = URL.createObjectURL(new Blob([out.bytes], { type: 'audio/midi' }));
+    var a = document.createElement('a'); a.href = url; a.download = RGMIDI.fileName(r, stripExt(cur.name)); document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 3000);
+    $('mdInfo').textContent = out.notas + ' notas · ' + out.trilhas + ' trilha' + (out.trilhas === 1 ? '' : 's') + ' · ' +
+      (out.tempoDetectado ? out.bpm + ' BPM' : 'tempo livre (120 BPM)');
+  };
+
   function selectSong(path, name) {
     if (cur.path === path) { mtab('timbres'); return; }
     stopMusic();

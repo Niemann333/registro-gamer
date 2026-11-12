@@ -51,6 +51,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
   <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador">📂 Abrir do computador</button>
   <button class="btn" id="bFiles" title="Arquivos salvos no navegador — baixe para o computador">💾 Arquivos salvos</button>
+  <button class="btn" id="bMidi" title="Converter um VGM (do computador) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note">Salvar no Furnace (Ctrl+S) guarda no navegador; daqui você baixa para o computador.</span>
   <div class="sp"></div>
@@ -58,6 +59,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" style="display:none">✕</button>
 </div>
 <input type="file" id="fileIn" multiple hidden>
+<input type="file" id="midiIn" accept=".vgm,.vgz" multiple hidden>
 <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
 <div id="load"><div><div class="big">🎛️</div><h2>Carregando o Tracker</h2>
   <p id="loadTxt">Na primeira vez são cerca de 10 MB; depois fica guardado no navegador e abre rápido.</p><div class="spin"></div></div></div>
@@ -67,7 +69,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <div class="sub">Tudo o que você salva ou exporta no Tracker fica aqui. Baixe para guardar no computador — limpar os dados do navegador apaga estes arquivos.</div>
   <div id="pList"></div>
 </div>
-<div class="toast" id="toast"><span id="tTxt"></span><button class="btn pri" id="tDl">⬇ Baixar</button><button class="btn" id="tX">✕</button></div>
+<div class="toast" id="toast"><span id="tTxt"></span><button class="btn pri" id="tDl">⬇ Baixar</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
 <div class="drop" id="drop">Solte o arquivo para abrir no Tracker</div>
 
 <script>
@@ -141,11 +143,40 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (!paths.length) return;
     lastSaved = paths[paths.length - 1];
     $('tTxt').textContent = '💾 Salvo no navegador: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
+    $('tDl').style.display = '';
+    $('tMidi').style.display = isVGM(lastSaved) ? '' : 'none';
     $('toast').classList.add('show');
     try { Module.FS.syncfs(false, function () {}); } catch (e) {}
     if ($('panel').classList.contains('show')) listFiles();
   }
   $('tDl').onclick = function () { if (lastSaved) download(lastSaved); $('toast').classList.remove('show'); };
+  $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
+
+  // ── VGM → MIDI (mesmo conversor do Chiptune Studio) ──
+  function isVGM(p) { return /\.(vgm|vgz)$/i.test(p || ''); }
+  function notify(txt) {
+    $('tTxt').textContent = txt; $('tDl').style.display = 'none'; $('tMidi').style.display = 'none';
+    $('toast').classList.add('show');
+  }
+  function vgmToMidi(u8, name) {
+    if (!window.RGVGM || !window.RGMIDI) { notify('Conversor de MIDI não carregou.'); return; }
+    notify('🎼 Convertendo ' + name + '…');
+    RGVGM.inflate(new Uint8Array(u8)).then(function (raw) {
+      var r = RGVGM.parse(raw, { events: true });
+      if (!r.midi.chans.length) { notify('🎼 ' + name + ': nenhum canal para converter' + (r.unsupported.length ? ' (' + r.unsupported.join(', ') + ' ainda não suportado)' : '') + '.'); return; }
+      var out = RGMIDI.build(r, { tempo: true });
+      var url = URL.createObjectURL(new Blob([out.bytes], { type: 'audio/midi' }));
+      var a = document.createElement('a'); a.href = url; a.download = RGMIDI.fileName(r, name); document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 3000);
+      notify('🎼 ' + a.download + ' — ' + out.notas + ' notas, ' + out.trilhas + ' trilhas, ' + (out.tempoDetectado ? out.bpm + ' BPM' : 'tempo livre'));
+    }).catch(function (e) { notify('🎼 Não consegui converter ' + name + ' (' + (e.message || e) + ').'); });
+  }
+  $('bMidi').onclick = function () { $('midiIn').value = ''; $('midiIn').click(); };
+  $('midiIn').onchange = function () {
+    Array.prototype.forEach.call(this.files, function (f, i) {
+      f.arrayBuffer().then(function (ab) { setTimeout(function () { vgmToMidi(new Uint8Array(ab), f.name); }, i * 400); });
+    });
+  };
   $('tX').onclick = function () { $('toast').classList.remove('show'); };
 
   // ── painel de arquivos ──
@@ -175,6 +206,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
       groups[d].forEach(function (f) {
         html += '<div class="f"><span class="n" title="' + esc(f.p) + '">' + esc(f.p.split('/').pop()) + '</span><span class="m">' + kb(f.size) + ' · ' +
           new Date(f.t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + '</span>' +
+          (isVGM(f.p) ? '<button data-midi="' + esc(f.p) + '" title="Converter para MIDI e baixar">🎼</button>' : '') +
           '<button data-dl="' + esc(f.p) + '" title="Baixar para o computador">⬇</button><button data-op="' + esc(f.p) + '" title="Abrir no Tracker">📂</button><button data-rm="' + esc(f.p) + '" title="Apagar do navegador">🗑</button></div>';
       });
     });
@@ -182,7 +214,8 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   }
   $('pList').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.dl) download(b.dataset.dl);
+    if (b.dataset.midi) vgmToMidi(Module.FS.readFile(b.dataset.midi), b.dataset.midi.split('/').pop());
+    else if (b.dataset.dl) download(b.dataset.dl);
     else if (b.dataset.op) { Module.ccall('rg_web_drop', null, ['string'], [b.dataset.op]); $('panel').classList.remove('show'); $('canvas').focus(); }
     else if (b.dataset.rm && confirm('Apagar "' + b.dataset.rm.split('/').pop() + '" do navegador?')) {
       try { Module.FS.unlink(b.dataset.rm); Module.FS.syncfs(false, function () {}); } catch (x) {}
@@ -233,6 +266,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   window.addEventListener('beforeunload', function (e) { if (ready) { e.preventDefault(); e.returnValue = ''; } });
 })();
 </script>
+<script src="vgm-midi.js"></script>
 <script src="furnace.js"></script>
 </body>
 </html>
