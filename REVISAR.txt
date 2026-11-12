@@ -8,98 +8,132 @@ A) SEM COMPOSITOR (preciso que você informe, ou deixamos "Desconhecido")
 
 - PlayStation (PSF)/Yu-Gi-Oh - Forbidden Memories
     nota: créditos do jogo não informam compositor (MobyGames, Yugipedia)
-(Compositores: Naoko Ishii/Hiroshi Tanabe/Waichiro Ozaki)
+Compositores: Naoko Ishii/Hiroshi Tanabe/Waichiro Ozaki
 
 
 - Master System (VGM)/Chip de Som PSG/Kenseiden
     nota: não encontrado (Wikipedia e MobyGames não creditam)
-(Compositores: Desconhecido)
+Compositores: Desconhecido
 
 - Arcade (VGM)/Hyper Sports
     nota: não creditado (vgmrips: Unknown); usa músicas conhecidas, como "Chariots of Fire" (Vangelis)
-(Compositores: 09 Ranking - Vangelis = Restante desconhecido)
+Compositores: 
+09 Ranking = Vangelis 
+Restante desconhecido
 
 
 - Arcade (VGM)/Pitfall II - Lost Caverns
     nota: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
-(Compositores: Desconhecido)
+Compositores: Desconhecido
 
 
 - Arcade (VGM)/Circus Charlie
     nota: não creditado (vgmrips: Unknown); usa "American Patrol" e "Danúbio Azul" (Wikipedia)
-(Compositores: 05 Aerial Bar - Johann Strauss II = ) 
+Compositores: 
+05 Aerial Bar = Johann Strauss II 
+Restante desconhecido
 
 
 - Mega Drive (VGM)/The Flintstones
     nota: não encontrado (Wikipedia não credita)
+Compositores: 
+The Flintstones - 01 - Title Theme = Hoyt Curtin
+The Flintstones - 13 - Ending Theme = Hoyt Curtin
+The Flintstones - 14 - Invincibility = Hoyt Curtin
+Restante desconhecido
 
 
 - Mega Drive (VGM)/Sega Soccer
     nota: jogo: World Championship Soccer; compositor não encontrado
+Compositor: Keisuke Tsukahara
 
 
 - Mega Drive (VGM)/Ayrton Senna's Super Monaco GP II
     nota: versão de Master System é de Tokuhiko Uwabo e Masaru Setsumaru (MobyGames); a de Mega Drive não confirmada
+Compositores: Tokuhiko Uwabo/Haruyo Oguro
 
 
 - Mega Drive (VGM)/California Games
     nota: não encontrado
+Compositor: Chris Grigg
+Arranjador: András Magyari
 
 
 - Atari XL-XE (SAP)/Pitfall II - Lost Caverns
     nota: etiqueta do arquivo SAP sem autor
+Compositores: Desconhecido
+
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Mega Man 9
     nota: etiqueta traz só quem fez o NSF; compositores do Mega Man 9 não conferidos
+Compositor: Ippo Yamada/Ryo Kawakami/Yu Shimoda/Hiroki Isogai
+Arranjador: Mathew Valente
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Jaws
     nota: não encontrado
-
+Compositores:
+Faixa 1 - John Williams
+Restante - Shinichi Sakamoto
 
 - Nintendo Entertainment System (NSF) (VGM)/Rockman 2 UnPrecedented
     nota: hack feito por fãs: compositor original Takashi Tateishi (Mega Man 2)? autor do hack desconhecido
+Compositor: Desconhecido
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Contra Force
     nota: não encontrado (Konami)
+Compositores: Kenichi Matsubara/Tomoya Tomita/Yasuhiko Manno
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Soccer
     nota: não encontrado (Nintendo, 1985)
-
+Compositor: Koji Kondo
 
 - Nintendo Entertainment System (NSF) (VGM)/Bugs Bunny Crazy Castle
     nota: não encontrado (Kemco)
+Compositor: Hiroyuki Masuno
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Lagrange Point
     nota: não encontrado (Konami)
+Compositores: Akio Dobashi/Noriyuki Takahashi/Aki Hata/Kenji Nakamura/Tadashi Sawashita/Makoto Kawamoto/Izuho Yoshitani
+
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Street Fighter 2010 - Final Fight
     nota: não encontrado (Capcom)
-
+Compositor: Junko Tamiya
 
 - Nintendo Entertainment System (NSF) (VGM)/Battle City
     nota: não encontrado (Namco)
+Compositor: Junko Ozawa
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Bad Dudes
     nota: etiqueta só com sobrenomes da Data East: "Saki, Miura, Suzuki, Takahama, ..."
+Compositores: Azusa Hara/Hiroaki Yoshida
+Arranjadores: Masaaki Iwasaki/Shogo Sakai/Takafumi Miura/Yuji Suzuki/Yusuke Takahama/Junichi Uchida
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Magic Jewelry 2
     nota: jogo não licenciado; compositor desconhecido
+Compositores: Desconhecido
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Advanced Dungeons & Dragons - Heroes of the Lance
     nota: não encontrado
+Compositor: Seiji Toda
+Arranjador: Iku Mizutani
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Circus Charlie
     nota: não creditado; usa "American Patrol" e "Danúbio Azul"
+Compositores: 
+Faixa 1 = Frank W. Meacham
+Faixa 3 = Johann Strauss II
+Arranjador: Katsuya Ogawa
 
 
 - Nintendo Entertainment System (NSF) (VGM)/Bucky O'Hare
