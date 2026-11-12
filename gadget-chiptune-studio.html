@@ -1,0 +1,52 @@
+<!-- ===== Gadget Chiptune Studio — Registro Gamer =====
+     Cole este código num gadget "HTML/JavaScript" do Blogger.
+     O botão abre o Chiptune Studio numa janela própria. -->
+<div id="rg-estudio">
+  <style>
+    #rg-estudio{font-family:Oxanium,system-ui,sans-serif}
+    #rg-estudio .rge-card{position:relative;overflow:hidden;border:1px solid #3d3363;border-radius:14px;padding:16px;
+      background:linear-gradient(160deg,#1f1538 0%,#13101f 70%);color:#e9e4ff}
+    #rg-estudio .rge-card::before{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;
+      background:radial-gradient(circle,#a855f755,transparent 70%)}
+    #rg-estudio .rge-top{display:flex;align-items:center;gap:10px;position:relative}
+    #rg-estudio .rge-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+      background:linear-gradient(135deg,#a855f7,#6d28d9);box-shadow:0 0 16px #a855f766;flex:none}
+    #rg-estudio .rge-t{font-weight:700;font-size:16px;letter-spacing:.08em}
+    #rg-estudio .rge-s{font-size:11px;letter-spacing:.12em;color:#a99fd0}
+    #rg-estudio p{font-size:13px;line-height:1.55;color:#c9c1ec;margin:12px 0 14px;position:relative}
+    #rg-estudio .rge-keys{display:flex;height:34px;margin:0 0 14px;position:relative}
+    #rg-estudio .rge-keys i{flex:1;background:#ecebf5;margin:0 1px;border-radius:0 0 4px 4px;position:relative}
+    #rg-estudio .rge-keys i.b::after{content:"";position:absolute;right:-30%;top:0;width:60%;height:60%;background:#1a1726;border-radius:0 0 3px 3px;z-index:1}
+    #rg-estudio .rge-keys i.on{background:#c49bff}
+    #rg-estudio button{width:100%;border:0;border-radius:10px;padding:11px;font:600 14px Oxanium,system-ui,sans-serif;color:#fff;cursor:pointer;
+      background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 4px 18px #a855f744;position:relative;transition:transform .15s}
+    #rg-estudio button:hover{transform:translateY(-1px)}
+    #rg-estudio .rge-f{font-size:11px;color:#6f6699;margin-top:9px;text-align:center;position:relative}
+  </style>
+  <div class="rge-card">
+    <div class="rge-top">
+      <div class="rge-ic">🎹</div>
+      <div><div class="rge-t">CHIPTUNE STUDIO</div><div class="rge-s">TOQUE COM OS TIMBRES DOS GAMES</div></div>
+    </div>
+    <p>Escolha uma música VGM do acervo, pegue um timbre do chip (Mega Drive, Arcade, NES, Game Boy…) e toque no seu teclado MIDI, no teclado do computador ou na tela.</p>
+    <div class="rge-keys"><i class="b"></i><i class="b on"></i><i></i><i class="b"></i><i class="b"></i><i class="b on"></i><i></i><i class="b"></i><i class="b"></i><i></i></div>
+    <button type="button" id="rge-open">Abrir o Chiptune Studio</button>
+    <div class="rge-f">Abre numa janela própria · teclado MIDI via USB · Tracker no computador</div>
+  </div>
+  <script>
+  (function () {
+    var URL_ESTUDIO = 'https://niemann333.github.io/registro-gamer/chiptune-player/estudio.html';
+    var btn = document.getElementById('rge-open');
+    btn.addEventListener('click', function () {
+      var w = null;
+      if (window.innerWidth > 860) {
+        var W = Math.min(1360, screen.availWidth - 40), H = Math.min(900, screen.availHeight - 60);
+        w = window.open(URL_ESTUDIO, 'rg-estudio', 'popup=yes,width=' + W + ',height=' + H + ',left=' + Math.round((screen.availWidth - W) / 2) + ',top=' + Math.round((screen.availHeight - H) / 2));
+      }
+      if (!w) w = window.open(URL_ESTUDIO, 'rg-estudio');
+      if (!w) location.href = URL_ESTUDIO;
+      else try { w.focus(); } catch (e) {}
+    });
+  })();
+  </script>
+</div>
