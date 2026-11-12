@@ -8,25 +8,26 @@ A) SEM COMPOSITOR (preciso que você informe, ou deixamos "Desconhecido")
 
 - PlayStation (PSF)/Yu-Gi-Oh - Forbidden Memories
     nota: créditos do jogo não informam compositor (MobyGames, Yugipedia)
-(Composers: Naoko Ishii/Hiroshi Tanabe/Waichiro Ozaki)
+(Compositores: Naoko Ishii/Hiroshi Tanabe/Waichiro Ozaki)
 
 
 - Master System (VGM)/Chip de Som PSG/Kenseiden
     nota: não encontrado (Wikipedia e MobyGames não creditam)
-(Composers: Desconhecido)
+(Compositores: Desconhecido)
 
 - Arcade (VGM)/Hyper Sports
     nota: não creditado (vgmrips: Unknown); usa músicas conhecidas, como "Chariots of Fire" (Vangelis)
-(Composers: Desconhecido)
+(Compositores: 09 Ranking - Vangelis = Restante desconhecido)
 
 
 - Arcade (VGM)/Pitfall II - Lost Caverns
     nota: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
-(Composers: Desconhecido)
+(Compositores: Desconhecido)
 
 
 - Arcade (VGM)/Circus Charlie
     nota: não creditado (vgmrips: Unknown); usa "American Patrol" e "Danúbio Azul" (Wikipedia)
+(Compositores: 05 Aerial Bar - Johann Strauss II = ) 
 
 
 - Mega Drive (VGM)/The Flintstones
