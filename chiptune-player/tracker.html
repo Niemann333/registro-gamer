@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tracker · Chiptune Studio</title>
+<meta name="theme-color" content="#050a05">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a05;--bg3:#0e260e;--line:#163a16;--line2:#1e501e;--tx:#c8ffbe;--tx2:#7fc87a;--tx3:#4f874f;--ac:#1f8a10;--ac2:#39ff14;--barH:42px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:Oxanium,system-ui,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.bar{position:fixed;left:0;right:0;top:0;height:var(--barH);display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);background:#081208;z-index:5}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.06em;font-size:13px;white-space:nowrap;margin-right:6px}
+.logo i{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-style:normal;background:linear-gradient(135deg,#39ff14,#1f8a10);box-shadow:0 0 12px #39ff1466}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg3);border-radius:8px;padding:5px 11px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--ac2);color:#fff}
+.btn.pri{background:linear-gradient(135deg,#2fd010,#1a7a0c);border-color:transparent;color:#041004;text-shadow:none}
+.sp{flex:1}
+.pill{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11.5px;color:var(--tx2);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--tx3);flex:none}.dot.on{background:#39ff14;box-shadow:0 0 7px #39ff14}
+.note{font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100vh - var(--barH));display:block;outline:none}
+#load{position:fixed;inset:var(--barH) 0 0 0;display:grid;place-items:center;text-align:center;z-index:3;background:var(--bg)}
+#load .big{font-size:44px}#load h2{margin:8px 0 6px;font-size:19px}#load p{color:var(--tx2);font-size:13px;line-height:1.6;max-width:420px}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--ac2);animation:sp 1s linear infinite;margin:16px auto 0}
+@keyframes sp{to{transform:rotate(360deg)}}
+.panel{position:fixed;right:10px;top:calc(var(--barH) + 8px);width:min(420px,calc(100vw - 20px));max-height:calc(100vh - var(--barH) - 24px);overflow:auto;background:#081408;border:1px solid var(--line2);border-radius:12px;z-index:10;box-shadow:0 12px 40px #000a;display:none}
+.panel.show{display:block}
+.panel h3{font-size:14px;padding:12px 14px 4px;display:flex;align-items:center}
+.panel h3 button{margin-left:auto;font-size:16px;color:var(--tx3)}
+.panel .sub{font-size:11.5px;color:var(--tx3);padding:0 14px 10px;line-height:1.5}
+.dir{font-size:11px;letter-spacing:.12em;color:var(--ac2);text-transform:uppercase;padding:10px 14px 4px}
+.f{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #ffffff08;font-size:12.5px}
+.f .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f .m{font-size:11px;color:var(--tx3);white-space:nowrap}
+.f button{border:1px solid var(--line2);border-radius:6px;padding:3px 7px;font-size:12px}
+.f button:hover{border-color:var(--ac)}
+.empty{padding:16px 14px;color:var(--tx3);font-size:12.5px}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0e260e;border:1px solid var(--line2);border-radius:10px;padding:9px 12px;font-size:13px;z-index:20;display:none;align-items:center;gap:10px;box-shadow:0 8px 30px #000a;max-width:calc(100vw - 20px)}
+.toast.show{display:flex}
+.toast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drop{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(57,255,20,.15);border:3px dashed var(--ac2);font-size:20px;font-weight:700}
+.drop.show{display:grid}
+@media (max-width:760px){.note,.logo span{display:none}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
+  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador">📂 Abrir do computador</button>
+  <button class="btn" id="bFiles" title="Arquivos salvos no navegador — baixe para o computador">💾 Arquivos salvos</button>
+  <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
+  <span class="note" id="note">Salvar no Furnace (Ctrl+S) guarda no navegador; daqui você baixa para o computador.</span>
+  <div class="sp"></div>
+  <button class="btn" id="bBack">← Chiptune Studio</button>
+</div>
+<input type="file" id="fileIn" multiple hidden>
+<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+<div id="load"><div><div class="big">🎛️</div><h2>Carregando o Tracker</h2>
+  <p id="loadTxt">Na primeira vez são cerca de 10 MB; depois fica guardado no navegador e abre rápido.</p><div class="spin"></div></div></div>
+
+<div class="panel" id="panel">
+  <h3>Arquivos salvos no navegador <button id="pClose" title="Fechar">✕</button></h3>
+  <div class="sub">Tudo o que você salva ou exporta no Tracker fica aqui. Baixe para guardar no computador — limpar os dados do navegador apaga estes arquivos.</div>
+  <div id="pList"></div>
+</div>
+<div class="toast" id="toast"><span id="tTxt"></span><button class="btn pri" id="tDl">⬇ Baixar</button><button class="btn" id="tX">✕</button></div>
+<div class="drop" id="drop">Solte o arquivo para abrir no Tracker</div>
+
+<script>
+(function () {
+  'use strict';
+  var HOME = '/home/web_user';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var ready = false;
+
+  window.Module = {
+    canvas: $('canvas'),
+    print: function (t) { console.log(t); },
+    printErr: function (t) { console.warn(t); },
+    setStatus: function () {},
+    onRgReady: function () { ready = true; setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); },
+    onAbort: function () { $('loadTxt').textContent = 'O Tracker parou com um erro. Recarregue a página.'; $('load').style.display = 'grid'; }
+  };
+
+  // ── pasta de destino conforme o tipo do arquivo ──
+  function folderFor(name) {
+    if (/\.(fui|dmp|tfi|vgi|opni|opli|y12|bnk|ff|gyb|sbi|ins|wopn|wopl|s3i|ni|ins)$/i.test(name)) return 'Instrumentos';
+    return 'Projetos';
+  }
+  function openFiles(list) {
+    if (!ready) { alert('Espere o Tracker terminar de carregar.'); return; }
+    Array.prototype.forEach.call(list, function (f, i) {
+      f.arrayBuffer().then(function (ab) {
+        var safe = f.name.replace(/[\/\\]/g, '_');
+        var path = HOME + '/' + folderFor(safe) + '/' + safe;
+        importing[path] = 1;
+        Module.FS.writeFile(path, new Uint8Array(ab));
+        delete importing[path];
+        setTimeout(function () { Module.ccall('rg_web_drop', null, ['string'], [path]); }, i * 250);
+      });
+    });
+    $('canvas').focus();
+  }
+  $('bOpen').onclick = function () { $('fileIn').value = ''; $('fileIn').click(); };
+  $('fileIn').onchange = function () { if (this.files.length) openFiles(this.files); };
+
+  // arrastar e soltar arquivos em cima do Tracker
+  var dragN = 0;
+  window.addEventListener('dragenter', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0) { dragN++; $('drop').classList.add('show'); } });
+  window.addEventListener('dragleave', function () { if (--dragN <= 0) { dragN = 0; $('drop').classList.remove('show'); } });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); dragN = 0; $('drop').classList.remove('show'); if (e.dataTransfer.files.length) openFiles(e.dataTransfer.files); });
+
+  // ── baixar ──
+  function download(path) {
+    var data = Module.FS.readFile(path), name = path.split('/').pop();
+    var url = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
+    var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
+  }
+  function hidden(path) { return path.indexOf(HOME + '/.') === 0 || path.indexOf(HOME + '/') !== 0; }
+  // quando o Furnace salva ou exporta algo, oferece o download na hora
+  var pending = {}, pendT = null, lastSaved = null, importing = {};
+  function hookWrites() {
+    var FS = Module.FS, origClose = FS.close;
+    // ao fechar um arquivo aberto para escrita, avisa que algo foi salvo
+    FS.close = function (stream) {
+      var path = stream && stream.path, wrote = stream && (stream.flags & 3) !== 0;
+      var r = origClose.apply(this, arguments);
+      if (wrote && path && !hidden(path) && !importing[path]) { pending[path] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 700); }
+      return r;
+    };
+  }
+  function flushSaved() {
+    var paths = Object.keys(pending); pending = {};
+    if (!paths.length) return;
+    lastSaved = paths[paths.length - 1];
+    $('tTxt').textContent = '💾 Salvo no navegador: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
+    $('toast').classList.add('show');
+    try { Module.FS.syncfs(false, function () {}); } catch (e) {}
+    if ($('panel').classList.contains('show')) listFiles();
+  }
+  $('tDl').onclick = function () { if (lastSaved) download(lastSaved); $('toast').classList.remove('show'); };
+  $('tX').onclick = function () { $('toast').classList.remove('show'); };
+
+  // ── painel de arquivos ──
+  function walk(dir, out) {
+    var FS = Module.FS, names;
+    try { names = FS.readdir(dir); } catch (e) { return; }
+    names.forEach(function (n) {
+      if (n === '.' || n === '..' || n[0] === '.') return;
+      var p = dir + '/' + n, st;
+      try { st = FS.stat(p); } catch (e) { return; }
+      if (FS.isDir(st.mode)) walk(p, out); else out.push({ p: p, size: st.size, t: +st.mtime });
+    });
+  }
+  function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  function listFiles() {
+    if (!ready) { $('pList').innerHTML = '<div class="empty">O Tracker ainda está carregando…</div>'; return; }
+    var files = []; walk(HOME, files);
+    if (!files.length) { $('pList').innerHTML = '<div class="empty">Nada salvo ainda. Use <b>Arquivo → Salvar</b> no Tracker (ou Ctrl+S).</div>'; return; }
+    var groups = {};
+    files.sort(function (a, b) { return b.t - a.t; }).forEach(function (f) {
+      var rel = f.p.slice(HOME.length + 1), d = rel.indexOf('/') > 0 ? rel.split('/')[0] : 'Pasta principal';
+      (groups[d] = groups[d] || []).push(f);
+    });
+    var html = '';
+    Object.keys(groups).forEach(function (d) {
+      html += '<div class="dir">' + esc(d) + '</div>';
+      groups[d].forEach(function (f) {
+        html += '<div class="f"><span class="n" title="' + esc(f.p) + '">' + esc(f.p.split('/').pop()) + '</span><span class="m">' + kb(f.size) + ' · ' +
+          new Date(f.t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + '</span>' +
+          '<button data-dl="' + esc(f.p) + '" title="Baixar para o computador">⬇</button><button data-op="' + esc(f.p) + '" title="Abrir no Tracker">📂</button><button data-rm="' + esc(f.p) + '" title="Apagar do navegador">🗑</button></div>';
+      });
+    });
+    $('pList').innerHTML = html;
+  }
+  $('pList').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.dl) download(b.dataset.dl);
+    else if (b.dataset.op) { Module.ccall('rg_web_drop', null, ['string'], [b.dataset.op]); $('panel').classList.remove('show'); $('canvas').focus(); }
+    else if (b.dataset.rm && confirm('Apagar "' + b.dataset.rm.split('/').pop() + '" do navegador?')) {
+      try { Module.FS.unlink(b.dataset.rm); Module.FS.syncfs(false, function () {}); } catch (x) {}
+      listFiles();
+    }
+  });
+  $('bFiles').onclick = function () { var p = $('panel'); p.classList.toggle('show'); if (p.classList.contains('show')) listFiles(); };
+  $('pClose').onclick = function () { $('panel').classList.remove('show'); };
+  $('bBack').onclick = function () { location.href = 'estudio.html'; };
+
+  // ── teclado MIDI (Web MIDI) → fila lida pelo Furnace ──
+  Module.rgMidiQ = [];
+  var midiNames = [];
+  function midiUI(msg) {
+    $('midiDot').classList.toggle('on', midiNames.length > 0);
+    $('midiTxt').textContent = msg || (midiNames.length ? 'MIDI: ' + midiNames.join(', ') : 'MIDI: nenhum teclado');
+    $('midiPill').title = midiNames.length ? 'Teclado MIDI ligado ao Tracker' : 'Ligue um teclado MIDI no USB';
+  }
+  function onMidi(e) {
+    var d = e.data; if (!d || !d.length) return;
+    var st = d[0];
+    if (st === 0xF0 || st === 0xF8 || st === 0xFE) return; // SysEx, clock e "estou vivo" ficam de fora
+    if (Module.rgMidiOpen && Module.rgMidiQ.length < 4000) Module.rgMidiQ.push(Array.prototype.slice.call(d));
+  }
+  if (navigator.requestMIDIAccess) {
+    navigator.requestMIDIAccess({ sysex: false }).then(function (acc) {
+      function scan() {
+        midiNames = [];
+        acc.inputs.forEach(function (inp) { inp.onmidimessage = onMidi; if (inp.state !== 'disconnected') midiNames.push(inp.name || 'Teclado'); });
+        midiUI();
+      }
+      acc.onstatechange = scan; scan();
+    }).catch(function () { midiUI('MIDI: sem permissão'); });
+  } else midiUI('MIDI: indisponível');
+
+  // garante que nada fique sem gravar ao fechar
+  window.addEventListener('pagehide', function () { try { Module.FS.syncfs(false, function () {}); } catch (e) {} });
+  window.addEventListener('beforeunload', function (e) { if (ready) { e.preventDefault(); e.returnValue = ''; } });
+})();
+</script>
+<script src="furnace.js"></script>
+</body>
+</html>
