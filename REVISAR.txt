@@ -1,0 +1,216 @@
+REVISAR — Compositores dos Chiptunes de Games
+
+Cada pasta de trilha recebeu um info.txt. As 271 marcadas "Status: OK" vieram das etiquetas
+dos arquivos, do txt do pacote ou de fonte confirmada. As abaixo estão "Status: CONFERIR".
+Para corrigir: abra o info.txt da pasta, ajuste a linha "Compositor(es):" e troque o status para OK.
+
+A) SEM COMPOSITOR (preciso que você informe, ou deixamos "Desconhecido")
+
+- PlayStation (PSF)/Yu-Gi-Oh - Forbidden Memories
+    nota: créditos do jogo não informam compositor (MobyGames, Yugipedia)
+(Composers: Naoko Ishii/Hiroshi Tanabe/Waichiro Ozaki)
+
+
+- Master System (VGM)/Chip de Som PSG/Kenseiden
+    nota: não encontrado (Wikipedia e MobyGames não creditam)
+(Composers: Desconhecido)
+
+- Arcade (VGM)/Hyper Sports
+    nota: não creditado (vgmrips: Unknown); usa músicas conhecidas, como "Chariots of Fire" (Vangelis)
+(Composers: Desconhecido)
+
+
+- Arcade (VGM)/Pitfall II - Lost Caverns
+    nota: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
+(Composers: Desconhecido)
+
+
+- Arcade (VGM)/Circus Charlie
+    nota: não creditado (vgmrips: Unknown); usa "American Patrol" e "Danúbio Azul" (Wikipedia)
+
+
+- Mega Drive (VGM)/The Flintstones
+    nota: não encontrado (Wikipedia não credita)
+
+
+- Mega Drive (VGM)/Sega Soccer
+    nota: jogo: World Championship Soccer; compositor não encontrado
+
+
+- Mega Drive (VGM)/Ayrton Senna's Super Monaco GP II
+    nota: versão de Master System é de Tokuhiko Uwabo e Masaru Setsumaru (MobyGames); a de Mega Drive não confirmada
+
+
+- Mega Drive (VGM)/California Games
+    nota: não encontrado
+
+
+- Atari XL-XE (SAP)/Pitfall II - Lost Caverns
+    nota: etiqueta do arquivo SAP sem autor
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Mega Man 9
+    nota: etiqueta traz só quem fez o NSF; compositores do Mega Man 9 não conferidos
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Jaws
+    nota: não encontrado
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Rockman 2 UnPrecedented
+    nota: hack feito por fãs: compositor original Takashi Tateishi (Mega Man 2)? autor do hack desconhecido
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Contra Force
+    nota: não encontrado (Konami)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Soccer
+    nota: não encontrado (Nintendo, 1985)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Bugs Bunny Crazy Castle
+    nota: não encontrado (Kemco)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Lagrange Point
+    nota: não encontrado (Konami)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Street Fighter 2010 - Final Fight
+    nota: não encontrado (Capcom)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Battle City
+    nota: não encontrado (Namco)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Bad Dudes
+    nota: etiqueta só com sobrenomes da Data East: "Saki, Miura, Suzuki, Takahama, ..."
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Magic Jewelry 2
+    nota: jogo não licenciado; compositor desconhecido
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Advanced Dungeons & Dragons - Heroes of the Lance
+    nota: não encontrado
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Circus Charlie
+    nota: não creditado; usa "American Patrol" e "Danúbio Azul"
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Bucky O'Hare
+    nota: etiqueta abreviada: "T. Sumiyama, N. Nakazato et al"
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Rockman 5 - Dood in Gate II
+    nota: hack feito por fãs; etiqueta "Chiko"
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Werewolf - The Last Warrior
+    nota: etiqueta só com sobrenomes: "Sakai, Miura, Takahama"
+
+
+- MSX (KSS) (SCC) (VGM)/Pitfall II - The Lost Caverns
+    nota: vgmrips: unknown; uma faixa é "Sobre las Olas" (Juventino Rosas)
+
+
+- MSX (KSS) (SCC) (VGM)/Golvellius II
+    nota: não encontrado
+
+
+- MSX (KSS) (SCC) (VGM)/Knightmare
+    nota: não encontrado (Konami)
+
+
+
+B) COM NOME, MAS É PALPITE OU A ETIQUETA É DUVIDOSA (confirme ou corrija)
+
+- Windows (XM) (IT) (S3M) (MID) (VGM)/Jazz Jackrabbit 2
+    proposto: Alexander Brandon, Robert A. Allen, Sean Hiler
+    nota: VGMPF (Alexander Brandon) — divisão por faixa não confirmada
+
+
+- Windows (XM) (IT) (S3M) (MID) (VGM)/Jazz Jackrabbit 2/Prerelease Tracks
+    proposto: Alexander Brandon, Robert A. Allen, Sean Hiler
+    nota: VGMPF (Alexander Brandon) — divisão por faixa não confirmada
+
+
+- Windows (XM) (IT) (S3M) (MID) (VGM)/Jazz Jackrabbit 2/Unused Tracks
+    proposto: Alexander Brandon, Robert A. Allen, Sean Hiler
+    nota: VGMPF (Alexander Brandon) — divisão por faixa não confirmada
+
+
+- Super Nintendo (SPC) (SNSF)/Disney's Aladdin
+    proposto: Yuko Takehara, Setsuo Yamamoto
+    nota: etiqueta abreviada "Sato, Yuko, Setsuo" — o "Sato" não foi identificado
+
+
+- DOS (XM) (IT) (S3M) (MID) (VGM)/Epic Pinball
+    proposto: Robert A. Allen
+    nota: conhecimento geral (créditos do jogo)
+
+
+- Mega Drive (VGM)/Altered Beast
+    proposto: Tohru Nakabayashi
+    nota: compositor do original de Arcade; quem adaptou para o Mega Drive não confirmado
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Magic Jewelry
+    proposto: Hwang Shinwei
+    nota: etiqueta do NSF (jogo não licenciado)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Uninvited
+    proposto: Hiroyuki Masuno
+    nota: mesmo compositor das versões NES de Déjà Vu e Shadowgate (Kemco)
+
+
+- Nintendo Entertainment System (NSF) (VGM)/Mega Man 11
+    proposto: Marika Suzuki  | arranjo: M.T (versão NSF)
+    nota: etiqueta: "Marika Suzuki; arr. by M.T"
+
+
+- MSX (KSS) (SCC) (VGM)/Golvellius
+    proposto: Myam, Shant, Shin-kun, Pazu
+    nota: palpite: mesma equipe da versão Master System (Compile); não confirmado
+
+
+- MSX (KSS) (SCC) (VGM)/Vampire Killer
+    proposto: Kinuyo Yamashita, Satoe Terashima
+    nota: palpite: mesma equipe de Castlevania (NES); não confirmado
+
+
+
+C) FAIXAS SEM NOME (o arquivo NSF/GBS/SID/SAP não traz os títulos; aparecem como "Faixa N")
+
+- Game Boy (GBS) (VGM)/Tetris
+- Game Boy (GBS) (VGM)/Castlevania II - Belmont's Revenge
+- Game Boy (GBS) (VGM)/Pokémon Yellow
+- Commodore 64 (SID)/Alien 3
+- Commodore 64 (SID)/Turrican II -The Final Fight
+- Commodore 64 (SID)/Turrican 3
+- Commodore 64 (SID)/Turrican
+- Atari XL-XE (SAP)/Ninja Commando
+- Nintendo Entertainment System (NSF) (VGM)/Magic Jewelry
+- Nintendo Entertainment System (NSF) (VGM)/Jaws
+- Nintendo Entertainment System (NSF) (VGM)/Rockman 2 UnPrecedented
+- Nintendo Entertainment System (NSF) (VGM)/Spider-Man - Return of the Sinister Six
+- Nintendo Entertainment System (NSF) (VGM)/Contra Force
+- Nintendo Entertainment System (NSF) (VGM)/Soccer
+- Nintendo Entertainment System (NSF) (VGM)/Uninvited
+- Nintendo Entertainment System (NSF) (VGM)/Bugs Bunny Crazy Castle
+- Nintendo Entertainment System (NSF) (VGM)/Lagrange Point
+- Nintendo Entertainment System (NSF) (VGM)/Street Fighter 2010 - Final Fight
+- Nintendo Entertainment System (NSF) (VGM)/Déjà Vu
+- Nintendo Entertainment System (NSF) (VGM)/Battle City
+- Nintendo Entertainment System (NSF) (VGM)/Double Dragon II - The Revenge
+- Nintendo Entertainment System (NSF) (VGM)/Bad Dudes
+- Nintendo Entertainment System (NSF) (VGM)/Magic Jewelry 2
+- Nintendo Entertainment System (NSF) (VGM)/Advanced Dungeons & Dragons - Heroes of the Lance
+- Nintendo Entertainment System (NSF) (VGM)/Circus Charlie
+- Nintendo Entertainment System (NSF) (VGM)/Bucky O'Hare
+- Nintendo Entertainment System (NSF) (VGM)/Rockman 5 - Dood in Gate II
+- Nintendo Entertainment System (NSF) (VGM)/Werewolf - The Last Warrior
