@@ -7,6 +7,17 @@
 <meta name="theme-color" content="#0c0a14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+(function () { // modo computador ou celular: escolha salva, senão detecta pelo tipo de tela
+  var m = null; try { m = localStorage.getItem('rgStudioMode'); } catch (e) {}
+  if (m !== 'pc' && m !== 'mob') {
+    var fino = window.matchMedia && matchMedia('(any-pointer:fine)').matches;
+    var toque = window.matchMedia && matchMedia('(pointer:coarse)').matches;
+    m = (toque && !fino) || Math.min(screen.width, screen.height) < 600 ? 'mob' : 'pc';
+  }
+  document.documentElement.className = m;
+})();
+</script>
 <style>
 :root{
   --bg:#0c0a14;--bg2:#13101f;--bg3:#1b1730;--line:#2c2547;--line2:#3d3363;
@@ -36,7 +47,7 @@ input,select{font:inherit;color:inherit}
 .btn.sm{padding:4px 9px;font-size:12px;border-radius:7px}
 a.btn{text-decoration:none;color:inherit}
 .trk{display:none}
-@media (hover:hover) and (pointer:fine) and (min-width:861px){.trk{display:inline-flex}}
+html.pc .trk{display:inline-flex}
 .btn:disabled{opacity:.4;cursor:default}
 /* corpo */
 .main{display:grid;grid-template-columns:330px 1fr;min-height:0}
@@ -126,34 +137,33 @@ input[type=range]{accent-color:var(--ac);width:90px}
 .toast{position:fixed;left:50%;bottom:calc(var(--kbH) + 90px);transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:9px 14px;font-size:13px;z-index:40;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
 .mtabs{display:none}
-@media (max-width:860px){
-  :root{--kbH:132px}
-  .main{grid-template-columns:1fr}
-  .panel{border-right:0}
-  .mtabs{display:flex;border-bottom:1px solid var(--line)}
-  .mtabs button{flex:1;padding:10px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent}
-  .mtabs button.on{color:var(--tx);border-color:var(--ac)}
-  .main.m-songs .stage{display:none}
-  .main.m-timbres .panel{display:none}
-  .top{padding:8px 10px}
-  .logo small{display:none}
-  .song{padding:12px 14px 10px}.song h1{font-size:18px}
-  .musicbar,.chans{padding-left:14px;padding-right:14px}
-  .timbres{padding:12px 14px}
-  .grid{grid-template-columns:1fr 1fr;gap:8px}
-  .card .info{font-size:11px}
-  .hint{display:none}
-  .kbbar .cur{max-width:34vw}
-}
+/* modo celular (escolhido automaticamente ou pelo botão 📱/🖥) */
+html.mob {--kbH:132px}
+html.mob .app{grid-template-rows:auto auto 1fr auto} /* topo, abas, conteúdo, teclado */
+html.mob .main{grid-template-columns:1fr;min-height:0}
+html.mob .panel{border-right:0}
+html.mob .mtabs{display:flex;border-bottom:1px solid var(--line)}
+html.mob .mtabs button{flex:1;padding:10px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent}
+html.mob .mtabs button.on{color:var(--tx);border-color:var(--ac)}
+html.mob .main.m-songs .stage{display:none}
+html.mob .main.m-timbres .panel{display:none}
+html.mob .top{padding:8px 10px}
+html.mob .logo small{display:none}
+html.mob .song{padding:12px 14px 10px}
+html.mob .song h1{font-size:18px}
+html.mob .musicbar,html.mob .chans{padding-left:14px;padding-right:14px}
+html.mob .timbres{padding:12px 14px}
+html.mob .grid{grid-template-columns:1fr 1fr;gap:8px}
+html.mob .card .info{font-size:11px}
+html.mob .hint{display:none}
+html.mob .kbbar .cur{max-width:34vw}
 /* computador (mouse + teclado): sem teclado na tela — toca pelo teclado do PC ou MIDI */
-@media (hover:hover) and (pointer:fine) and (min-width:861px){
-  :root{--kbH:0px}
-  .kb{display:none}
-  .kbwrap{padding-bottom:10px}
-  .kbbar{margin-bottom:0}
-  .hint{font-size:12px;color:var(--tx2)}
-}
-@media (max-width:480px){.grid{grid-template-columns:1fr}.pill .txt{display:none}}
+html.pc {--kbH:0px}
+html.pc .kb{display:none}
+html.pc .kbwrap{padding-bottom:10px}
+html.pc .kbbar{margin-bottom:0}
+html.pc .hint{font-size:12px;color:var(--tx2)}
+@media (max-width:480px){html.mob .grid{grid-template-columns:1fr}.pill .txt{display:none}}
 </style>
 </head>
 <body>
@@ -162,6 +172,7 @@ input[type=range]{accent-color:var(--ac);width:90px}
     <div class="logo"><div class="ic">🎹</div><div>CHIPTUNE STUDIO<small>REGISTRO GAMER · TIMBRES DOS CHIPS</small></div></div>
     <div class="sp"></div>
     <div class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span class="txt" id="midiTxt">MIDI: procurando…</span></div>
+    <button class="btn sm" id="btnMode" title="Alternar entre o modo computador e o modo celular">📱</button>
     <a class="btn sm trk" id="btnTracker" href="tracker.html" title="Abrir o Tracker (Furnace) — só no computador">🎛 Tracker</a>
     <button class="btn sm" id="btnClose" title="Fechar o Chiptune Studio">✕ Fechar</button>
   </header>
@@ -1455,15 +1466,24 @@ var RGVGM = (function () {
   });
 
   // ───────────────────── fechar ─────────────────────
+  var EMBED = window.parent !== window; // aberto dentro do blog (camada por cima da página)
   $('btnClose').onclick = function () {
     allOff(); stopMusic();
+    if (EMBED) { try { window.parent.postMessage({ type: 'rg-studio-close' }, '*'); } catch (e) {} return; }
     if (window.opener && !window.opener.closed) { window.close(); return; }
     if (history.length > 1) history.back(); else location.href = BLOG;
   };
   window.addEventListener('pagehide', function () { try { pSend({ type: 'stop' }); } catch (e) {} });
 
   setOct(4); setMidi();
-  if (window.innerWidth > 860) mtab('songs');
+  if (document.documentElement.className === 'pc') mtab('songs');
+  function modeBtn() { var pc = document.documentElement.className === 'pc'; $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? 'Mudar para o modo celular' : 'Mudar para o modo computador'; }
+  $('btnMode').onclick = function () {
+    var nm = document.documentElement.className === 'pc' ? 'mob' : 'pc';
+    document.documentElement.className = nm; lsSet('rgStudioMode', nm); modeBtn(); buildKb();
+    toast(nm === 'pc' ? 'Modo computador' : 'Modo celular');
+  };
+  modeBtn();
   // abre direto numa música: estudio.html?f=Chiptunes/...vgz
   var qf = new URLSearchParams(location.search).get('f');
   if (qf && VGM_RE.test(qf)) selectSong(qf, qf.split('/').pop());

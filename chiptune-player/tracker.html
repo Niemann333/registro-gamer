@@ -55,6 +55,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <span class="note" id="note">Salvar no Furnace (Ctrl+S) guarda no navegador; daqui você baixa para o computador.</span>
   <div class="sp"></div>
   <button class="btn" id="bBack">← Chiptune Studio</button>
+  <button class="btn" id="bClose" title="Fechar e voltar ao blog" style="display:none">✕</button>
 </div>
 <input type="file" id="fileIn" multiple hidden>
 <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
@@ -191,6 +192,16 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   $('bFiles').onclick = function () { var p = $('panel'); p.classList.toggle('show'); if (p.classList.contains('show')) listFiles(); };
   $('pClose').onclick = function () { $('panel').classList.remove('show'); };
   $('bBack').onclick = function () { location.href = 'estudio.html'; };
+  // dentro do blog: botão ✕ fecha a camada do Chiptune Studio
+  var EMBED = window.parent !== window;
+  if (EMBED) {
+    $('bClose').style.display = '';
+    $('bClose').onclick = function () {
+      if (ready && !confirm('Fechar o Tracker? O que não foi salvo (Ctrl+S) se perde.')) return;
+      try { Module.FS.syncfs(false, function () {}); } catch (e) {}
+      try { window.parent.postMessage({ type: 'rg-studio-close' }, '*'); } catch (e) {}
+    };
+  }
 
   // ── teclado MIDI (Web MIDI) → fila lida pelo Furnace ──
   Module.rgMidiQ = [];
