@@ -59,6 +59,42 @@
   var EXT_OMPT = /\.mptm$/i;                 // OpenMPT: só o libopenmpt toca certo (tempo moderno, swing...)
   var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
 
+  // ───────────────────────── arquivos do computador ─────────────────────────
+  // A página manda os bytes (load com "files"); aqui eles viram endereços blob: e qualquer pedido para
+  // https://rg-local.invalid/<nome> (inclusive as bibliotecas .gsflib/.psflib/... que os players pedem
+  // sozinhos) é atendido com esses bytes. Nada é guardado: some quando a página fecha.
+  var LOCAL = 'https://rg-local.invalid/', localFiles = {};
+  function addLocalFiles(files) {
+    (files || []).forEach(function (f) {
+      if (!f || !f.name || !f.buf) return;
+      var k = String(f.name).toLowerCase();
+      if (localFiles[k]) { try { URL.revokeObjectURL(localFiles[k]); } catch (e) {} }
+      localFiles[k] = URL.createObjectURL(new Blob([f.buf]));
+    });
+  }
+  function localUrl(url) {
+    url = String(url || '');
+    if (url.indexOf(LOCAL) !== 0) return url;
+    var n = url.slice(LOCAL.length).split('?')[0].split('#')[0];
+    try { n = decodeURIComponent(n); } catch (e) {}
+    n = n.split('/').pop().toLowerCase();
+    return localFiles[n] || url;
+  }
+  (function () {
+    var of = window.fetch;
+    if (of) window.fetch = function (input, init) {
+      if (typeof input === 'string' && input.indexOf(LOCAL) === 0) input = localUrl(input);
+      else if (input && input.url && input.url.indexOf(LOCAL) === 0) input = localUrl(input.url);
+      return of.call(this, input, init);
+    };
+    var oo = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (m, url) {
+      var a = Array.prototype.slice.call(arguments);
+      if (typeof url === 'string' && url.indexOf(LOCAL) === 0) a[1] = localUrl(url);
+      return oo.apply(this, a);
+    };
+  })();
+
   // ───────────────────────── utilidades ─────────────────────────
   function send(m) { try { parent.postMessage(m, '*'); } catch (e) {} }
   var statusEl = null;
@@ -1006,6 +1042,7 @@
     if (!d || typeof d !== 'object' || !d.type) return;
     switch (d.type) {
       case 'load':
+        if (d.files) addLocalFiles(d.files);
         if (d.url) loadTrack(d.url, Math.max(1, d.loops || 1), d.sub || 0, d.durMs || 0);
         break;
       case 'pause':

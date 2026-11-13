@@ -70,6 +70,10 @@ html.pc .trk{display:inline-flex}
 .it .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .it .ct{font-size:11px;color:var(--tx3)}
 .it .sub{display:block;font-size:11px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcopen{display:block;width:calc(100% - 8px);margin:8px 4px 10px;padding:12px;border:1px dashed var(--line2);border-radius:10px;font-weight:600;font-size:13px;color:var(--tx)}
+.pcopen:hover{border-color:var(--ac)}
+.dropzone{position:fixed;inset:0;z-index:60;display:none;place-items:center;background:rgba(124,58,237,.18);border:3px dashed var(--ac);font-size:20px;font-weight:700;color:#fff}
+.dropzone.show{display:grid}
 .msg{padding:18px 14px;color:var(--tx3);font-size:13px;text-align:center;line-height:1.5}
 /* área central */
 .stage{display:flex;flex-direction:column;min-height:0;overflow:hidden}
@@ -192,7 +196,8 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 
   <div class="main m-songs" id="main">
     <aside class="panel">
-      <div class="tabs"><button class="tab on" id="tabAc">Acervo</button><button class="tab" id="tabPl">Playlists</button></div>
+      <div class="tabs"><button class="tab on" id="tabAc">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um VGM que está no seu computador">💻 Do PC</button></div>
+      <input type="file" id="pcIn" accept=".vgm,.vgz" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo (VGM)…" autocomplete="off"></div>
       <div class="crumbs" id="crumbs"></div>
       <div class="list" id="list"><div class="msg">Carregando o acervo…</div></div>
@@ -252,7 +257,8 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   <button class="btn pri" id="gateBtn">Ativar o som</button></div></div>
 <div class="toast" id="toast"></div>
 
-<iframe id="pf" src="player.html?v=14" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<div class="dropzone" id="dropzone">Solte o VGM para abrir no Chiptune Studio</div>
+<iframe id="pf" src="player.html?v=15" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">// ===== Sintetizador do Estúdio (roda no AudioWorklet) =====
 // FM de 4 operadores no estilo OPN/OPM (YM2612, YM2151...) e PSG (pulso, triângulo, onda, ruído).
@@ -2165,7 +2171,9 @@ var RGMIDI = (function () {
   var RAW = 'https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
   var BLOG = 'https://lucniemanngames.blogspot.com/';
   var VGM_RE = /\.(vgm|vgz)$/i;
-  var CACHE_V = 'rgEstudio:v1:';
+  var LOCAL_URL = 'https://rg-local.invalid/'; // endereço de mentira que o player entende como "arquivo enviado pela página"
+  // versões antigas guardavam os timbres das músicas no navegador: limpa
+  try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('rgEstudio:') === 0) localStorage.removeItem(k); }); } catch (e) {}
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function stripExt(n) { return n.replace(/\.[^.]+$/, ''); }
@@ -2340,6 +2348,7 @@ var RGMIDI = (function () {
   function renderList() {
     var L = $('list'), q = $('q').value.trim().toLowerCase(), html = '';
     if (mode === 'pl') return renderPlaylists(q);
+    if (mode === 'pc') return renderLocal(q);
     if (!index) return;
     if (q.length >= 2) {
       $('crumbs').innerHTML = '';
@@ -2363,6 +2372,43 @@ var RGMIDI = (function () {
     return '<button class="it' + (cur.path === path ? ' on' : '') + '" data-file="' + esc(path) + '" data-name="' + esc(name) + '"><span class="ico">♪</span><span class="nm">' + esc(stripExt(name)) +
       (showDir ? '<span class="sub">' + esc(dir) + '</span>' : '') + '</span></button>';
   }
+  // ───────────────────── arquivos do computador ─────────────────────
+  // ficam só na memória, enquanto a página estiver aberta (nada é guardado no navegador)
+  var local = {}, localOrder = [], localN = 0;
+  function isLocal(path) { return String(path).indexOf('local:') === 0; }
+  function renderLocal(q) {
+    $('crumbs').innerHTML = '<span>Do seu computador (só nesta visita)</span>';
+    var html = '<button class="pcopen" data-pcopen="1">📂 Abrir VGM do computador…<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">.vgm ou .vgz · também dá para arrastar o arquivo para cá</span></button>';
+    localOrder.filter(function (p) { return !q || local[p].name.toLowerCase().indexOf(q) >= 0; }).forEach(function (p) { html += fileItem(p, local[p].name, false); });
+    if (!localOrder.length) html += '<div class="msg">Nenhum arquivo aberto ainda.</div>';
+    $('list').innerHTML = html;
+  }
+  function openLocalFiles(files) {
+    var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name); });
+    if (!list.length) { toast('O Chiptune Studio abre arquivos .vgm e .vgz.'); return; }
+    var first = null;
+    Promise.all(list.map(function (f) {
+      return f.arrayBuffer().then(function (ab) {
+        return RGVGM.inflate(new Uint8Array(ab.slice(0))).then(function (u8) {
+          var path = 'local:' + (++localN) + ':' + f.name;
+          local[path] = { name: f.name, file: ab, u8: u8 };
+          localOrder.unshift(path); if (!first) first = path;
+        });
+      });
+    })).then(function () {
+      showTab('pc');
+      if (first) selectSong(first, local[first].name);
+    }).catch(function (e) { toast('Não consegui abrir: ' + (e.message || e)); });
+  }
+  $('pcIn').onchange = function () { if (this.files.length) openLocalFiles(this.files); };
+  // arrastar e soltar em qualquer lugar do Studio
+  var dragN = 0;
+  function hasFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; }
+  window.addEventListener('dragenter', function (e) { if (hasFiles(e)) { dragN++; $('dropzone').classList.add('show'); } });
+  window.addEventListener('dragleave', function () { if (--dragN <= 0) { dragN = 0; $('dropzone').classList.remove('show'); } });
+  window.addEventListener('dragover', function (e) { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', function (e) { if (!hasFiles(e)) return; e.preventDefault(); dragN = 0; $('dropzone').classList.remove('show'); if (e.dataTransfer.files.length) openLocalFiles(e.dataTransfer.files); });
+
   function renderPlaylists(q) {
     var L = $('list');
     if (!playlists) {
@@ -2390,6 +2436,7 @@ var RGMIDI = (function () {
     if (b.dataset.dir != null) { stack.push(stack[stack.length - 1].children[+b.dataset.dir]); renderList(); $('list').scrollTop = 0; }
     else if (b.dataset.pl != null) { plOpen = +b.dataset.pl; renderList(); }
     else if (b.dataset.file) selectSong(b.dataset.file, b.dataset.name);
+    else if (b.dataset.pcopen) { $('pcIn').value = ''; $('pcIn').click(); }
   });
   $('crumbs').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -2397,8 +2444,16 @@ var RGMIDI = (function () {
     if (b.dataset.plback) { plOpen = null; renderList(); }
   });
   $('q').addEventListener('input', function () { renderList(); });
-  $('tabAc').onclick = function () { mode = 'ac'; this.classList.add('on'); $('tabPl').classList.remove('on'); $('q').placeholder = 'Buscar música ou jogo (VGM)…'; renderList(); };
-  $('tabPl').onclick = function () { mode = 'pl'; this.classList.add('on'); $('tabAc').classList.remove('on'); $('q').placeholder = 'Filtrar a playlist…'; renderList(); };
+  function showTab(m) {
+    mode = m;
+    $('tabAc').classList.toggle('on', m === 'ac'); $('tabPl').classList.toggle('on', m === 'pl'); $('tabPc').classList.toggle('on', m === 'pc');
+    $('q').placeholder = m === 'ac' ? 'Buscar música ou jogo (VGM)…' : m === 'pl' ? 'Filtrar a playlist…' : 'Filtrar os arquivos abertos…';
+    if (m !== 'pl') mtab('songs');
+    renderList();
+  }
+  $('tabAc').onclick = function () { showTab('ac'); };
+  $('tabPl').onclick = function () { showTab('pl'); };
+  $('tabPc').onclick = function () { showTab('pc'); };
   function mtab(w) { $('main').className = 'main m-' + w; $('mtSongs').classList.toggle('on', w === 'songs'); $('mtTimbres').classList.toggle('on', w === 'timbres'); }
   $('mtSongs').onclick = function () { mtab('songs'); };
   $('mtTimbres').onclick = function () { mtab('timbres'); };
@@ -2408,27 +2463,16 @@ var RGMIDI = (function () {
   var memCache = {};
   function loadParsed(path) {
     if (memCache[path]) return Promise.resolve(memCache[path]);
-    var ls = lsGet(CACHE_V + path);
-    if (ls) { try { var o = JSON.parse(ls); memCache[path] = o; return Promise.resolve(o); } catch (e) {} }
-    var url = RAW + path.split('/').map(encodeURIComponent).join('/');
-    return fetch(url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-      .then(function (ab) { return RGVGM.inflate(new Uint8Array(ab)); })
-      .then(function (u8) {
-        keepRaw(path, u8);
-        var res = RGVGM.parse(u8);
-        memCache[path] = res;
-        // guarda no navegador (só os timbres, poucos KB) — mantém as 40 últimas
-        try {
-          var keys = JSON.parse(lsGet(CACHE_V + '_keys') || '[]').filter(function (k) { return k !== path; });
-          keys.push(path); while (keys.length > 40) { try { localStorage.removeItem(CACHE_V + keys.shift()); } catch (e) {} }
-          lsSet(CACHE_V + path, JSON.stringify(res)); lsSet(CACHE_V + '_keys', JSON.stringify(keys));
-        } catch (e) {}
-        return res;
-      });
+    return getRaw(path).then(function (u8) {
+      var res = RGVGM.parse(u8);
+      memCache = {}; memCache[path] = res; // só a música aberta fica na memória
+      return res;
+    });
   }
   // ───────────────────── MIDI ─────────────────────
   var memRaw = {}, memMidi = {};
   function getRaw(path) {
+    if (isLocal(path)) return local[path] ? Promise.resolve(local[path].u8) : Promise.reject(new Error('arquivo não está mais aberto'));
     if (memRaw[path]) return Promise.resolve(memRaw[path]);
     var url = RAW + path.split('/').map(encodeURIComponent).join('/');
     return fetch(url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
@@ -2536,7 +2580,7 @@ var RGMIDI = (function () {
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1;
     renderList();
     $('songHead').style.display = '';
-    var dir = path.split('/').slice(-2, -1)[0] || '';
+    var dir = isLocal(path) ? 'Do seu computador' : path.split('/').slice(-2, -1)[0] || '';
     $('sGame').textContent = dir; $('sTitle').textContent = stripExt(name); $('sMeta').innerHTML = 'Lendo os timbres…';
     $('timbres').innerHTML = '<div class="empty"><div><div class="big">⏳</div><p>Lendo os registros do chip…</p></div></div>';
     resetChans();
@@ -2688,8 +2732,11 @@ var RGMIDI = (function () {
     if (pLoaded !== cur.path) {
       pLoaded = cur.path; pPaused = false;
       $('bPlay').textContent = '⏳ Carregando…';
-      pSend({ type: 'load', url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), loops: 2 });
-      var dir = cur.path.split('/').slice(-2, -1)[0] || '';
+      if (isLocal(cur.path)) {
+        var lf = local[cur.path];
+        pSend({ type: 'load', url: LOCAL_URL + encodeURIComponent(lf.name), files: [{ name: lf.name, buf: lf.file.slice(0) }], loops: 2 });
+      } else pSend({ type: 'load', url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), loops: 2 });
+      var dir = isLocal(cur.path) ? 'Do seu computador' : cur.path.split('/').slice(-2, -1)[0] || '';
       pSend({ type: 'mediainfo', title: $('sTitle').textContent, artist: dir, album: 'Chiptune Studio · Registro Gamer' });
       return;
     }

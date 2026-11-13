@@ -26,18 +26,6 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 #load .big{font-size:44px}#load h2{margin:8px 0 6px;font-size:19px}#load p{color:var(--tx2);font-size:13px;line-height:1.6;max-width:420px}
 .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--ac2);animation:sp 1s linear infinite;margin:16px auto 0}
 @keyframes sp{to{transform:rotate(360deg)}}
-.panel{position:fixed;right:10px;top:calc(var(--barH) + 8px);width:min(420px,calc(100vw - 20px));max-height:calc(100vh - var(--barH) - 24px);overflow:auto;background:#081408;border:1px solid var(--line2);border-radius:12px;z-index:10;box-shadow:0 12px 40px #000a;display:none}
-.panel.show{display:block}
-.panel h3{font-size:14px;padding:12px 14px 4px;display:flex;align-items:center}
-.panel h3 button{margin-left:auto;font-size:16px;color:var(--tx3)}
-.panel .sub{font-size:11.5px;color:var(--tx3);padding:0 14px 10px;line-height:1.5}
-.dir{font-size:11px;letter-spacing:.12em;color:var(--ac2);text-transform:uppercase;padding:10px 14px 4px}
-.f{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #ffffff08;font-size:12.5px}
-.f .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.f .m{font-size:11px;color:var(--tx3);white-space:nowrap}
-.f button{border:1px solid var(--line2);border-radius:6px;padding:3px 7px;font-size:12px}
-.f button:hover{border-color:var(--ac)}
-.empty{padding:16px 14px;color:var(--tx3);font-size:12.5px}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0e260e;border:1px solid var(--line2);border-radius:10px;padding:9px 12px;font-size:13px;z-index:20;display:none;align-items:center;gap:10px;box-shadow:0 8px 30px #000a;max-width:calc(100vw - 20px)}
 .toast.show{display:flex}
 .toast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -50,10 +38,9 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
   <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip">📂 Abrir do computador</button>
-  <button class="btn" id="bFiles" title="Arquivos salvos no navegador — baixe para o computador">💾 Arquivos salvos</button>
   <button class="btn" id="bMidi" title="Converter um VGM (do computador) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
-  <span class="note" id="note">Salvar no Furnace (Ctrl+S) guarda no navegador; daqui você baixa para o computador.</span>
+  <span class="note" id="note">Salvar (Ctrl+S) ou exportar baixa o arquivo para o seu computador. Nada fica guardado no navegador.</span>
   <div class="sp"></div>
   <button class="btn" id="bBack">← Chiptune Studio</button>
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" style="display:none">✕</button>
@@ -64,12 +51,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div id="load"><div><div class="big">🎛️</div><h2>Carregando o Tracker</h2>
   <p id="loadTxt">Na primeira vez são cerca de 10 MB; depois fica guardado no navegador e abre rápido.</p><div class="spin"></div></div></div>
 
-<div class="panel" id="panel">
-  <h3>Arquivos salvos no navegador <button id="pClose" title="Fechar">✕</button></h3>
-  <div class="sub">Tudo o que você salva ou exporta no Tracker fica aqui. Baixe para guardar no computador — limpar os dados do navegador apaga estes arquivos.</div>
-  <div id="pList"></div>
-</div>
-<div class="toast" id="toast"><span id="tTxt"></span><button class="btn pri" id="tDl">⬇ Baixar</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
+<div class="toast" id="toast"><span id="tTxt"></span><button class="btn" id="tFur" style="display:none" title="Abrir este VGM como projeto (timbres do chip)">🎛 Abrir como projeto</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
 <div class="drop" id="drop">Solte o arquivo para abrir no Tracker</div>
 
 <script>
@@ -94,14 +76,14 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (/\.(fui|dmp|tfi|vgi|opni|opli|y12|bnk|ff|gyb|sbi|ins|wopn|wopl|s3i|ni|ins)$/i.test(name)) return 'Instrumentos';
     return 'Projetos';
   }
-  // grava no navegador e abre no Furnace
+  // põe o arquivo na pasta do Tracker (só na memória, enquanto a página estiver aberta) e abre no Furnace
   function openBytes(name, u8, delay) {
     var safe = name.replace(/[\/\\]/g, '_');
     var path = HOME + '/' + folderFor(safe) + '/' + safe;
     importing[path] = 1;
     Module.FS.writeFile(path, u8);
     delete importing[path];
-    setTimeout(function () { Module.ccall('rg_web_drop', null, ['string'], [path]); try { Module.FS.syncfs(false, function () {}); } catch (e) {} }, delay || 0);
+    setTimeout(function () { Module.ccall('rg_web_drop', null, ['string'], [path]); }, delay || 0);
   }
   // VGM → projeto do Furnace (direto, com os timbres do chip)
   function vgmToFur(u8, name, delay) {
@@ -148,31 +130,28 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
   }
   function hidden(path) { return path.indexOf(HOME + '/.') === 0 || path.indexOf(HOME + '/') !== 0; }
-  // quando o Furnace salva ou exporta algo, oferece o download na hora
+  // quando o Furnace salva ou exporta algo, o arquivo vai direto para o computador (Downloads)
   var pending = {}, pendT = null, lastSaved = null, importing = {};
   function hookWrites() {
     var FS = Module.FS, origClose = FS.close;
-    // ao fechar um arquivo aberto para escrita, avisa que algo foi salvo
     FS.close = function (stream) {
       var path = stream && stream.path, wrote = stream && (stream.flags & 3) !== 0;
       var r = origClose.apply(this, arguments);
-      if (wrote && path && !hidden(path) && !importing[path]) { pending[path] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 700); }
+      if (wrote && path && !hidden(path) && !importing[path]) { pending[path] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 500); }
       return r;
     };
   }
   function flushSaved() {
     var paths = Object.keys(pending); pending = {};
     if (!paths.length) return;
+    paths.forEach(function (p, i) { setTimeout(function () { download(p); }, i * 300); });
     lastSaved = paths[paths.length - 1];
-    $('tTxt').textContent = '💾 Salvo no navegador: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
-    $('tDl').style.display = '';
-    $('tMidi').style.display = isVGM(lastSaved) ? '' : 'none';
+    $('tTxt').textContent = '⬇ Baixado para o computador: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
+    $('tMidi').style.display = $('tFur').style.display = isVGM(lastSaved) ? '' : 'none';
     $('toast').classList.add('show');
-    try { Module.FS.syncfs(false, function () {}); } catch (e) {}
-    if ($('panel').classList.contains('show')) listFiles();
   }
-  $('tDl').onclick = function () { if (lastSaved) download(lastSaved); $('toast').classList.remove('show'); };
   $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
+  $('tFur').onclick = function () { if (lastSaved) vgmToFur(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); $('canvas').focus(); };
 
   // projeto mandado pelo Chiptune Studio (botão "Abrir no Tracker")
   function checkInbox() {
@@ -181,9 +160,10 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
       rq.onupgradeneeded = function () { rq.result.createObjectStore('f'); };
       rq.onsuccess = function () {
         var db = rq.result, tx = db.transaction('f', 'readwrite'), st = tx.objectStore('f'), g = st.get('next');
+        // a "caixa de entrada" só serve para a passagem: apaga logo depois de ler
+        tx.oncomplete = function () { db.close(); try { indexedDB.deleteDatabase('rg-inbox'); } catch (e) {} };
         g.onsuccess = function () {
           var it = g.result; if (!it) return;
-          st.delete('next');
           if (Date.now() - (it.t || 0) > 10 * 60 * 1000) return; // velho demais: ignora
           openBytes(it.name, new Uint8Array(it.bytes), 0);
           notify('🎛 Aberto do Chiptune Studio: ' + it.name);
@@ -195,7 +175,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   // ── VGM → MIDI (mesmo conversor do Chiptune Studio) ──
   function isVGM(p) { return /\.(vgm|vgz)$/i.test(p || ''); }
   function notify(txt) {
-    $('tTxt').textContent = txt; $('tDl').style.display = 'none'; $('tMidi').style.display = 'none';
+    $('tTxt').textContent = txt; $('tFur').style.display = 'none'; $('tMidi').style.display = 'none';
     $('toast').classList.add('show');
   }
   function vgmToMidi(u8, name) {
@@ -219,60 +199,13 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   };
   $('tX').onclick = function () { $('toast').classList.remove('show'); };
 
-  // ── painel de arquivos ──
-  function walk(dir, out) {
-    var FS = Module.FS, names;
-    try { names = FS.readdir(dir); } catch (e) { return; }
-    names.forEach(function (n) {
-      if (n === '.' || n === '..' || n[0] === '.') return;
-      var p = dir + '/' + n, st;
-      try { st = FS.stat(p); } catch (e) { return; }
-      if (FS.isDir(st.mode)) walk(p, out); else out.push({ p: p, size: st.size, t: +st.mtime });
-    });
-  }
-  function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
-  function listFiles() {
-    if (!ready) { $('pList').innerHTML = '<div class="empty">O Tracker ainda está carregando…</div>'; return; }
-    var files = []; walk(HOME, files);
-    if (!files.length) { $('pList').innerHTML = '<div class="empty">Nada salvo ainda. Use <b>Arquivo → Salvar</b> no Tracker (ou Ctrl+S).</div>'; return; }
-    var groups = {};
-    files.sort(function (a, b) { return b.t - a.t; }).forEach(function (f) {
-      var rel = f.p.slice(HOME.length + 1), d = rel.indexOf('/') > 0 ? rel.split('/')[0] : 'Pasta principal';
-      (groups[d] = groups[d] || []).push(f);
-    });
-    var html = '';
-    Object.keys(groups).forEach(function (d) {
-      html += '<div class="dir">' + esc(d) + '</div>';
-      groups[d].forEach(function (f) {
-        html += '<div class="f"><span class="n" title="' + esc(f.p) + '">' + esc(f.p.split('/').pop()) + '</span><span class="m">' + kb(f.size) + ' · ' +
-          new Date(f.t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + '</span>' +
-          (isVGM(f.p) ? '<button data-fur="' + esc(f.p) + '" title="Abrir como projeto (timbres do chip)">🎛</button><button data-midi="' + esc(f.p) + '" title="Converter para MIDI e baixar">🎼</button>' : '') +
-          '<button data-dl="' + esc(f.p) + '" title="Baixar para o computador">⬇</button><button data-op="' + esc(f.p) + '" title="Abrir no Tracker">📂</button><button data-rm="' + esc(f.p) + '" title="Apagar do navegador">🗑</button></div>';
-      });
-    });
-    $('pList').innerHTML = html;
-  }
-  $('pList').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.fur) { vgmToFur(Module.FS.readFile(b.dataset.fur), b.dataset.fur.split('/').pop()); $('panel').classList.remove('show'); $('canvas').focus(); }
-    else if (b.dataset.midi) vgmToMidi(Module.FS.readFile(b.dataset.midi), b.dataset.midi.split('/').pop());
-    else if (b.dataset.dl) download(b.dataset.dl);
-    else if (b.dataset.op) { Module.ccall('rg_web_drop', null, ['string'], [b.dataset.op]); $('panel').classList.remove('show'); $('canvas').focus(); }
-    else if (b.dataset.rm && confirm('Apagar "' + b.dataset.rm.split('/').pop() + '" do navegador?')) {
-      try { Module.FS.unlink(b.dataset.rm); Module.FS.syncfs(false, function () {}); } catch (x) {}
-      listFiles();
-    }
-  });
-  $('bFiles').onclick = function () { var p = $('panel'); p.classList.toggle('show'); if (p.classList.contains('show')) listFiles(); };
-  $('pClose').onclick = function () { $('panel').classList.remove('show'); };
   $('bBack').onclick = function () { location.href = 'estudio.html'; };
   // dentro do blog: botão ✕ fecha a camada do Chiptune Studio
   var EMBED = window.parent !== window;
   if (EMBED) {
     $('bClose').style.display = '';
     $('bClose').onclick = function () {
-      if (ready && !confirm('Fechar o Tracker? O que não foi salvo (Ctrl+S) se perde.')) return;
-      try { Module.FS.syncfs(false, function () {}); } catch (e) {}
+      if (unsaved() && !confirm('Fechar o Tracker? O projeto tem alterações que não foram salvas (Ctrl+S) e elas se perdem.')) return;
       try { window.parent.postMessage({ type: 'rg-studio-close' }, '*'); } catch (e) {}
     };
   }
@@ -302,9 +235,10 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     }).catch(function () { midiUI('MIDI: sem permissão'); });
   } else midiUI('MIDI: indisponível');
 
-  // garante que nada fique sem gravar ao fechar
-  window.addEventListener('pagehide', function () { try { Module.FS.syncfs(false, function () {}); } catch (e) {} });
-  window.addEventListener('beforeunload', function (e) { if (ready) { e.preventDefault(); e.returnValue = ''; } });
+  // ao fechar: avisa só se o projeto tem alterações não salvas (como um programa de computador)
+  function unsaved() { try { return ready && Module.ccall('rg_web_modified', 'number', [], []) === 1; } catch (e) { return ready; } }
+  window.addEventListener('pagehide', function () { try { Module.FS.syncfs(false, function () {}); } catch (e) {} }); // só as configurações
+  window.addEventListener('beforeunload', function (e) { if (unsaved()) { e.preventDefault(); e.returnValue = ''; } });
 })();
 </script>
 <script src="vgm-midi.js"></script>
