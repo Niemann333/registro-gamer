@@ -196,7 +196,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 
   <div class="main m-songs" id="main">
     <aside class="panel">
-      <div class="tabs"><button class="tab on" id="tabAc">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um VGM que está no seu computador">💻 Do PC</button></div>
+      <div class="tabs"><button class="tab on" id="tabAc">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um arquivo VGM do seu aparelho (computador, celular, tablet…)">📂 Local</button></div>
       <input type="file" id="pcIn" accept=".vgm,.vgz" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo (VGM)…" autocomplete="off"></div>
       <div class="crumbs" id="crumbs"></div>
@@ -2372,13 +2372,13 @@ var RGMIDI = (function () {
     return '<button class="it' + (cur.path === path ? ' on' : '') + '" data-file="' + esc(path) + '" data-name="' + esc(name) + '"><span class="ico">♪</span><span class="nm">' + esc(stripExt(name)) +
       (showDir ? '<span class="sub">' + esc(dir) + '</span>' : '') + '</span></button>';
   }
-  // ───────────────────── arquivos do computador ─────────────────────
+  // ───────────────────── arquivos locais ─────────────────────
   // ficam só na memória, enquanto a página estiver aberta (nada é guardado no navegador)
   var local = {}, localOrder = [], localN = 0;
   function isLocal(path) { return String(path).indexOf('local:') === 0; }
   function renderLocal(q) {
-    $('crumbs').innerHTML = '<span>Do seu computador (só nesta visita)</span>';
-    var html = '<button class="pcopen" data-pcopen="1">📂 Abrir VGM do computador…<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">.vgm ou .vgz · também dá para arrastar o arquivo para cá</span></button>';
+    $('crumbs').innerHTML = '<span>Arquivos locais (só nesta visita)</span>';
+    var html = '<button class="pcopen" data-pcopen="1">📂 Abrir arquivo VGM…<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">.vgm ou .vgz do seu aparelho · também dá para arrastar o arquivo para cá</span></button>';
     localOrder.filter(function (p) { return !q || local[p].name.toLowerCase().indexOf(q) >= 0; }).forEach(function (p) { html += fileItem(p, local[p].name, false); });
     if (!localOrder.length) html += '<div class="msg">Nenhum arquivo aberto ainda.</div>';
     $('list').innerHTML = html;
@@ -2580,7 +2580,7 @@ var RGMIDI = (function () {
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1;
     renderList();
     $('songHead').style.display = '';
-    var dir = isLocal(path) ? 'Do seu computador' : path.split('/').slice(-2, -1)[0] || '';
+    var dir = isLocal(path) ? 'Arquivo local' : path.split('/').slice(-2, -1)[0] || '';
     $('sGame').textContent = dir; $('sTitle').textContent = stripExt(name); $('sMeta').innerHTML = 'Lendo os timbres…';
     $('timbres').innerHTML = '<div class="empty"><div><div class="big">⏳</div><p>Lendo os registros do chip…</p></div></div>';
     resetChans();
@@ -2736,7 +2736,7 @@ var RGMIDI = (function () {
         var lf = local[cur.path];
         pSend({ type: 'load', url: LOCAL_URL + encodeURIComponent(lf.name), files: [{ name: lf.name, buf: lf.file.slice(0) }], loops: 2 });
       } else pSend({ type: 'load', url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), loops: 2 });
-      var dir = isLocal(cur.path) ? 'Do seu computador' : cur.path.split('/').slice(-2, -1)[0] || '';
+      var dir = isLocal(cur.path) ? 'Arquivo local' : cur.path.split('/').slice(-2, -1)[0] || '';
       pSend({ type: 'mediainfo', title: $('sTitle').textContent, artist: dir, album: 'Chiptune Studio · Registro Gamer' });
       return;
     }

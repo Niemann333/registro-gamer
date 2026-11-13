@@ -37,10 +37,10 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <body>
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
-  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip">📂 Abrir do computador</button>
-  <button class="btn" id="bMidi" title="Converter um VGM (do computador) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI">🎼 VGM → MIDI</button>
+  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu aparelho. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip">📂 Abrir arquivo local</button>
+  <button class="btn" id="bMidi" title="Converter um VGM (arquivo local) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
-  <span class="note" id="note">Salvar (Ctrl+S) ou exportar baixa o arquivo para o seu computador. Nada fica guardado no navegador.</span>
+  <span class="note" id="note">Salvar (Ctrl+S) ou exportar baixa o arquivo (vai para os Downloads). Nada fica guardado no navegador.</span>
   <div class="sp"></div>
   <button class="btn" id="bBack">← Chiptune Studio</button>
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" style="display:none">✕</button>
@@ -130,7 +130,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
   }
   function hidden(path) { return path.indexOf(HOME + '/.') === 0 || path.indexOf(HOME + '/') !== 0; }
-  // quando o Furnace salva ou exporta algo, o arquivo vai direto para o computador (Downloads)
+  // quando o Furnace salva ou exporta algo, o arquivo vai direto para os Downloads
   var pending = {}, pendT = null, lastSaved = null, importing = {};
   function hookWrites() {
     var FS = Module.FS, origClose = FS.close;
@@ -146,7 +146,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (!paths.length) return;
     paths.forEach(function (p, i) { setTimeout(function () { download(p); }, i * 300); });
     lastSaved = paths[paths.length - 1];
-    $('tTxt').textContent = '⬇ Baixado para o computador: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
+    $('tTxt').textContent = '⬇ Baixado: ' + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
     $('tMidi').style.display = $('tFur').style.display = isVGM(lastSaved) ? '' : 'none';
     $('toast').classList.add('show');
   }
