@@ -193,11 +193,6 @@ input[type=range]{accent-color:var(--ac);width:90px}
 .dch:hover{background:var(--bg3)}.dch input{accent-color:var(--ac)}
 .dch .nm{flex:1}.dch .ct{font-size:11.5px;color:var(--tx3)}.dch .dr{font-size:10.5px;color:var(--ac2);border:1px solid var(--line2);border-radius:5px;padding:0 5px}
 .dft{display:flex;align-items:center;gap:10px;padding:12px 16px}.dinfo{flex:1;font-size:12px;color:var(--tx3)}
-.gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(8,6,14,.82);backdrop-filter:blur(6px)}
-.gate .box{text-align:center;padding:30px;max-width:420px}
-.gate .box .big{font-size:52px}
-.gate h2{margin:10px 0 8px;font-size:22px}
-.gate p{color:var(--tx2);line-height:1.6;margin-bottom:18px;font-size:13.5px}
 .toast{position:fixed;left:50%;bottom:calc(var(--kbH) + 90px);transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:9px 14px;font-size:13px;z-index:40;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
 .mtabs{display:none}
@@ -206,6 +201,67 @@ html.mob {--kbH:132px}
 html.mob .app{grid-template-rows:auto auto 1fr auto} /* topo, abas, conteúdo, teclado */
 html.mob .main{grid-template-columns:1fr;min-height:0}
 html.mob .panel{border-right:0}
+/* ───── editor de timbres ───── */
+.card .edit{position:absolute;right:44px;bottom:9px;width:28px;height:28px;border-radius:50%;border:1px solid var(--line2);display:grid;place-items:center;font-size:12px;background:var(--bg3)}
+.card .edit:hover{border-color:var(--ac);color:#fff}
+.card .edited{font-size:9.5px;letter-spacing:.08em;color:var(--ac2);border:1px solid var(--acd);background:#2a1747;border-radius:5px;padding:1px 5px;margin-left:6px}
+.stage.editing #songHead,.stage.editing #timbres{display:none!important}
+.ed{flex:1;overflow:auto;padding:12px 20px 20px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.ed[hidden]{display:none}
+.edhd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.edhd input.nm{flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:7px 10px;color:var(--tx);font:600 14px Oxanium,system-ui,sans-serif}
+.edhd input.nm:focus{outline:0;border-color:var(--ac)}
+.edhd .chip{font-size:11px;letter-spacing:.1em;color:var(--tx2);border:1px solid var(--line2);border-radius:6px;padding:4px 8px;white-space:nowrap}
+.edsec{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:10px}
+.edsec h3{margin:0 0 10px;font-size:11px;letter-spacing:.14em;color:var(--tx3);text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:8px}
+.edsec h3 .x{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400}
+.edglob{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+.algs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.algs button{border:1px solid var(--line);background:var(--bg3);border-radius:8px;padding:4px 2px 2px;position:relative}
+.algs button:hover{border-color:var(--line2)}
+.algs button.on{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac);background:#1f1538}
+.algs button b{position:absolute;left:5px;top:3px;font-size:9px;color:var(--tx3)}
+.algs svg{display:block;width:100%;height:46px}
+.prm{display:grid;grid-template-columns:44px 1fr 30px;align-items:center;gap:6px;margin:3px 0;font-size:11.5px}
+.prm label{color:var(--tx2);font-weight:600;letter-spacing:.04em;cursor:help;white-space:nowrap}
+.prm output{text-align:right;font-variant-numeric:tabular-nums;color:var(--tx);font-weight:600}
+.prm input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:0;background:transparent;cursor:pointer}
+.prm input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:var(--line2)}
+.prm input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:var(--line2)}
+.prm input[type=range]::-moz-range-progress{height:4px;border-radius:4px;background:var(--ac)}
+.prm input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ac2);margin-top:-4.5px;box-shadow:0 0 0 3px #a855f733}
+.prm input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--ac2);box-shadow:0 0 0 3px #a855f733}
+.prm input[type=range]:hover::-webkit-slider-thumb{background:#fff}
+.prm.tg{grid-template-columns:44px 1fr}
+.prm.tg .sw{justify-self:start}
+.sw{display:inline-flex;border:1px solid var(--line2);border-radius:99px;overflow:hidden}
+.sw button{padding:3px 9px;font-size:11px;color:var(--tx3)}
+.sw button.on{background:var(--ac);color:#fff}
+.ops{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.op{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:10px 10px 8px}
+.op.car{border-color:#5b3a8f;background:linear-gradient(180deg,#1d1433,var(--bg2))}
+.op.off{opacity:.45}
+.op .oh{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.op .oh b{font-size:14px;color:var(--ac2)}
+.op .oh span{font-size:10px;letter-spacing:.08em;color:var(--tx3);text-transform:uppercase}
+.op .oh .tgop{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid var(--line2);color:var(--tx2)}
+.op .oh .tgop.on{border-color:var(--ac);color:#fff;background:var(--acd)}
+.op canvas{display:block;width:100%;height:40px;margin-bottom:6px;background:var(--bg);border-radius:6px}
+.bars{display:block;width:100%;height:120px;background:var(--bg);border-radius:8px;touch-action:none;cursor:crosshair}
+.bars.sm{height:70px}
+.edrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--tx2)}
+.edrow select{background:var(--bg3);color:var(--tx);border:1px solid var(--line2);border-radius:7px;padding:4px 8px;font:inherit}
+.edhint{font-size:11px;color:var(--tx3);margin-top:6px;line-height:1.5}
+@media (max-width:1100px){.ops{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html.mob .ed{padding:10px 12px 16px}
+html.mob .edglob{grid-template-columns:1fr}
+@media (max-width:560px){.ops{grid-template-columns:1fr}}
+.newwrap{position:relative}
+.newmenu{display:none;position:absolute;bottom:calc(100% + 6px);left:0;z-index:30;min-width:210px;border:1px solid var(--line2);background:var(--bg2);border-radius:10px;padding:5px;box-shadow:0 10px 30px #0008}
+.newmenu.show{display:block}
+.newmenu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px;font-size:12.5px;color:var(--tx)}
+.newmenu button:hover{background:var(--bg3)}
+.newmenu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
 html.mob .mtabs{display:flex;border-bottom:1px solid var(--line)}
 html.mob .mtabs button{flex:1;padding:10px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent}
 html.mob .mtabs button.on{color:var(--tx);border-color:var(--ac)}
@@ -253,7 +309,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
       <div class="list" id="list"><div class="msg" data-en="Loading the library…">Carregando o acervo…</div></div>
     </aside>
 
-    <section class="stage">
+    <section class="stage" id="stage">
       <div id="songHead" style="display:none">
         <div class="song"><div class="game" id="sGame"></div><h1 id="sTitle"></h1><div class="meta" id="sMeta"></div></div>
         <div class="musicbar">
@@ -271,12 +327,24 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
         <div class="empty"><div><div class="big">🎹</div><h2 data-en="Pick a song">Escolha uma música</h2>
           <p data-en="Chiptune Studio reads the VGM file and lists the sounds (chip instruments) the song uses. Pick a sound and play it on your MIDI keyboard or your computer keyboard (on a phone, on the on-screen keyboard).">O Chiptune Studio lê o arquivo VGM e lista os timbres (instrumentos dos chips) que a música usa. Escolha um timbre e toque no seu teclado MIDI ou no teclado do computador (no celular, no teclado da tela).</p></div></div>
       </div>
+      <div class="ed" id="ed" hidden></div>
     </section>
   </div>
 
   <footer class="kbwrap">
     <div class="kbbar">
       <span data-en="Sound:">Timbre:</span><span class="cur" id="curT" data-en="none">nenhum</span>
+      <button class="btn sm" id="bEdit" title="Editar o timbre escolhido: algoritmo, operadores, envelope…" data-en-title="Edit the chosen sound: algorithm, operators, envelope…" data-en="✎ Edit">✎ Editar</button>
+      <span class="newwrap"><button class="btn sm" id="bNew" title="Criar um timbre do zero ou abrir um instrumento do Furnace (.fui)" data-en-title="Create a sound from scratch or open a Furnace instrument (.fui)" data-en="＋ New">＋ Novo</button>
+        <div class="newmenu" id="newMenu">
+          <button data-new="opn" data-en="FM · YM2612 (Mega Drive)">FM · YM2612 (Mega Drive)</button>
+          <button data-new="opm" data-en="FM · YM2151 (Arcade)">FM · YM2151 (Arcade)</button>
+          <button data-new="nes" data-en="Pulse · NES">Pulso · NES</button>
+          <button data-new="gb" data-en="Pulse / wave · Game Boy">Pulso / onda · Game Boy</button>
+          <button data-new="sn" data-en="PSG · SN76489 (Master System)">PSG · SN76489 (Master System)</button>
+          <hr><button data-new="fui" data-en="📂 Open instrument (.fui)…">📂 Abrir instrumento (.fui)…</button>
+        </div></span>
+      <input type="file" id="fuiIn" accept=".fui" multiple hidden>
       <div class="sp"></div>
       <div class="oct"><button class="btn sm" id="octDn">−</button><b id="octV">C4</b><button class="btn sm" id="octUp">+</button></div>
       <label class="tgl" title="A nota continua soando enquanto a tecla estiver apertada" data-en-title="The note keeps sounding while the key is held"><input type="checkbox" id="hold" checked><span data-en="Hold">Segurar</span></label>
@@ -302,9 +370,6 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   <div class="dlist" id="fdBody"><div class="msg">Convertendo…</div></div>
   <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker (só no computador)" data-en-title="Open this project in the Tracker (desktop only)" data-en="🎛 Open in Tracker">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled data-en="⬇ Download .fur">⬇ Baixar .fur</button></div>
 </div></div>
-<div class="gate" id="gate"><div class="box"><div class="big">🎹</div><h2>Chiptune Studio</h2>
-  <p data-en="Plug your MIDI keyboard into USB (or use the computer keyboard; on a phone, the on-screen keyboard) and play with the sounds of the songs in the library.">Ligue seu teclado MIDI no USB (ou use o teclado do computador; no celular, o teclado na tela) e toque com os timbres das músicas do acervo.</p>
-  <button class="btn pri" id="gateBtn" data-en="Turn on sound">Ativar o som</button></div></div>
 <div class="toast" id="toast"></div>
 
 <div class="dropzone" id="dropzone" data-en="Drop the VGM to open it in Chiptune Studio">Solte o VGM para abrir no Chiptune Studio</div>
@@ -360,7 +425,11 @@ class EstudioSynth extends AudioWorkletProcessor {
     this.port.onmessage = (e) => this.msg(e.data);
   }
   msg(d) {
-    if (d.t === 'patch') { this.patch = d.p; }
+    if (d.t === 'patch') {
+      this.patch = d.p;
+      // editor de timbres: as notas que já estão soando passam a usar os valores novos na hora
+      if (d.live) for (var i = 0; i < 16; i++) { var v = this.voices[i]; if (v.active && v.p.type === d.p.type) this.refresh(v, d.p); }
+    }
     else if (d.t === 'on') this.noteOn(d.n, d.v);
     else if (d.t === 'off') this.noteOff(d.n);
     else if (d.t === 'bend') { this.bend = d.v; this.retune(); }
@@ -370,6 +439,26 @@ class EstudioSynth extends AudioWorkletProcessor {
     else if (d.t === 'hold') this.hold = d.on;
     else if (d.t === 'transp') { this.transp = d.v; this.retune(); }
     else if (d.t === 'panic') this.voices.forEach(v => v.active = false);
+  }
+  refresh(v, p) {
+    v.p = p;
+    if (p.type === 'fm') {
+      this.setFreq(v);
+      for (var k = 0; k < 4; k++) {
+        var op = p.ops[k], ks = v.kc >> (3 - op.ks);
+        var r = function (raw) { return raw === 0 ? 0 : Math.min(63, raw + ks); };
+        v.rates[k] = [r(op.ar * 2), r(op.d1r * 2), r(op.d2r * 2), r(op.rr * 4 + 2)];
+        v.sl[k] = op.sl === 15 ? 31 * 32 : op.sl * 32;
+      }
+      v.car = CAR[p.alg];
+      var velAtt = vToAtt(v.vel);
+      v.tl = p.ops.map(function (op, k) { return (op.tl << 3) + (v.car.indexOf(k) >= 0 ? velAtt : 0); });
+    } else {
+      this.setFreq(v);
+      var env = p.env;
+      if (this.hold && p.wave !== 'noise') { var n = env.length; while (n > 1 && env[n - 1] <= 0.001) n--; env = env.slice(0, n); }
+      v.envA = env; v.dutyA = p.duty;
+    }
   }
   freqOf(n) { return 440 * Math.pow(2, (n - 69 + this.bend) / 12); }
   noteOn(n, vel) {
@@ -502,7 +591,7 @@ class EstudioSynth extends AudioWorkletProcessor {
     var fmul = pm * vib, o = v.out, k, a;
     for (k = 0; k < 4; k++) {
       a = v.env[k] + v.tl[k] + (p.ops[k].am ? amOff : 0);
-      v.lvl[k] = a >= 1023 ? 0 : ATT[a | 0];
+      v.lvl[k] = (a >= 1023 || p.ops[k].off) ? 0 : ATT[a | 0];
       v.ph[k] += v.inc[k] * fmul; if (v.ph[k] >= 1) v.ph[k] -= Math.floor(v.ph[k]);
     }
     var fbm = p.fb ? (v.fb0 + v.fb1) * Math.pow(2, p.fb - 7) : 0;
@@ -2219,7 +2308,85 @@ var RGMIDI = (function () {
     return n.replace(/[\\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120) + '.fur';
   }
 
-  root.RGFUR = { build: build, fileName: fileName };
+  // ---------- instrumento avulso do Furnace (.fui) — usado pelo editor de timbres ----------
+  var DT_INV = [7, 6, 5, 0, 1, 2, 3, 3];  // dt do Furnace (3 = sem desafinação) → nosso (bit 2 = negativo)
+  function fui(t, name) {
+    var w = new Wr();
+    w.tag('FINS'); w.s(228);
+    if (t.type === 'fm') {
+      w.c(t.fmKind === 'opm' ? 33 : 1); w.c(0);
+      w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
+      w.tag('FM'); a = w.n; w.s(0);
+      var en = 0; [0, 2, 1, 3].forEach(function (m, i) { if (!t.ops[m].off) en |= 16 << i; });
+      w.c(en | 4);
+      w.c(((t.alg & 7) << 4) | (t.fb & 7));
+      w.c(((t.ams & 3) << 3) | (t.fms & 7));
+      w.c(0x20); w.c(0);
+      [0, 2, 1, 3].forEach(function (m) {
+        var o = t.ops[m];
+        w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
+        w.c(o.tl & 127);
+        w.c(((o.ks & 3) << 6) | (o.ar & 31));
+        w.c((o.am ? 128 : 0) | (o.d1r & 31));
+        w.c((2 << 5) | (o.d2r & 31));
+        w.c(((o.sl & 15) << 4) | (o.rr & 15));
+        w.c((o.ssg || 0) & 15);
+        w.c(((o.dt2 || 0) & 3) << 3);
+      });
+      patchS(w, a);
+    } else {
+      var type = { sn: 0, gb: 2, ay: 6, nes: 34 }[t.chipKind] || 0;
+      w.c(type); w.c(0);
+      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
+      var vols = (t.env || [1]).slice(0, 255).map(function (x) { return Math.max(0, Math.min(15, Math.round(x * 15))); });
+      var mac = [[0, vols]];
+      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb')) {
+        var d = (t.duty || []).slice(0, 255).map(function (x) { return x < 0 ? 2 : x & 3; });
+        if (d.length) mac.push([2, d]);
+      }
+      if (t.wave === 'noise' && (t.chipKind === 'sn' || t.chipKind === 'nes')) mac.push([2, [t.nmode === 'periodic' ? (t.chipKind === 'sn' ? 0 : 1) : (t.chipKind === 'sn' ? 1 : 0)]]);
+      w.tag('MA'); a = w.n; w.s(0); w.s(8);
+      mac.forEach(function (m) {
+        w.c(m[0]); w.c(m[1].length); w.c(255); w.c(255); w.c(0); w.c(0); w.c(0); w.c(1);
+        m[1].forEach(function (v) { w.c(v); });
+      });
+      w.c(255);
+      patchS(w, a);
+    }
+    w.tag('EN');
+    return w.out();
+  }
+  // lê um .fui (ou o INS2 de dentro de um .fur) e devolve o timbre FM no formato do Chiptune Studio
+  function readFui(u8) {
+    var p = 0, dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    function tag() { return String.fromCharCode(u8[p], u8[p + 1]); }
+    var magic = String.fromCharCode(u8[0], u8[1], u8[2], u8[3]);
+    if (magic !== 'FINS') throw new Error('not a Furnace instrument (.fui)');
+    p = 4; var ver = dv.getUint16(p, true); p += 2; var type = u8[p]; p += 2;
+    var t = null, name = '';
+    while (p + 4 <= u8.length) {
+      var tg = tag(); p += 2; if (tg === 'EN') break;
+      var len = dv.getUint16(p, true); p += 2; var end = p + len;
+      if (tg === 'NA') { var q = p; while (q < end && u8[q]) q++; name = new TextDecoder().decode(u8.subarray(p, q)); }
+      else if (tg === 'FM') {
+        var en = u8[p], cnt = en & 15, x = u8[p + 1];
+        t = { type: 'fm', fmKind: type === 33 ? 'opm' : 'opn', alg: (x >> 4) & 7, fb: x & 7, ams: (u8[p + 2] >> 3) & 3, fms: u8[p + 2] & 7, lfo: -1, opmLfo: null, tune: 0, ops: [] };
+        var o = p + 4 + (ver >= 224 ? 1 : 0), F = [];
+        for (var i = 0; i < 4; i++) {
+          var b = i < cnt ? u8.subarray(o + i * 8, o + i * 8 + 8) : new Uint8Array(8);
+          F.push({ dt: DT_INV[(b[0] >> 4) & 7], mul: b[0] & 15, tl: b[1] & 127, ks: (b[2] >> 6) & 3, ar: b[2] & 31, am: (b[3] >> 7) & 1, d1r: b[3] & 31,
+                   d2r: b[4] & 31, sl: (b[5] >> 4) & 15, rr: b[5] & 15, ssg: b[6] & 15, dt2: (b[7] >> 3) & 3, off: !(en & (16 << i)) });
+        }
+        t.ops = [F[0], F[2], F[1], F[3]];
+      }
+      p = end;
+    }
+    if (!t) throw new Error('only FM instruments can be opened for now');
+    t.name = name;
+    return t;
+  }
+  root.RGFUR = { build: build, fileName: fileName, fui: fui, readFui: readFui };
 })(typeof window !== 'undefined' ? window : typeof self !== 'undefined' ? self : this);
 
 </script>
@@ -2262,20 +2429,25 @@ var RGMIDI = (function () {
       synth.connect(ctx.destination);
       send({ t: 'vol', v: +$('kVol').value });
       send({ t: 'hold', on: $('hold').checked });
-      if (cur.timbre) send({ t: 'patch', p: cur.timbre });
+      if (cur.timbre) sendPatch(cur.timbre);
     }).catch(function (e) { console.error(e); toast(T('Este navegador não conseguiu iniciar o sintetizador.','This browser could not start the synthesizer.')); });
     return synthReady;
   }
   function send(m) { if (synth) synth.port.postMessage(m); }
   function wake() { initAudio(); if (ctx && ctx.state !== 'running') ctx.resume(); }
-  $('gateBtn').onclick = function () { $('gate').style.display = 'none'; wake(); };
+  // sem tela de "ativar o som": aberto pelo blog, o clique no botão do gadget já libera o áudio;
+  // aberto direto, o primeiro toque ou tecla em qualquer lugar liga o som
+  wake();
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, function () { if (!ctx || ctx.state !== 'running') wake(); }, true);
+  });
   ['pointerdown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { if (ctx && ctx.state !== 'running') ctx.resume(); }, true); });
 
   // ───────────────────── notas (todas as fontes) ─────────────────────
   var down = {};
   function noteOn(n, v) {
     if (n < 0 || n > 127) return;
-    if (!ctx) wake();
+    if (!ctx || ctx.state !== 'running') wake();
     if (!cur.timbre) { if (!noteOn.warned) { toast(T('Escolha um timbre primeiro','Pick a sound first')); noteOn.warned = true; } }
     down[n] = (down[n] || 0) + 1;
     send({ t: 'on', n: n, v: v || 100 });
@@ -2376,7 +2548,7 @@ var RGMIDI = (function () {
   var ptr = {};
   function keyAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.dataset && el.dataset.n != null && el.closest('#kb') ? +el.dataset.n : -1; }
   $('kb').addEventListener('pointerdown', function (e) {
-    e.preventDefault(); wake(); $('gate').style.display = 'none';
+    e.preventDefault(); wake();
     try { this.setPointerCapture(e.pointerId); } catch (x) {}
     var n = keyAt(e.clientX, e.clientY); if (n < 0) return;
     ptr[e.pointerId] = n; noteOn(n, 100);
@@ -2451,6 +2623,8 @@ var RGMIDI = (function () {
     $('list').innerHTML = html;
   }
   function openLocalFiles(files) {
+    var fuis = Array.prototype.filter.call(files, function (f) { return /\.fui$/i.test(f.name); });
+    if (fuis.length) { openFui(fuis); if (fuis.length === files.length) return; }
     var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name); });
     if (!list.length) { toast(T('O Chiptune Studio abre arquivos .vgm e .vgz.','Chiptune Studio opens .vgm and .vgz files.')); return; }
     var first = null;
@@ -2645,6 +2819,7 @@ var RGMIDI = (function () {
   function selectSong(path, name) {
     if (cur.path === path) { mtab('timbres'); return; }
     stopMusic();
+    if (ED.k >= 0 && ED.k < MINE0) { ED.k = -1; ED.t = null; $('stage').classList.remove('editing'); $('ed').hidden = true; }
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1;
     renderList();
     $('songHead').style.display = '';
@@ -2699,8 +2874,8 @@ var RGMIDI = (function () {
       groups[chip].forEach(function (k) { html += card(res.timbres[k], k); });
       html += '</div>';
     });
-    $('timbres').innerHTML = html;
-    $('timbres').querySelectorAll('canvas.viz').forEach(function (cv) { drawViz(cv, res.timbres[+cv.dataset.k]); });
+    $('timbres').innerHTML = mineHtml() + html;
+    $('timbres').querySelectorAll('canvas.viz').forEach(function (cv) { drawViz(cv, tb(+cv.dataset.k)); });
     pickTimbre(groups[order[0]][0], true);
     $('timbres').scrollTop = 0;
   }
@@ -2711,11 +2886,11 @@ var RGMIDI = (function () {
       var dd = t.duty.filter(function (x) { return x >= 0; });
       if (dd.length) typ += ' ' + ['12,5%', '25%', '50%', '75%'][dd[0]];
     }
-    var info = T('Canais: ','Channels: ') + esc(t.chanList.map(LBL).join(', ')) + '<br>' + t.count + T(' nota',' note') + (t.count === 1 ? '' : 's') + (r ? ' · ' + nn(r[0]) + (r[1] !== r[0] ? '–' + nn(r[1]) : '') : '');
+    var info = t.mine ? T('Criado por você · baixe em .fui para guardar','Made by you · download as .fui to keep') : T('Canais: ','Channels: ') + esc(t.chanList.map(LBL).join(', ')) + '<br>' + t.count + T(' nota',' note') + (t.count === 1 ? '' : 's') + (r ? ' · ' + nn(r[0]) + (r[1] !== r[0] ? '–' + nn(r[1]) : '') : '');
     return '<div class="card' + (k === cur.sel ? ' on' : '') + '" data-k="' + k + '" role="button" tabindex="0">' +
-      '<div class="hd"><span class="num">' + t.n + '</span><span class="role">' + esc(ROLE(t.role)) + '</span><span class="typ">' + esc(typ) + '</span></div>' +
+      '<div class="hd"><span class="num">' + t.n + '</span><span class="role">' + esc(t.name || ROLE(t.role)) + (isEdited(t) ? '<span class="edited">' + T('EDITADO','EDITED') + '</span>' : '') + '</span><span class="typ">' + esc(typ) + '</span></div>' +
       '<div class="info">' + info + '</div><canvas class="viz" data-k="' + k + '" width="300" height="52"></canvas>' +
-      '<button class="play" data-prev="' + k + '" title="' + T('Ouvir','Listen') + '">▶</button></div>';
+      '<button class="edit" data-edit="' + k + '" title="' + T('Editar timbre','Edit sound') + '">✎</button><button class="play" data-prev="' + k + '" title="' + T('Ouvir','Listen') + '">▶</button></div>';
   }
   // desenho do envelope (como o volume do timbre se comporta)
   function drawViz(cv, t) {
@@ -2742,13 +2917,13 @@ var RGMIDI = (function () {
     g.strokeStyle = grd; g.lineWidth = 3; g.stroke();
   }
   function pickTimbre(k, silent) {
-    var t = cur.res && cur.res.timbres[k]; if (!t) return;
+    var t = tb(k); if (!t) return;
     cur.sel = k; cur.timbre = t;
     $('timbres').querySelectorAll('.card').forEach(function (c) { c.classList.toggle('on', +c.dataset.k === k); });
-    $('curT').textContent = t.chip + ' · ' + t.n + ' (' + ROLE(t.role) + ')';
-    send({ t: 'patch', p: t });
+    $('curT').textContent = t.name || (t.chip + ' · ' + t.n + ' (' + ROLE(t.role) + ')');
+    sendPatch(t);
     buildKb(); markMine();
-    if (!silent) toast(T('Timbre ','Sound ') + t.n + ' (' + ROLE(t.role) + ')' + T(' pronto para tocar',' ready to play'));
+    if (!silent) toast(T('Timbre ','Sound ') + (t.name || t.n + ' (' + ROLE(t.role) + ')') + T(' pronto para tocar',' ready to play'));
   }
   var prevT = [];
   function preview(k) {
@@ -2769,8 +2944,344 @@ var RGMIDI = (function () {
   }
   $('timbres').addEventListener('click', function (e) {
     var p = e.target.closest('[data-prev]'); if (p) { e.stopPropagation(); preview(+p.dataset.prev); return; }
+    var ee = e.target.closest('[data-edit]'); if (ee) { e.stopPropagation(); openEd(+ee.dataset.edit); return; }
     var c = e.target.closest('.card'); if (c) { wake(); pickTimbre(+c.dataset.k); }
   });
+
+  // ───────────────────── editor de timbres ─────────────────────
+  // Edita o timbre na hora (as notas que estão soando mudam junto). Nada fica guardado no navegador:
+  // para guardar, baixa como instrumento do Furnace (.fui), que também abre aqui de volta.
+  var MINE0 = 10000, mine = [], ED = { k: -1, t: null };
+  function tb(k) { return k >= MINE0 ? mine[k - MINE0] : (cur.res && cur.res.timbres[k]); }
+  function plain(t) { var o = {}; Object.keys(t).forEach(function (k) { if (k !== '_orig') o[k] = t[k]; }); return o; }
+  function cloneT(t) { return JSON.parse(JSON.stringify(plain(t))); }
+  function sendPatch(t, live) { send({ t: 'patch', p: plain(t), live: !!live }); }
+  var EDKEYS = ['alg', 'fb', 'ams', 'fms', 'lfo', 'opmLfo', 'ops', 'tune', 'wave', 'env', 'duty', 'tbl', 'nmode', 'name'];
+  function isEdited(t) {
+    if (!t._orig) return false;
+    return EDKEYS.some(function (k) { return JSON.stringify(t[k]) !== JSON.stringify(t._orig[k]); });
+  }
+  function tName(t) { return t.name || (t.n + ' · ' + ROLE(t.role)); }
+
+  function newOp(o) { return Object.assign({ dt: 0, mul: 1, tl: 0, ks: 0, ar: 31, am: 0, d1r: 0, d2r: 0, sl: 0, rr: 7, ssg: 0, dt2: 0 }, o); }
+  function newTimbre(kind) {
+    var n = mine.length + 1, t;
+    if (kind === 'opn' || kind === 'opm') {
+      var clock = kind === 'opm' ? 3579545 : 7670453;
+      t = { type: 'fm', fmKind: kind, clock: clock, rate: clock / (kind === 'opm' ? 64 : 144), alg: 4, fb: 4, ams: 0, fms: 0, lfo: -1, opmLfo: null, tune: 0,
+        ops: [newOp({ tl: 34, d1r: 10, sl: 4, ks: 1 }), newOp({ d1r: 6, d2r: 2, sl: 3 }), newOp({ tl: 44, mul: 3, d1r: 12, sl: 5, dt: 3, ks: 1 }), newOp({ tl: 6, mul: 2, d1r: 5, d2r: 2, sl: 3, dt: 7 })],
+        chip: kind === 'opm' ? 'YM2151' : 'YM2612' };
+    } else {
+      t = { type: 'psg', chipKind: kind, wave: 'pulse', nmode: '', tbl: null, tune: 0,
+        env: [1, 1, 0.93, 0.87, 0.8, 0.73, 0.67, 0.67], duty: kind === 'sn' ? [-1] : [2],
+        chip: { nes: 'NES APU', gb: 'Game Boy', sn: 'SN76489', ay: 'AY-3-8910' }[kind] };
+    }
+    t.n = 'M' + n; t.role = ''; t.name = T('Meu timbre ', 'My sound ') + n;
+    t.notes = []; t.chans = {}; t.chanList = []; t.count = 0; t.lo = 999; t.hi = -999; t.mine = true;
+    return t;
+  }
+  function addMine(t) { mine.push(t); refreshTimbres(); return MINE0 + mine.length - 1; }
+
+  // lista de timbres (da música e/ou os seus)
+  function mineHtml() {
+    if (!mine.length) return '';
+    var h = '<div class="chiph">' + T('Meus timbres', 'My sounds') + ' · ' + mine.length + '</div><div class="grid">';
+    mine.forEach(function (t, i) { h += card(t, MINE0 + i); });
+    return h + '</div>';
+  }
+  function refreshTimbres() {
+    var st = $('timbres').scrollTop;
+    if (cur.res) { var sel = cur.sel; renderSong(); if (sel >= 0 && tb(sel)) pickTimbre(sel, true); }
+    else if (mine.length) {
+      $('timbres').innerHTML = mineHtml();
+      $('timbres').querySelectorAll('canvas.viz').forEach(function (cv) { drawViz(cv, tb(+cv.dataset.k)); });
+      if (!(cur.sel >= MINE0 && tb(cur.sel))) pickTimbre(MINE0, true); else pickTimbre(cur.sel, true);
+    }
+    $('timbres').scrollTop = st;
+  }
+
+  // ── abrir / fechar ──
+  function openEd(k) {
+    var t = tb(k); if (!t) return;
+    if (cur.sel !== k) pickTimbre(k, true);
+    if (!t._orig) t._orig = cloneT(t);
+    ED.k = k; ED.t = t;
+    $('stage').classList.add('editing'); $('ed').hidden = false;
+    if (document.documentElement.classList.contains('mob')) mtab('timbres');
+    renderEd(); wake();
+  }
+  function closeEd() {
+    ED.k = -1; ED.t = null;
+    $('stage').classList.remove('editing'); $('ed').hidden = true;
+    refreshTimbres();
+  }
+
+  // ── desenhos ──
+  var ALG = [ // posição de cada operador (coluna, linha) e quem modula quem
+    { p: [[0, 1], [1, 1], [2, 1], [3, 1]], e: [[0, 1], [1, 2], [2, 3]] },
+    { p: [[0, 0.5], [0, 1.5], [1, 1], [2, 1]], e: [[0, 2], [1, 2], [2, 3]] },
+    { p: [[1, 0.5], [0, 1.5], [1, 1.5], [2, 1]], e: [[0, 3], [1, 2], [2, 3]] },
+    { p: [[0, 0.5], [1, 0.5], [1, 1.5], [2, 1]], e: [[0, 1], [1, 3], [2, 3]] },
+    { p: [[0, 0.5], [1, 0.5], [0, 1.5], [1, 1.5]], e: [[0, 1], [2, 3]] },
+    { p: [[0, 1], [1, 0.3], [1, 1], [1, 1.7]], e: [[0, 1], [0, 2], [0, 3]] },
+    { p: [[0, 0.3], [1, 0.3], [1, 1], [1, 1.7]], e: [[0, 1]] },
+    { p: [[0, 1], [1, 1], [2, 1], [3, 1]], e: [] }];
+  function algSvg(a) {
+    var L = ALG[a], car = RGVGM.CARRIERS[a], cols = 1 + Math.max.apply(null, L.p.map(function (p) { return p[0]; }));
+    var W = 120, H = 46, bw = 18, bh = 11, gx = Math.min(30, (W - 16) / cols), x0 = (W - (cols - 1) * gx - bw) / 2;
+    function X(i) { return x0 + L.p[i][0] * gx; } function Y(i) { return 4 + L.p[i][1] * 13; }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '">';
+    L.e.forEach(function (e) { s += '<path d="M' + (X(e[0]) + bw) + ' ' + (Y(e[0]) + bh / 2) + 'L' + X(e[1]) + ' ' + (Y(e[1]) + bh / 2) + '" stroke="#6f6699" stroke-width="1.2" fill="none"/>'; });
+    var by = H - 3; car.forEach(function (c) { s += '<path d="M' + (X(c) + bw / 2) + ' ' + (Y(c) + bh) + 'V' + by + '" stroke="#c084fc" stroke-width="1.2"/>'; });
+    if (car.length > 1) s += '<path d="M' + (Math.min.apply(null, car.map(X)) + bw / 2) + ' ' + by + 'H' + (Math.max.apply(null, car.map(X)) + bw / 2) + '" stroke="#c084fc" stroke-width="1.2"/>';
+    s += '<path d="M' + (X(0) + bw) + ' ' + (Y(0) + 3) + 'h3v-5h' + (-bw - 6) + 'v5h3" stroke="#6f6699" fill="none" stroke-width="1"/>';
+    for (var i = 0; i < 4; i++) {
+      var c = car.indexOf(i) >= 0;
+      s += '<rect x="' + X(i) + '" y="' + Y(i) + '" width="' + bw + '" height="' + bh + '" rx="2.5" fill="' + (c ? '#a855f7' : '#2c2547') + '" stroke="' + (c ? '#c084fc' : '#6f6699') + '"/>' +
+        '<text x="' + (X(i) + bw / 2) + '" y="' + (Y(i) + 8.3) + '" font-size="8" text-anchor="middle" fill="#fff" font-family="Oxanium,sans-serif">' + (i + 1) + '</text>';
+    }
+    return s + '</svg>';
+  }
+  function drawOpEnv(cv, op) {
+    var g = cv.getContext('2d'), W = cv.width = cv.clientWidth * 2 || 240, H = cv.height = 80;
+    g.clearRect(0, 0, W, H);
+    // tempo aproximado de cada fase a partir das taxas do chip (só para ver a forma)
+    function tm(rate, full) { return rate <= 0 ? 9 : full / Math.pow(2, rate / 4); }
+    var a = op.ar >= 31 ? 0.001 : tm(op.ar * 2, 6), slv = op.sl === 15 ? 0 : Math.pow(10, -(op.sl * 3) / 20);
+    var d1 = tm(op.d1r * 2, 40) * (1 - slv), d2 = tm(op.d2r * 2, 60), r = tm(op.rr * 4 + 2, 40);
+    var held = 1.2, tot = a + Math.min(held, d1) + 0.35 + Math.min(r, 1.6), sx = W / tot, lvl = Math.pow(10, -(op.tl * 0.75) / 20);
+    var pts = [[0, 0], [a, 1]], t = a, y = 1;
+    if (d1 < held) { pts.push([a + d1, slv]); t = a + d1; y = slv; var rest = held - d1; y = op.d2r ? Math.max(0, slv * (1 - rest / Math.max(0.05, d2))) : slv; t = a + held; pts.push([t, y]); }
+    else { y = 1 - (1 - slv) * (held / d1); t = a + held; pts.push([t, y]); }
+    pts.push([t + Math.min(r, 1.6), 0]);
+    g.beginPath(); g.moveTo(0, H);
+    pts.forEach(function (p) { g.lineTo(p[0] * sx, H - 4 - p[1] * lvl * (H - 10)); });
+    g.lineTo(W, H); g.closePath(); g.fillStyle = op.off ? 'rgba(111,102,153,.15)' : 'rgba(168,85,247,.2)'; g.fill();
+    g.beginPath(); pts.forEach(function (p, i) { var x = p[0] * sx, yy = H - 4 - p[1] * lvl * (H - 10); if (i) g.lineTo(x, yy); else g.moveTo(x, yy); });
+    g.strokeStyle = op.off ? '#6f6699' : '#c084fc'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = '#3d3363'; g.fillRect((a + held) * sx, 0, 2, H);   // onde a tecla é solta
+  }
+
+  // ── barras desenháveis (envelope, duty, wavetable) ──
+  function bars(cv, arr, max, labels) {
+    var g = cv.getContext('2d'), W = cv.width = cv.clientWidth * 2 || 600, H = cv.height = cv.clientHeight * 2 || 240;
+    g.clearRect(0, 0, W, H);
+    var n = arr.length, bw = W / n;
+    g.strokeStyle = '#1b1730'; g.lineWidth = 1;
+    for (var l = 1; l < max; l++) { var yy = H - l / max * H; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); }
+    arr.forEach(function (v, i) {
+      var h = (v / max) * (H - 4);
+      g.fillStyle = '#a855f7'; g.fillRect(i * bw + 1, H - h, Math.max(1, bw - 2), h);
+      g.fillStyle = '#c084fc'; g.fillRect(i * bw + 1, H - h, Math.max(1, bw - 2), Math.min(4, h));
+    });
+    if (labels) { g.fillStyle = '#6f6699'; g.font = '18px Oxanium,sans-serif'; labels.forEach(function (t, i) { g.fillText(t, 6, H - (i / max) * (H - 4) - 6); }); }
+  }
+  function barsInput(cv, get, max, done) {
+    var drawing = false, last = -1;
+    function at(e) {
+      var r = cv.getBoundingClientRect(), arr = get(), n = arr.length;
+      var i = Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left) / r.width * n)));
+      var v = Math.max(0, Math.min(max, Math.round((1 - (e.clientY - r.top) / r.height) * max)));
+      // ao arrastar rápido, preenche as colunas puladas
+      if (last >= 0 && Math.abs(i - last) > 1) { var s = i > last ? 1 : -1; for (var j = last + s; j !== i; j += s) arr[j] = v; }
+      arr[i] = v; last = i; done(false);
+    }
+    cv.addEventListener('pointerdown', function (e) { drawing = true; last = -1; cv.setPointerCapture(e.pointerId); at(e); });
+    cv.addEventListener('pointermove', function (e) { if (drawing) at(e); });
+    cv.addEventListener('pointerup', function () { drawing = false; done(true); });
+  }
+
+  // ── parâmetros ──
+  var TIPS = {
+    ar: ['Ataque: quão rápido o som chega no volume máximo (31 = instantâneo)', 'Attack: how fast the sound reaches full volume (31 = instant)'],
+    d1r: ['Queda: velocidade da queda depois do ataque até o nível SL', 'Decay: how fast it falls after the attack, down to the SL level'],
+    sl: ['Nível de sustentação: até onde a queda vai (0 = não cai, 15 = cai tudo)', 'Sustain level: how far the decay goes (0 = no drop, 15 = all the way)'],
+    d2r: ['Queda 2: o som continua caindo enquanto a tecla está apertada (0 = segura)', 'Decay 2: keeps fading while the key is held (0 = holds)'],
+    rr: ['Soltura: quão rápido o som some ao soltar a tecla', 'Release: how fast the sound fades when the key is let go'],
+    tl: ['Volume do operador (TL): quanto maior, mais baixo. Nos moduladores muda o brilho', 'Operator level (TL): higher = quieter. On modulators it changes the brightness'],
+    mul: ['Multiplicador: frequência do operador em relação à nota (0 = metade)', 'Multiplier: operator frequency relative to the note (0 = half)'],
+    dt: ['Desafinação fina do operador (-3 a +3)', 'Fine detune of the operator (-3 to +3)'],
+    dt2: ['Desafinação grossa (só no YM2151)', 'Coarse detune (YM2151 only)'],
+    ks: ['Escala do envelope pela nota: notas agudas ficam mais rápidas', 'Envelope key scaling: higher notes get faster envelopes'],
+    am: ['Modulação de amplitude pelo LFO (tremolo neste operador)', 'Amplitude modulation from the LFO (tremolo on this operator)'],
+    fb: ['Realimentação do operador 1: deixa o som mais áspero', 'Operator 1 feedback: makes the sound rougher'],
+    ams: ['Intensidade do tremolo do LFO', 'LFO tremolo depth'],
+    fms: ['Intensidade do vibrato do LFO', 'LFO vibrato depth'],
+    lfo: ['Velocidade do LFO do chip (desligado = sem tremolo/vibrato)', 'Chip LFO speed (off = no tremolo/vibrato)'],
+    tune: ['Transpor o teclado (semitons)', 'Transpose the keyboard (semitones)']
+  };
+  function tip(k) { var x = TIPS[k]; return x ? esc(T(x[0], x[1])) : ''; }
+  function prm(path, lbl, min, max, val, key, disp) {
+    return '<div class="prm"><label title="' + tip(key) + '">' + lbl + '</label><input type="range" data-p="' + path + '" min="' + min + '" max="' + max + '" step="1" value="' + val + '"><output>' + (disp != null ? disp : val) + '</output></div>';
+  }
+  function dtShow(raw) { var m = raw & 3; return (raw & 4) && m ? -m : m; }
+  function dtRaw(v) { return v < 0 ? (4 | -v) : v; }
+
+  function renderEd() {
+    var t = ED.t, h = '';
+    h += '<div class="edhd"><button class="btn sm" id="edBack">← ' + T('Timbres', 'Sounds') + '</button>' +
+      '<input class="nm" id="edName" maxlength="40" value="' + esc(tName(t)) + '" title="' + T('Nome do timbre (vai junto no .fui)', 'Sound name (saved in the .fui)') + '">' +
+      '<span class="chip">' + esc(t.type === 'fm' ? (t.fmKind === 'opm' ? 'YM2151 · OPM' : (t.chip || 'YM2612') + ' · OPN') : t.chip) + '</span>' +
+      (t.mine ? '' : '<button class="btn sm" id="edRevert" title="' + T('Voltar ao timbre original da música', 'Back to the song\'s original sound') + '">↺ ' + T('Original', 'Original') + '</button>') +
+      '<button class="btn sm" id="edDup" title="' + T('Fazer uma cópia em Meus timbres', 'Make a copy in My sounds') + '">⧉ ' + T('Duplicar', 'Duplicate') + '</button>' +
+      '<button class="btn sm pri" id="edSave" title="' + T('Baixar como instrumento do Furnace (abre no Tracker, no Furnace do computador e aqui de volta)', 'Download as a Furnace instrument (opens in the Tracker, desktop Furnace and back here)') + '">⬇ .fui</button></div>';
+    if (t.type === 'fm') {
+      var opm = t.fmKind === 'opm';
+      h += '<div class="edglob"><div class="edsec"><h3>' + T('Algoritmo', 'Algorithm') + '<span class="x">' + T('roxo = sai som (portadora)', 'purple = makes sound (carrier)') + '</span></h3><div class="algs">';
+      for (var a = 0; a < 8; a++) h += '<button data-alg="' + a + '" class="' + (t.alg === a ? 'on' : '') + '"><b>' + a + '</b>' + algSvg(a) + '</button>';
+      h += '</div></div><div class="edsec"><h3>' + T('Geral', 'Global') + '</h3>' +
+        prm('fb', 'FB', 0, 7, t.fb, 'fb') +
+        (opm ? prm('opmLfo.frq', 'LFO', 0, 255, t.opmLfo ? t.opmLfo.frq : 0, 'lfo') + prm('opmLfo.amd', 'AMD', 0, 127, t.opmLfo ? t.opmLfo.amd : 0, 'ams') + prm('opmLfo.pmd', 'PMD', 0, 127, t.opmLfo ? t.opmLfo.pmd : 0, 'fms')
+             : prm('lfo', 'LFO', -1, 7, t.lfo == null ? -1 : t.lfo, 'lfo', (t.lfo == null || t.lfo < 0) ? T('não', 'off') : t.lfo)) +
+        prm('ams', 'AMS', 0, 3, t.ams, 'ams') + prm('fms', 'FMS', 0, 7, t.fms, 'fms') +
+        prm('tune', T('TOM', 'KEY'), -24, 24, Math.round(t.tune || 0), 'tune') +
+        '</div></div><div class="ops">';
+      var car = RGVGM.CARRIERS[t.alg];
+      t.ops.forEach(function (o, i) {
+        var c = car.indexOf(i) >= 0;
+        h += '<div class="op' + (c ? ' car' : '') + (o.off ? ' off' : '') + '" data-op="' + i + '"><div class="oh"><b>OP' + (i + 1) + '</b><span>' + (c ? T('portadora', 'carrier') : T('modulador', 'modulator')) + '</span>' +
+          '<button class="tgop' + (o.off ? '' : ' on') + '" data-tog="' + i + '" title="' + T('Liga/desliga este operador', 'Turn this operator on/off') + '">' + (o.off ? T('desl.', 'off') : T('lig.', 'on')) + '</button></div>' +
+          '<canvas class="openv" data-k="' + i + '"></canvas>' +
+          prm('ops.' + i + '.ar', 'AR', 0, 31, o.ar, 'ar') + prm('ops.' + i + '.d1r', 'DR', 0, 31, o.d1r, 'd1r') + prm('ops.' + i + '.sl', 'SL', 0, 15, o.sl, 'sl') +
+          prm('ops.' + i + '.d2r', 'SR', 0, 31, o.d2r, 'd2r') + prm('ops.' + i + '.rr', 'RR', 0, 15, o.rr, 'rr') + prm('ops.' + i + '.tl', 'TL', 0, 127, o.tl, 'tl') +
+          prm('ops.' + i + '.mul', 'MULT', 0, 15, o.mul, 'mul') + prm('ops.' + i + '.dt', 'DT', -3, 3, dtShow(o.dt), 'dt') +
+          (opm ? prm('ops.' + i + '.dt2', 'DT2', 0, 3, o.dt2 || 0, 'dt2') : '') +
+          prm('ops.' + i + '.ks', 'RS', 0, 3, o.ks, 'ks') +
+          '<div class="prm tg"><label title="' + tip('am') + '">AM</label><span class="sw" data-am="' + i + '"><button class="' + (o.am ? '' : 'on') + '" data-v="0">' + T('não', 'off') + '</button><button class="' + (o.am ? 'on' : '') + '" data-v="1">' + T('sim', 'on') + '</button></span></div>' +
+          '</div>';
+      });
+      h += '</div><div class="edhint">' + T('Dica: passe o mouse nos nomes (AR, DR, TL…) para ver o que cada um faz. Toque no teclado enquanto mexe: o som muda na hora.', 'Tip: hover the names (AR, DR, TL…) to see what each one does. Play the keyboard while you tweak: the sound changes right away.') + '</div>';
+    } else {
+      var waves = { nes: ['pulse', 'tri', 'noise'], gb: ['pulse', 'wave', 'noise'], sn: ['pulse', 'noise'], ay: ['pulse', 'noise'] }[t.chipKind] || ['pulse', 'noise'];
+      var WN = { pulse: T('Pulso', 'Pulse'), tri: T('Triângulo', 'Triangle'), wave: T('Onda (wavetable)', 'Wave (wavetable)'), noise: T('Ruído', 'Noise') };
+      h += '<div class="edsec"><h3>' + T('Forma de onda', 'Waveform') + '</h3><div class="edrow"><span class="sw" id="edWave">' +
+        waves.map(function (w) { return '<button data-v="' + w + '" class="' + (t.wave === w ? 'on' : '') + '">' + WN[w] + '</button>'; }).join('') + '</span>' +
+        (t.wave === 'noise' ? '<label>' + T('Tipo', 'Type') + ' <select id="edNoise"><option value="white"' + (t.nmode !== 'periodic' ? ' selected' : '') + '>' + T('branco', 'white') + '</option><option value="periodic"' + (t.nmode === 'periodic' ? ' selected' : '') + '>' + T('periódico (metálico)', 'periodic (metallic)') + '</option></select></label>' : '') +
+        '<div style="flex:1;min-width:160px">' + prm('tune', T('TOM', 'KEY'), -24, 24, Math.round(t.tune || 0), 'tune') + '</div></div></div>';
+      h += '<div class="edsec"><h3>' + T('Volume ao longo da nota', 'Volume over the note') + '<span class="x">' + T('desenhe com o mouse ou o dedo · 60 passos por segundo', 'draw with the mouse or your finger · 60 steps per second') + '</span></h3>' +
+        '<canvas class="bars" id="edEnv"></canvas>' + prm('envLen', T('PASSOS', 'STEPS'), 1, 90, t.env.length, null) +
+        '<div class="edhint">' + T('O último passo fica valendo enquanto a tecla estiver apertada.', 'The last step holds while the key is down.') + '</div></div>';
+      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb'))
+        h += '<div class="edsec"><h3>' + T('Largura do pulso (duty)', 'Pulse width (duty)') + '<span class="x">12,5% · 25% · 50% · 75%</span></h3><canvas class="bars sm" id="edDuty"></canvas>' + prm('dutyLen', T('PASSOS', 'STEPS'), 1, 90, t.duty.length, null) + '</div>';
+      if (t.wave === 'wave')
+        h += '<div class="edsec"><h3>' + T('Formato da onda (32 pontos)', 'Wave shape (32 points)') + '</h3><canvas class="bars" id="edTbl"></canvas>' +
+          '<div class="edrow" style="margin-top:8px"><button class="btn sm" data-tblp="sin">∿ ' + T('Seno', 'Sine') + '</button><button class="btn sm" data-tblp="tri">△ ' + T('Triângulo', 'Triangle') + '</button><button class="btn sm" data-tblp="saw">◿ ' + T('Dente de serra', 'Saw') + '</button><button class="btn sm" data-tblp="sq">⊓ ' + T('Quadrada', 'Square') + '</button></div></div>';
+    }
+    $('ed').innerHTML = h;
+    bindEd();
+  }
+  function setPath(t, path, v) {
+    var ks = path.split('.'), o = t;
+    for (var i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null) o[ks[i]] = ks[i] === 'opmLfo' ? { frq: 0, amd: 0, pmd: 0 } : {}; o = o[ks[i]]; }
+    o[ks[ks.length - 1]] = v;
+  }
+  function edChanged(redraw) {
+    sendPatch(ED.t, true);
+    if (redraw) renderEd();
+  }
+  function bindEd() {
+    var t = ED.t, ed = $('ed');
+    ed.querySelectorAll('canvas.openv').forEach(function (cv) { drawOpEnv(cv, t.ops[+cv.dataset.k]); });
+    ed.querySelectorAll('input[type=range][data-p]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var p = inp.dataset.p, v = +inp.value, out = inp.nextElementSibling;
+        if (p === 'envLen' || p === 'dutyLen') {
+          var arr = p === 'envLen' ? t.env : t.duty, last = arr.length ? arr[arr.length - 1] : (p === 'envLen' ? 1 : 2);
+          while (arr.length < v) arr.push(last); arr.length = v;
+          out.textContent = v; drawPSG(); edChanged(false); return;
+        }
+        if (/\.dt$/.test(p)) { out.textContent = v; v = dtRaw(v); }
+        else if (p === 'lfo') out.textContent = v < 0 ? T('não', 'off') : v;
+        else out.textContent = v;
+        setPath(t, p, v);
+        var m = /^ops\.(\d)\./.exec(p); if (m) drawOpEnv(ed.querySelector('canvas.openv[data-k="' + m[1] + '"]'), t.ops[+m[1]]);
+        edChanged(false);
+      });
+    });
+    function on(id, ev, fn) { var el = $(id); if (el) el.addEventListener(ev, fn); }
+    on('edBack', 'click', closeEd);
+    on('edName', 'input', function () { t.name = this.value; $('curT').textContent = t.name; });
+    on('edRevert', 'click', function () {
+      if (!t._orig) return; var o = t._orig;
+      EDKEYS.forEach(function (k) { if (k in o) t[k] = JSON.parse(JSON.stringify(o[k])); else delete t[k]; });
+      edChanged(true); toast(T('Timbre original de volta', 'Original sound restored'));
+    });
+    on('edDup', 'click', function () {
+      var c = cloneT(t); c.mine = true; c.n = 'M' + (mine.length + 1); c.name = tName(t) + T(' (cópia)', ' (copy)');
+      c.notes = []; c.chans = {}; c.chanList = []; c.count = 0; c.lo = 999; c.hi = -999;
+      var k = addMine(c); openEd(k); toast(T('Cópia criada em Meus timbres', 'Copy created in My sounds'));
+    });
+    on('edSave', 'click', function () {
+      var nm = tName(t), b = RGFUR.fui(t, nm);
+      var url = URL.createObjectURL(new Blob([b], { type: 'application/octet-stream' }));
+      var a = document.createElement('a'); a.href = url; a.download = nm.replace(/[\\/:*?"<>|]+/g, '_') + '.fui'; document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
+      toast(T('⬇ Baixado: ', '⬇ Downloaded: ') + a.download);
+    });
+    ed.querySelectorAll('[data-alg]').forEach(function (b) { b.onclick = function () { t.alg = +b.dataset.alg; edChanged(true); }; });
+    ed.querySelectorAll('[data-tog]').forEach(function (b) { b.onclick = function () { var o = t.ops[+b.dataset.tog]; o.off = !o.off; edChanged(true); }; });
+    ed.querySelectorAll('[data-am]').forEach(function (s) { s.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; t.ops[+s.dataset.am].am = +b.dataset.v; edChanged(true); }; });
+    var wv = $('edWave');
+    if (wv) wv.onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return; t.wave = b.dataset.v;
+      if (t.wave === 'noise' && !t.nmode) t.nmode = 'white';
+      if (t.wave === 'wave' && !t.tbl) t.tbl = tblPreset('tri');
+      edChanged(true);
+    };
+    on('edNoise', 'change', function () { t.nmode = this.value; edChanged(false); });
+    ed.querySelectorAll('[data-tblp]').forEach(function (b) { b.onclick = function () { t.tbl = tblPreset(b.dataset.tblp); drawPSG(); edChanged(false); }; });
+    // barras: o envelope é guardado de 0 a 1; na tela vai de 0 a 15 como no chip
+    var envSteps = null;
+    function envArr() { if (!envSteps || envSteps.length !== t.env.length) envSteps = t.env.map(function (x) { return Math.round(x * 15); }); return envSteps; }
+    if ($('edEnv')) barsInput($('edEnv'), envArr, 15, function () { t.env = envSteps.map(function (x) { return x / 15; }); drawPSG(); edChanged(false); });
+    if ($('edDuty')) barsInput($('edDuty'), function () { t.duty = t.duty.map(function (x) { return x < 0 ? 2 : x; }); return t.duty; }, 3, function () { drawPSG(); edChanged(false); });
+    if ($('edTbl')) barsInput($('edTbl'), function () { return t.tbl; }, 15, function () { drawPSG(); edChanged(false); });
+    function drawPSG() {
+      if ($('edEnv')) bars($('edEnv'), t.env.map(function (x) { return Math.round(x * 15); }), 15);
+      if ($('edDuty')) bars($('edDuty'), t.duty.map(function (x) { return x < 0 ? 2 : x; }), 3);
+      if ($('edTbl')) bars($('edTbl'), t.tbl, 15);
+    }
+    drawPSG();
+  }
+  function tblPreset(k) {
+    var a = [];
+    for (var i = 0; i < 32; i++) {
+      var x = i / 32, v;
+      if (k === 'sin') v = 7.5 + 7.5 * Math.sin(2 * Math.PI * x);
+      else if (k === 'saw') v = 15 * x;
+      else if (k === 'sq') v = x < 0.5 ? 15 : 0;
+      else v = x < 0.5 ? 30 * x : 30 * (1 - x);
+      a.push(Math.max(0, Math.min(15, Math.round(v))));
+    }
+    return a;
+  }
+
+  // ── botões da barra do teclado: editar / novo / abrir .fui ──
+  $('bEdit').onclick = function () {
+    if (cur.sel >= 0 && tb(cur.sel)) openEd(cur.sel);
+    else { var k = addMine(newTimbre('opn')); openEd(k); }
+  };
+  $('bNew').onclick = function () { $('newMenu').classList.toggle('show'); };
+  $('newMenu').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-new]'); if (!b) return;
+    $('newMenu').classList.remove('show');
+    if (b.dataset.new === 'fui') { $('fuiIn').click(); return; }
+    var k = addMine(newTimbre(b.dataset.new)); openEd(k);
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('#newMenu,#bNew')) $('newMenu').classList.remove('show'); });
+  function openFui(files) {
+    Array.prototype.forEach.call(files, function (f) {
+      f.arrayBuffer().then(function (ab) {
+        var t = RGFUR.readFui(new Uint8Array(ab));
+        var base = newTimbre(t.fmKind);
+        ['alg', 'fb', 'ams', 'fms', 'ops', 'fmKind'].forEach(function (k) { base[k] = t[k]; });
+        base.name = t.name || f.name.replace(/\.fui$/i, '');
+        var k = addMine(base); openEd(k);
+        toast(T('Instrumento aberto: ', 'Instrument opened: ') + base.name);
+      }).catch(function (e) { toast(T('Não consegui abrir o .fui: ', 'Could not open the .fui: ') + (e.message || e)); });
+    });
+  }
+  $('fuiIn').onchange = function () { if (this.files.length) openFui(this.files); this.value = ''; };
 
   // ───────────────────── música tocando junto (player do blog) ─────────────────────
   var pf = $('pf'), pReady = false, pLoaded = null, pPlaying = false, pPaused = false, voices = null, mask = [], durMs = 0;
@@ -2795,7 +3306,7 @@ var RGMIDI = (function () {
   });
   function playBtn() { $('bPlay').innerHTML = pPlaying && !pPaused ? T('❚❚ Pausar música','❚❚ Pause song') : T('▶ Tocar música','▶ Play song'); }
   $('bPlay').onclick = function () {
-    wake(); $('gate').style.display = 'none';
+    wake();
     if (!cur.path) return;
     if (pLoaded !== cur.path) {
       pLoaded = cur.path; pPaused = false;
@@ -2909,7 +3420,7 @@ var RGMIDI = (function () {
   rgI18n.on(function (l) {
     langMark(); qPh(); renderList(); playBtn(); modeBtn(); setMidi(midiState);
     if (cur.path && isLocal(cur.path) && !(cur.res && cur.res.info && cur.res.info.game)) $('sGame').textContent = T('Arquivo local', 'Local file');
-    if (cur.res) { var sel = cur.sel, st = $('timbres').scrollTop; renderSong(); if (sel >= 0) pickTimbre(sel, true); $('timbres').scrollTop = st; }
+    refreshTimbres(); if (ED.t) renderEd();
     if (voices) renderChans(); else if (!pLoaded) resetChans();
     if (EMBED) try { window.parent.postMessage({ type: 'rg-lang', lang: l }, '*'); } catch (e) {}
   });

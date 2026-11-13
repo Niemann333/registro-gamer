@@ -1641,5 +1641,83 @@ var RGMIDI = (function () {
     return n.replace(/[\\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120) + '.fur';
   }
 
-  root.RGFUR = { build: build, fileName: fileName };
+  // ---------- instrumento avulso do Furnace (.fui) — usado pelo editor de timbres ----------
+  var DT_INV = [7, 6, 5, 0, 1, 2, 3, 3];  // dt do Furnace (3 = sem desafinação) → nosso (bit 2 = negativo)
+  function fui(t, name) {
+    var w = new Wr();
+    w.tag('FINS'); w.s(228);
+    if (t.type === 'fm') {
+      w.c(t.fmKind === 'opm' ? 33 : 1); w.c(0);
+      w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
+      w.tag('FM'); a = w.n; w.s(0);
+      var en = 0; [0, 2, 1, 3].forEach(function (m, i) { if (!t.ops[m].off) en |= 16 << i; });
+      w.c(en | 4);
+      w.c(((t.alg & 7) << 4) | (t.fb & 7));
+      w.c(((t.ams & 3) << 3) | (t.fms & 7));
+      w.c(0x20); w.c(0);
+      [0, 2, 1, 3].forEach(function (m) {
+        var o = t.ops[m];
+        w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
+        w.c(o.tl & 127);
+        w.c(((o.ks & 3) << 6) | (o.ar & 31));
+        w.c((o.am ? 128 : 0) | (o.d1r & 31));
+        w.c((2 << 5) | (o.d2r & 31));
+        w.c(((o.sl & 15) << 4) | (o.rr & 15));
+        w.c((o.ssg || 0) & 15);
+        w.c(((o.dt2 || 0) & 3) << 3);
+      });
+      patchS(w, a);
+    } else {
+      var type = { sn: 0, gb: 2, ay: 6, nes: 34 }[t.chipKind] || 0;
+      w.c(type); w.c(0);
+      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
+      var vols = (t.env || [1]).slice(0, 255).map(function (x) { return Math.max(0, Math.min(15, Math.round(x * 15))); });
+      var mac = [[0, vols]];
+      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb')) {
+        var d = (t.duty || []).slice(0, 255).map(function (x) { return x < 0 ? 2 : x & 3; });
+        if (d.length) mac.push([2, d]);
+      }
+      if (t.wave === 'noise' && (t.chipKind === 'sn' || t.chipKind === 'nes')) mac.push([2, [t.nmode === 'periodic' ? (t.chipKind === 'sn' ? 0 : 1) : (t.chipKind === 'sn' ? 1 : 0)]]);
+      w.tag('MA'); a = w.n; w.s(0); w.s(8);
+      mac.forEach(function (m) {
+        w.c(m[0]); w.c(m[1].length); w.c(255); w.c(255); w.c(0); w.c(0); w.c(0); w.c(1);
+        m[1].forEach(function (v) { w.c(v); });
+      });
+      w.c(255);
+      patchS(w, a);
+    }
+    w.tag('EN');
+    return w.out();
+  }
+  // lê um .fui (ou o INS2 de dentro de um .fur) e devolve o timbre FM no formato do Chiptune Studio
+  function readFui(u8) {
+    var p = 0, dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    function tag() { return String.fromCharCode(u8[p], u8[p + 1]); }
+    var magic = String.fromCharCode(u8[0], u8[1], u8[2], u8[3]);
+    if (magic !== 'FINS') throw new Error('not a Furnace instrument (.fui)');
+    p = 4; var ver = dv.getUint16(p, true); p += 2; var type = u8[p]; p += 2;
+    var t = null, name = '';
+    while (p + 4 <= u8.length) {
+      var tg = tag(); p += 2; if (tg === 'EN') break;
+      var len = dv.getUint16(p, true); p += 2; var end = p + len;
+      if (tg === 'NA') { var q = p; while (q < end && u8[q]) q++; name = new TextDecoder().decode(u8.subarray(p, q)); }
+      else if (tg === 'FM') {
+        var en = u8[p], cnt = en & 15, x = u8[p + 1];
+        t = { type: 'fm', fmKind: type === 33 ? 'opm' : 'opn', alg: (x >> 4) & 7, fb: x & 7, ams: (u8[p + 2] >> 3) & 3, fms: u8[p + 2] & 7, lfo: -1, opmLfo: null, tune: 0, ops: [] };
+        var o = p + 4 + (ver >= 224 ? 1 : 0), F = [];
+        for (var i = 0; i < 4; i++) {
+          var b = i < cnt ? u8.subarray(o + i * 8, o + i * 8 + 8) : new Uint8Array(8);
+          F.push({ dt: DT_INV[(b[0] >> 4) & 7], mul: b[0] & 15, tl: b[1] & 127, ks: (b[2] >> 6) & 3, ar: b[2] & 31, am: (b[3] >> 7) & 1, d1r: b[3] & 31,
+                   d2r: b[4] & 31, sl: (b[5] >> 4) & 15, rr: b[5] & 15, ssg: b[6] & 15, dt2: (b[7] >> 3) & 3, off: !(en & (16 << i)) });
+        }
+        t.ops = [F[0], F[2], F[1], F[3]];
+      }
+      p = end;
+    }
+    if (!t) throw new Error('only FM instruments can be opened for now');
+    t.name = name;
+    return t;
+  }
+  root.RGFUR = { build: build, fileName: fileName, fui: fui, readFui: readFui };
 })(typeof window !== 'undefined' ? window : typeof self !== 'undefined' ? self : this);
