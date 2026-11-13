@@ -934,6 +934,8 @@ var RGMIDI = (function () {
   // opts: { chans: [ids] (padrão: todos), tempo: true/false }
   function build(res, opts) {
     opts = opts || {};
+    var EN = opts.lang === 'en';
+    var LW = { 'Pulso': 'Pulse', 'Triângulo': 'Triangle', 'Onda': 'Wave', 'Ruído': 'Noise' };
     var M = res.midi; if (!M) throw new Error('sem eventos');
     var want = {}; (opts.chans || M.chans.map(function (c) { return c.id; })).forEach(function (id) { want[id] = 1; });
     var chans = M.chans.filter(function (c) { return want[c.id]; });
@@ -1008,7 +1010,7 @@ var RGMIDI = (function () {
     var title = (res.info && res.info.title) || 'Chiptune';
     var head = [
       { tick: 0, ord: 0, data: meta(0x03, utf8(title)) },
-      { tick: 0, ord: 1, data: meta(0x01, utf8('Convertido de VGM pelo Chiptune Studio - Registro Gamer')) },
+      { tick: 0, ord: 1, data: meta(0x01, utf8(EN ? 'Converted from VGM by Chiptune Studio - Registro Gamer' : 'Convertido de VGM pelo Chiptune Studio - Registro Gamer')) },
       { tick: 0, ord: 2, data: meta(0x51, [(Math.round(60e6 / bpm) >> 16) & 255, (Math.round(60e6 / bpm) >> 8) & 255, Math.round(60e6 / bpm) & 255]) },
       { tick: 0, ord: 3, data: meta(0x58, [4, 2, 24, 8]) }
     ];
@@ -1018,7 +1020,7 @@ var RGMIDI = (function () {
     chans.forEach(function (c) {
       var mc = midiCh[c.id], E = [], ord = 0;
       function add(tk, data) { E.push({ tick: tk, ord: ord++, data: data }); }
-      add(0, meta(0x03, utf8(c.chip + ' ' + c.label)));
+      add(0, meta(0x03, utf8(c.chip + ' ' + (EN ? String(c.label).replace(/Pulso|Triângulo|Onda|Ruído/g, function (w) { return LW[w]; }) : c.label))));
       if (mc !== 9) {
         // alcance do pitch bend = ±12 semitons
         add(0, [0xB0 | mc, 101, 0]); add(0, [0xB0 | mc, 100, 0]); add(0, [0xB0 | mc, 6, 12]); add(0, [0xB0 | mc, 38, 0]);
@@ -1158,7 +1160,7 @@ var RGMIDI = (function () {
       var o = L.names.length;
       L.sys.push({ id: 0x03, n: 4, vol: ym ? 0.5 : 1, pan: 0, fr: ym ? 0.5 : 1 });
       for (var j = 1; j <= 3; j++) { L.map['SN76489 · PSG ' + j] = o + j - 1; L.names.push('PSG ' + j); L.shorts.push('S' + j); L.kind.push('sn'); }
-      L.map['SN76489 · Ruído'] = o + 3; L.names.push('Ruído'); L.shorts.push('NO'); L.kind.push('noise');
+      L.map['SN76489 · Ruído'] = o + 3; L.names.push(tr('Ruído', 'Noise')); L.shorts.push('NO'); L.kind.push('noise');
     }
     L.chans = L.names.length;
     L.missing = outros;
@@ -1244,8 +1246,14 @@ var RGMIDI = (function () {
   }
 
   // ---------- conversão principal ----------
+  // idioma dos nomes gravados no projeto (instrumentos, canais, comentário)
+  var EN = false;
+  function tr(pt, en) { return EN ? en : pt; }
+  var ROLE_EN = { 'Percussão': 'Drums', 'Baixo': 'Bass', 'Melodia': 'Lead', 'Acompanhamento': 'Backing' };
+  function role(r) { return EN ? ROLE_EN[r] || r : r; }
   function build(res, opts) {
     opts = opts || {};
+    EN = opts.lang === 'en';
     if (!res || !res.midi) throw new Error('VGM sem eventos (chame RGVGM.parse com {events:true, pcm:true}).');
     var L = opts.layout || layout(res);
     var hz = res.rateHz === 50 ? 50 : 60;
@@ -1273,7 +1281,7 @@ var RGMIDI = (function () {
       if (e.tb) uses.set(e.tb, (uses.get(e.tb) || 0) + 1);
       if (e.k === 'hit' && smpOf[e.id] == null && res.pcm && res.pcm[e.id]) {
         smpOf[e.id] = smpList.length;
-        smpList.push({ id: e.id, name: 'Bateria ' + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
+        smpList.push({ id: e.id, name: tr('Bateria ', 'Drum ') + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
       }
     });
     if (smpList.length > 160) throw new Error('Samples de bateria demais para um módulo (' + smpList.length + ').');
@@ -1311,9 +1319,9 @@ var RGMIDI = (function () {
       }
       if (target.idx == null) {
         var t = target.tb, name;
-        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + t.role : '');
-        else if (t.wave === 'noise') name = 'Ruído ' + (++nNoise);
-        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + t.role : '');
+        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + role(t.role) : '');
+        else if (t.wave === 'noise') name = tr('Ruído ', 'Noise ') + (++nNoise);
+        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + role(t.role) : '');
         target.idx = insList.length; insList.push({ kind: target.kind, tb: t, name: name });
       }
       g.members.forEach(function (t) { insOf.set(t, target.idx); });
@@ -1586,8 +1594,8 @@ var RGMIDI = (function () {
     for (c = 0; c < L.chans; c++) w.c(0);
     for (c = 0; c < L.chans; c++) w.str(L.names[c]);
     for (c = 0; c < L.chans; c++) w.str(L.shorts[c]);
-    w.str('Convertido de VGM pelo Chiptune Studio (Registro Gamer).' + (info.game ? '\nJogo: ' + info.game : '') +
-      '\nLinha = ' + R + ' quadro(s) a ' + hz + ' Hz.');
+    w.str(tr('Convertido de VGM pelo Chiptune Studio (Registro Gamer).', 'Converted from VGM by Chiptune Studio (Registro Gamer).') + (info.game ? tr('\nJogo: ', '\nGame: ') + info.game : '') +
+      tr('\nLinha = ', '\nRow = ') + R + tr(' quadro(s) a ', ' frame(s) at ') + hz + ' Hz.');
     w.f(1);
     [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 4, 0, 0, 1, 1, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0].forEach(function (v) { w.c(v); });
     w.s(150); w.s(150);

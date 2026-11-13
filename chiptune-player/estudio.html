@@ -18,6 +18,54 @@
   document.documentElement.className = m;
 })();
 </script>
+<script>
+/* Registro Gamer — idioma do blog (PT | EN). O mesmo bloco vai em todos os gadgets: o primeiro que carregar cria. */
+(function(){
+  if(window.rgI18n) return;
+  var K='rgLang',l=null;
+  try{l=localStorage.getItem(K);}catch(e){}
+  try{var q=/[?&]lang=(pt|en)\b/.exec(location.search);if(q) l=q[1];}catch(e){}
+  if(l!=='pt'&&l!=='en') l=/^pt/i.test(navigator.language||'pt')?'pt':'en';
+  // títulos dos gadgets do Blogger (os h2 que o próprio Blogger desenha)
+  var TIT={'Arquivo':'Archive','Filtragem':'Labels','Marcadores':'Labels','Páginas':'Pages','Pesquisar':'Search','Arquivo do blog':'Blog archive'};
+  var I=window.rgI18n={
+    lang:l,
+    t:function(pt,en){return I.lang==='en'&&en!=null?en:pt;},
+    loc:function(){return I.lang==='en'?'en-US':'pt-BR';},
+    set:function(v){
+      if((v!=='pt'&&v!=='en')||v===I.lang) return;
+      I.lang=v;try{localStorage.setItem(K,v);}catch(e){}
+      I.apply();
+      try{window.dispatchEvent(new CustomEvent('rg:lang',{detail:v}));}catch(e){}
+    },
+    on:function(fn){window.addEventListener('rg:lang',function(){fn(I.lang);});},
+    apply:function(root){
+      var en=I.lang==='en',r=root||document;
+      document.documentElement.lang=en?'en':'pt-BR';
+      r.querySelectorAll('[data-en]').forEach(function(el){
+        if(!el.hasAttribute('data-pt')) el.setAttribute('data-pt',el.innerHTML);
+        var v=en?el.getAttribute('data-en'):el.getAttribute('data-pt');
+        if(el.innerHTML!==v) el.innerHTML=v;
+      });
+      ['title','placeholder','aria-label'].forEach(function(a){
+        r.querySelectorAll('[data-en-'+a+']').forEach(function(el){
+          var k='data-pt-'+a;
+          if(!el.hasAttribute(k)) el.setAttribute(k,el.getAttribute(a)||'');
+          el.setAttribute(a,en?el.getAttribute('data-en-'+a):el.getAttribute(k));
+        });
+      });
+      if(!root) document.querySelectorAll('.widget>h2,.widget>.title').forEach(function(h){
+        if(!h.hasAttribute('data-pt')) h.setAttribute('data-pt',h.textContent.trim());
+        var p=h.getAttribute('data-pt');h.textContent=en&&TIT[p]?TIT[p]:p;
+      });
+    }
+  };
+  window.rgT=function(pt,en){return I.t(pt,en);};
+  document.documentElement.lang=l==='en'?'en':'pt-BR';
+  if(document.readyState!=='loading') I.apply();
+  else document.addEventListener('DOMContentLoaded',function(){I.apply();});
+})();
+</script>
 <style>
 :root{
   --bg:#0c0a14;--bg2:#13101f;--bg3:#1b1730;--line:#2c2547;--line2:#3d3363;
@@ -38,6 +86,7 @@ input,select{font:inherit;color:inherit}
 .logo .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--ac),#6d28d9);box-shadow:0 0 18px #a855f766}
 .logo small{display:block;font-weight:500;font-size:11px;color:var(--tx3);letter-spacing:.12em}
 .sp{flex:1}
+.lang{display:flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden;flex:none}.lang button{all:unset;cursor:pointer;font:700 11px/1 Oxanium,sans-serif;letter-spacing:1px;padding:6px 9px;color:var(--tx3)}.lang button.on{background:var(--ac);color:#fff}
 .pill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;color:var(--tx2);white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--tx3);flex:none}
 .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
@@ -184,80 +233,81 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 <body>
 <div class="app">
   <header class="top">
-    <div class="logo"><div class="ic">🎹</div><div>CHIPTUNE STUDIO<small>REGISTRO GAMER · TIMBRES DOS CHIPS</small></div></div>
+    <div class="logo"><div class="ic">🎹</div><div>CHIPTUNE STUDIO<small data-en="REGISTRO GAMER · CHIP SOUNDS">REGISTRO GAMER · TIMBRES DOS CHIPS</small></div></div>
     <div class="sp"></div>
-    <div class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span class="txt" id="midiTxt">MIDI: procurando…</span></div>
+    <div class="lang" id="langSw"><button type="button" data-l="pt">PT</button><button type="button" data-l="en">EN</button></div>
+    <div class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span class="txt" id="midiTxt" data-en="MIDI: searching…">MIDI: procurando…</span></div>
     <button class="btn sm" id="btnMode" title="Alternar entre o modo computador e o modo celular">📱</button>
-    <a class="btn sm trk" id="btnTracker" href="tracker.html" title="Abrir o Tracker (Furnace) — só no computador">🎛 Tracker</a>
-    <button class="btn sm" id="btnClose" title="Fechar o Chiptune Studio">✕ Fechar</button>
+    <a class="btn sm trk" id="btnTracker" href="tracker.html" title="Abrir o Tracker (Furnace) — só no computador" data-en-title="Open the Tracker (Furnace) — desktop only">🎛 Tracker</a>
+    <button class="btn sm" id="btnClose" title="Fechar o Chiptune Studio" data-en-title="Close Chiptune Studio" data-en="✕ Close">✕ Fechar</button>
   </header>
 
-  <div class="mtabs"><button id="mtSongs" class="on">🎵 Músicas</button><button id="mtTimbres">🎛 Timbres</button></div>
+  <div class="mtabs"><button id="mtSongs" class="on" data-en="🎵 Songs">🎵 Músicas</button><button id="mtTimbres" data-en="🎛 Sounds">🎛 Timbres</button></div>
 
   <div class="main m-songs" id="main">
     <aside class="panel">
-      <div class="tabs"><button class="tab on" id="tabAc">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um arquivo VGM do seu aparelho (computador, celular, tablet…)">📂 Local</button></div>
+      <div class="tabs"><button class="tab on" id="tabAc" data-en="Library">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um arquivo VGM do seu aparelho (computador, celular, tablet…)" data-en-title="Open a VGM file from your device (computer, phone, tablet…)">📂 Local</button></div>
       <input type="file" id="pcIn" accept=".vgm,.vgz" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo (VGM)…" autocomplete="off"></div>
       <div class="crumbs" id="crumbs"></div>
-      <div class="list" id="list"><div class="msg">Carregando o acervo…</div></div>
+      <div class="list" id="list"><div class="msg" data-en="Loading the library…">Carregando o acervo…</div></div>
     </aside>
 
     <section class="stage">
       <div id="songHead" style="display:none">
         <div class="song"><div class="game" id="sGame"></div><h1 id="sTitle"></h1><div class="meta" id="sMeta"></div></div>
         <div class="musicbar">
-          <button class="btn pri" id="bPlay">▶ Tocar música</button>
-          <button class="btn" id="bStop" title="Parar">■</button>
+          <button class="btn pri" id="bPlay" data-en="▶ Play song">▶ Tocar música</button>
+          <button class="btn" id="bStop" title="Parar" data-en-title="Stop">■</button>
           <div class="prog" id="prog"><i id="progI"></i></div>
           <div class="tm" id="tm">0:00 / 0:00</div>
           <label class="vol">🔊<input type="range" id="mVol" min="0" max="1.5" step="0.05" value="0.8"></label>
-          <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar">⬇ MIDI</button>
-          <button class="btn" id="bFur" title="Converter esta música num projeto do Furnace (.fur) com os timbres exatos do chip">⬇ Furnace</button>
+          <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar" data-en-title="Convert this song to MIDI and download it">⬇ MIDI</button>
+          <button class="btn" id="bFur" title="Converter esta música num projeto do Furnace (.fur) com os timbres exatos do chip" data-en-title="Convert this song into a Furnace project (.fur) with the chip's exact sounds">⬇ Furnace</button>
         </div>
         <div class="chans" id="chans"><span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span></div>
       </div>
       <div class="timbres" id="timbres">
-        <div class="empty"><div><div class="big">🎹</div><h2>Escolha uma música</h2>
-          <p>O Chiptune Studio lê o arquivo VGM e lista os timbres (instrumentos dos chips) que a música usa. Escolha um timbre e toque no seu teclado MIDI ou no teclado do computador (no celular, no teclado da tela).</p></div></div>
+        <div class="empty"><div><div class="big">🎹</div><h2 data-en="Pick a song">Escolha uma música</h2>
+          <p data-en="Chiptune Studio reads the VGM file and lists the sounds (chip instruments) the song uses. Pick a sound and play it on your MIDI keyboard or your computer keyboard (on a phone, on the on-screen keyboard).">O Chiptune Studio lê o arquivo VGM e lista os timbres (instrumentos dos chips) que a música usa. Escolha um timbre e toque no seu teclado MIDI ou no teclado do computador (no celular, no teclado da tela).</p></div></div>
       </div>
     </section>
   </div>
 
   <footer class="kbwrap">
     <div class="kbbar">
-      <span>Timbre:</span><span class="cur" id="curT">nenhum</span>
+      <span data-en="Sound:">Timbre:</span><span class="cur" id="curT" data-en="none">nenhum</span>
       <div class="sp"></div>
       <div class="oct"><button class="btn sm" id="octDn">−</button><b id="octV">C4</b><button class="btn sm" id="octUp">+</button></div>
-      <label class="tgl" title="A nota continua soando enquanto a tecla estiver apertada"><input type="checkbox" id="hold" checked>Segurar</label>
-      <label class="vol" title="Volume do teclado">🎹<input type="range" id="kVol" min="0" max="1.2" step="0.05" value="0.8"></label>
-      <button class="btn sm" id="panic" title="Calar todas as notas">Calar</button>
-      <span class="hint">Teclado do PC: Z S X D C… e Q 2 W 3 E… · ← → oitava</span>
+      <label class="tgl" title="A nota continua soando enquanto a tecla estiver apertada" data-en-title="The note keeps sounding while the key is held"><input type="checkbox" id="hold" checked><span data-en="Hold">Segurar</span></label>
+      <label class="vol" title="Volume do teclado" data-en-title="Keyboard volume">🎹<input type="range" id="kVol" min="0" max="1.2" step="0.05" value="0.8"></label>
+      <button class="btn sm" id="panic" title="Calar todas as notas" data-en-title="Silence all notes" data-en="Panic">Calar</button>
+      <span class="hint" data-en="PC keyboard: Z S X D C… and Q 2 W 3 E… · ← → octave">Teclado do PC: Z S X D C… e Q 2 W 3 E… · ← → oitava</span>
     </div>
     <div class="kb" id="kb"></div>
   </footer>
 </div>
 
 <div class="dlg" id="midiDlg"><div class="dbox">
-  <div class="dhd"><b>Baixar em MIDI</b><button class="btn sm" id="mdX">✕</button></div>
-  <div class="dsub" id="mdSub">Cada canal do chip vira uma trilha. As notas, a afinação, o volume e o panorâmico vão junto; o timbre não (o MIDI usa instrumentos General MIDI). Ruído e samples de bateria vão para o canal 10.</div>
-  <div class="dtools"><button class="btn sm" id="mdAll">Todos</button><button class="btn sm" id="mdNone">Nenhum</button>
-    <label class="tgl" title="Detecta o andamento para as notas caírem nos compassos (bom para editar numa DAW)"><input type="checkbox" id="mdTempo" checked>Ajustar ao tempo (BPM)</label></div>
+  <div class="dhd"><b data-en="Download as MIDI">Baixar em MIDI</b><button class="btn sm" id="mdX">✕</button></div>
+  <div class="dsub" id="mdSub" data-en="Each chip channel becomes a track. Notes, tuning, volume and panning come along; the sound does not (MIDI uses General MIDI instruments). Noise and drum samples go to channel 10.">Cada canal do chip vira uma trilha. As notas, a afinação, o volume e o panorâmico vão junto; o timbre não (o MIDI usa instrumentos General MIDI). Ruído e samples de bateria vão para o canal 10.</div>
+  <div class="dtools"><button class="btn sm" id="mdAll" data-en="All">Todos</button><button class="btn sm" id="mdNone" data-en="None">Nenhum</button>
+    <label class="tgl" title="Detecta o andamento para as notas caírem nos compassos (bom para editar numa DAW)" data-en-title="Detects the tempo so notes land on the bars (good for editing in a DAW)"><input type="checkbox" id="mdTempo" checked><span data-en="Fit to tempo (BPM)">Ajustar ao tempo (BPM)</span></label></div>
   <div class="dlist" id="mdList"><div class="msg">Lendo as notas…</div></div>
-  <div class="dft"><span class="dinfo" id="mdInfo"></span><button class="btn pri" id="mdGo" disabled>⬇ Baixar .mid</button></div>
+  <div class="dft"><span class="dinfo" id="mdInfo"></span><button class="btn pri" id="mdGo" disabled data-en="⬇ Download .mid">⬇ Baixar .mid</button></div>
 </div></div>
 <div class="dlg" id="furDlg"><div class="dbox">
-  <div class="dhd"><b>Projeto do Furnace (.fur)</b><button class="btn sm" id="fdX">✕</button></div>
-  <div class="dsub">Converte direto do VGM, sem passar pelo MIDI: os instrumentos FM saem com os registradores originais do chip, o PSG com o envelope de volume de cada timbre e a bateria com os samples do próprio jogo. Abre no Tracker daqui e no Furnace do computador.</div>
+  <div class="dhd"><b data-en="Furnace project (.fur)">Projeto do Furnace (.fur)</b><button class="btn sm" id="fdX">✕</button></div>
+  <div class="dsub" data-en="Converts straight from the VGM, without going through MIDI: FM instruments keep the chip's original registers, the PSG keeps each sound's volume envelope and the drums use the game's own samples. Opens in the Tracker here and in Furnace on your computer.">Converte direto do VGM, sem passar pelo MIDI: os instrumentos FM saem com os registradores originais do chip, o PSG com o envelope de volume de cada timbre e a bateria com os samples do próprio jogo. Abre no Tracker daqui e no Furnace do computador.</div>
   <div class="dlist" id="fdBody"><div class="msg">Convertendo…</div></div>
-  <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker (só no computador)">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled>⬇ Baixar .fur</button></div>
+  <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker (só no computador)" data-en-title="Open this project in the Tracker (desktop only)" data-en="🎛 Open in Tracker">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled data-en="⬇ Download .fur">⬇ Baixar .fur</button></div>
 </div></div>
 <div class="gate" id="gate"><div class="box"><div class="big">🎹</div><h2>Chiptune Studio</h2>
-  <p>Ligue seu teclado MIDI no USB (ou use o teclado do computador; no celular, o teclado na tela) e toque com os timbres das músicas do acervo.</p>
-  <button class="btn pri" id="gateBtn">Ativar o som</button></div></div>
+  <p data-en="Plug your MIDI keyboard into USB (or use the computer keyboard; on a phone, the on-screen keyboard) and play with the sounds of the songs in the library.">Ligue seu teclado MIDI no USB (ou use o teclado do computador; no celular, o teclado na tela) e toque com os timbres das músicas do acervo.</p>
+  <button class="btn pri" id="gateBtn" data-en="Turn on sound">Ativar o som</button></div></div>
 <div class="toast" id="toast"></div>
 
-<div class="dropzone" id="dropzone">Solte o VGM para abrir no Chiptune Studio</div>
+<div class="dropzone" id="dropzone" data-en="Drop the VGM to open it in Chiptune Studio">Solte o VGM para abrir no Chiptune Studio</div>
 <iframe id="pf" src="player.html?v=15" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">// ===== Sintetizador do Estúdio (roda no AudioWorklet) =====
@@ -1462,6 +1512,8 @@ var RGMIDI = (function () {
   // opts: { chans: [ids] (padrão: todos), tempo: true/false }
   function build(res, opts) {
     opts = opts || {};
+    var EN = opts.lang === 'en';
+    var LW = { 'Pulso': 'Pulse', 'Triângulo': 'Triangle', 'Onda': 'Wave', 'Ruído': 'Noise' };
     var M = res.midi; if (!M) throw new Error('sem eventos');
     var want = {}; (opts.chans || M.chans.map(function (c) { return c.id; })).forEach(function (id) { want[id] = 1; });
     var chans = M.chans.filter(function (c) { return want[c.id]; });
@@ -1536,7 +1588,7 @@ var RGMIDI = (function () {
     var title = (res.info && res.info.title) || 'Chiptune';
     var head = [
       { tick: 0, ord: 0, data: meta(0x03, utf8(title)) },
-      { tick: 0, ord: 1, data: meta(0x01, utf8('Convertido de VGM pelo Chiptune Studio - Registro Gamer')) },
+      { tick: 0, ord: 1, data: meta(0x01, utf8(EN ? 'Converted from VGM by Chiptune Studio - Registro Gamer' : 'Convertido de VGM pelo Chiptune Studio - Registro Gamer')) },
       { tick: 0, ord: 2, data: meta(0x51, [(Math.round(60e6 / bpm) >> 16) & 255, (Math.round(60e6 / bpm) >> 8) & 255, Math.round(60e6 / bpm) & 255]) },
       { tick: 0, ord: 3, data: meta(0x58, [4, 2, 24, 8]) }
     ];
@@ -1546,7 +1598,7 @@ var RGMIDI = (function () {
     chans.forEach(function (c) {
       var mc = midiCh[c.id], E = [], ord = 0;
       function add(tk, data) { E.push({ tick: tk, ord: ord++, data: data }); }
-      add(0, meta(0x03, utf8(c.chip + ' ' + c.label)));
+      add(0, meta(0x03, utf8(c.chip + ' ' + (EN ? String(c.label).replace(/Pulso|Triângulo|Onda|Ruído/g, function (w) { return LW[w]; }) : c.label))));
       if (mc !== 9) {
         // alcance do pitch bend = ±12 semitons
         add(0, [0xB0 | mc, 101, 0]); add(0, [0xB0 | mc, 100, 0]); add(0, [0xB0 | mc, 6, 12]); add(0, [0xB0 | mc, 38, 0]);
@@ -1686,7 +1738,7 @@ var RGMIDI = (function () {
       var o = L.names.length;
       L.sys.push({ id: 0x03, n: 4, vol: ym ? 0.5 : 1, pan: 0, fr: ym ? 0.5 : 1 });
       for (var j = 1; j <= 3; j++) { L.map['SN76489 · PSG ' + j] = o + j - 1; L.names.push('PSG ' + j); L.shorts.push('S' + j); L.kind.push('sn'); }
-      L.map['SN76489 · Ruído'] = o + 3; L.names.push('Ruído'); L.shorts.push('NO'); L.kind.push('noise');
+      L.map['SN76489 · Ruído'] = o + 3; L.names.push(tr('Ruído', 'Noise')); L.shorts.push('NO'); L.kind.push('noise');
     }
     L.chans = L.names.length;
     L.missing = outros;
@@ -1772,8 +1824,14 @@ var RGMIDI = (function () {
   }
 
   // ---------- conversão principal ----------
+  // idioma dos nomes gravados no projeto (instrumentos, canais, comentário)
+  var EN = false;
+  function tr(pt, en) { return EN ? en : pt; }
+  var ROLE_EN = { 'Percussão': 'Drums', 'Baixo': 'Bass', 'Melodia': 'Lead', 'Acompanhamento': 'Backing' };
+  function role(r) { return EN ? ROLE_EN[r] || r : r; }
   function build(res, opts) {
     opts = opts || {};
+    EN = opts.lang === 'en';
     if (!res || !res.midi) throw new Error('VGM sem eventos (chame RGVGM.parse com {events:true, pcm:true}).');
     var L = opts.layout || layout(res);
     var hz = res.rateHz === 50 ? 50 : 60;
@@ -1801,7 +1859,7 @@ var RGMIDI = (function () {
       if (e.tb) uses.set(e.tb, (uses.get(e.tb) || 0) + 1);
       if (e.k === 'hit' && smpOf[e.id] == null && res.pcm && res.pcm[e.id]) {
         smpOf[e.id] = smpList.length;
-        smpList.push({ id: e.id, name: 'Bateria ' + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
+        smpList.push({ id: e.id, name: tr('Bateria ', 'Drum ') + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
       }
     });
     if (smpList.length > 160) throw new Error('Samples de bateria demais para um módulo (' + smpList.length + ').');
@@ -1839,9 +1897,9 @@ var RGMIDI = (function () {
       }
       if (target.idx == null) {
         var t = target.tb, name;
-        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + t.role : '');
-        else if (t.wave === 'noise') name = 'Ruído ' + (++nNoise);
-        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + t.role : '');
+        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + role(t.role) : '');
+        else if (t.wave === 'noise') name = tr('Ruído ', 'Noise ') + (++nNoise);
+        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + role(t.role) : '');
         target.idx = insList.length; insList.push({ kind: target.kind, tb: t, name: name });
       }
       g.members.forEach(function (t) { insOf.set(t, target.idx); });
@@ -2114,8 +2172,8 @@ var RGMIDI = (function () {
     for (c = 0; c < L.chans; c++) w.c(0);
     for (c = 0; c < L.chans; c++) w.str(L.names[c]);
     for (c = 0; c < L.chans; c++) w.str(L.shorts[c]);
-    w.str('Convertido de VGM pelo Chiptune Studio (Registro Gamer).' + (info.game ? '\nJogo: ' + info.game : '') +
-      '\nLinha = ' + R + ' quadro(s) a ' + hz + ' Hz.');
+    w.str(tr('Convertido de VGM pelo Chiptune Studio (Registro Gamer).', 'Converted from VGM by Chiptune Studio (Registro Gamer).') + (info.game ? tr('\nJogo: ', '\nGame: ') + info.game : '') +
+      tr('\nLinha = ', '\nRow = ') + R + tr(' quadro(s) a ', ' frame(s) at ') + hz + ' Hz.');
     w.f(1);
     [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 4, 0, 0, 1, 1, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0].forEach(function (v) { w.c(v); });
     w.s(150); w.s(150);
@@ -2175,6 +2233,12 @@ var RGMIDI = (function () {
   // versões antigas guardavam os timbres das músicas no navegador: limpa
   try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('rgEstudio:') === 0) localStorage.removeItem(k); }); } catch (e) {}
   function $(id) { return document.getElementById(id); }
+  var T = window.rgT;
+  // nomes que vêm do leitor de VGM (em português) → inglês na tela
+  var LBLW = { 'Pulso': 'Pulse', 'Triângulo': 'Triangle', 'Onda': 'Wave', 'Ruído': 'Noise' };
+  function LBL(s) { return rgI18n.lang === 'en' ? String(s).replace(/Pulso|Triângulo|Onda|Ruído/g, function (w) { return LBLW[w]; }) : s; }
+  var ROLES = { 'Percussão': 'Drums', 'Baixo': 'Bass', 'Melodia': 'Lead', 'Acompanhamento': 'Backing' };
+  function ROLE(r) { return rgI18n.lang === 'en' ? ROLES[r] || r : r; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function stripExt(n) { return n.replace(/\.[^.]+$/, ''); }
   var NN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -2191,7 +2255,7 @@ var RGMIDI = (function () {
     if (ctx) return synthReady;
     var AC = window.AudioContext || window.webkitAudioContext;
     ctx = new AC({ latencyHint: 'interactive' });
-    if (!ctx.audioWorklet) { toast('Este navegador não tem suporte ao sintetizador (AudioWorklet).'); return (synthReady = Promise.resolve()); }
+    if (!ctx.audioWorklet) { toast(T('Este navegador não tem suporte ao sintetizador (AudioWorklet).','This browser does not support the synthesizer (AudioWorklet).')); return (synthReady = Promise.resolve()); }
     var url = URL.createObjectURL(new Blob([$('synthSrc').textContent], { type: 'application/javascript' }));
     synthReady = ctx.audioWorklet.addModule(url).then(function () {
       synth = new AudioWorkletNode(ctx, 'estudio-synth', { numberOfInputs: 0, outputChannelCount: [2] });
@@ -2199,7 +2263,7 @@ var RGMIDI = (function () {
       send({ t: 'vol', v: +$('kVol').value });
       send({ t: 'hold', on: $('hold').checked });
       if (cur.timbre) send({ t: 'patch', p: cur.timbre });
-    }).catch(function (e) { console.error(e); toast('Este navegador não conseguiu iniciar o sintetizador.'); });
+    }).catch(function (e) { console.error(e); toast(T('Este navegador não conseguiu iniciar o sintetizador.','This browser could not start the synthesizer.')); });
     return synthReady;
   }
   function send(m) { if (synth) synth.port.postMessage(m); }
@@ -2212,7 +2276,7 @@ var RGMIDI = (function () {
   function noteOn(n, v) {
     if (n < 0 || n > 127) return;
     if (!ctx) wake();
-    if (!cur.timbre) { if (!noteOn.warned) { toast('Escolha um timbre primeiro'); noteOn.warned = true; } }
+    if (!cur.timbre) { if (!noteOn.warned) { toast(T('Escolha um timbre primeiro','Pick a sound first')); noteOn.warned = true; } }
     down[n] = (down[n] || 0) + 1;
     send({ t: 'on', n: n, v: v || 100 });
     paintKey(n, true);
@@ -2225,10 +2289,13 @@ var RGMIDI = (function () {
 
   // ───────────────────── teclado MIDI (USB) ─────────────────────
   var midiNames = [];
+  var midiState = null;
   function setMidi(state) {
+    if (typeof state === 'string') state = [state, state];
+    midiState = state;
     $('midiDot').classList.toggle('on', !!midiNames.length);
-    $('midiTxt').textContent = midiNames.length ? ('MIDI: ' + midiNames.join(', ')) : state || 'MIDI: nenhum teclado';
-    $('midiPill').title = midiNames.length ? 'Teclado MIDI conectado' : 'Ligue um teclado MIDI no USB (no celular, com cabo OTG)';
+    $('midiTxt').textContent = midiNames.length ? ('MIDI: ' + midiNames.join(', ')) : (state ? T(state[0], state[1]) : T('MIDI: nenhum teclado','MIDI: no keyboard'));
+    $('midiPill').title = midiNames.length ? T('Teclado MIDI conectado','MIDI keyboard connected') : T('Ligue um teclado MIDI no USB (no celular, com cabo OTG)','Plug a MIDI keyboard into USB (on a phone, with an OTG cable)');
   }
   function onMidi(e) {
     var d = e.data, st = d[0] & 0xF0;
@@ -2249,8 +2316,8 @@ var RGMIDI = (function () {
       }
       acc.onstatechange = function (e) { scan(); if (e.port && e.port.type === 'input') toast(e.port.state === 'connected' ? '🎹 ' + (e.port.name || 'Teclado MIDI') + ' conectado' : 'Teclado MIDI desconectado'); };
       scan();
-    }).catch(function () { setMidi('MIDI: sem permissão'); });
-  } else setMidi('MIDI: indisponível neste navegador');
+    }).catch(function () { setMidi(['MIDI: sem permissão','MIDI: no permission']); });
+  } else setMidi(['MIDI: indisponível neste navegador','MIDI: not available in this browser']);
 
   // ───────────────────── teclado do computador ─────────────────────
   var octave = 4; // fileira de cima começa no C da oitava escolhida
@@ -2343,7 +2410,7 @@ var RGMIDI = (function () {
     stack = [index];
     // atalho direto para os chiptunes de games quando só há uma pasta no topo útil
     renderList();
-  }).catch(function () { $('list').innerHTML = '<div class="msg">Não consegui carregar o acervo.</div>'; });
+  }).catch(function () { $('list').innerHTML = '<div class="msg">' + T('Não consegui carregar o acervo.','Could not load the library.') + '</div>'; });
 
   function renderList() {
     var L = $('list'), q = $('q').value.trim().toLowerCase(), html = '';
@@ -2353,7 +2420,7 @@ var RGMIDI = (function () {
     if (q.length >= 2) {
       $('crumbs').innerHTML = '';
       var res = allFiles.filter(function (f) { return f.path.toLowerCase().indexOf(q) >= 0; }).slice(0, 150);
-      if (!res.length) { L.innerHTML = '<div class="msg">Nada encontrado para "' + esc(q) + '"</div>'; return; }
+      if (!res.length) { L.innerHTML = '<div class="msg">' + T('Nada encontrado para "','Nothing found for "') + esc(q) + '"</div>'; return; }
       res.forEach(function (f) { html += fileItem(f.path, f.name, true); });
       L.innerHTML = html; return;
     }
@@ -2377,15 +2444,15 @@ var RGMIDI = (function () {
   var local = {}, localOrder = [], localN = 0;
   function isLocal(path) { return String(path).indexOf('local:') === 0; }
   function renderLocal(q) {
-    $('crumbs').innerHTML = '<span>Arquivos locais (só nesta visita)</span>';
-    var html = '<button class="pcopen" data-pcopen="1">📂 Abrir arquivo VGM…<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">.vgm ou .vgz do seu aparelho · também dá para arrastar o arquivo para cá</span></button>';
+    $('crumbs').innerHTML = '<span>' + T('Arquivos locais (só nesta visita)','Local files (this visit only)') + '</span>';
+    var html = '<button class="pcopen" data-pcopen="1">' + T('📂 Abrir arquivo VGM…','📂 Open VGM file…') + '<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">' + T('.vgm ou .vgz do seu aparelho · também dá para arrastar o arquivo para cá','.vgm or .vgz from your device · you can also drag the file here') + '</span></button>';
     localOrder.filter(function (p) { return !q || local[p].name.toLowerCase().indexOf(q) >= 0; }).forEach(function (p) { html += fileItem(p, local[p].name, false); });
-    if (!localOrder.length) html += '<div class="msg">Nenhum arquivo aberto ainda.</div>';
+    if (!localOrder.length) html += '<div class="msg">' + T('Nenhum arquivo aberto ainda.','No files opened yet.') + '</div>';
     $('list').innerHTML = html;
   }
   function openLocalFiles(files) {
     var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name); });
-    if (!list.length) { toast('O Chiptune Studio abre arquivos .vgm e .vgz.'); return; }
+    if (!list.length) { toast(T('O Chiptune Studio abre arquivos .vgm e .vgz.','Chiptune Studio opens .vgm and .vgz files.')); return; }
     var first = null;
     Promise.all(list.map(function (f) {
       return f.arrayBuffer().then(function (ab) {
@@ -2398,7 +2465,7 @@ var RGMIDI = (function () {
     })).then(function () {
       showTab('pc');
       if (first) selectSong(first, local[first].name);
-    }).catch(function (e) { toast('Não consegui abrir: ' + (e.message || e)); });
+    }).catch(function (e) { toast(T('Não consegui abrir: ','Could not open: ') + (e.message || e)); });
   }
   $('pcIn').onchange = function () { if (this.files.length) openLocalFiles(this.files); };
   // arrastar e soltar em qualquer lugar do Studio
@@ -2412,7 +2479,7 @@ var RGMIDI = (function () {
   function renderPlaylists(q) {
     var L = $('list');
     if (!playlists) {
-      L.innerHTML = '<div class="msg">Carregando playlists…</div>';
+      L.innerHTML = '<div class="msg">' + T('Carregando playlists…','Loading playlists…') + '</div>';
       fetch('playlists-fixas.json?v=' + Math.floor(Date.now() / 3.6e6)).then(function (r) { return r.json(); }).then(function (j) {
         playlists = (j || []).map(function (p) { return { nome: p.nome, faixas: (p.faixas || []).filter(function (f) { return VGM_RE.test(f.p); }) }; }).filter(function (p) { return p.faixas.length; });
         renderList();
@@ -2421,8 +2488,8 @@ var RGMIDI = (function () {
     }
     var html = '';
     if (plOpen == null) {
-      $('crumbs').innerHTML = '<span>Playlists (só as faixas VGM)</span>';
-      if (!playlists.length) { L.innerHTML = '<div class="msg">Nenhuma playlist com músicas VGM.</div>'; return; }
+      $('crumbs').innerHTML = '<span>' + T('Playlists (só as faixas VGM)','Playlists (VGM tracks only)') + '</span>';
+      if (!playlists.length) { L.innerHTML = '<div class="msg">' + T('Nenhuma playlist com músicas VGM.','No playlists with VGM songs.') + '</div>'; return; }
       playlists.forEach(function (p, i) { html += '<button class="it" data-pl="' + i + '"><span class="ico">📃</span><span class="nm">' + esc(p.nome) + '</span><span class="ct">' + p.faixas.length + '</span></button>'; });
     } else {
       var p = playlists[plOpen];
@@ -2444,10 +2511,11 @@ var RGMIDI = (function () {
     if (b.dataset.plback) { plOpen = null; renderList(); }
   });
   $('q').addEventListener('input', function () { renderList(); });
+  function qPh() { $('q').placeholder = mode === 'ac' ? T('Buscar música ou jogo (VGM)…','Search song or game (VGM)…') : mode === 'pl' ? T('Filtrar a playlist…','Filter the playlist…') : T('Filtrar os arquivos abertos…','Filter the open files…'); }
   function showTab(m) {
     mode = m;
     $('tabAc').classList.toggle('on', m === 'ac'); $('tabPl').classList.toggle('on', m === 'pl'); $('tabPc').classList.toggle('on', m === 'pc');
-    $('q').placeholder = m === 'ac' ? 'Buscar música ou jogo (VGM)…' : m === 'pl' ? 'Filtrar a playlist…' : 'Filtrar os arquivos abertos…';
+    qPh();
     if (m !== 'pl') mtab('songs');
     renderList();
   }
@@ -2472,7 +2540,7 @@ var RGMIDI = (function () {
   // ───────────────────── MIDI ─────────────────────
   var memRaw = {}, memMidi = {};
   function getRaw(path) {
-    if (isLocal(path)) return local[path] ? Promise.resolve(local[path].u8) : Promise.reject(new Error('arquivo não está mais aberto'));
+    if (isLocal(path)) return local[path] ? Promise.resolve(local[path].u8) : Promise.reject(new Error(T('arquivo não está mais aberto','file is no longer open')));
     if (memRaw[path]) return Promise.resolve(memRaw[path]);
     var url = RAW + path.split('/').map(encodeURIComponent).join('/');
     return fetch(url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
@@ -2484,23 +2552,23 @@ var RGMIDI = (function () {
     if (!cur.path) return;
     var path = cur.path;
     $('midiDlg').classList.add('show'); $('mdGo').disabled = true; $('mdInfo').textContent = '';
-    $('mdList').innerHTML = '<div class="msg">Lendo as notas…</div>';
+    $('mdList').innerHTML = '<div class="msg">' + T('Lendo as notas…','Reading the notes…') + '</div>';
     (memMidi[path] ? Promise.resolve(memMidi[path]) : getRaw(path).then(function (u8) {
       var r = RGVGM.parse(u8, { events: true, pcm: true }); memMidi = {}; memMidi[path] = r; return r;
     })).then(function (r) {
       if (cur.path !== path) return;
       var ch = r.midi.chans;
       if (!ch.length) {
-        $('mdList').innerHTML = '<div class="msg">Esta música não tem canais que dê para converter' + (r.unsupported.length ? ' (usa ' + esc(r.unsupported.join(', ')) + ', ainda não suportado)' : '') + '.</div>';
+        $('mdList').innerHTML = '<div class="msg">' + T('Esta música não tem canais que dê para converter','This song has no channels that can be converted') + (r.unsupported.length ? T(' (usa ',' (uses ') + esc(r.unsupported.join(', ')) + T(', ainda não suportado)',', not supported yet)') : '') + '.</div>';
         return;
       }
       $('mdList').innerHTML = ch.map(function (c) {
         var drum = c.kind === 'noise' || c.kind === 'dac';
-        return '<label class="dch"><input type="checkbox" value="' + esc(c.id) + '" checked><span class="nm">' + esc(c.chip + ' · ' + c.label) + '</span>' +
-          (drum ? '<span class="dr">bateria</span>' : '') + '<span class="ct">' + c.notes + ' nota' + (c.notes === 1 ? '' : 's') + '</span></label>';
-      }).join('') + (r.unsupported.length ? '<div class="msg" style="padding:8px">Não entram: ' + esc(r.unsupported.join(', ')) + ' (ainda não suportado).</div>' : '');
+        return '<label class="dch"><input type="checkbox" value="' + esc(c.id) + '" checked><span class="nm">' + esc(c.chip + ' · ' + LBL(c.label)) + '</span>' +
+          (drum ? '<span class="dr">' + T('bateria','drums') + '</span>' : '') + '<span class="ct">' + c.notes + T(' nota',' note') + (c.notes === 1 ? '' : 's') + '</span></label>';
+      }).join('') + (r.unsupported.length ? '<div class="msg" style="padding:8px">' + T('Não entram: ','Left out: ') + esc(r.unsupported.join(', ')) + T(' (ainda não suportado).',' (not supported yet).') + '</div>' : '');
       $('mdGo').disabled = false;
-    }).catch(function (e) { $('mdList').innerHTML = '<div class="msg">Não consegui ler a música (' + esc(e.message || e) + ').</div>'; });
+    }).catch(function (e) { $('mdList').innerHTML = '<div class="msg">' + T('Não consegui ler a música (','Could not read the song (') + esc(e.message || e) + ').</div>'; });
   }
   function midiChecks() { return Array.prototype.slice.call($('mdList').querySelectorAll('input[type=checkbox]')); }
   $('bMidi').onclick = openMidi;
@@ -2511,13 +2579,13 @@ var RGMIDI = (function () {
   $('mdGo').onclick = function () {
     var r = memMidi[cur.path]; if (!r) return;
     var ids = midiChecks().filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
-    if (!ids.length) { $('mdInfo').textContent = 'Escolha pelo menos um canal.'; return; }
-    var out = RGMIDI.build(r, { chans: ids, tempo: $('mdTempo').checked });
+    if (!ids.length) { $('mdInfo').textContent = T('Escolha pelo menos um canal.','Pick at least one channel.'); return; }
+    var out = RGMIDI.build(r, { chans: ids, tempo: $('mdTempo').checked, lang: rgI18n.lang });
     var url = URL.createObjectURL(new Blob([out.bytes], { type: 'audio/midi' }));
     var a = document.createElement('a'); a.href = url; a.download = RGMIDI.fileName(r, stripExt(cur.name)); document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 3000);
-    $('mdInfo').textContent = out.notas + ' notas · ' + out.trilhas + ' trilha' + (out.trilhas === 1 ? '' : 's') + ' · ' +
-      (out.tempoDetectado ? out.bpm + ' BPM' : 'tempo livre (120 BPM)');
+    $('mdInfo').textContent = out.notas + T(' notas · ',' notes · ') + out.trilhas + T(' trilha',' track') + (out.trilhas === 1 ? '' : 's') + ' · ' +
+      (out.tempoDetectado ? out.bpm + ' BPM' : T('tempo livre (120 BPM)','free tempo (120 BPM)'));
   };
 
   // ───────────────────── Furnace (.fur) ─────────────────────
@@ -2526,23 +2594,23 @@ var RGMIDI = (function () {
     if (!cur.path) return;
     var path = cur.path;
     $('furDlg').classList.add('show'); $('fdGo').disabled = true; $('fdTrk').disabled = true; $('fdInfo').textContent = '';
-    $('fdBody').innerHTML = '<div class="msg">Convertendo…</div>';
+    $('fdBody').innerHTML = '<div class="msg">' + T('Convertendo…','Converting…') + '</div>';
     (memFur[path] ? Promise.resolve(memFur[path]) : getRaw(path).then(function (u8) {
       var r = RGVGM.parse(u8, { events: true, pcm: true });
-      var o = RGFUR.build(r);
+      var o = RGFUR.build(r, { lang: rgI18n.lang });
       o.name = RGFUR.fileName(r, stripExt(cur.name));
       memFur = {}; memFur[path] = o; return o;
     })).then(function (o) {
       if (cur.path !== path) return;
-      var dur = function (n) { return n === 1 ? '1 quadro' : n + ' quadros'; };
+      var dur = function (n) { return n === 1 ? T('1 quadro','1 frame') : n + T(' quadros',' frames'); };
       $('fdBody').innerHTML = '<div class="msg" style="text-align:left;line-height:1.7">' +
         '<b>' + esc(o.name) + '</b><br>' +
         '🎛 ' + esc(o.system) + '<br>' +
-        '🎹 ' + (o.instruments - o.samples) + ' instrumento' + (o.instruments - o.samples === 1 ? '' : 's') + (o.samples ? ' + ' + o.samples + ' sample' + (o.samples === 1 ? '' : 's') + ' de bateria' : '') + '<br>' +
-        '📏 ' + o.rows + ' linhas · cada linha = ' + dur(o.rowFrames) + ' (' + o.hz + ' Hz) · ' + o.orders + ' ordens de ' + o.patLen + ' linhas<br>' +
-        (o.loopRow >= 0 ? '🔁 Repete a partir da linha ' + o.loopRow : '⏹ Sem repetição') +
-        (o.missing && o.missing.length ? '<br>⚠ Ficou de fora: ' + esc(o.missing.join(', ')) + ' (chip ainda não suportado no conversor)' : '') +
-        (o.merged ? '<br>⚠ ' + o.merged + ' timbre' + (o.merged === 1 ? '' : 's') + ' raro' + (o.merged === 1 ? '' : 's') + ' juntado' + (o.merged === 1 ? '' : 's') + ' ao mais parecido (limite de 255 instrumentos)' : '') +
+        '🎹 ' + (o.instruments - o.samples) + T(' instrumento',' instrument') + (o.instruments - o.samples === 1 ? '' : 's') + (o.samples ? ' + ' + o.samples + T(' sample',' drum sample') + (o.samples === 1 ? '' : 's') + T(' de bateria','') : '') + '<br>' +
+        '📏 ' + o.rows + T(' linhas · cada linha = ',' rows · each row = ') + dur(o.rowFrames) + ' (' + o.hz + ' Hz) · ' + o.orders + T(' ordens de ',' orders of ') + o.patLen + T(' linhas<br>',' rows<br>') +
+        (o.loopRow >= 0 ? T('🔁 Repete a partir da linha ','🔁 Loops from row ') + o.loopRow : T('⏹ Sem repetição','⏹ No loop')) +
+        (o.missing && o.missing.length ? T('<br>⚠ Ficou de fora: ','<br>⚠ Left out: ') + esc(o.missing.join(', ')) + T(' (chip ainda não suportado no conversor)',' (chip not supported by the converter yet)') : '') +
+        (o.merged ? '<br>⚠ ' + o.merged + T(' timbre' + (o.merged === 1 ? '' : 's') + ' raro' + (o.merged === 1 ? '' : 's') + ' juntado' + (o.merged === 1 ? '' : 's') + ' ao mais parecido (limite de 255 instrumentos)', ' rare sound' + (o.merged === 1 ? '' : 's') + ' merged into the closest one (255-instrument limit)') : '') +
         '</div>';
       $('fdInfo').textContent = Math.max(1, Math.round(o.bytes.length / 1024)) + ' KB';
       $('fdGo').disabled = false; $('fdTrk').disabled = false;
@@ -2560,14 +2628,14 @@ var RGMIDI = (function () {
   // entrega o projeto ao Tracker (mesmo site) por uma "caixa de entrada" no IndexedDB
   $('fdTrk').onclick = function () {
     var o = memFur[cur.path]; if (!o) return;
-    $('fdInfo').textContent = 'Abrindo o Tracker…';
+    $('fdInfo').textContent = T('Abrindo o Tracker…','Opening the Tracker…');
     try {
       var rq = indexedDB.open('rg-inbox', 1);
       rq.onupgradeneeded = function () { rq.result.createObjectStore('f'); };
       rq.onsuccess = function () {
         var tx = rq.result.transaction('f', 'readwrite');
         tx.objectStore('f').put({ name: o.name, bytes: o.bytes, t: Date.now() }, 'next');
-        tx.oncomplete = function () { location.href = 'tracker.html'; };
+        tx.oncomplete = function () { location.href = 'tracker.html?lang=' + rgI18n.lang; };
         tx.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
       };
       rq.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
@@ -2580,9 +2648,9 @@ var RGMIDI = (function () {
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1;
     renderList();
     $('songHead').style.display = '';
-    var dir = isLocal(path) ? 'Arquivo local' : path.split('/').slice(-2, -1)[0] || '';
-    $('sGame').textContent = dir; $('sTitle').textContent = stripExt(name); $('sMeta').innerHTML = 'Lendo os timbres…';
-    $('timbres').innerHTML = '<div class="empty"><div><div class="big">⏳</div><p>Lendo os registros do chip…</p></div></div>';
+    var dir = isLocal(path) ? T('Arquivo local','Local file') : path.split('/').slice(-2, -1)[0] || '';
+    $('sGame').textContent = dir; $('sTitle').textContent = stripExt(name); $('sMeta').innerHTML = T('Lendo os timbres…','Reading the sounds…');
+    $('timbres').innerHTML = '<div class="empty"><div><div class="big">⏳</div><p>' + T('Lendo os registros do chip…','Reading the chip registers…') + '</p></div></div>';
     resetChans();
     mtab('timbres');
     loadParsed(path).then(function (res) {
@@ -2592,7 +2660,7 @@ var RGMIDI = (function () {
     }).catch(function (e) {
       if (cur.path !== path) return;
       $('sMeta').textContent = '';
-      $('timbres').innerHTML = '<div class="empty"><div><div class="big">⚠️</div><p>Não consegui ler este arquivo (' + esc(e.message || e) + ').</p></div></div>';
+      $('timbres').innerHTML = '<div class="empty"><div><div class="big">⚠️</div><p>' + T('Não consegui ler este arquivo (','Could not read this file (') + esc(e.message || e) + ').</p></div></div>';
     });
   }
   function soundRange(t) {
@@ -2607,15 +2675,15 @@ var RGMIDI = (function () {
     if (i.game) $('sGame').textContent = i.game + (i.system ? ' · ' + i.system : '');
     var meta = res.chips.map(function (c) { return '<span class="chiptag">' + esc(c) + '</span>'; }).join('');
     if (i.author) meta += '<span>' + esc(i.author) + '</span>';
-    meta += '<span>' + res.timbres.length + ' timbre' + (res.timbres.length === 1 ? '' : 's') + '</span>';
+    meta += '<span>' + res.timbres.length + T(' timbre',' sound') + (res.timbres.length === 1 ? '' : 's') + '</span>';
     $('sMeta').innerHTML = meta;
     var html = '';
     if (res.unsupported && res.unsupported.length) {
-      html += '<div class="notice">Esta música também usa <b>' + esc(res.unsupported.join(', ')) + '</b> — ' +
-        (res.timbres.length ? 'esses sons (amostras ou chips ainda não suportados) não aparecem na lista; os timbres abaixo são dos outros chips.' : 'esse chip ainda não é suportado no Chiptune Studio.') + '</div>';
+      html += '<div class="notice">' + T('Esta música também usa','This song also uses') + ' <b>' + esc(res.unsupported.join(', ')) + '</b> — ' +
+        (res.timbres.length ? T('esses sons (amostras ou chips ainda não suportados) não aparecem na lista; os timbres abaixo são dos outros chips.','those sounds (samples or chips not supported yet) are not listed; the sounds below come from the other chips.') : T('esse chip ainda não é suportado no Chiptune Studio.','that chip is not supported in Chiptune Studio yet.')) + '</div>';
     }
     if (!res.timbres.length) {
-      html += '<div class="empty"><div><div class="big">🔇</div><h2>Nenhum timbre encontrado</h2><p>Por enquanto o Chiptune Studio lê timbres de YM2612, YM2151, YM2203/2608/2610, SN76489, NES, Game Boy e AY-3-8910.</p></div></div>';
+      html += '<div class="empty"><div><div class="big">🔇</div><h2>' + T('Nenhum timbre encontrado','No sounds found') + '</h2><p>' + T('Por enquanto o Chiptune Studio lê timbres de YM2612, YM2151, YM2203/2608/2610, SN76489, NES, Game Boy e AY-3-8910.','For now Chiptune Studio reads sounds from YM2612, YM2151, YM2203/2608/2610, SN76489, NES, Game Boy and AY-3-8910.') + '</p></div></div>';
       $('timbres').innerHTML = html; return;
     }
     var groups = {}, order = [];
@@ -2638,16 +2706,16 @@ var RGMIDI = (function () {
   }
   function card(t, k) {
     var r = soundRange(t);
-    var typ = t.type === 'fm' ? 'FM · ALG ' + t.alg : ({ pulse: 'Pulso', tri: 'Triângulo', wave: 'Onda', noise: 'Ruído' }[t.wave] || t.wave);
+    var typ = t.type === 'fm' ? 'FM · ALG ' + t.alg : (LBL({ pulse: 'Pulso', tri: 'Triângulo', wave: 'Onda', noise: 'Ruído' }[t.wave] || t.wave));
     if (t.type === 'psg' && t.wave === 'pulse' && t.chipKind !== 'sn' && t.chipKind !== 'ay') {
       var dd = t.duty.filter(function (x) { return x >= 0; });
       if (dd.length) typ += ' ' + ['12,5%', '25%', '50%', '75%'][dd[0]];
     }
-    var info = 'Canais: ' + esc(t.chanList.join(', ')) + '<br>' + t.count + ' nota' + (t.count === 1 ? '' : 's') + (r ? ' · ' + nn(r[0]) + (r[1] !== r[0] ? '–' + nn(r[1]) : '') : '');
+    var info = T('Canais: ','Channels: ') + esc(t.chanList.map(LBL).join(', ')) + '<br>' + t.count + T(' nota',' note') + (t.count === 1 ? '' : 's') + (r ? ' · ' + nn(r[0]) + (r[1] !== r[0] ? '–' + nn(r[1]) : '') : '');
     return '<div class="card' + (k === cur.sel ? ' on' : '') + '" data-k="' + k + '" role="button" tabindex="0">' +
-      '<div class="hd"><span class="num">' + t.n + '</span><span class="role">' + esc(t.role) + '</span><span class="typ">' + esc(typ) + '</span></div>' +
+      '<div class="hd"><span class="num">' + t.n + '</span><span class="role">' + esc(ROLE(t.role)) + '</span><span class="typ">' + esc(typ) + '</span></div>' +
       '<div class="info">' + info + '</div><canvas class="viz" data-k="' + k + '" width="300" height="52"></canvas>' +
-      '<button class="play" data-prev="' + k + '" title="Ouvir">▶</button></div>';
+      '<button class="play" data-prev="' + k + '" title="' + T('Ouvir','Listen') + '">▶</button></div>';
   }
   // desenho do envelope (como o volume do timbre se comporta)
   function drawViz(cv, t) {
@@ -2677,10 +2745,10 @@ var RGMIDI = (function () {
     var t = cur.res && cur.res.timbres[k]; if (!t) return;
     cur.sel = k; cur.timbre = t;
     $('timbres').querySelectorAll('.card').forEach(function (c) { c.classList.toggle('on', +c.dataset.k === k); });
-    $('curT').textContent = t.chip + ' · ' + t.n + ' (' + t.role + ')';
+    $('curT').textContent = t.chip + ' · ' + t.n + ' (' + ROLE(t.role) + ')';
     send({ t: 'patch', p: t });
     buildKb(); markMine();
-    if (!silent) toast('Timbre ' + t.n + ' (' + t.role + ') pronto para tocar');
+    if (!silent) toast(T('Timbre ','Sound ') + t.n + ' (' + ROLE(t.role) + ')' + T(' pronto para tocar',' ready to play'));
   }
   var prevT = [];
   function preview(k) {
@@ -2722,21 +2790,21 @@ var RGMIDI = (function () {
       $('progI').style.width = durMs ? Math.min(100, d.posMs / durMs * 100) + '%' : '0';
       $('tm').textContent = fmt(d.posMs) + ' / ' + fmt(durMs);
     } else if (d.type === 'ended') { pPlaying = false; pPaused = false; pLoaded = null; playBtn(); $('progI').style.width = '100%'; }
-    else if (d.type === 'error') { pPlaying = false; pLoaded = null; playBtn(); toast('A música não pôde tocar: ' + d.msg); }
+    else if (d.type === 'error') { pPlaying = false; pLoaded = null; playBtn(); toast(T('A música não pôde tocar: ','The song could not play: ') + d.msg); }
     else if (d.type === 'ms-action') { if (d.action === 'pause' || d.action === 'play') $('bPlay').click(); }
   });
-  function playBtn() { $('bPlay').innerHTML = pPlaying && !pPaused ? '❚❚ Pausar música' : '▶ Tocar música'; }
+  function playBtn() { $('bPlay').innerHTML = pPlaying && !pPaused ? T('❚❚ Pausar música','❚❚ Pause song') : T('▶ Tocar música','▶ Play song'); }
   $('bPlay').onclick = function () {
     wake(); $('gate').style.display = 'none';
     if (!cur.path) return;
     if (pLoaded !== cur.path) {
       pLoaded = cur.path; pPaused = false;
-      $('bPlay').textContent = '⏳ Carregando…';
+      $('bPlay').textContent = T('⏳ Carregando…','⏳ Loading…');
       if (isLocal(cur.path)) {
         var lf = local[cur.path];
         pSend({ type: 'load', url: LOCAL_URL + encodeURIComponent(lf.name), files: [{ name: lf.name, buf: lf.file.slice(0) }], loops: 2 });
       } else pSend({ type: 'load', url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), loops: 2 });
-      var dir = isLocal(cur.path) ? 'Arquivo local' : cur.path.split('/').slice(-2, -1)[0] || '';
+      var dir = isLocal(cur.path) ? T('Arquivo local','Local file') : cur.path.split('/').slice(-2, -1)[0] || '';
       pSend({ type: 'mediainfo', title: $('sTitle').textContent, artist: dir, album: 'Chiptune Studio · Registro Gamer' });
       return;
     }
@@ -2754,10 +2822,10 @@ var RGMIDI = (function () {
     var r = this.getBoundingClientRect(); pSend({ type: 'seek', ms: Math.round((e.clientX - r.left) / r.width * durMs) });
   };
   $('mVol').oninput = function () { pSend({ type: 'volume', level: +this.value }); };
-  function resetChans() { voices = null; mask = []; $('chans').innerHTML = '<span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span>'; }
+  function resetChans() { voices = null; mask = []; $('chans').innerHTML = '<span class="lbl">' + T('Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo','Song channels show up when you press play · tap to mute, double-tap to solo') + '</span>'; }
   function renderChans() {
-    if (!voices || !voices.names || !voices.names.length) { $('chans').innerHTML = '<span class="lbl">Esta música não informa os canais.</span>'; return; }
-    var html = '<span class="lbl">Canais:</span>';
+    if (!voices || !voices.names || !voices.names.length) { $('chans').innerHTML = '<span class="lbl">' + T('Esta música não informa os canais.','This song does not report its channels.') + '</span>'; return; }
+    var html = '<span class="lbl">' + T('Canais:','Channels:') + '</span>';
     var groups = voices.groups && voices.groups.length ? voices.groups : [{ name: '', voices: voices.names.map(function (n, i) { return { idx: i, name: n }; }) }];
     groups.forEach(function (g) {
       if (groups.length > 1 && g.name) html += '<span class="lbl" style="margin-left:6px">' + esc(g.name) + '</span>';
@@ -2765,7 +2833,7 @@ var RGMIDI = (function () {
         html += '<button class="ch' + (mask[v.idx] ? '' : ' off') + '" data-v="' + v.idx + '" data-g="' + esc(g.name || '') + '" data-nm="' + esc(v.name) + '">' + esc(v.name) + '</button>';
       });
     });
-    html += '<button class="ch grp" data-all="1">Todos</button><button class="ch grp" data-mine="1" title="Silenciar os canais onde este timbre toca na música, para você tocar a parte dele">Silenciar canais do timbre</button>';
+    html += '<button class="ch grp" data-all="1">' + T('Todos','All') + '</button><button class="ch grp" data-mine="1" title="' + T('Silenciar os canais onde este timbre toca na música, para você tocar a parte dele','Mute the channels where this sound plays in the song, so you can play its part') + '">' + T('Silenciar canais do timbre','Mute this sound\'s channels') + '</button>';
     $('chans').innerHTML = html; markMine();
   }
   // liga os nomes dos canais do player aos canais onde o timbre aparece
@@ -2803,8 +2871,8 @@ var RGMIDI = (function () {
     var b = e.target.closest('.ch'); if (!b || !voices) return;
     if (b.dataset.all) { mask = mask.map(function () { return true; }); applyMask(); return; }
     if (b.dataset.mine) {
-      var m = mineIdx(); if (!m.length) { toast('Não achei os canais deste timbre — mute manualmente'); return; }
-      m.forEach(function (i) { mask[i] = false; }); applyMask(); toast('Canais do timbre silenciados — agora é você!'); return;
+      var m = mineIdx(); if (!m.length) { toast(T('Não achei os canais deste timbre — mute manualmente','Could not find this sound\'s channels — mute them by hand')); return; }
+      m.forEach(function (i) { mask[i] = false; }); applyMask(); toast(T('Canais do timbre silenciados — agora é você!','Sound\'s channels muted — your turn!')); return;
     }
     var v = +b.dataset.v, now = Date.now();
     if (lastTap.v === v && now - lastTap.t < 320) { // toque duplo: solo
@@ -2825,13 +2893,29 @@ var RGMIDI = (function () {
 
   setOct(4); setMidi();
   if (document.documentElement.className === 'pc') mtab('songs');
-  function modeBtn() { var pc = document.documentElement.className === 'pc'; $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? 'Mudar para o modo celular' : 'Mudar para o modo computador'; }
+  function modeBtn() { var pc = document.documentElement.className === 'pc'; $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? T('Mudar para o modo celular','Switch to phone mode') : T('Mudar para o modo computador','Switch to desktop mode'); }
   $('btnMode').onclick = function () {
     var nm = document.documentElement.className === 'pc' ? 'mob' : 'pc';
     document.documentElement.className = nm; lsSet('rgStudioMode', nm); modeBtn(); buildKb();
-    toast(nm === 'pc' ? 'Modo computador' : 'Modo celular');
+    toast(nm === 'pc' ? T('Modo computador','Desktop mode') : T('Modo celular','Phone mode'));
   };
   modeBtn();
+  // ───────────────────── idioma (PT | EN) ─────────────────────
+  function langMark() {
+    $('langSw').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-l') === rgI18n.lang); });
+    $('btnTracker').href = 'tracker.html?lang=' + rgI18n.lang;
+  }
+  $('langSw').addEventListener('click', function (e) { var b = e.target.closest('button[data-l]'); if (b) rgI18n.set(b.getAttribute('data-l')); });
+  rgI18n.on(function (l) {
+    langMark(); qPh(); renderList(); playBtn(); modeBtn(); setMidi(midiState);
+    if (cur.path && isLocal(cur.path) && !(cur.res && cur.res.info && cur.res.info.game)) $('sGame').textContent = T('Arquivo local', 'Local file');
+    if (cur.res) { var sel = cur.sel, st = $('timbres').scrollTop; renderSong(); if (sel >= 0) pickTimbre(sel, true); $('timbres').scrollTop = st; }
+    if (voices) renderChans(); else if (!pLoaded) resetChans();
+    if (EMBED) try { window.parent.postMessage({ type: 'rg-lang', lang: l }, '*'); } catch (e) {}
+  });
+  // o blog avisa quando o idioma muda lá fora
+  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-lang' && e.source === window.parent) rgI18n.set(e.data.lang); });
+  langMark(); qPh();
   // abre direto numa música: estudio.html?f=Chiptunes/...vgz
   var qf = new URLSearchParams(location.search).get('f');
   if (qf && VGM_RE.test(qf)) selectSong(qf, qf.split('/').pop());
