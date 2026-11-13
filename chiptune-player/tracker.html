@@ -49,7 +49,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <body>
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
-  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador">📂 Abrir do computador</button>
+  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu computador. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip">📂 Abrir do computador</button>
   <button class="btn" id="bFiles" title="Arquivos salvos no navegador — baixe para o computador">💾 Arquivos salvos</button>
   <button class="btn" id="bMidi" title="Converter um VGM (do computador) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
@@ -85,7 +85,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     print: function (t) { console.log(t); },
     printErr: function (t) { console.warn(t); },
     setStatus: function () {},
-    onRgReady: function () { ready = true; setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); },
+    onRgReady: function () { ready = true; setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); setTimeout(checkInbox, 600); },
     onAbort: function () { $('loadTxt').textContent = 'O Tracker parou com um erro. Recarregue a página.'; $('load').style.display = 'grid'; }
   };
 
@@ -94,10 +94,32 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (/\.(fui|dmp|tfi|vgi|opni|opli|y12|bnk|ff|gyb|sbi|ins|wopn|wopl|s3i|ni|ins)$/i.test(name)) return 'Instrumentos';
     return 'Projetos';
   }
+  // grava no navegador e abre no Furnace
+  function openBytes(name, u8, delay) {
+    var safe = name.replace(/[\/\\]/g, '_');
+    var path = HOME + '/' + folderFor(safe) + '/' + safe;
+    importing[path] = 1;
+    Module.FS.writeFile(path, u8);
+    delete importing[path];
+    setTimeout(function () { Module.ccall('rg_web_drop', null, ['string'], [path]); try { Module.FS.syncfs(false, function () {}); } catch (e) {} }, delay || 0);
+  }
+  // VGM → projeto do Furnace (direto, com os timbres do chip)
+  function vgmToFur(u8, name, delay) {
+    if (!window.RGVGM || !window.RGFUR) { notify('Conversor de VGM não carregou.'); return; }
+    notify('🎛 Convertendo ' + name + ' para o Furnace…');
+    RGVGM.inflate(new Uint8Array(u8)).then(function (raw) {
+      var r = RGVGM.parse(raw, { events: true, pcm: true });
+      var o = RGFUR.build(r);
+      var fn = RGFUR.fileName(r, name.replace(/\.[^.]+$/, ''));
+      openBytes(fn, o.bytes, delay);
+      notify('🎛 ' + fn + ' — ' + (o.instruments - o.samples) + ' instrumentos' + (o.samples ? ', ' + o.samples + ' samples' : '') + ', linha = ' + o.rowFrames + ' quadro' + (o.rowFrames === 1 ? '' : 's') + (o.missing && o.missing.length ? ' · ficou de fora: ' + o.missing.join(', ') : ''));
+    }).catch(function (e) { notify('🎛 ' + name + ': ' + (e.message || e)); });
+  }
   function openFiles(list) {
     if (!ready) { alert('Espere o Tracker terminar de carregar.'); return; }
     Array.prototype.forEach.call(list, function (f, i) {
       f.arrayBuffer().then(function (ab) {
+        if (isVGM(f.name)) { vgmToFur(new Uint8Array(ab), f.name, i * 250); return; }
         var safe = f.name.replace(/[\/\\]/g, '_');
         var path = HOME + '/' + folderFor(safe) + '/' + safe;
         importing[path] = 1;
@@ -151,6 +173,24 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   }
   $('tDl').onclick = function () { if (lastSaved) download(lastSaved); $('toast').classList.remove('show'); };
   $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
+
+  // projeto mandado pelo Chiptune Studio (botão "Abrir no Tracker")
+  function checkInbox() {
+    try {
+      var rq = indexedDB.open('rg-inbox', 1);
+      rq.onupgradeneeded = function () { rq.result.createObjectStore('f'); };
+      rq.onsuccess = function () {
+        var db = rq.result, tx = db.transaction('f', 'readwrite'), st = tx.objectStore('f'), g = st.get('next');
+        g.onsuccess = function () {
+          var it = g.result; if (!it) return;
+          st.delete('next');
+          if (Date.now() - (it.t || 0) > 10 * 60 * 1000) return; // velho demais: ignora
+          openBytes(it.name, new Uint8Array(it.bytes), 0);
+          notify('🎛 Aberto do Chiptune Studio: ' + it.name);
+        };
+      };
+    } catch (e) {}
+  }
 
   // ── VGM → MIDI (mesmo conversor do Chiptune Studio) ──
   function isVGM(p) { return /\.(vgm|vgz)$/i.test(p || ''); }
@@ -206,7 +246,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
       groups[d].forEach(function (f) {
         html += '<div class="f"><span class="n" title="' + esc(f.p) + '">' + esc(f.p.split('/').pop()) + '</span><span class="m">' + kb(f.size) + ' · ' +
           new Date(f.t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + '</span>' +
-          (isVGM(f.p) ? '<button data-midi="' + esc(f.p) + '" title="Converter para MIDI e baixar">🎼</button>' : '') +
+          (isVGM(f.p) ? '<button data-fur="' + esc(f.p) + '" title="Abrir como projeto (timbres do chip)">🎛</button><button data-midi="' + esc(f.p) + '" title="Converter para MIDI e baixar">🎼</button>' : '') +
           '<button data-dl="' + esc(f.p) + '" title="Baixar para o computador">⬇</button><button data-op="' + esc(f.p) + '" title="Abrir no Tracker">📂</button><button data-rm="' + esc(f.p) + '" title="Apagar do navegador">🗑</button></div>';
       });
     });
@@ -214,7 +254,8 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   }
   $('pList').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.midi) vgmToMidi(Module.FS.readFile(b.dataset.midi), b.dataset.midi.split('/').pop());
+    if (b.dataset.fur) { vgmToFur(Module.FS.readFile(b.dataset.fur), b.dataset.fur.split('/').pop()); $('panel').classList.remove('show'); $('canvas').focus(); }
+    else if (b.dataset.midi) vgmToMidi(Module.FS.readFile(b.dataset.midi), b.dataset.midi.split('/').pop());
     else if (b.dataset.dl) download(b.dataset.dl);
     else if (b.dataset.op) { Module.ccall('rg_web_drop', null, ['string'], [b.dataset.op]); $('panel').classList.remove('show'); $('canvas').focus(); }
     else if (b.dataset.rm && confirm('Apagar "' + b.dataset.rm.split('/').pop() + '" do navegador?')) {

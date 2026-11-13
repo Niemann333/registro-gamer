@@ -208,6 +208,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
           <div class="tm" id="tm">0:00 / 0:00</div>
           <label class="vol">🔊<input type="range" id="mVol" min="0" max="1.5" step="0.05" value="0.8"></label>
           <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar">⬇ MIDI</button>
+          <button class="btn" id="bFur" title="Converter esta música num projeto do Furnace (.fur) com os timbres exatos do chip">⬇ Furnace</button>
         </div>
         <div class="chans" id="chans"><span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span></div>
       </div>
@@ -239,6 +240,12 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
     <label class="tgl" title="Detecta o andamento para as notas caírem nos compassos (bom para editar numa DAW)"><input type="checkbox" id="mdTempo" checked>Ajustar ao tempo (BPM)</label></div>
   <div class="dlist" id="mdList"><div class="msg">Lendo as notas…</div></div>
   <div class="dft"><span class="dinfo" id="mdInfo"></span><button class="btn pri" id="mdGo" disabled>⬇ Baixar .mid</button></div>
+</div></div>
+<div class="dlg" id="furDlg"><div class="dbox">
+  <div class="dhd"><b>Projeto do Furnace (.fur)</b><button class="btn sm" id="fdX">✕</button></div>
+  <div class="dsub">Converte direto do VGM, sem passar pelo MIDI: os instrumentos FM saem com os registradores originais do chip, o PSG com o envelope de volume de cada timbre e a bateria com os samples do próprio jogo. Abre no Tracker daqui e no Furnace do computador.</div>
+  <div class="dlist" id="fdBody"><div class="msg">Convertendo…</div></div>
+  <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker (só no computador)">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled>⬇ Baixar .fur</button></div>
 </div></div>
 <div class="gate" id="gate"><div class="box"><div class="big">🎹</div><h2>Chiptune Studio</h2>
   <p>Ligue seu teclado MIDI no USB (ou use o teclado do computador; no celular, o teclado na tela) e toque com os timbres das músicas do acervo.</p>
@@ -618,7 +625,7 @@ var RGVGM = (function () {
       if (start) {
         if (this.mOn) R.push({ c: this.id, t: ft, k: 'off' });
         var ev = { c: this.id, t: ft, k: 'on', n: w.k === 'noise' ? 0 : midiOf(f), v: v, pan: 64 };
-        if (w.k === 'noise') ev.noise = { ck: w.ck, r: w.nrate || 0, m: w.nmode };
+        if (w.k === 'noise') ev.noise = { ck: w.ck, r: w.nrate || 0, m: w.nmode, f: w.tf || 0 };
         R.push(ev); this.rec.evOn = ev;
         this.mOn = true; this.mNote = ev.n; this.mV = v;
       } else if (this.mOn) {
@@ -774,6 +781,7 @@ var RGVGM = (function () {
       chip.used = true;
       chip.regs[port][a] = d;
       if (port === 0 && a === 0x2B) chip.dac = !!(d & 0x80);
+      if (DS && port === 0 && a === 0x2A && chip.chip === 'YM2612' && chip.dac) dsPush(t, d);
       if (port === 0 && a === 0x28) {
         var c = d & 7, ch = c >= 4 ? c - 1 : c;
         if (c === 3 || c === 7 || ch >= chip.nch) return;
@@ -809,7 +817,8 @@ var RGVGM = (function () {
         c.wave = { k: 'pulse', ck: 'sn', duty: 2 };
       }
       var n = sn.ch[3]; n.vol = snVol(sn.att[3]);
-      n.wave = { k: 'noise', ck: 'sn', nmode: (sn.noise & 4) ? 'white' : 'periodic', nrate: sn.noise & 3 };
+      n.wave = { k: 'noise', ck: 'sn', nmode: (sn.noise & 4) ? 'white' : 'periodic', nrate: sn.noise & 3,
+        tf: (sn.noise & 3) === 3 ? sn.clock / (32 * (sn.per[2] || 1024)) : 0 };
       n.freq = 0;
     }
     function snWrite(d) {
@@ -955,6 +964,45 @@ var RGVGM = (function () {
     // ── percorre os comandos ──
     var p = hdrLen, t = 0, nextFrame = FRAME, end = b.length, guard = 0;
     var dacSeek = null, dacLast = -1e9, dacSeen = false, streamChip = {};
+    var PCM = opts && opts.pcm ? { bank: [], blocks: [], ids: {}, streamFreq: {}, streamBank: {} } : null;
+    var pcmLen = 0, dacCur = null; // sample que o DAC está tocando agora (via 0x8n)
+    // fluxo completo do DAC (valor + tempo de cada escrita), para recortar em samples exatos
+    var DS = PCM ? { v: new Uint8Array(1 << 16), t: new Float64Array(1 << 16), n: 0, seeks: [], ptr: 0, st: null } : null;
+    function dsPush(tt, v) {
+      if (DS.n === DS.v.length) {
+        var nv = new Uint8Array(DS.n * 2); nv.set(DS.v); DS.v = nv;
+        var nt = new Float64Array(DS.n * 2); nt.set(DS.t); DS.t = nt;
+      }
+      DS.v[DS.n] = v; DS.t[DS.n] = tt; DS.n++;
+    }
+    function dsBank() { // banco de dados PCM até agora (em pedaços)
+      return PCM.bank;
+    }
+    function bankByte(off) {
+      var o = off;
+      for (var k = 0; k < PCM.bank.length; k++) { var x = PCM.bank[k]; if (o < x.length) return x[o]; o -= x.length; }
+      return 128;
+    }
+    // stream do VGM (0x93/0x95): gera as escritas até 'ate' (ou até o fim do bloco)
+    function dsFlushStream(ate) {
+      var S = DS.st; if (!S) return;
+      var step = 44100 / S.f;
+      while (S.i < S.len) {
+        var tt = S.t0 + S.i * step;
+        if (tt >= ate) return;
+        if (fm.ym2612 && fm.ym2612.dac) dsPush(tt, bankByte(S.off + S.i));
+        S.i++;
+      }
+      DS.st = null;
+    }
+    function dacEnd() {
+      if (!PCM || !dacCur) return;
+      var c = dacCur; dacCur = null;
+      if (c.n < 8) return;
+      var info = PCM.ids[c.id] || (PCM.ids[c.id] = { start: c.start, len: 0, rates: [] });
+      if (c.n > info.len) info.len = c.n;
+      if (c.t1 > c.t0) info.rates.push((c.n - 1) * 44100 / (c.t1 - c.t0));
+    }
     function dacHit(id) {
       if (!REC || !fm.ym2612 || !fm.ym2612.dac) return;
       if (t - dacLast < 300 && id === dacHit.last) return;
@@ -994,12 +1042,52 @@ var RGVGM = (function () {
         if (c === 0x62) { advance(735); p++; continue; }
         if (c === 0x63) { advance(882); p++; continue; }
         if (c >= 0x70 && c <= 0x7F) { advance((c & 15) + 1); p++; continue; }
-        if (c >= 0x80 && c <= 0x8F) { if (dacSeek !== null) { dacHit('o' + dacSeek); dacSeek = null; } advance(c & 15); p++; continue; }
-        if (c === 0xE0) { dacSeek = u32(b, p + 1); p += 5; continue; }
+        if (c >= 0x80 && c <= 0x8F) {
+          if (dacSeek !== null) {
+            dacHit('o' + dacSeek);
+            if (PCM && fm.ym2612 && fm.ym2612.dac) { dacEnd(); dacCur = { id: 'o' + dacSeek, start: dacSeek, n: 0, t0: t, t1: t }; }
+            dacSeek = null;
+          }
+          if (dacCur) { dacCur.n++; dacCur.t1 = t; }
+          if (DS && fm.ym2612 && fm.ym2612.dac) dsPush(t, bankByte(DS.ptr));
+          if (DS) DS.ptr++;
+          advance(c & 15); p++; continue;
+        }
+        if (c === 0xE0) { dacSeek = u32(b, p + 1); dacEnd(); if (DS) { DS.ptr = dacSeek; DS.seeks.push(t); } p += 5; continue; }
         if (c === 0x90) { streamChip[b[p + 1]] = b[p + 2] & 0x7F; p += 5; continue; }
-        if (c === 0x95) { if (streamChip[b[p + 1]] === 2) dacHit('b' + (b[p + 2] | (b[p + 3] << 8))); p += 5; continue; }
-        if (c === 0x93) { if (streamChip[b[p + 1]] === 2) dacHit('s' + u32(b, p + 2)); p += 11; continue; }
-        if (c === 0x67) { p += 7 + u32(b, p + 3) ; p -= 0; continue; }
+        if (c === 0x91) { if (PCM) PCM.streamBank[b[p + 1]] = b[p + 2]; p += 5; continue; }
+        if (c === 0x92) { if (PCM) PCM.streamFreq[b[p + 1]] = u32(b, p + 2); p += 6; continue; }
+        if (c === 0x95) {
+          var sid = b[p + 1], bid = b[p + 2] | (b[p + 3] << 8);
+          if (streamChip[sid] === 2) {
+            dacHit('b' + bid);
+            if (DS && PCM.blocks[bid]) {
+              dsFlushStream(t); DS.seeks.push(t);
+              DS.st = { t0: t, f: PCM.streamFreq[sid] || 8000, off: PCM.blocks[bid].start, len: PCM.blocks[bid].len, i: 0 };
+            }
+            if (PCM && !PCM.ids['b' + bid]) PCM.ids['b' + bid] = { block: bid, rates: [PCM.streamFreq[sid] || 0] };
+          }
+          p += 5; continue;
+        }
+        if (c === 0x93) {
+          if (streamChip[b[p + 1]] === 2) {
+            dacHit('s' + u32(b, p + 2));
+            if (DS) {
+              var sOff = u32(b, p + 2), lm = b[p + 6], sLen = u32(b, p + 7);
+              // modo de tamanho: 1 = comandos (bytes), 2 = ms, 3 = até o fim do banco
+              var ln = (lm & 15) === 2 ? Math.round(sLen * (PCM.streamFreq[b[p + 1]] || 8000) / 1000) : (lm & 15) === 3 ? 1e9 : sLen;
+              dsFlushStream(t); DS.seeks.push(t);
+              DS.st = { t0: t, f: PCM.streamFreq[b[p + 1]] || 8000, off: sOff, len: Math.min(ln, Math.max(0, pcmLen - sOff)), i: 0 };
+            }
+          }
+          p += 11; continue;
+        }
+        if (c === 0x94) { if (DS && DS.st) { dsFlushStream(t); DS.st = null; } p += 2; continue; }
+        if (c === 0x67) {
+          var bsz = u32(b, p + 3) & 0x7FFFFFFF, btype = b[p + 2];
+          if (PCM && btype === 0x00) { PCM.blocks.push({ start: pcmLen, len: bsz }); PCM.bank.push(b.subarray(p + 7, p + 7 + bsz)); pcmLen += bsz; }
+          p += 7 + bsz; continue;
+        }
         if (c === 0x68) { p += 12; continue; }
         if (c >= 0x90 && c <= 0x95) { p += [5, 5, 6, 11, 2, 5][c - 0x90]; continue; }
         if (c >= 0x30 && c <= 0x3F) { p += 2; continue; }
@@ -1012,8 +1100,10 @@ var RGVGM = (function () {
         p++; // comando desconhecido
       }
     } catch (e) { if (e !== 'longo') throw e; }
+    if (DS) dsFlushStream(t + 1);
     advance(FRAME);
     chans.forEach(function (c) { c.finish(); });
+    dacEnd();
     if (REC) {
       for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
       chans.forEach(function (c) { if (c.mOn) { REC.push({ c: c.id, t: t, k: 'off' }); c.mOn = false; } });
@@ -1049,6 +1139,32 @@ var RGVGM = (function () {
       var used = {}; REC.forEach(function (e) { if (e.k === 'on' || e.k === 'hit') used[e.c] = (used[e.c] || 0) + 1; });
       res.midi = { events: REC, chans: mchans.filter(function (m) { return used[m.id]; }).map(function (m) { m.notes = used[m.id]; return m; }) };
     }
+    if (PCM) {
+      // junta os blocos em um banco só e resolve cada sample (início, tamanho, taxa)
+      var bank = new Uint8Array(pcmLen), o = 0;
+      PCM.bank.forEach(function (x) { bank.set(x, o); o += x.length; });
+      var smp = {};
+      Object.keys(PCM.ids).forEach(function (id) {
+        var it = PCM.ids[id], st, ln;
+        if (it.block != null) { var bl = PCM.blocks[it.block]; if (!bl) return; st = bl.start; ln = bl.len; }
+        else { st = it.start; ln = it.len; }
+        if (!ln || st >= bank.length) return;
+        ln = Math.min(ln, bank.length - st);
+        var r = it.rates.filter(function (x) { return x > 1000 && x < 60000; }).sort(function (a, b2) { return a - b2; });
+        smp[id] = { data: bank.subarray(st, st + ln), rate: r.length ? Math.round(r[r.length >> 1]) : 8000 };
+      });
+      res.pcm = smp;
+      // drivers que tocam uma batida por seek/stream já dão os samples certos (Object.keys(smp));
+      // os que escrevem direto no DAC ou mixam em pedaços curtos são recortados do fluxo
+      if (DS && DS.n) {
+        var cut = dacSegments(DS);
+        res.dacCut = cut; // alternativa (o conversor escolhe a que der menos samples)
+        if (!cut.bySeek || !Object.keys(smp).length) { res.dacHits = cut.hits; cut.list.forEach(function (x) { res.pcm[x.id] = x; }); }
+      }
+      res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
+      res.rateHz = ver >= 0x101 ? u32(b, 0x24) : 0;
+      res.clocks = clk;
+    }
     return res;
   }
 
@@ -1064,6 +1180,98 @@ var RGVGM = (function () {
     if (x.median < 48) return 'Baixo';
     if (x.median < 62) return 'Acompanhamento';
     return 'Melodia';
+  }
+
+  // recorta o fluxo do DAC em pedaços (um por batida); pedaços iguais viram o mesmo sample
+  function dacSegments(DS) {
+    var n = DS.n, v = DS.v, tt = DS.t, k;
+    var ord = false;
+    for (k = 1; k < n; k++) if (tt[k] < tt[k - 1]) { ord = true; break; }
+    if (ord) { // streams misturados com escrita direta: ordena por tempo
+      var idx = []; for (k = 0; k < n; k++) idx.push(k);
+      idx.sort(function (a, b) { return tt[a] - tt[b]; });
+      var v2 = new Uint8Array(n), t2 = new Float64Array(n);
+      idx.forEach(function (j, i) { v2[i] = v[j]; t2[i] = tt[j]; }); v = v2; tt = t2;
+    }
+    // corta nos "seeks" só quando o driver toca uma batida por seek (intervalos longos)
+    var sk = DS.seeks, useSeek = false;
+    if (sk.length > 2) {
+      var gaps = []; for (k = 1; k < sk.length; k++) gaps.push(sk[k] - sk[k - 1]);
+      gaps.sort(function (a, b) { return a - b; });
+      useSeek = gaps[gaps.length >> 1] > 735 * 2.5;
+    }
+    var si = 0, segs = [], cur = null, quietFrom = -1;
+    function close(e, byNext) { if (cur && e - cur.s >= 24) segs.push({ s: cur.s, e: e, next: !!byNext }); cur = null; }
+    for (k = 0; k < n; k++) {
+      var gap = k ? tt[k] - tt[k - 1] : 1e9, isSeek = false;
+      if (useSeek) while (si < sk.length && sk[si] <= tt[k]) { isSeek = true; si++; }
+      if (cur && (gap > 120 || isSeek)) { close(quietFrom >= 0 ? quietFrom : k, gap <= 120 && quietFrom < 0); quietFrom = -1; }
+      var silent = Math.abs(v[k] - 128) <= 2;
+      if (!cur) { if (silent && !isSeek) continue; cur = { s: k }; quietFrom = -1; }
+      if (silent) { if (quietFrom < 0) quietFrom = k; else if (tt[k] - tt[quietFrom] > 441) { close(quietFrom); quietFrom = -1; } }
+      else quietFrom = -1;
+    }
+    close(quietFrom >= 0 ? quietFrom : n);
+    var byKey = {}, list = [], hits = [];
+    // os pedaços cortados pela batida seguinte usam o sample inteiro (o Furnace corta igual, na nota seguinte)
+    var full = segs.filter(function (g) { return !g.next; }).sort(function (a, b) { return (b.e - b.s) - (a.e - a.s); });
+    function prefixOf(g) {
+      var len = g.e - g.s;
+      for (var q = 0; q < full.length; q++) {
+        var f = full[q]; if (f.e - f.s <= len) break;
+        var ok = true;
+        for (var j = 0; j < len; j++) if (v[f.s + j] !== v[g.s + j]) { ok = false; break; }
+        if (ok) return f;
+      }
+      return null;
+    }
+    segs.forEach(function (g) {
+      if (g.next) { var f = prefixOf(g); if (f) { g.rs = g.s; g.re = g.e; g.s = f.s; g.e = f.e; } }
+      var len = g.e - g.s, h = 2166136261;
+      for (var j = g.s; j < g.e; j++) { h ^= v[j]; h = Math.imul(h, 16777619); }
+      var key = len + ':' + (h >>> 0);
+      var a0 = g.rs != null ? g.rs : g.s, a1 = g.re != null ? g.re : g.e;
+      var dur = tt[a1 - 1] - tt[a0];
+      var rate = dur > 0 ? (a1 - a0 - 1) * 44100 / dur : 8000;
+      var it = byKey[key];
+      if (!it) { it = byKey[key] = { id: 'd' + list.length, data: v.slice(g.s, g.e), rates: [] }; list.push(it); }
+      it.rates.push(rate);
+      hits.push({ t: tt[g.rs != null ? g.rs : g.s], id: it.id });
+    });
+    // junta pedaços quase iguais (mesma batida com 1-2 bytes de diferença por causa do tempo)
+    function mad(x, y) {
+      var m = Math.min(x.length, y.length), d = 0;
+      for (var j = 0; j < m; j++) d += Math.abs(x[j] - y[j]);
+      return d / (m || 1);
+    }
+    list.forEach(function (it) { it.uses = it.rates.length; });
+    var order = list.slice().sort(function (a, b) { return b.uses - a.uses || b.data.length - a.data.length; });
+    var reps = [], alias = {};
+    order.forEach(function (it) {
+      var hit = null;
+      for (var q = 0; q < reps.length; q++) {
+        var r = reps[q], la = it.data.length, lb = r.data.length;
+        if (Math.abs(la - lb) > Math.max(8, 0.03 * Math.max(la, lb))) continue;
+        if (mad(it.data, r.data) <= 2.5) { hit = r; break; }
+      }
+      if (hit) { alias[it.id] = hit; hit.rates = hit.rates.concat(it.rates); hit.uses += it.uses; if (it.data.length > hit.data.length) hit.data = it.data; }
+      else { reps.push(it); alias[it.id] = it; }
+    });
+    // limite de samples: os raros vão para o mais parecido
+    var MAXS = 100;
+    reps.sort(function (a, b) { return b.uses - a.uses; });
+    var keep = reps.slice(0, MAXS);
+    reps.slice(MAXS).forEach(function (it) {
+      var best = keep[0], bd = 1e9;
+      keep.forEach(function (k) { var d = mad(it.data, k.data) + Math.abs(it.data.length - k.data.length) / 50; if (d < bd) { bd = d; best = k; } });
+      Object.keys(alias).forEach(function (id) { if (alias[id] === it) alias[id] = best; });
+    });
+    hits.forEach(function (h) { h.id = alias[h.id].id; });
+    keep.forEach(function (it) {
+      var r = it.rates.sort(function (a, b) { return a - b; })[it.rates.length >> 1];
+      it.rate = Math.max(1000, Math.min(60000, Math.round(r))); delete it.rates;
+    });
+    return { hits: hits, list: keep, bySeek: useSeek };
   }
 
   function inflate(u8) {
@@ -1296,6 +1504,547 @@ var RGMIDI = (function () {
   return { build: build, fileName: fileName };
 })();
 
+
+/* ===== VGM → Furnace (.fur) — Registro Gamer =====
+   Converte o resultado de RGVGM.parse(buf, {events:true, pcm:true}) num módulo do Furnace,
+   com os timbres exatos dos chips (instrumentos FM com os registradores originais,
+   envelopes do PSG como macro de volume, samples do DAC do jeito que estão no VGM).
+   Fase 1: Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489).
+   Gera o formato da versão 228 (abre no Furnace 0.6.8 e mais novos). */
+;(function (root) {
+  'use strict';
+
+  // ---------- escritor binário ----------
+  function Wr() { this.b = new Uint8Array(1 << 16); this.n = 0; }
+  Wr.prototype.need = function (k) {
+    if (this.n + k <= this.b.length) return;
+    var nb = new Uint8Array(Math.max(this.b.length * 2, this.n + k + 1024)); nb.set(this.b.subarray(0, this.n)); this.b = nb;
+  };
+  Wr.prototype.c = function (v) { this.need(1); this.b[this.n++] = v & 255; };
+  Wr.prototype.s = function (v) { this.c(v); this.c(v >> 8); };
+  Wr.prototype.i = function (v) { this.c(v); this.c(v >> 8); this.c(v >> 16); this.c(v >>> 24); };
+  Wr.prototype.f = function (v) { var a = new DataView(new ArrayBuffer(4)); a.setFloat32(0, v, true); for (var k = 0; k < 4; k++) this.c(a.getUint8(k)); };
+  Wr.prototype.tag = function (t) { for (var k = 0; k < t.length; k++) this.c(t.charCodeAt(k)); };
+  Wr.prototype.str = function (t) { // UTF-8 terminada em 0
+    var u = unescape(encodeURIComponent(t || ''));
+    for (var k = 0; k < u.length; k++) this.c(u.charCodeAt(k));
+    this.c(0);
+  };
+  Wr.prototype.bytes = function (a) { this.need(a.length); this.b.set(a, this.n); this.n += a.length; };
+  Wr.prototype.patchI = function (at, v) { var s = this.n; this.n = at; this.i(v); this.n = s; };
+  Wr.prototype.out = function () { return this.b.slice(0, this.n); };
+  // bloco "TAG" + tamanho (preenchido no fim)
+  Wr.prototype.block = function (t) { this.tag(t); var at = this.n; this.i(0); return at; };
+  Wr.prototype.end = function (at) { this.patchI(at, this.n - at - 4); };
+
+  // ---------- conversões de volume ----------
+  function dB(v) { return v > 0 ? -20 * Math.log(v) / Math.LN10 : 999; }
+  function fmVol(v) { return Math.max(0, Math.min(127, 127 - Math.round(dB(v) / 0.75))); }
+  function snVol(v) { return Math.max(0, Math.min(15, 15 - Math.round(dB(v) / 2))); }
+  function midiOfHz(f) { return 69 + 12 * Math.log(f / 440) / Math.LN2; }
+
+  // detune do hardware (0..7) → valor interno do Furnace (3 = sem detune)
+  var DT = [3, 4, 5, 6, 3, 2, 1, 0];
+
+  // ---------- canais suportados ----------
+  // mapa id do evento → índice do canal no Furnace, por sistema
+  function layout(res) {
+    var has = {};
+    (res.chips || []).forEach(function (c) { has[(c.name || c.chip || c.id || c).toString()] = 1; });
+    var ids = res.midi.chans.map(function (c) { return c.id; });
+    var ym = ids.some(function (i) { return /^YM2612/.test(i); });
+    var sn = ids.some(function (i) { return /^SN76489/.test(i); });
+    var outros = ids.filter(function (i) { return !/^(YM2612|SN76489)/.test(i); }).map(function (b) { return b.split(' · ')[0]; })
+      .concat(res.unsupported || []).filter(function (v, k, a) { return a.indexOf(v) === k; });
+    if (!ym && !sn) throw new Error('Este VGM usa ' + (outros.length ? outros.join(', ') : 'um chip') +
+      ', que o conversor para Furnace ainda não aceita. Por enquanto: Mega Drive e Master System (YM2612 e SN76489).');
+    var L = { sys: [], map: {}, names: [], shorts: [], kind: [] };
+    if (ym) {
+      L.sys.push({ id: 0x83, n: 6, vol: 1, pan: 0, fr: 1 });
+      for (var k = 1; k <= 6; k++) { L.map['YM2612 · FM ' + k] = k - 1; L.names.push('FM ' + k); L.shorts.push('F' + k); L.kind.push('fm'); }
+      L.map['YM2612 · DAC'] = 5; L.names[5] = 'FM 6 / DAC'; L.shorts[5] = 'DAC';
+    }
+    if (sn || ym) {
+      var o = L.names.length;
+      L.sys.push({ id: 0x03, n: 4, vol: ym ? 0.5 : 1, pan: 0, fr: ym ? 0.5 : 1 });
+      for (var j = 1; j <= 3; j++) { L.map['SN76489 · PSG ' + j] = o + j - 1; L.names.push('PSG ' + j); L.shorts.push('S' + j); L.kind.push('sn'); }
+      L.map['SN76489 · Ruído'] = o + 3; L.names.push('Ruído'); L.shorts.push('NO'); L.kind.push('noise');
+    }
+    L.chans = L.names.length;
+    L.missing = outros;
+    L.system = ym ? 'Sega Genesis/Mega Drive' : 'Sega Master System';
+    return L;
+  }
+
+  // ---------- instrumentos ----------
+  function insFM(w, tb, name) {
+    var at = w.block('INS2'); w.s(228); w.s(1);
+    var f = w.tag('NA') || 0; var a = w.n; w.s(0); w.str(name); patchS(w, a);
+    w.tag('FM'); a = w.n; w.s(0);
+    w.c(0xF0 | 4);
+    w.c(((tb.alg & 7) << 4) | (tb.fb & 7));
+    w.c(((tb.ams & 3) << 3) | (tb.fms & 7));
+    w.c(0x20);
+    w.c(0);
+    // ordem do Furnace (registrador +0,+4,+8,+12) a partir da nossa (+0,+8,+4,+12)
+    [0, 2, 1, 3].forEach(function (m) {
+      var o = tb.ops[m];
+      w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
+      w.c(o.tl & 127);
+      w.c(((o.ks & 3) << 6) | (o.ar & 31));
+      w.c((o.am ? 128 : 0) | (o.d1r & 31));
+      w.c((2 << 5) | (o.d2r & 31));
+      w.c(((o.sl & 15) << 4) | (o.rr & 15));
+      w.c(o.ssg & 15);
+      w.c((o.dt2 & 3) << 3);
+    });
+    patchS(w, a);
+    w.tag('EN');
+    w.end(at);
+  }
+  function patchS(w, a) { var s = w.n, len = s - a - 2; w.n = a; w.s(len); w.n = s; }
+
+  function insSTD(w, name, vols) {
+    var at = w.block('INS2'); w.s(228); w.s(0);
+    w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
+    if (vols && vols.length) {
+      w.tag('MA'); a = w.n; w.s(0);
+      w.s(8);
+      w.c(0); w.c(vols.length); w.c(255); w.c(255); w.c(0); w.c(0); w.c(0); w.c(1);
+      vols.forEach(function (v) { w.c(v); });
+      w.c(255);
+      patchS(w, a);
+    }
+    w.tag('EN');
+    w.end(at);
+  }
+
+  function insSample(w, name, smpIdx) {
+    var at = w.block('INS2'); w.s(228); w.s(4);
+    w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
+    w.tag('SM'); a = w.n; w.s(0);
+    w.s(smpIdx); w.c(2); w.c(0);
+    patchS(w, a);
+    w.tag('EN');
+    w.end(at);
+  }
+
+  function sampleBlock(w, name, data, rate) {
+    var at = w.block('SMP2');
+    w.str(name);
+    w.i(data.length); w.i(rate); w.i(rate);
+    w.c(8); w.c(0); w.c(0); w.c(0);
+    w.i(-1); w.i(-1);
+    for (var k = 0; k < 4; k++) w.i(-1);
+    var s = new Uint8Array(data.length);
+    for (var j = 0; j < data.length; j++) s[j] = (data[j] - 128) & 255; // DAC sem sinal → 8 bits com sinal
+    w.bytes(s);
+    w.end(at);
+  }
+
+  // envelope normalizado (pico 1, um valor por quadro) → macro de volume 0..15 do SN
+  function envMacro(env) {
+    if (!env || !env.length) return null;
+    var out = [];
+    for (var k = 0; k < env.length && k < 255; k++) out.push(Math.max(0, 15 - Math.round(dB(env[k]) / 2)));
+    // tira a cauda repetida (o último valor fica valendo)
+    while (out.length > 1 && out[out.length - 1] === out[out.length - 2]) out.pop();
+    if (out.length === 1 && out[0] === 15) return null;
+    return out;
+  }
+
+  // ---------- conversão principal ----------
+  function build(res, opts) {
+    opts = opts || {};
+    if (!res || !res.midi) throw new Error('VGM sem eventos (chame RGVGM.parse com {events:true, pcm:true}).');
+    var L = opts.layout || layout(res);
+    var hz = res.rateHz === 50 ? 50 : 60;
+    var spt = 44100 / hz;
+
+    // instrumentos: timbres FM, timbres PSG e um por sample do DAC
+    var insList = [], insOf = new Map(), smpList = [], smpOf = {};
+    var nFM = 0, nPSG = 0, nNoise = 0;
+    // batidas do DAC: recortes do fluxo (res.dacHits) quando existirem; senão os 'hit' dos eventos
+    var events = res.midi.events;
+    if (res.dacHits && res.dacHits.length) {
+      events = events.filter(function (e) { return e.k !== 'hit'; })
+        .concat(res.dacHits.map(function (h) { return { c: 'YM2612 · DAC', t: h.t, k: 'hit', id: h.id }; }))
+        .sort(function (a, b) { return a.t - b.t; });
+    }
+    // assinatura do timbre (o que vai para o instrumento): timbres iguais viram um instrumento só
+    function sigOf(t) {
+      if (t.type === 'fm') return 'f' + [t.alg, t.fb, t.ams, t.fms].join(',') + '|' + t.ops.map(function (o) {
+        return [DT[o.dt & 7], o.mul, o.tl, o.ks, o.ar, o.am ? 1 : 0, o.d1r, o.d2r, o.sl, o.rr, o.ssg & 15, o.dt2 & 3].join(',');
+      }).join('|');
+      return 's' + (envMacro(t.env) || []).join(',');
+    }
+    var bySig = {}, uses = new Map();
+    events.forEach(function (e) {
+      if (e.tb) uses.set(e.tb, (uses.get(e.tb) || 0) + 1);
+      if (e.k === 'hit' && smpOf[e.id] == null && res.pcm && res.pcm[e.id]) {
+        smpOf[e.id] = smpList.length;
+        smpList.push({ id: e.id, name: 'Bateria ' + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
+      }
+    });
+    if (smpList.length > 160) throw new Error('Samples de bateria demais para um módulo (' + smpList.length + ').');
+    // agrupa por assinatura, do mais usado para o menos usado
+    var groups = [];
+    Array.from(uses.keys()).forEach(function (t) {
+      var k = sigOf(t), g = bySig[k];
+      if (!g) { g = bySig[k] = { sig: k, tb: t, kind: t.type === 'fm' ? 'fm' : 'std', n: 0, members: [] }; groups.push(g); }
+      g.n += uses.get(t); g.members.push(t);
+    });
+    groups.sort(function (a, b) { return b.n - a.n; });
+    // limite do módulo: os timbres raros vão para o parecido mais próximo
+    var room = 255 - smpList.length, kept = groups.slice(0, room), merged = 0;
+    function dist(a, b) {
+      if (a.kind !== b.kind) return 1e9;
+      if (a.kind === 'std') {
+        var x = envMacro(a.tb.env) || [15], y = envMacro(b.tb.env) || [15], d = 0;
+        for (var i = 0; i < Math.max(x.length, y.length); i++) d += Math.abs((x[Math.min(i, x.length - 1)]) - (y[Math.min(i, y.length - 1)]));
+        return d;
+      }
+      var p = a.tb, q = b.tb, dd = (p.alg !== q.alg ? 1000 : 0) + Math.abs(p.fb - q.fb) * 4;
+      for (var o = 0; o < 4; o++) {
+        var u = p.ops[o], w2 = q.ops[o];
+        dd += Math.abs(u.tl - w2.tl) + Math.abs(u.ar - w2.ar) + Math.abs(u.d1r - w2.d1r) + Math.abs(u.d2r - w2.d2r) +
+          Math.abs(u.sl - w2.sl) * 2 + Math.abs(u.rr - w2.rr) * 2 + (u.mul !== w2.mul ? 30 : 0) + ((u.dt & 3) !== (w2.dt & 3) ? 3 : 0);
+      }
+      return dd;
+    }
+    groups.forEach(function (g, gi) {
+      var target = g;
+      if (gi >= room) {
+        var best = null, bd = 1e18;
+        kept.forEach(function (k) { var d = dist(g, k); if (d < bd) { bd = d; best = k; } });
+        target = best || kept[0]; merged++;
+      }
+      if (target.idx == null) {
+        var t = target.tb, name;
+        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + t.role : '');
+        else if (t.wave === 'noise') name = 'Ruído ' + (++nNoise);
+        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + t.role : '');
+        target.idx = insList.length; insList.push({ kind: target.kind, tb: t, name: name });
+      }
+      g.members.forEach(function (t) { insOf.set(t, target.idx); });
+    });
+    smpList.forEach(function (s, k) { s.ins = insList.length; insList.push({ kind: 'smp', smp: k, name: s.name }); });
+
+    // eventos por canal, em quadros
+    var per = [];
+    for (var c = 0; c < L.chans; c++) per.push([]);
+    events.forEach(function (e) {
+      var ch = L.map[e.c]; if (ch == null) return;
+      if (e.k === 'hit' && smpOf[e.id] == null) return;
+      per[ch].push({ f: Math.round(e.t / spt), e: e });
+    });
+    per.forEach(function (l) { l.sort(function (a, b) { return a.f - b.f; }); });
+
+    var totalF = Math.ceil((res.totalSamples || 0) / spt);
+    per.forEach(function (l) { if (l.length) totalF = Math.max(totalF, l[l.length - 1].f + 1); });
+
+    // quadros por linha: o maior R em que quase não há duas notas na mesma linha do mesmo canal
+    var onsets = per.map(function (l, ch) { var sh = L.kind[ch] !== 'fm' ? 1 : 0; return l.filter(function (x) { return x.e.k === 'on' || x.e.k === 'hit'; }).map(function (x) { return Math.max(0, x.f - sh); }); });
+    var nOn = onsets.reduce(function (s, l) { return s + l.length; }, 0) || 1;
+    function bestPhase(R) {
+      var h = new Array(R).fill(0);
+      onsets.forEach(function (l) { l.forEach(function (f) { h[f % R]++; }); });
+      var p = 0; for (var k = 1; k < R; k++) if (h[k] > h[p]) p = k;
+      return p;
+    }
+    function collisions(R, p) {
+      // devolve o total de notas que cairiam na mesma linha; um canal com muitas colisões desqualifica o R
+      // conta só as colisões a mais do que já existem com 1 quadro por linha (essas não têm como evitar)
+      var col = 0, worst = 0;
+      onsets.forEach(function (l, ci) {
+        var last = -1, cc = 0;
+        l.forEach(function (f) { var r = Math.floor((f + (R - p) % R) / R); if (r === last) cc++; last = r; });
+        cc -= base1[ci]; if (cc < 0) cc = 0;
+        col += cc; if (l.length >= 20) worst = Math.max(worst, cc / l.length);
+      });
+      return worst > 0.01 ? 1e9 : col;
+    }
+    var base1 = onsets.map(function (l) { var last = -1, cc = 0; l.forEach(function (f) { if (f === last) cc++; last = f; }); return cc; });
+    var R = opts.rowFrames || 0, phase = 0;
+    if (!R) {
+      R = 1;
+      for (var cand = 16; cand >= 2; cand--) {
+        var p = bestPhase(cand);
+        if (collisions(cand, p) <= nOn * 0.004 && Math.ceil(totalF / cand) <= 256 * 256) { R = cand; break; }
+      }
+    }
+    phase = R > 1 ? bestPhase(R) : 0;
+    if (opts.rowFrames && opts.phase != null) phase = opts.phase;
+
+    // em vez de cortar o começo, adianta a grade com um pouco de silêncio no início (o tempo relativo fica exato)
+    var lead = (R - phase) % R;
+    var lastRow = Math.max(0, Math.ceil((totalF + lead) / R) - 1);
+    var rowsPerSec = hz / R;
+    var patLen = opts.patLen || Math.max(32, Math.min(256, Math.round(rowsPerSec * 6 / 16) * 16));
+    var nOrd = Math.ceil((lastRow + 1) / patLen);
+    while (nOrd > 256 && patLen < 256) { patLen = Math.min(256, patLen * 2); nOrd = Math.ceil((lastRow + 1) / patLen); }
+    if (nOrd > 256) { lastRow = 256 * patLen - 1; nOrd = 256; }
+
+    // células: grid[canal][linha] = {note, ins, vol, fx:{código:valor}, d (atraso da nota)}
+    var grid = [];
+    for (c = 0; c < L.chans; c++) grid.push(new Map());
+    function cell(ch, r) { var m = grid[ch], x = m.get(r); if (!x) { x = { fx: {} }; m.set(r, x); } return x; }
+    function pos(f) { var g = Math.max(0, f + lead); return { r: Math.floor(g / R), d: g % R }; }
+
+    var lfoNow = null, noteMax = 179;
+    function clampNote(x) { return Math.max(0, Math.min(noteMax, x)); }
+    function panOf(p) { return p < 32 ? 0x10 : p > 96 ? 0x01 : 0x11; }
+    function splitPitch(n) { var b = Math.round(n), f = Math.round((n - b) * 128); if (Math.abs(f) < 8) f = 0; return { b: b, f: f }; }
+    for (c = 0; c < L.chans; c++) {
+      var isFM = L.kind[c] === 'fm', isSN = !isFM;
+      // no Furnace o PSG (SN76489) soa 2 oitavas acima do FM para a mesma nota escrita (convenção herdada do DefleMask):
+      // escreve 2 oitavas abaixo para soar na altura original
+      var nOff = isFM ? 48 : 24;
+      var st = { vol: -1, fine: 0, leg: false, note: -1, pan: 0x11, noise: null };
+      // agrupa os eventos do canal por linha
+      var rows = new Map();
+      per[c].forEach(function (x) {
+        // o PSG do Furnace solta a nota um quadro depois: adianta um quadro para ficar no tempo certo
+        var P = pos(isSN && x.f > 0 ? x.f - 1 : x.f);
+        if (P.r > lastRow) return;
+        var l = rows.get(P.r); if (!l) rows.set(P.r, l = []);
+        l.push({ e: x.e, d: P.d });
+      });
+      var keys = Array.from(rows.keys()).sort(function (a, b) { return a - b; });
+      var carry = { pitch: null, vol: null };
+      var setPitch = function (cl, n, d, allowLegato) {
+        var p = splitPitch(n);
+        if (p.b !== st.note && st.note >= 0 && allowLegato) {
+          if (!st.leg) { cl.fx[0xEA] = 0xFF; st.leg = true; }
+          cl.note = clampNote(p.b + nOff); st.note = p.b;
+          if (d) { cl.fx[0xED] = d; cl.d = d; }
+        }
+        if (p.f !== st.fine && (p.b === st.note)) { cl.fx[0xE5] = 0x80 + p.f; st.fine = p.f; }
+      };
+      var visit = function (r) {
+        var evs = rows.get(r) || [];
+        var hasOn = evs.some(function (x) { return x.e.k === 'on' || x.e.k === 'hit'; });
+        var hasPitch = false, hasVol = false, lastPitch = null, lastVol = null, seenOn = false;
+        var cl = (evs.length || carry.pitch != null || carry.vol != null) ? cell(c, r) : null;
+        evs.forEach(function (x) {
+          var e = x.e, d = x.d;
+          if (e.k === 'on' || e.k === 'hit') {
+            var n, ins, vol = -1, fixedNoise = false;
+            if (e.k === 'hit') { n = 60; ins = smpList[smpOf[e.id]].ins; }
+            else {
+              ins = insOf.get(e.tb);
+              if (e.noise) {
+                var nm = (e.noise.r === 3 ? 0x10 : 0) | (e.noise.m === 'white' ? 1 : 0);
+                if (nm !== st.noise) { cl.fx[0x20] = nm; st.noise = nm; }
+                n = e.noise.r === 3 ? midiOfHz(e.noise.f || 440) : 60 + (2 - e.noise.r);
+                fixedNoise = e.noise.r !== 3;
+              } else n = e.n;
+              // PSG: o envelope (macro) já começa no nível do 1º quadro; o volume da nota é o pico
+              var e0 = !isFM && e.tb && e.tb.env && e.tb.env.length ? e.tb.env[0] : 1;
+              vol = isFM ? fmVol(e.v) : snVol(e0 > 0.01 ? Math.min(1, e.v / e0) : e.v);
+            }
+            var p = splitPitch(n);
+            cl.note = clampNote(p.b + (fixedNoise ? 48 : nOff)); cl.ins = ins; if (vol >= 0) { cl.vol = vol; st.vol = vol; }
+            cl.d = d;
+            if (d) cl.fx[0xED] = d; else delete cl.fx[0xED];
+            delete cl.fx[0xEC];
+            if (p.f !== st.fine) { cl.fx[0xE5] = 0x80 + p.f; st.fine = p.f; }
+            if (st.leg) { cl.fx[0xEA] = 0; st.leg = false; }
+            if (isFM && e.pan != null && e.k !== 'hit') {
+              var pv = panOf(e.pan); if (pv !== st.pan) { cl.fx[0x08] = pv; st.pan = pv; }
+            }
+            if (e.tb && e.tb.type === 'fm' && e.tb.lfo != null) {
+              var lv = e.tb.lfo < 0 ? 0 : 0x10 | (e.tb.lfo & 7);
+              if (lv !== lfoNow) { cl.fx[0x10] = lv; lfoNow = lv; }
+            }
+            st.note = p.b; seenOn = true; lastPitch = null; lastVol = null;
+            st.playing = true;
+          } else if (e.k === 'off') {
+            st.playing = false;
+            if (seenOn || (cl.note != null && cl.note !== 180)) {
+              if (d > (cl.d || 0)) cl.fx[0xEC] = d; // acaba dentro da mesma linha
+            } else if (!hasOn) {
+              cl.note = 180; cl.d = d;
+              if (d) cl.fx[0xED] = d;
+            }
+          } else if (e.k === 'vol') {
+            // no PSG o envelope do timbre (macro de volume) já faz essas mudanças durante a nota
+            if (isSN && st.playing) return;
+            var v2 = isFM ? fmVol(e.v) : snVol(e.v);
+            if (seenOn || hasVol) lastVol = v2; // depois da nota/1º volume: vale na linha seguinte
+            else if (!hasOn) { if (v2 !== st.vol) { cl.vol = v2; st.vol = v2; } hasVol = true; }
+            else lastVol = v2;
+          } else if (e.k === 'pitch') {
+            if (seenOn || hasPitch || hasOn) lastPitch = e.n;
+            else { setPitch(cl, e.n, d, true); hasPitch = true; }
+          } else if (e.k === 'pan' && isFM) {
+            var pv2 = panOf(e.pan);
+            if (pv2 !== st.pan) { cl.fx[0x08] = pv2; st.pan = pv2; }
+          }
+        });
+        // o que ficou do quadro anterior entra no começo desta linha (se a linha não tem o seu)
+        if (!hasOn) {
+          if (carry.pitch != null && !hasPitch) setPitch(cl, carry.pitch, 0, true);
+          if (carry.vol != null && !hasVol && carry.vol !== st.vol) { cl.vol = carry.vol; st.vol = carry.vol; }
+        }
+        carry.pitch = lastPitch; carry.vol = lastVol;
+      };
+      for (var ki = 0; ki < keys.length; ki++) {
+        visit(keys[ki]);
+        var nx = keys[ki] + 1;
+        if ((carry.pitch != null || carry.vol != null) && nx <= lastRow && (ki + 1 >= keys.length || keys[ki + 1] !== nx)) visit(nx);
+      }
+    }
+
+    // repetição: na última linha, pula para o ponto de loop (ou para a música)
+    var loopRow = -1;
+    if (res.loopSamples > 0 && res.totalSamples > res.loopSamples) {
+      var lf = Math.round((res.totalSamples - res.loopSamples) / spt);
+      loopRow = Math.max(0, Math.floor((lf + lead) / R));
+      if (loopRow > lastRow) loopRow = -1;
+    }
+    var endCell = cell(0, lastRow);
+    if (loopRow >= 0) { endCell.fx[0x0B] = Math.floor(loopRow / patLen); endCell.fx[0x0D] = loopRow % patLen; }
+    else endCell.fx[0xFF] = 0;
+
+    var fxStats = {};
+    grid.forEach(function (m, ch) { m.forEach(function (x) { Object.keys(x.fx).forEach(function (k) { var kk = ch + ':' + (+k).toString(16); fxStats[kk] = (fxStats[kk] || 0) + 1; }); }); });
+    // colunas de efeito por canal
+    var fxCols = [];
+    for (c = 0; c < L.chans; c++) {
+      var mx = 1;
+      grid[c].forEach(function (x) { mx = Math.max(mx, Object.keys(x.fx).length); });
+      fxCols.push(Math.min(8, mx));
+    }
+
+    // padrões por canal (iguais são reaproveitados)
+    var pats = []; // {ch, idx, bytes}
+    var orders = []; // orders[ch][o]
+    for (c = 0; c < L.chans; c++) {
+      var seen = {}, list = [];
+      orders.push([]);
+      for (var o = 0; o < nOrd; o++) {
+        var pw = new Wr(), skip = 0;
+        var flush = function () {
+          while (skip > 0) {
+            if (skip === 1) { pw.c(0); skip = 0; }
+            else { var k = Math.min(skip, 128); pw.c(0x80 | (k - 2)); skip -= k; }
+          }
+        };
+        for (var r = 0; r < patLen; r++) {
+          var x = grid[c].get(o * patLen + r);
+          var codes = x ? Object.keys(x.fx).map(Number) : [];
+          if (!x || (x.note == null && x.ins == null && x.vol == null && !codes.length)) { skip++; continue; }
+          flush();
+          // ordem fixa das colunas: atraso primeiro, depois o resto
+          codes.sort(function (a, b) { return (a === 0xED ? -1 : 0) - (b === 0xED ? -1 : 0) || a - b; });
+          codes = codes.slice(0, fxCols[c]);
+          var mask = 0, em = 0;
+          if (x.note != null) mask |= 1;
+          if (x.ins != null) mask |= 2;
+          if (x.vol != null) mask |= 4;
+          codes.forEach(function (cd, k) { em |= 3 << (k * 2); });
+          if (em & 0xFF) mask |= 32;
+          if (em & 0xFF00) mask |= 64;
+          pw.c(mask);
+          if (mask & 32) pw.c(em & 0xFF);
+          if (mask & 64) pw.c(em >> 8);
+          if (mask & 1) pw.c(x.note);
+          if (mask & 2) pw.c(x.ins);
+          if (mask & 4) pw.c(x.vol);
+          codes.forEach(function (cd) { pw.c(cd); pw.c(x.fx[cd]); });
+        }
+        pw.c(0xFF);
+        var body = pw.out(), key = Array.prototype.join.call(body, ',');
+        if (seen[key] == null) {
+          if (list.length >= 256) throw new Error('Padrões demais no canal ' + L.names[c] + '.');
+          seen[key] = list.length; list.push(body);
+        }
+        orders[c].push(seen[key]);
+      }
+      list.forEach(function (b, k) { pats.push({ ch: c, idx: k, body: b }); });
+    }
+
+    // ---------- arquivo ----------
+    var info = res.info || {};
+    var w = new Wr();
+    w.tag('-Furnace module-'); w.s(228); w.s(0); var infoPtrAt = w.n; w.i(0); w.i(0); w.i(0);
+    var infoAt = w.n; w.patchI(infoPtrAt, infoAt);
+    var ib = w.block('INFO');
+    w.c(0); w.c(R); w.c(R); w.c(1);
+    w.f(hz);
+    w.s(patLen); w.s(nOrd);
+    w.c(4); w.c(16);
+    var waves = opts.waves || [];
+    w.s(insList.length); w.s(waves.length); w.s(smpList.length);
+    w.i(pats.length);
+    var k;
+    for (k = 0; k < 32; k++) w.c(k < L.sys.length ? L.sys[k].id : 0);
+    for (k = 0; k < 32; k++) w.c(64);
+    for (k = 0; k < 32; k++) w.c(0);
+    for (k = 0; k < 32; k++) w.i(0);
+    w.str(info.title || ''); w.str(info.author || '');
+    w.f(440);
+    [0, 2, 2, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1].forEach(function (v) { w.c(v); });
+    var insPtr = w.n; for (k = 0; k < insList.length; k++) w.i(0);
+    var wavPtr = w.n; for (k = 0; k < waves.length; k++) w.i(0);
+    var smpPtr = w.n; for (k = 0; k < smpList.length; k++) w.i(0);
+    var patPtr = w.n; for (k = 0; k < pats.length; k++) w.i(0);
+    for (c = 0; c < L.chans; c++) for (o = 0; o < nOrd; o++) w.c(orders[c][o]);
+    for (c = 0; c < L.chans; c++) w.c(fxCols[c]);
+    for (c = 0; c < L.chans; c++) w.c(3);
+    for (c = 0; c < L.chans; c++) w.c(0);
+    for (c = 0; c < L.chans; c++) w.str(L.names[c]);
+    for (c = 0; c < L.chans; c++) w.str(L.shorts[c]);
+    w.str('Convertido de VGM pelo Chiptune Studio (Registro Gamer).' + (info.game ? '\nJogo: ' + info.game : '') +
+      '\nLinha = ' + R + ' quadro(s) a ' + hz + ' Hz.');
+    w.f(1);
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 4, 0, 0, 1, 1, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0].forEach(function (v) { w.c(v); });
+    w.s(150); w.s(150);
+    w.str(''); w.str(''); w.c(0); w.c(0); w.c(0); w.c(0);
+    w.str(L.system); w.str(info.game || ''); w.str(''); w.str(''); w.str(''); w.str('');
+    L.sys.forEach(function (s) { w.f(s.vol); w.f(s.pan); w.f(s.fr); });
+    w.i(0); w.c(1);
+    for (k = 0; k < 8; k++) w.c(0);
+    w.c(1); w.c(R); for (k = 1; k < 16; k++) w.c(0);
+    w.c(0);
+    var adirPtr = w.n; w.i(0); w.i(0); w.i(0);
+    w.end(ib);
+
+    for (k = 0; k < 3; k++) { w.patchI(adirPtr + k * 4, w.n); var ab = w.block('ADIR'); w.i(0); w.end(ab); }
+
+    insList.forEach(function (it, j) {
+      w.patchI(insPtr + j * 4, w.n);
+      if (it.kind === 'fm') insFM(w, it.tb, it.name);
+      else if (it.kind === 'std') insSTD(w, it.name, envMacro(it.tb.env));
+      else insSample(w, it.name, it.smp);
+    });
+    waves.forEach(function (wv, j) {
+      w.patchI(wavPtr + j * 4, w.n);
+      var wb = w.block('WAVE'); w.str(''); w.i(wv.data.length); w.i(0); w.i(wv.max);
+      wv.data.forEach(function (v) { w.i(v); }); w.end(wb);
+    });
+    smpList.forEach(function (s, j) { w.patchI(smpPtr + j * 4, w.n); sampleBlock(w, s.name, s.data, s.rate); });
+    pats.forEach(function (p, j) {
+      w.patchI(patPtr + j * 4, w.n);
+      var pb = w.block('PATN');
+      w.c(0); w.c(p.ch); w.s(p.idx); w.str('');
+      w.bytes(p.body);
+      w.end(pb);
+    });
+
+    return { bytes: w.out(), rowFrames: R, hz: hz, patLen: patLen, orders: nOrd, rows: lastRow + 1, loopRow: loopRow,
+      fxStats: opts.debug ? fxStats : undefined, grid: opts.debug ? grid : undefined, lead: lead, missing: L.missing || [], instruments: insList.length, merged: merged, samples: smpList.length, patterns: pats.length, system: L.system };
+  }
+
+  function fileName(res, fb) {
+    var i = (res && res.info) || {};
+    var n = (i.game ? i.game + ' - ' : '') + (i.title || fb || 'musica');
+    return n.replace(/[\\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120) + '.fur';
+  }
+
+  root.RGFUR = { build: build, fileName: fileName };
+})(typeof window !== 'undefined' ? window : typeof self !== 'undefined' ? self : this);
 
 </script>
 <script>
@@ -1613,6 +2362,60 @@ var RGMIDI = (function () {
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 3000);
     $('mdInfo').textContent = out.notas + ' notas · ' + out.trilhas + ' trilha' + (out.trilhas === 1 ? '' : 's') + ' · ' +
       (out.tempoDetectado ? out.bpm + ' BPM' : 'tempo livre (120 BPM)');
+  };
+
+  // ───────────────────── Furnace (.fur) ─────────────────────
+  var memFur = {};
+  function openFur() {
+    if (!cur.path) return;
+    var path = cur.path;
+    $('furDlg').classList.add('show'); $('fdGo').disabled = true; $('fdTrk').disabled = true; $('fdInfo').textContent = '';
+    $('fdBody').innerHTML = '<div class="msg">Convertendo…</div>';
+    (memFur[path] ? Promise.resolve(memFur[path]) : getRaw(path).then(function (u8) {
+      var r = RGVGM.parse(u8, { events: true, pcm: true });
+      var o = RGFUR.build(r);
+      o.name = RGFUR.fileName(r, stripExt(cur.name));
+      memFur = {}; memFur[path] = o; return o;
+    })).then(function (o) {
+      if (cur.path !== path) return;
+      var dur = function (n) { return n === 1 ? '1 quadro' : n + ' quadros'; };
+      $('fdBody').innerHTML = '<div class="msg" style="text-align:left;line-height:1.7">' +
+        '<b>' + esc(o.name) + '</b><br>' +
+        '🎛 ' + esc(o.system) + '<br>' +
+        '🎹 ' + (o.instruments - o.samples) + ' instrumento' + (o.instruments - o.samples === 1 ? '' : 's') + (o.samples ? ' + ' + o.samples + ' sample' + (o.samples === 1 ? '' : 's') + ' de bateria' : '') + '<br>' +
+        '📏 ' + o.rows + ' linhas · cada linha = ' + dur(o.rowFrames) + ' (' + o.hz + ' Hz) · ' + o.orders + ' ordens de ' + o.patLen + ' linhas<br>' +
+        (o.loopRow >= 0 ? '🔁 Repete a partir da linha ' + o.loopRow : '⏹ Sem repetição') +
+        (o.missing && o.missing.length ? '<br>⚠ Ficou de fora: ' + esc(o.missing.join(', ')) + ' (chip ainda não suportado no conversor)' : '') +
+        (o.merged ? '<br>⚠ ' + o.merged + ' timbre' + (o.merged === 1 ? '' : 's') + ' raro' + (o.merged === 1 ? '' : 's') + ' juntado' + (o.merged === 1 ? '' : 's') + ' ao mais parecido (limite de 255 instrumentos)' : '') +
+        '</div>';
+      $('fdInfo').textContent = Math.max(1, Math.round(o.bytes.length / 1024)) + ' KB';
+      $('fdGo').disabled = false; $('fdTrk').disabled = false;
+    }).catch(function (e) { $('fdBody').innerHTML = '<div class="msg">' + esc(e.message || e) + '</div>'; });
+  }
+  $('bFur').onclick = openFur;
+  $('fdX').onclick = function () { $('furDlg').classList.remove('show'); };
+  $('furDlg').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('show'); });
+  $('fdGo').onclick = function () {
+    var o = memFur[cur.path]; if (!o) return;
+    var url = URL.createObjectURL(new Blob([o.bytes], { type: 'application/octet-stream' }));
+    var a = document.createElement('a'); a.href = url; a.download = o.name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 3000);
+  };
+  // entrega o projeto ao Tracker (mesmo site) por uma "caixa de entrada" no IndexedDB
+  $('fdTrk').onclick = function () {
+    var o = memFur[cur.path]; if (!o) return;
+    $('fdInfo').textContent = 'Abrindo o Tracker…';
+    try {
+      var rq = indexedDB.open('rg-inbox', 1);
+      rq.onupgradeneeded = function () { rq.result.createObjectStore('f'); };
+      rq.onsuccess = function () {
+        var tx = rq.result.transaction('f', 'readwrite');
+        tx.objectStore('f').put({ name: o.name, bytes: o.bytes, t: Date.now() }, 'next');
+        tx.oncomplete = function () { location.href = 'tracker.html'; };
+        tx.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
+      };
+      rq.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
+    } catch (e) { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; }
   };
 
   function selectSong(path, name) {
