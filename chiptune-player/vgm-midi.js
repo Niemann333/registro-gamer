@@ -284,7 +284,9 @@ var RGVGM = (function () {
     // ── SN76489 ──
     var sn = null;
     if (clk.sn) {
-      sn = { clock: clk.sn, att: [15, 15, 15, 15], per: [0, 0, 0, 0], latch: 0, ltype: 0, noise: 0, ch: [] };
+      // período 0: no PSG da Sega vale 1 (frequência máxima); no SN da TI vale 0x400 (bit 0 das flags, VGM 1.51+)
+      sn = { clock: clk.sn, att: [15, 15, 15, 15], per: [0, 0, 0, 0], latch: 0, ltype: 0, noise: 0, ch: [],
+        zero: ver >= 0x151 && b.length > 0x2B && (b[0x2B] & 1) ? 1024 : 1 };
       for (var i = 0; i < 4; i++) { var pc = new PSGChan(col, i < 3 ? 'PSG ' + (i + 1) : 'Ruído', 'SN76489', REC); mchan(pc.id, pc.chip, pc.label, i < 3 ? 'psg' : 'noise'); sn.ch.push(pc); chans.push(pc); }
     }
     function snVol(a) { return a >= 15 ? 0 : Math.pow(10, -2 * a / 20); }
@@ -296,7 +298,7 @@ var RGVGM = (function () {
       }
       var n = sn.ch[3]; n.vol = snVol(sn.att[3]);
       n.wave = { k: 'noise', ck: 'sn', nmode: (sn.noise & 4) ? 'white' : 'periodic', nrate: sn.noise & 3,
-        tf: (sn.noise & 3) === 3 ? sn.clock / (32 * (sn.per[2] || 1024)) : 0 };
+        tf: (sn.noise & 3) === 3 ? sn.clock / (32 * (sn.per[2] || sn.zero)) : 0 };
       n.freq = 0;
     }
     function snWrite(d) {
@@ -776,12 +778,107 @@ var RGMIDI = (function () {
   // bateria (canal 10 do General MIDI)
   function noiseDrum(nz, dur) {
     var br; // brilho 0..1 (1 = chiado agudo)
-    if (nz.ck === 'sn') br = [1, 0.6, 0.3, 0.5][nz.r & 3];
+    if (nz.ck === 'sn') {
+      // ritmo do ruído: fixo (r 0-2) ou o do PSG 3 (r 3); quanto mais rápido, mais chiado
+      var fz = (nz.r & 3) === 3 ? (nz.f || 1000) : 3579545 / (32 * (16 << (nz.r & 3)));
+      br = Math.max(0, Math.min(1, Math.log(fz / 400) / Math.log(16)));
+      if (nz.m === 'periodic') br *= 0.5; // ruído periódico soa mais "grave/zumbido"
+    }
     else if (nz.ck === 'ay') br = 1 - (nz.r & 31) / 31;
     else br = 1 - (nz.r & 15) / 15;
     if (br > 0.65) return dur > 0.6 ? 49 : dur > 0.22 ? 46 : 42;
     if (br > 0.35) return dur > 0.7 ? 49 : 38;
     return 36;
+  }
+
+  // ── bateria do DAC: escuta cada sample e decide que peça ele é (bumbo, caixa, chimbal, tom…) ──
+  function fft(re, im) {
+    var n = re.length, i, j = 0, k, t;
+    for (i = 1; i < n; i++) { var bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (var len = 2; len <= n; len <<= 1) {
+      var ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+      for (i = 0; i < n; i += len) {
+        var cr = 1, ci = 0;
+        for (k = 0; k < h; k++) {
+          var a = i + k, b = a + h, vr = re[b] * cr - im[b] * ci, vi = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - vr; im[b] = im[a] - vi; re[a] += vr; im[a] += vi;
+          var nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+        }
+      }
+    }
+  }
+  function drumFeats(data, rate) {
+    var n = data.length, x = new Float64Array(n), k, j, mean = 0;
+    for (k = 0; k < n; k++) mean += data[k]; mean /= n || 1;
+    for (k = 0; k < n; k++) x[k] = (data[k] - mean) / 128;
+    var w = Math.max(16, Math.round(rate * 0.005)), env = [], pk = 0;
+    for (k = 0; k < n; k += w) { var s = 0, m = Math.min(n, k + w); for (j = k; j < m; j++) s += x[j] * x[j]; s = Math.sqrt(s / (m - k)); env.push(s); if (s > pk) pk = s; }
+    var eff = 0;
+    for (k = env.length - 1; k >= 0; k--) if (env[k] > pk * 0.12) { eff = (k + 1) * w / rate; break; }
+    var bursts = 0, armed = true;
+    for (k = 0; k < env.length; k++) { if (armed && env[k] > pk * 0.6) { bursts++; armed = false; } else if (env[k] < pk * 0.25) armed = true; }
+    var N = 1024, lim = Math.min(n, Math.round(rate * 0.3)), spec = new Float64Array(N / 2);
+    for (var st = 0; st < Math.max(lim, 1); st += N / 2) {
+      var re = new Float64Array(N), im = new Float64Array(N);
+      for (k = 0; k < N; k++) re[k] = (st + k < n ? x[st + k] : 0) * (0.5 - 0.5 * Math.cos(2 * Math.PI * k / (N - 1)));
+      fft(re, im);
+      for (k = 0; k < N / 2; k++) spec[k] += re[k] * re[k] + im[k] * im[k];
+      if (st + N >= lim) break;
+    }
+    var tot = 0, cen = 0, high = 0, air = 0, pb = 1, hiCut = Math.min(5000, rate * 0.35);
+    for (k = 1; k < N / 2; k++) {
+      var f = k * rate / N, p = spec[k];
+      tot += p; cen += f * p; if (f > hiCut) high += p; if (f > 1500) air += p; if (p > spec[pb]) pb = k;
+    }
+    // periodicidade: tom e tímpano têm altura definida; caixa e prato são ruído
+    var a0 = Math.round(rate * 0.008), aw = Math.min(n - a0, Math.round(rate * 0.04)), per = 0;
+    if (aw > 32) {
+      var e0 = 0; for (k = 0; k < aw; k++) e0 += x[a0 + k] * x[a0 + k];
+      for (var lag = Math.max(1, Math.round(rate / 1000)); lag <= Math.round(rate / 50) && a0 + lag + aw <= n; lag += 1) {
+        var c = 0, e1 = 0; for (k = 0; k < aw; k++) { c += x[a0 + k] * x[a0 + k + lag]; e1 += x[a0 + k + lag] * x[a0 + k + lag]; }
+        var r = c / Math.sqrt(e0 * e1 + 1e-12); if (r > per) per = r;
+      }
+    }
+    tot = tot || 1;
+    return { dur: n / rate, eff: eff, pk: pk, bursts: bursts, cen: cen / tot, high: high / tot, air: air / tot, per: per, peakHz: pb * rate / N };
+  }
+  // devolve {id: nota GM, ...} e a força relativa de cada sample (para a velocity)
+  function classifyDrums(pcm, counts) {
+    var S = [], out = {}, loud = {}, rest = [], maxPk = 0;
+    Object.keys(counts).forEach(function (id) {
+      var p = pcm && pcm[id]; if (!p || !p.data || p.data.length < 8) return;
+      var f = drumFeats(p.data, p.rate || 8000); f.id = id; f.uses = counts[id]; S.push(f); if (f.pk > maxPk) maxPk = f.pk;
+    });
+    S.forEach(function (s) {
+      loud[s.id] = maxPk ? Math.max(0.25, Math.sqrt(s.pk / maxPk)) : 1;
+      if (maxPk && s.pk < maxPk * 0.08) out[s.id] = 0;                         // quase silêncio: não vira nota
+      else if (s.dur < 0.03) out[s.id] = 37;                                            // estalo curtíssimo: aro
+      else if (s.air > 0.45 || s.high > 0.3) out[s.id] = s.eff < 0.15 ? 42 : s.eff < 0.5 ? 46 : 49; // chimbal / prato
+      else rest.push(s);
+    });
+    if (rest.length) {
+      rest.sort(function (a, b) { return b.uses - a.uses; });
+      // as duas peças mais tocadas: a mais grave é o bumbo, a outra a caixa
+      var kick = rest[0], snare = null;
+      if (rest[1]) { if (rest[1].cen < kick.cen) { snare = kick; kick = rest[1]; } else snare = rest[1]; if (snare.cen < kick.cen * 1.4) snare = null; }
+      if (!snare && kick.cen > 500) { snare = kick; kick = null; }
+      var sim = function (a, b) { return Math.abs(a.cen - b.cen) < 0.06 * Math.max(a.cen, b.cen) && Math.abs(a.dur - b.dur) < 0.12 * Math.max(a.dur, b.dur); };
+      var toms = [];
+      rest.forEach(function (s) {
+        if (s === kick || (kick && sim(s, kick))) { out[s.id] = 36; return; }
+        if (s === snare || (snare && sim(s, snare))) { out[s.id] = 38; return; }
+        var twin = rest.some(function (o) { return o !== s && o !== kick && o !== snare && sim(o, s); }); // mesmo som em várias alturas
+        if (kick && s.cen <= kick.cen * 1.3 && !twin) out[s.id] = 35;           // outro bumbo
+        else if (twin || (s.per > 0.6 && s.air < 0.1 && (!kick || s.cen > kick.cen * 1.3))) toms.push(s);
+        else if (s.bursts >= 3) out[s.id] = 39;                                  // palmas
+        else if (s.eff > 0.9) out[s.id] = 49;                                    // prato / efeito longo
+        else out[s.id] = 40;                                                     // outra caixa
+      });
+      var TOMS = [41, 43, 45, 47, 48, 50];
+      toms.sort(function (a, b) { return a.peakHz - b.peakHz; });
+      toms.forEach(function (s, i) { out[s.id] = TOMS[Math.min(5, Math.round(i * 5 / Math.max(1, toms.length - 1)))]; });
+    }
+    return { map: out, loud: loud };
   }
   function tonalDrum(n) { return n < 43 ? 36 : n < 55 ? 38 : n < 67 ? 47 : 42; }
   function program(tb) {
@@ -844,7 +941,15 @@ var RGMIDI = (function () {
     // 1) junta eventos em notas por canal
     var notes = {}; chans.forEach(function (c) { notes[c.id] = []; });
     var open = {}, dacCount = {};
-    M.events.forEach(function (e) {
+    // batidas do DAC recortadas do fluxo (drivers que mixam em software), quando o leitor as tiver
+    var EV = M.events;
+    if (res.dacHits && res.dacHits.length) {
+      var dacCh = null; M.events.some(function (e) { if (e.k === 'hit') { dacCh = e.c; return true; } return false; });
+      if (dacCh) EV = M.events.filter(function (e) { return e.k !== 'hit'; })
+        .concat(res.dacHits.map(function (h) { return { c: dacCh, t: h.t, k: 'hit', id: h.id }; }))
+        .sort(function (a, b) { return a.t - b.t; });
+    }
+    EV.forEach(function (e) {
       if (!want[e.c]) return;
       var L = notes[e.c];
       if (e.k === 'hit') { L.push({ t: e.t, end: e.t + SR * 0.12, dac: e.id, v: 0.9, ev: [] }); dacCount[e.id] = (dacCount[e.id] || 0) + 1; return; }
@@ -862,6 +967,12 @@ var RGMIDI = (function () {
     var tEnd = res.seconds * SR;
     Object.keys(open).forEach(function (id) { if (open[id] && open[id].end == null) open[id].end = tEnd; });
     var dacRank = Object.keys(dacCount).sort(function (a, b) { return dacCount[b] - dacCount[a]; });
+    // com os samples em mãos, cada um vira a peça que ele parece; sem eles, vai pela ordem de uso
+    var drumCls = res.pcm ? classifyDrums(res.pcm, dacCount) : { map: {}, loud: {} };
+    function dacNote(id) {
+      var m = drumCls.map[id];
+      return m != null ? m : DAC_NOTES[Math.min(DAC_NOTES.length - 1, dacRank.indexOf(id))];
+    }
 
     // 2) tempo
     var onsets = [];
@@ -875,7 +986,7 @@ var RGMIDI = (function () {
       var hist = new Array(16).fill(0);
       chans.forEach(function (c) { notes[c.id].forEach(function (nt) {
         var k = Math.round((nt.t / SR + shift) / tp.grid) % 16;
-        var w = (nt.dac && dacRank.indexOf(nt.dac) === 0) || (nt.n && nt.n < 48 && !nt.noise) ? 2 : (nt.noise ? 0.5 : 1);
+        var w = (nt.dac && dacNote(nt.dac) <= 36) || (nt.n && nt.n < 48 && !nt.noise) ? 2 : (nt.noise ? 0.5 : 1);
         hist[k] += w;
       }); });
       var kb = 0; for (var k = 1; k < 16; k += 1) if (hist[k] > hist[kb]) kb = k;
@@ -923,11 +1034,12 @@ var RGMIDI = (function () {
         var dur = (nt.end - nt.t) / SR;
         var drum = mc === 9 || (nt.tb && nt.tb.role === 'Percussão');
         if (drum) {
-          var dn = nt.dac ? DAC_NOTES[Math.min(DAC_NOTES.length - 1, dacRank.indexOf(nt.dac))] : nt.noise ? noiseDrum(nt.noise, dur) : tonalDrum(nt.n);
+          var dn = nt.dac ? dacNote(nt.dac) : nt.noise ? noiseDrum(nt.noise, dur) : tonalDrum(nt.n);
+          if (!dn) return;
           var dt1 = t0 + Math.max(12, Math.min(t1 - t0, Math.round(0.25 / spb * PPQ)));
           var prev = drumOff[dn];
           if (prev) { if (prev.tick > t0) prev.tick = t0; if (prev.tick <= prev.on) { prev.tick = prev.on + 1; if (prev.tick > t0) return; } }
-          add(t0, [0x99, dn, vel(nt.v)]); add(dt1, [0x89, dn, 0]); count++;
+          add(t0, [0x99, dn, vel(nt.dac ? nt.v * (drumCls.loud[nt.dac] || 1) : nt.v)]); add(dt1, [0x89, dn, 0]); count++;
           drumOff[dn] = E[E.length - 1]; drumOff[dn].on = t0;
           return;
         }

@@ -202,7 +202,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (!window.RGVGM || !window.RGMIDI) { notify('Conversor de MIDI não carregou.'); return; }
     notify('🎼 Convertendo ' + name + '…');
     RGVGM.inflate(new Uint8Array(u8)).then(function (raw) {
-      var r = RGVGM.parse(raw, { events: true });
+      var r = RGVGM.parse(raw, { events: true, pcm: true });
       if (!r.midi.chans.length) { notify('🎼 ' + name + ': nenhum canal para converter' + (r.unsupported.length ? ' (' + r.unsupported.join(', ') + ' ainda não suportado)' : '') + '.'); return; }
       var out = RGMIDI.build(r, { tempo: true });
       var url = URL.createObjectURL(new Blob([out.bytes], { type: 'audio/midi' }));
