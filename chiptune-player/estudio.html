@@ -2504,7 +2504,7 @@ var RGMIDI = (function () {
     if (!ctx || ctx.state !== 'running') wake();
     if (!cur.timbre) { if (!noteOn.warned) { toast(T('Escolha um timbre primeiro','Pick a sound first')); noteOn.warned = true; } }
     down[n] = (down[n] || 0) + 1;
-    if (typeof RL !== 'undefined') rollUserOn(n);
+    if (typeof RL !== 'undefined' && down[n] === 1) rollUserOn(n);
     send({ t: 'on', n: n, v: v || 100 });
     paintKey(n, true);
   }
@@ -2512,7 +2512,7 @@ var RGMIDI = (function () {
     if (!down[n]) return;
     down[n]--; if (down[n] <= 0) { delete down[n]; send({ t: 'off', n: n }); paintKey(n, false); if (typeof RL !== 'undefined') rollUserOff(n); }
   }
-  function allOff() { Object.keys(down).forEach(function (n) { delete down[n]; paintKey(+n, false); }); send({ t: 'panic' }); }
+  function allOff() { Object.keys(down).forEach(function (n) { delete down[n]; paintKey(+n, false); if (typeof RL !== 'undefined') rollUserOff(+n); }); send({ t: 'panic' }); }
 
   // ───────────────────── teclado MIDI (USB) ─────────────────────
   var midiNames = [];
@@ -3485,6 +3485,7 @@ var RGMIDI = (function () {
     RL.user.forEach(function (u) {
       if (u.n < lo || u.n > hi) return;
       var e = u.t1 == null ? sec : u.t1, xa = Math.max(GUT, X(u.t0)), xb = Math.max(xa + 6, X(e) + (u.t1 == null ? 6 : 0)), y = Y(u.n);
+      if (u.t1 == null && !down[u.n]) u.t1 = sec;
       if (u.t1 == null) held[u.n] = 1;
       g.shadowColor = '#38bdf8'; g.shadowBlur = u.t1 == null ? 12 : 0;
       g.fillStyle = u.t1 == null ? '#7dd3fc' : 'rgba(56,189,248,.55)';
@@ -3537,7 +3538,9 @@ var RGMIDI = (function () {
   // o que você toca aparece no piano roll (em azul), na linha de onde a música está
   function rollUserOn(n) { RL.user.push({ n: n, t0: songSec(), t1: null }); if (RL.user.length > 200) RL.user.shift(); rollKick(); }
   function rollUserOff(n) {
-    for (var i = RL.user.length - 1; i >= 0; i--) if (RL.user[i].n === n && RL.user[i].t1 == null) { RL.user[i].t1 = songSec(); break; }
+    // fecha toda nota aberta dessa tecla (a mesma tecla pode ter sido apertada por mais de um lugar: PC, MIDI, tela)
+    var t = songSec();
+    for (var i = 0; i < RL.user.length; i++) if (RL.user[i].n === n && RL.user[i].t1 == null) RL.user[i].t1 = t;
     rollKick();
   }
   function rollKick() { if (RL.open && !RL.raf) RL.raf = requestAnimationFrame(drawRoll); }
