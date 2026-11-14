@@ -3351,6 +3351,8 @@ var RGMIDI = (function () {
     else if (d.type === 'loaded') {
       pPlaying = true; pPaused = false; durMs = d.durMs || 0; voices = d.voices || null;
       mask = voices && voices.mask ? voices.mask.map(function () { return true; }) : [];
+      // mesma música tocando de novo (parou e deu play): mantém o que estava mutado/solo
+      if (keptMask.path === cur.path && keptMask.m.length === mask.length) { mask = keptMask.m.slice(); if (mask.some(function (x) { return !x; })) applyMask(); }
       pSend({ type: 'volume', level: +$('mVol').value });
       renderChans(); playBtn();
       RL.pos = 0; RL.at = performance.now(); RL.manual = null; rollKick();
@@ -3654,7 +3656,8 @@ var RGMIDI = (function () {
     var m = mineIdx();
     $('chans').querySelectorAll('.ch[data-v]').forEach(function (b) { b.classList.toggle('mine', m.indexOf(+b.dataset.v) >= 0); });
   }
-  function applyMask() { pSend({ type: 'voicemask', mask: mask.slice() }); $('chans').querySelectorAll('.ch[data-v]').forEach(function (b) { b.classList.toggle('off', !mask[+b.dataset.v]); }); }
+  var keptMask = { path: null, m: [] };
+  function applyMask() { keptMask = { path: cur.path, m: mask.slice() }; pSend({ type: 'voicemask', mask: mask.slice() }); $('chans').querySelectorAll('.ch[data-v]').forEach(function (b) { b.classList.toggle('off', !mask[+b.dataset.v]); }); }
   var lastTap = { v: -1, t: 0 };
   $('chans').addEventListener('click', function (e) {
     var b = e.target.closest('.ch'); if (!b || !voices) return;
