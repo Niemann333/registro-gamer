@@ -79,7 +79,7 @@ body{background:var(--bg);color:var(--tx);font-family:Oxanium,system-ui,sans-ser
   background-image:radial-gradient(1200px 500px at 70% -10%,#2a1350 0%,transparent 60%),radial-gradient(800px 400px at -10% 110%,#16113a 0%,transparent 60%)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,select{font:inherit;color:inherit}
-.app{display:grid;grid-template-rows:auto 1fr auto;height:100%;height:100dvh}
+.app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100%;height:100dvh}
 /* topo */
 .top{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(12,10,20,.85);backdrop-filter:blur(8px)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
@@ -198,7 +198,7 @@ input[type=range]{accent-color:var(--ac);width:90px}
 .mtabs{display:none}
 /* modo celular (escolhido automaticamente ou pelo botão 📱/🖥) */
 html.mob {--kbH:132px}
-html.mob .app{grid-template-rows:auto auto 1fr auto} /* topo, abas, conteúdo, teclado */
+html.mob .app{grid-template-rows:auto auto minmax(0,1fr) auto} /* topo, abas, conteúdo, teclado */
 html.mob .main{grid-template-columns:1fr;min-height:0}
 html.mob .panel{border-right:0}
 /* ───── editor de timbres ───── */
@@ -282,6 +282,14 @@ html.mob .edglob{grid-template-columns:1fr}
 .kbk.sg{background:linear-gradient(180deg,#0ea5e9,#075985)}
 .kw.sg.dn,.kbk.sg.dn{filter:hue-rotate(40deg) saturate(1.4)}
 html.mob #rlCv{height:150px}
+/* piano roll grande: ocupa a área toda acima do teclado */
+html.rollbig .main{grid-template-columns:1fr}
+html.rollbig .main .panel,html.rollbig #timbres,html.rollbig #ed,html.rollbig .mtabs{display:none!important}
+html.rollbig .main .stage{display:flex!important}
+html.rollbig #songHead{flex:1;display:flex!important;flex-direction:column;min-height:0}
+html.rollbig .roll{flex:1;display:flex;flex-direction:column;min-height:0}
+html.rollbig #rlCv,html.mob.rollbig #rlCv{flex:1;height:auto;min-height:120px}
+#rlBig.on{border-color:var(--ac);color:#fff;background:var(--acd)}
 html.mob .rbar{padding:6px 12px}
 html.mob .mtabs{display:flex;border-bottom:1px solid var(--line)}
 html.mob .mtabs button{flex:1;padding:10px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent}
@@ -301,6 +309,7 @@ html.mob .kbbar .cur{max-width:34vw}
 /* computador (mouse + teclado): sem teclado na tela — toca pelo teclado do PC ou MIDI */
 html.pc {--kbH:0px}
 html.pc .kb{display:none}
+html.pc .rbar .tgl{display:none} /* sem teclado na tela no modo computador */
 html.pc .kbwrap{padding-bottom:10px}
 html.pc .kbbar{margin-bottom:0}
 html.pc .hint{font-size:12px;color:var(--tx2)}
@@ -347,7 +356,8 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
         <div class="roll" id="roll" hidden>
           <div class="rbar"><select id="rlView" title="O que mostrar" data-en-title="What to show"></select><span class="lgs" id="rlLeg"></span>
             <label class="tgl" title="Acender no teclado as notas que a música está tocando" data-en-title="Light up on the keyboard the notes the song is playing"><input type="checkbox" id="rlKeys" checked><span data-en="Show on keyboard">Mostrar no teclado</span></label>
-            <button class="btn sm" id="rlZout" title="Afastar" data-en-title="Zoom out">−</button><button class="btn sm" id="rlZin" title="Aproximar" data-en-title="Zoom in">+</button></div>
+            <button class="btn sm" id="rlZout" title="Afastar" data-en-title="Zoom out">−</button><button class="btn sm" id="rlZin" title="Aproximar" data-en-title="Zoom in">+</button>
+            <button class="btn sm" id="rlBig" title="Abrir o piano roll grande (Esc volta)" data-en-title="Open the piano roll big (Esc goes back)">⤢ <span id="rlBigT">Ampliar</span></button></div>
           <canvas id="rlCv"></canvas><div class="rtip" id="rlTip"></div>
         </div>
       </div>
@@ -3489,7 +3499,16 @@ var RGMIDI = (function () {
     if (!RL.open) { Object.keys(RL.lit).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.remove('sg'); }); RL.lit = {}; RL.litKey = ''; }
     rollKick();
   }
-  $('bRoll').onclick = function () { RL.open = !RL.open; try { localStorage.setItem('rgRoll', RL.open ? '1' : '0'); } catch (e) {} rollShow(); };
+  function rollBig(on) {
+    document.documentElement.classList.toggle('rollbig', on);
+    $('rlBig').classList.toggle('on', on);
+    $('rlBigT').textContent = on ? T('Reduzir', 'Shrink') : T('Ampliar', 'Enlarge');
+    if (on && ED.t) closeEd();
+    RL.litKey = ''; setTimeout(function () { buildKb(); rollKick(); }, 30);
+  }
+  $('rlBig').onclick = function () { rollBig(!document.documentElement.classList.contains('rollbig')); };
+  window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.documentElement.classList.contains('rollbig')) { e.preventDefault(); rollBig(false); } });
+  $('bRoll').onclick = function () { if (RL.open && document.documentElement.classList.contains('rollbig')) rollBig(false); RL.open = !RL.open; try { localStorage.setItem('rgRoll', RL.open ? '1' : '0'); } catch (e) {} rollShow(); };
   $('rlView').onchange = function () { RL.view = this.value; RL.lastLegend = ''; rollKick(); };
   $('rlZin').onclick = function () { RL.pps = Math.min(600, RL.pps * 1.35); rollKick(); };
   $('rlZout').onclick = function () { RL.pps = Math.max(20, RL.pps / 1.35); rollKick(); };
@@ -3636,6 +3655,7 @@ var RGMIDI = (function () {
     if (cur.path && isLocal(cur.path) && !(cur.res && cur.res.info && cur.res.info.game)) $('sGame').textContent = T('Arquivo local', 'Local file');
     refreshTimbres(); if (ED.t) renderEd();
     if (RL.notes) { buildNotes(); RL.lastLegend = ''; rollKick(); }
+    $('rlBigT').textContent = document.documentElement.classList.contains('rollbig') ? T('Reduzir', 'Shrink') : T('Ampliar', 'Enlarge');
     if (voices) renderChans(); else if (!pLoaded) resetChans();
     if (EMBED) try { window.parent.postMessage({ type: 'rg-lang', lang: l }, '*'); } catch (e) {}
   });
