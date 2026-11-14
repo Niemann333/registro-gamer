@@ -437,6 +437,7 @@ var OPN_AM_DB = [0, 1.4, 5.9, 11.8], OPN_PM_C = [0, 3.4, 6.7, 10, 14, 20, 40, 80
 var OPM_AM_DB = [0, 2.8, 5.6, 11.25], OPM_PM_C = [0, 5, 10, 20, 50, 100, 400, 700];
 var DT2 = [1, 1.4142, 1.5698, 1.7319];
 var DUTY = [0.125, 0.25, 0.5, 0.75];
+var RR_MIN = 8;
 var NES_TRI = []; for (i = 15; i >= 0; i--) NES_TRI.push(i); for (i = 0; i < 16; i++) NES_TRI.push(i);
 
 function kcodeOf(p, f, note) {
@@ -491,6 +492,8 @@ class EstudioSynth extends AudioWorkletProcessor {
       v.car = CAR[p.alg];
       var velAtt = vToAtt(v.vel);
       v.tl = p.ops.map(function (op, k) { return (op.tl << 3) + (v.car.indexOf(k) >= 0 ? velAtt : 0); });
+      v.norm = carNorm(p, v.car);
+      if (v.releasing) for (k = 0; k < 4; k++) v.rates[k][3] = Math.max(v.rates[k][3], RR_MIN * 4 + 2);
     } else {
       this.setFreq(v);
       var env = p.env;
@@ -516,7 +519,12 @@ class EstudioSynth extends AudioWorkletProcessor {
   }
   release(v) {
     v.releasing = true;
-    if (v.p.type === 'fm') for (var k = 0; k < 4; k++) v.st[k] = 3;
+    if (v.p.type === 'fm') for (var k = 0; k < 4; k++) {
+      v.st[k] = 3;
+      // teclado: soltou a tecla, a nota para. Muitos jogos usam RR 0 (o som ficaria eterno até a próxima nota),
+      // então a soltura tem um mínimo de ~0,3 s. A música original e o .fur continuam com o valor de verdade.
+      v.rates[k][3] = Math.max(v.rates[k][3], RR_MIN * 4 + 2);
+    }
   }
   retune() { for (var i = 0; i < 16; i++) { var v = this.voices[i]; if (v.active) this.setFreq(v); } }
   setFreq(v) {
@@ -554,6 +562,7 @@ class EstudioSynth extends AudioWorkletProcessor {
     // velocidade: atenua só as portadoras (como o volume do canal no chip)
     var velAtt = vToAtt(v.vel);
     v.tl = p.ops.map(function (op, k) { return (op.tl << 3) + (v.car.indexOf(k) >= 0 ? velAtt : 0); });
+    v.norm = carNorm(p, v.car);
     v.egRate = p.rate / 3 / sampleRate;
   }
   egTick(v) {
@@ -645,6 +654,7 @@ class EstudioSynth extends AudioWorkletProcessor {
       case 6: o2 = op(v, 1, o1 * 4); o3 = op(v, 2, 0); o4 = op(v, 3, 0); outv = o2 + o3 + o4; break;
       default: o2 = op(v, 1, 0); o3 = op(v, 2, 0); o4 = op(v, 3, 0); outv = o1 + o2 + o3 + o4;
     }
+    outv *= v.norm;
     if (outv > 1) outv = 1; else if (outv < -1) outv = -1;
     // voz termina quando todas as portadoras se calaram
     if (v.releasing || !v.held) {
@@ -690,6 +700,11 @@ class EstudioSynth extends AudioWorkletProcessor {
     }
     return x * e * v.gain * v.rel * 0.45;
   }
+}
+function carNorm(p, car) { // soma das portadoras ligadas → divide para o timbre não sair estourado
+  var s = 0;
+  for (var i = 0; i < car.length; i++) { var op = p.ops[car[i]]; if (!op.off) s += ATT[Math.min(1023, op.tl << 3)]; }
+  return 1 / Math.max(1, s);
 }
 function vToAtt(vel) { // curva de velocidade em passos de 0,094 dB (até ~30 dB)
   var g = Math.max(1, vel) / 127;
@@ -2488,12 +2503,13 @@ var RGMIDI = (function () {
     if (!ctx || ctx.state !== 'running') wake();
     if (!cur.timbre) { if (!noteOn.warned) { toast(T('Escolha um timbre primeiro','Pick a sound first')); noteOn.warned = true; } }
     down[n] = (down[n] || 0) + 1;
+    if (typeof RL !== 'undefined') rollUserOn(n);
     send({ t: 'on', n: n, v: v || 100 });
     paintKey(n, true);
   }
   function noteOff(n) {
     if (!down[n]) return;
-    down[n]--; if (down[n] <= 0) { delete down[n]; send({ t: 'off', n: n }); paintKey(n, false); }
+    down[n]--; if (down[n] <= 0) { delete down[n]; send({ t: 'off', n: n }); paintKey(n, false); if (typeof RL !== 'undefined') rollUserOff(n); }
   }
   function allOff() { Object.keys(down).forEach(function (n) { delete down[n]; paintKey(+n, false); }); send({ t: 'panic' }); }
 
@@ -3350,7 +3366,7 @@ var RGMIDI = (function () {
   // ───────────────────── piano roll (notas da música) ─────────────────────
   // As notas vêm do próprio VGM (o mesmo leitor dos timbres) e andam junto com a música que está tocando.
   // A altura mostrada é a tecla que você aperta para tocar junto com o timbre (já com a correção de oitava do timbre).
-  var RL = { open: false, notes: null, drums: null, path: null, view: 'timbre', pps: 110, pos: 0, at: 0, manual: null, hover: null, raf: 0, lit: {} };
+  var RL = { user: [], open: false, notes: null, drums: null, path: null, view: 'timbre', pps: 110, pos: 0, at: 0, manual: null, hover: null, raf: 0, lit: {} };
   try { RL.open = localStorage.getItem('rgRoll') === '1'; } catch (e) {}
   var RCOL = ['#c084fc', '#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#fb923c', '#a3e635', '#22d3ee', '#e879f9', '#f87171'];
   var NOTE_PT = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'Lá', 'Lá#', 'Si'];
@@ -3424,6 +3440,7 @@ var RGMIDI = (function () {
     g.fillStyle = '#0c0a14'; g.fillRect(0, 0, W, H);
     var list = shown(), sec = songSec(), GUT = 40, DR = RL.view === 'timbre' ? 0 : 14;
     var lo = 999, hi = -1; list.forEach(function (x) { if (x.n < lo) lo = x.n; if (x.n > hi) hi = x.n; });
+    Object.keys(down).forEach(function (k) { k = +k; if (k < lo) lo = k; if (k > hi) hi = k; });
     if (hi < 0) { lo = 48; hi = 72; }
     lo -= 2; hi += 2; if (hi - lo < 24) { var mid = (lo + hi) >> 1; lo = mid - 12; hi = mid + 12; }
     var rows = hi - lo + 1, rh = (H - DR) / rows, px = W * 0.22, t0 = sec - (px - GUT) / RL.pps, t1 = sec + (W - px) / RL.pps;
@@ -3452,6 +3469,18 @@ var RGMIDI = (function () {
       if (mx != null && mx >= xa && mx <= xb && my >= y && my <= y + rh) hovered = x;
     });
     g.globalAlpha = 1;
+    var playing = pPlaying && !pPaused, held = {};
+    RL.user = RL.user.filter(function (u) { return u.t1 == null || (playing ? X(u.t1) > GUT : false); });
+    RL.user.forEach(function (u) {
+      if (u.n < lo || u.n > hi) return;
+      var e = u.t1 == null ? sec : u.t1, xa = Math.max(GUT, X(u.t0)), xb = Math.max(xa + 6, X(e) + (u.t1 == null ? 6 : 0)), y = Y(u.n);
+      if (u.t1 == null) held[u.n] = 1;
+      g.shadowColor = '#38bdf8'; g.shadowBlur = u.t1 == null ? 12 : 0;
+      g.fillStyle = u.t1 == null ? '#7dd3fc' : 'rgba(56,189,248,.55)';
+      g.fillRect(xa, y + 1, xb - xa, Math.max(3, rh - 2));
+      g.shadowBlur = 0;
+      if (u.t1 == null && rh >= 9) { g.fillStyle = '#0c0a14'; g.fillText(nn(u.n), xa + 3, y + rh / 2 + 0.5); }
+    });
     // bateria / ruído numa faixa embaixo
     if (DR) {
       g.fillStyle = '#13101f'; g.fillRect(GUT, H - DR, W - GUT, DR);
@@ -3468,7 +3497,8 @@ var RGMIDI = (function () {
       y = Y(n);
       g.fillStyle = BLACK[n % 12] ? '#1a1726' : '#2a2640'; g.fillRect(GUT - 10, y + 0.5, 10, Math.max(1, rh - 1));
       if (now[n]) { g.fillStyle = '#c084fc'; g.fillRect(GUT - 10, y + 0.5, 10, Math.max(1, rh - 1)); }
-      if (n % 12 === 0 || (rh >= 11 && !BLACK[n % 12]) || now[n]) { g.fillStyle = now[n] ? '#fff' : (n % 12 === 0 ? '#a99fd0' : '#6f6699'); g.fillText(nn(n), 3, y + rh / 2 + 0.5); }
+      if (held[n]) { g.fillStyle = '#38bdf8'; g.fillRect(GUT - 10, y + 0.5, 10, Math.max(1, rh - 1)); }
+      if (n % 12 === 0 || (rh >= 11 && !BLACK[n % 12]) || now[n] || held[n]) { g.fillStyle = held[n] ? '#7dd3fc' : now[n] ? '#fff' : (n % 12 === 0 ? '#a99fd0' : '#6f6699'); g.fillText(nn(n), 3, y + rh / 2 + 0.5); }
     }
     if (DR) { g.fillStyle = '#6f6699'; g.fillText('🥁', 8, H - DR / 2); }
     // linha de onde a música está
@@ -3492,6 +3522,12 @@ var RGMIDI = (function () {
     RL.hover = hovered;
     if (RL.lastLegend !== RL.view + '|' + tIdx(cur.timbre) + '|' + cur.path) { RL.lastLegend = RL.view + '|' + tIdx(cur.timbre) + '|' + cur.path; legend(list); }
     if (pPlaying && !pPaused && RL.manual == null) RL.raf = requestAnimationFrame(drawRoll);
+  }
+  // o que você toca aparece no piano roll (em azul), na linha de onde a música está
+  function rollUserOn(n) { RL.user.push({ n: n, t0: songSec(), t1: null }); if (RL.user.length > 200) RL.user.shift(); rollKick(); }
+  function rollUserOff(n) {
+    for (var i = RL.user.length - 1; i >= 0; i--) if (RL.user[i].n === n && RL.user[i].t1 == null) { RL.user[i].t1 = songSec(); break; }
+    rollKick();
   }
   function rollKick() { if (RL.open && !RL.raf) RL.raf = requestAnimationFrame(drawRoll); }
   function rollShow() {
