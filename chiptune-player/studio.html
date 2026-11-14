@@ -1,0 +1,146 @@
+<!-- ===== Gadget Chiptune Studio — Registro Gamer =====
+     Cole este código num gadget "HTML/JavaScript" do Blogger.
+     O cartão ocupa o quadro inteiro do gadget e o botão abre o Chiptune Studio
+     em tela cheia por cima do blog (sem abrir outra aba). Fechar volta ao blog.
+     Tudo aqui mexe só neste gadget; o resto da página não é alterado. -->
+<div id="rg-estudio">
+  <style>
+    /* o quadro do Blogger em volta deste gadget (só este) fica sem recuo, para o cartão encostar nas bordas */
+    .rgcs-widget{padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+    .rgcs-widget>.widget-content{padding:0!important;margin:0!important}
+    #rg-estudio{font-family:Oxanium,system-ui,sans-serif}
+    #rg-estudio .rge-card{position:relative;overflow:hidden;border:1px solid #3d3363;border-radius:14px;padding:16px;
+      background:linear-gradient(160deg,#1f1538 0%,#13101f 70%);color:#e9e4ff}
+    #rg-estudio .rge-card::before{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;
+      background:radial-gradient(circle,#a855f755,transparent 70%)}
+    #rg-estudio .rge-top{display:flex;align-items:center;gap:10px;position:relative}
+    #rg-estudio .rge-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+      background:linear-gradient(135deg,#a855f7,#6d28d9);box-shadow:0 0 16px #a855f766;flex:none}
+    #rg-estudio .rge-t{font-weight:700;font-size:16px;letter-spacing:.08em}
+    #rg-estudio .rge-s{font-size:11px;letter-spacing:.12em;color:#a99fd0;margin-top:2px;line-height:1.35}
+    #rg-estudio p{font-size:13px;line-height:1.6;color:#c9c1ec;margin:16px 0 0;position:relative}
+    #rg-estudio p.rge-cr{font-size:12px;color:#a99fd0;margin-top:10px;padding-top:10px;border-top:1px solid #3d336366}
+    #rg-estudio .rge-keys{display:flex;height:34px;margin:18px 0 16px;position:relative}
+    #rg-estudio .rge-keys i{flex:1;background:#ecebf5;margin:0 1px;border-radius:0 0 4px 4px;position:relative}
+    #rg-estudio .rge-keys i.b::after{content:"";position:absolute;right:-30%;top:0;width:60%;height:60%;background:#1a1726;border-radius:0 0 3px 3px;z-index:1}
+    #rg-estudio .rge-keys i.on{background:#c49bff}
+    #rg-estudio button{width:100%;border:0;border-radius:10px;padding:11px;font:600 14px Oxanium,system-ui,sans-serif;color:#fff;cursor:pointer;
+      background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 4px 18px #a855f744;position:relative;transition:transform .15s}
+    #rg-estudio button:hover{transform:translateY(-1px)}
+    #rg-estudio p a{color:#d8b4fe;text-decoration:none;border-bottom:1px dotted #a855f7}
+    #rg-estudio p a:hover{color:#fff;border-bottom-style:solid}
+    #rg-estudio .rge-f{font-size:11px;color:#6f6699;margin-top:9px;text-align:center;position:relative}
+  </style>
+  <div class="rge-card">
+    <div class="rge-top">
+      <div class="rge-ic">🎹</div>
+      <div><div class="rge-t">CHIPTUNE STUDIO</div><div class="rge-s" data-en="A COMPLETE SUITE FOR MUSICIANS AND ENTHUSIASTS">SUÍTE COMPLETA PARA MÚSICOS E ENTUSIASTAS</div></div>
+    </div>
+    <p><span data-en="Pick a chiptune file from the collection or from your local files.">Escolha uma música em arquivo de chiptune do acervo ou dos seus arquivos locais.</span> <span data-en="Play the melodies with the sound you want on your MIDI keyboard or your computer keyboard.">Toque as melodias com o timbre desejado no seu teclado MIDI ou no teclado do computador.</span></p>
+    <p class="rge-cr"><span data-en="For music production, open the web version of Furnace.">Para produção musical, acesse o Furnace em versão web.</span> <span data-en="Originally created by">Criado originalmente por</span> <a href="https://github.com/tildearrow" target="_blank" rel="noopener">tildearrow</a>. <span data-en="Thank you for making the best tracker of all time!">Obrigado por criar o melhor tracker de todos os tempos!</span></p>
+    <div class="rge-keys"><i class="b"></i><i class="b on"></i><i></i><i class="b"></i><i class="b"></i><i class="b on"></i><i></i><i class="b"></i><i class="b"></i><i></i></div>
+    <button type="button" id="rge-open" data-en="Open Chiptune Studio">Abrir o Chiptune Studio</button>
+    <div class="rge-f" data-en="Opens full screen right here on the blog · USB MIDI keyboard · Tracker">Abre em tela cheia aqui no blog · teclado MIDI via USB · Tracker</div>
+  </div>
+  <script>
+/* Registro Gamer \u2014 idioma do blog (PT | EN). O mesmo bloco vai em todos os gadgets: o primeiro que carregar cria. */
+(function(){
+  if(window.rgI18n) return;
+  var K='rgLang',l=null;
+  try{l=localStorage.getItem(K);}catch(e){}
+  try{var q=/[?&]lang=(pt|en)\b/.exec(location.search);if(q) l=q[1];}catch(e){}
+  if(l!=='pt'&&l!=='en') l=/^pt/i.test(navigator.language||'pt')?'pt':'en';
+  // t\u00edtulos dos gadgets do Blogger (os h2 que o pr\u00f3prio Blogger desenha)
+  var TIT={'Arquivo':'Archive','Filtragem':'Filters','Marcadores':'Labels','P\u00e1ginas':'Pages','Pesquisar':'Search','Arquivo do blog':'Blog archive'};
+  var I=window.rgI18n={
+    lang:l,
+    t:function(pt,en){return I.lang==='en'&&en!=null?en:pt;},
+    loc:function(){return I.lang==='en'?'en-US':'pt-BR';},
+    set:function(v){
+      if((v!=='pt'&&v!=='en')||v===I.lang) return;
+      I.lang=v;try{localStorage.setItem(K,v);}catch(e){}
+      I.apply();
+      try{window.dispatchEvent(new CustomEvent('rg:lang',{detail:v}));}catch(e){}
+    },
+    on:function(fn){window.addEventListener('rg:lang',function(){fn(I.lang);});},
+    apply:function(root){
+      var en=I.lang==='en',r=root||document;
+      document.documentElement.lang=en?'en':'pt-BR';
+      r.querySelectorAll('[data-en]').forEach(function(el){
+        if(!el.hasAttribute('data-pt')) el.setAttribute('data-pt',el.innerHTML);
+        var v=en?el.getAttribute('data-en'):el.getAttribute('data-pt');
+        if(el.innerHTML!==v) el.innerHTML=v;
+      });
+      ['title','placeholder','aria-label'].forEach(function(a){
+        r.querySelectorAll('[data-en-'+a+']').forEach(function(el){
+          var k='data-pt-'+a;
+          if(!el.hasAttribute(k)) el.setAttribute(k,el.getAttribute(a)||'');
+          el.setAttribute(a,en?el.getAttribute('data-en-'+a):el.getAttribute(k));
+        });
+      });
+      if(!root) document.querySelectorAll('.widget>h2,.widget>.title').forEach(function(h){
+        if(!h.hasAttribute('data-pt')) h.setAttribute('data-pt',h.textContent.trim());
+        var p=h.getAttribute('data-pt');h.textContent=en&&TIT[p]?TIT[p]:p;
+      });
+    }
+  };
+  window.rgT=function(pt,en){return I.t(pt,en);};
+  document.documentElement.lang=l==='en'?'en':'pt-BR';
+  if(document.readyState!=='loading') I.apply();
+  else document.addEventListener('DOMContentLoaded',function(){I.apply();});
+})();
+</script>
+  <script>
+  (function () {
+    var ORIGEM = 'https://niemann333.github.io';
+    var URL_ESTUDIO = ORIGEM + '/registro-gamer/chiptune-player/estudio.html';
+    var root = document.getElementById('rg-estudio');
+
+    // encosta o cart\u00e3o nas bordas: tira o recuo s\u00f3 do quadro deste gadget
+    var w = root.closest ? root.closest('.widget') : null;
+    if (w) w.classList.add('rgcs-widget');
+
+    // \u2500\u2500 camada em tela cheia (mesmo id no gadget mobile: as duas vers\u00f5es convivem) \u2500\u2500
+    function abrir() {
+      if (document.getElementById('rg-studio-overlay')) return;
+      var ov = document.createElement('div');
+      ov.id = 'rg-studio-overlay';
+      ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:#0c0a14;';
+      // guarda como a rolagem estava, para devolver exatamente igual ao fechar
+      ov.setAttribute('data-ov-html', document.documentElement.style.overflow || '');
+      ov.setAttribute('data-ov-body', document.body.style.overflow || '');
+      ov.setAttribute('data-ov-y', String(window.pageYOffset || 0));
+      var fr = document.createElement('iframe');
+      fr.src = URL_ESTUDIO + '?lang=' + rgI18n.lang;
+      fr.title = 'Chiptune Studio';
+      fr.setAttribute('allow', 'autoplay; midi; fullscreen; clipboard-write');
+      fr.setAttribute('allowfullscreen', '');
+      fr.style.cssText = 'border:0;width:100%;height:100%;display:block;background:#0c0a14;';
+      ov.appendChild(fr);
+      document.body.appendChild(ov);
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      fr.addEventListener('load', function () { try { fr.focus({ preventScroll: true }); } catch (e) {} });
+    }
+    function fechar() {
+      var ov = document.getElementById('rg-studio-overlay');
+      if (!ov) return;
+      document.documentElement.style.overflow = ov.getAttribute('data-ov-html') || '';
+      document.body.style.overflow = ov.getAttribute('data-ov-body') || '';
+      ov.parentNode.removeChild(ov);
+      window.scrollTo(0, +ov.getAttribute('data-ov-y') || 0); // volta para onde estava
+    }
+    document.getElementById('rge-open').addEventListener('click', abrir);
+    window.addEventListener('message', function (e) {
+      if (e.origin !== ORIGEM || !e.data) return;
+      if (e.data.type === 'rg-studio-close') fechar();
+      else if (e.data.type === 'rg-lang') rgI18n.set(e.data.lang); // o Studio trocou o idioma: o blog acompanha
+    });
+    // o blog trocou o idioma com o Studio aberto: avisa o Studio
+    rgI18n.on(function (l) {
+      var f = document.querySelector('#rg-studio-overlay iframe');
+      if (f && f.contentWindow) f.contentWindow.postMessage({ type: 'rg-lang', lang: l }, ORIGEM);
+    });
+  })();
+  </script>
+</div>
