@@ -1361,10 +1361,11 @@ var RGVGM = (function () {
         res.dacCut = cut; // alternativa (o conversor escolhe a que der menos samples)
         if (!cut.bySeek || !Object.keys(smp).length) { res.dacHits = cut.hits; cut.list.forEach(function (x) { res.pcm[x.id] = x; }); }
       }
-      res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
       res.rateHz = ver >= 0x101 ? u32(b, 0x24) : 0;
       res.clocks = clk;
     }
+    // tamanho e ponto de volta (loop) da música: o piano roll e o conversor usam
+    res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
     return res;
   }
 
@@ -3445,6 +3446,14 @@ var RGMIDI = (function () {
     lo -= 2; hi += 2; if (hi - lo < 24) { var mid = (lo + hi) >> 1; lo = mid - 12; hi = mid + 12; }
     var rows = hi - lo + 1, rh = (H - DR) / rows, px = W * 0.22, t0 = sec - (px - GUT) / RL.pps, t1 = sec + (W - px) / RL.pps;
     function X(t) { return px + (t - sec) * RL.pps; } function Y(n) { return (hi - n) * rh; }
+    // perto do fim, a música volta para o ponto de loop: mostra também as notas da volta
+    var res0 = cur.res, lpS = res0 && res0.loopSamples > 0 && res0.totalSamples ? res0.loopSamples / 44100 : 0, totS = lpS ? res0.totalSamples / 44100 : 0;
+    function wrap(arr) {
+      if (!lpS || t1 <= totS) return arr;
+      return arr.concat(arr.filter(function (x) { return x.t0 >= totS - lpS && x.t0 + lpS < t1; })
+        .map(function (x) { return { c: x.c, t0: x.t0 + lpS, t1: x.t1 + lpS, n: x.n, tb: x.tb, drum: x.drum }; }));
+    }
+    list = wrap(list);
     // fundo: teclas pretas mais escuras, linha em cada Dó
     for (var n = lo; n <= hi; n++) {
       var y = Y(n);
@@ -3484,7 +3493,7 @@ var RGMIDI = (function () {
     // bateria / ruído numa faixa embaixo
     if (DR) {
       g.fillStyle = '#13101f'; g.fillRect(GUT, H - DR, W - GUT, DR);
-      var dl = RL.view === 'all' ? RL.drums : RL.drums.filter(function (x) { return 'c:' + x.c === RL.view; });
+      var dl = wrap(RL.view === 'all' ? RL.drums : RL.drums.filter(function (x) { return 'c:' + x.c === RL.view; }));
       dl.forEach(function (x) {
         if (x.t1 < t0 || x.t0 > t1) return;
         g.fillStyle = sec >= x.t0 && sec < x.t1 ? '#fff' : '#6f6699';

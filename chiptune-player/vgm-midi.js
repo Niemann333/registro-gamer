@@ -641,10 +641,11 @@ var RGVGM = (function () {
         res.dacCut = cut; // alternativa (o conversor escolhe a que der menos samples)
         if (!cut.bySeek || !Object.keys(smp).length) { res.dacHits = cut.hits; cut.list.forEach(function (x) { res.pcm[x.id] = x; }); }
       }
-      res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
       res.rateHz = ver >= 0x101 ? u32(b, 0x24) : 0;
       res.clocks = clk;
     }
+    // tamanho e ponto de volta (loop) da música: o piano roll e o conversor usam
+    res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
     return res;
   }
 
