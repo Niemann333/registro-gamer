@@ -3684,11 +3684,13 @@ var RGMIDI = (function () {
   window.addEventListener('pagehide', function () { try { pSend({ type: 'stop' }); } catch (e) {} });
 
   setOct(4); setMidi();
-  if (document.documentElement.className === 'pc') mtab('songs');
-  function modeBtn() { var pc = document.documentElement.className === 'pc'; $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? T('Mudar para o modo celular','Switch to phone mode') : T('Mudar para o modo computador','Switch to desktop mode'); }
+  // o <html> também recebe outras classes (ex.: piano roll grande), então o modo é lido por classe, não pelo nome inteiro
+  function isPc() { return document.documentElement.classList.contains('pc'); }
+  if (isPc()) mtab('songs');
+  function modeBtn() { var pc = isPc(); $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? T('Mudar para o modo celular','Switch to phone mode') : T('Mudar para o modo computador','Switch to desktop mode'); }
   $('btnMode').onclick = function () {
-    var nm = document.documentElement.className === 'pc' ? 'mob' : 'pc';
-    document.documentElement.className = nm; lsSet('rgStudioMode', nm); modeBtn(); buildKb();
+    var nm = isPc() ? 'mob' : 'pc', h = document.documentElement.classList;
+    h.remove('pc', 'mob'); h.add(nm); lsSet('rgStudioMode', nm); modeBtn(); buildKb(); rollKick();
     toast(nm === 'pc' ? T('Modo computador','Desktop mode') : T('Modo celular','Phone mode'));
   };
   modeBtn();
