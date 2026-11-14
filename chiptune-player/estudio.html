@@ -262,6 +262,27 @@ html.mob .edglob{grid-template-columns:1fr}
 .newmenu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px;font-size:12.5px;color:var(--tx)}
 .newmenu button:hover{background:var(--bg3)}
 .newmenu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+/* ───── piano roll ───── */
+.roll{border-bottom:1px solid var(--line);background:#0c0a14;position:relative}
+.roll[hidden]{display:none}
+.rbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 20px;font-size:12px;color:var(--tx2)}
+.rbar select{background:var(--bg3);color:var(--tx);border:1px solid var(--line2);border-radius:7px;padding:3px 7px;font:inherit;font-size:12px}
+.rbar .lgs{display:flex;gap:5px;flex-wrap:wrap;flex:1;min-width:0}
+.rbar .lg{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:99px;padding:2px 8px 2px 6px;font-size:11px;cursor:pointer;white-space:nowrap;color:var(--tx2)}
+.rbar .lg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.rbar .lg.on{border-color:var(--ac);color:#fff}
+.rbar .lgx{font-size:11px;color:var(--tx3)}
+.rbar .tgl{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+#rlCv{display:block;width:100%;height:220px;cursor:grab;touch-action:pan-y}
+#rlCv:active{cursor:grabbing}
+.rtip{position:absolute;display:none;pointer-events:none;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:5px 8px;font-size:11.5px;line-height:1.45;color:var(--tx2);z-index:5;max-width:220px;margin-top:38px}
+.rtip b{color:#fff}
+#bRoll.on{border-color:var(--ac);color:#fff;background:var(--acd)}
+.kw.sg{background:linear-gradient(180deg,#e9fbff,#9be7ff);box-shadow:inset 0 -5px 0 #38bdf8}
+.kbk.sg{background:linear-gradient(180deg,#0ea5e9,#075985)}
+.kw.sg.dn,.kbk.sg.dn{filter:hue-rotate(40deg) saturate(1.4)}
+html.mob #rlCv{height:150px}
+html.mob .rbar{padding:6px 12px}
 html.mob .mtabs{display:flex;border-bottom:1px solid var(--line)}
 html.mob .mtabs button{flex:1;padding:10px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent}
 html.mob .mtabs button.on{color:var(--tx);border-color:var(--ac)}
@@ -317,11 +338,18 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
           <button class="btn" id="bStop" title="Parar" data-en-title="Stop">■</button>
           <div class="prog" id="prog"><i id="progI"></i></div>
           <div class="tm" id="tm">0:00 / 0:00</div>
+          <button class="btn" id="bRoll" title="Mostrar as notas da música (piano roll)" data-en-title="Show the song's notes (piano roll)" data-en="🎼 Notes">🎼 Notas</button>
           <label class="vol">🔊<input type="range" id="mVol" min="0" max="1.5" step="0.05" value="0.8"></label>
           <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar" data-en-title="Convert this song to MIDI and download it">⬇ MIDI</button>
           <button class="btn" id="bFur" title="Converter esta música num projeto do Furnace (.fur) com os timbres exatos do chip" data-en-title="Convert this song into a Furnace project (.fur) with the chip's exact sounds">⬇ Furnace</button>
         </div>
         <div class="chans" id="chans"><span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span></div>
+        <div class="roll" id="roll" hidden>
+          <div class="rbar"><select id="rlView" title="O que mostrar" data-en-title="What to show"></select><span class="lgs" id="rlLeg"></span>
+            <label class="tgl" title="Acender no teclado as notas que a música está tocando" data-en-title="Light up on the keyboard the notes the song is playing"><input type="checkbox" id="rlKeys" checked><span data-en="Show on keyboard">Mostrar no teclado</span></label>
+            <button class="btn sm" id="rlZout" title="Afastar" data-en-title="Zoom out">−</button><button class="btn sm" id="rlZin" title="Aproximar" data-en-title="Zoom in">+</button></div>
+          <canvas id="rlCv"></canvas><div class="rtip" id="rlTip"></div>
+        </div>
       </div>
       <div class="timbres" id="timbres">
         <div class="empty"><div><div class="big">🎹</div><h2 data-en="Pick a song">Escolha uma música</h2>
@@ -2706,7 +2734,7 @@ var RGMIDI = (function () {
   function loadParsed(path) {
     if (memCache[path]) return Promise.resolve(memCache[path]);
     return getRaw(path).then(function (u8) {
-      var res = RGVGM.parse(u8);
+      var res = RGVGM.parse(u8, { events: true });
       memCache = {}; memCache[path] = res; // só a música aberta fica na memória
       return res;
     });
@@ -2821,6 +2849,7 @@ var RGMIDI = (function () {
     stopMusic();
     if (ED.k >= 0 && ED.k < MINE0) { ED.k = -1; ED.t = null; $('stage').classList.remove('editing'); $('ed').hidden = true; }
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1;
+    RL.notes = null; RL.manual = null; RL.pos = 0;
     renderList();
     $('songHead').style.display = '';
     var dir = isLocal(path) ? T('Arquivo local','Local file') : path.split('/').slice(-2, -1)[0] || '';
@@ -2878,6 +2907,7 @@ var RGMIDI = (function () {
     $('timbres').querySelectorAll('canvas.viz').forEach(function (cv) { drawViz(cv, tb(+cv.dataset.k)); });
     pickTimbre(groups[order[0]][0], true);
     $('timbres').scrollTop = 0;
+    rollShow();
   }
   function card(t, k) {
     var r = soundRange(t);
@@ -2923,6 +2953,7 @@ var RGMIDI = (function () {
     $('curT').textContent = t.name || (t.chip + ' · ' + t.n + ' (' + ROLE(t.role) + ')');
     sendPatch(t);
     buildKb(); markMine();
+    if (typeof RL !== 'undefined') { RL.litKey = ''; RL.lastLegend = ''; rollKick(); }
     if (!silent) toast(T('Timbre ','Sound ') + (t.name || t.n + ' (' + ROLE(t.role) + ')') + T(' pronto para tocar',' ready to play'));
   }
   var prevT = [];
@@ -3295,15 +3326,198 @@ var RGMIDI = (function () {
       mask = voices && voices.mask ? voices.mask.map(function () { return true; }) : [];
       pSend({ type: 'volume', level: +$('mVol').value });
       renderChans(); playBtn();
+      RL.pos = 0; RL.at = performance.now(); RL.manual = null; rollKick();
     } else if (d.type === 'duration') durMs = d.durMs || durMs;
     else if (d.type === 'position') {
       durMs = d.durMs || durMs;
       $('progI').style.width = durMs ? Math.min(100, d.posMs / durMs * 100) + '%' : '0';
       $('tm').textContent = fmt(d.posMs) + ' / ' + fmt(durMs);
-    } else if (d.type === 'ended') { pPlaying = false; pPaused = false; pLoaded = null; playBtn(); $('progI').style.width = '100%'; }
+      RL.pos = d.posMs; RL.at = performance.now(); if (RL.manual != null && !RL.dragging) RL.manual = null; rollKick();
+    } else if (d.type === 'ended') { pPlaying = false; pPaused = false; pLoaded = null; playBtn(); $('progI').style.width = '100%'; rollKick(); }
     else if (d.type === 'error') { pPlaying = false; pLoaded = null; playBtn(); toast(T('A música não pôde tocar: ','The song could not play: ') + d.msg); }
     else if (d.type === 'ms-action') { if (d.action === 'pause' || d.action === 'play') $('bPlay').click(); }
   });
+  // ───────────────────── piano roll (notas da música) ─────────────────────
+  // As notas vêm do próprio VGM (o mesmo leitor dos timbres) e andam junto com a música que está tocando.
+  // A altura mostrada é a tecla que você aperta para tocar junto com o timbre (já com a correção de oitava do timbre).
+  var RL = { open: false, notes: null, drums: null, path: null, view: 'timbre', pps: 110, pos: 0, at: 0, manual: null, hover: null, raf: 0, lit: {} };
+  try { RL.open = localStorage.getItem('rgRoll') === '1'; } catch (e) {}
+  var RCOL = ['#c084fc', '#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#fb923c', '#a3e635', '#22d3ee', '#e879f9', '#f87171'];
+  var NOTE_PT = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'Lá', 'Lá#', 'Si'];
+  function noteLabel(n) { return nn(n) + (rgI18n.lang === 'pt' ? ' · ' + NOTE_PT[n % 12] : ''); }
+  function tIdx(t) { return cur.res ? cur.res.timbres.indexOf(t) : -1; }
+  function buildNotes() {
+    var res = cur.res; RL.notes = []; RL.drums = []; RL.path = cur.path;
+    if (!res || !res.midi) return;
+    var open = {}, SR = 44100;
+    function close(c, t) { var o = open[c]; if (o) { o.t1 = t / SR; if (o.t1 > o.t0) (o.drum ? RL.drums : RL.notes).push(o); delete open[c]; } }
+    res.midi.events.forEach(function (e) {
+      if (e.k === 'on') {
+        close(e.c, e.t);
+        var tb = e.tb && res.timbres.indexOf(e.tb) >= 0 ? e.tb : null, drum = !e.n || (tb && tb.type === 'psg' && tb.wave === 'noise');
+        var key = drum ? 0 : Math.round(e.n - (tb && tb.tune || 0));
+        open[e.c] = { c: e.c, t0: e.t / SR, t1: 0, n: key, tb: tb, drum: drum, v: e.v };
+      } else if (e.k === 'off') close(e.c, e.t);
+      else if (e.k === 'hit') RL.drums.push({ c: e.c, t0: e.t / SR, t1: e.t / SR + 0.08, n: 0, tb: null, drum: true });
+    });
+    var end = (res.totalSamples || res.seconds * SR) || 0;
+    Object.keys(open).forEach(function (c) { close(c, end); });
+    RL.notes.sort(function (a, b) { return a.t0 - b.t0; });
+    RL.drums.sort(function (a, b) { return a.t0 - b.t0; });
+    // menu de vistas: timbre escolhido, todos e cada canal
+    var sel = $('rlView'), chans = res.midi.chans.filter(function (c) { return RL.notes.some(function (x) { return x.c === c.id; }); });
+    sel.innerHTML = '<option value="timbre">' + T('Timbre escolhido', 'Chosen sound') + '</option><option value="all">' + T('Todos os canais', 'All channels') + '</option>' +
+      chans.map(function (c) { return '<option value="c:' + esc(c.id) + '">' + esc(c.chip + ' · ' + LBL(c.label)) + '</option>'; }).join('');
+    if (!/^(timbre|all)$/.test(RL.view) && !chans.some(function (c) { return 'c:' + c.id === RL.view; })) RL.view = 'timbre';
+    sel.value = RL.view;
+  }
+  function shown() {
+    if (!RL.notes) return [];
+    if (RL.view === 'timbre') return RL.notes.filter(function (x) { return x.tb && x.tb === cur.timbre; });
+    if (RL.view === 'all') return RL.notes;
+    var id = RL.view.slice(2); return RL.notes.filter(function (x) { return x.c === id; });
+  }
+  function colorOf(tb) {
+    if (!tb) return '#6f6699';
+    if (tb === cur.timbre) return '#c084fc';
+    var k = tIdx(tb); return RCOL[1 + ((k < 0 ? 0 : k) % (RCOL.length - 1))];
+  }
+  // posição da música em segundos (com a volta do loop do VGM)
+  function songSec() {
+    if (RL.manual != null) return RL.manual;
+    var ms = RL.pos + (pPlaying && !pPaused ? performance.now() - RL.at : 0), s = ms / 1000, res = cur.res;
+    if (res && res.totalSamples && res.loopSamples > 0) {
+      var tot = res.totalSamples / 44100, lp = res.loopSamples / 44100;
+      if (s > tot) s = (tot - lp) + ((s - tot) % lp);
+    }
+    return Math.max(0, s);
+  }
+  function legend(list) {
+    var seen = [], h = '';
+    list.forEach(function (x) { if (x.tb && seen.indexOf(x.tb) < 0) seen.push(x.tb); });
+    if (RL.view === 'timbre') {
+      h = cur.timbre ? '<span class="lg on"><i style="background:#c084fc"></i>' + esc(cur.timbre.name || cur.timbre.n + ' · ' + ROLE(cur.timbre.role)) + '</span>' : '';
+      if (cur.timbre && !list.length) h += '<span class="lgx">' + T('este timbre não aparece nas notas', 'this sound has no notes') + '</span>';
+    } else seen.slice(0, 8).forEach(function (tb) {
+      h += '<span class="lg' + (tb === cur.timbre ? ' on' : '') + '" data-tk="' + tIdx(tb) + '" title="' + T('Usar este timbre no teclado', 'Use this sound on the keyboard') + '"><i style="background:' + colorOf(tb) + '"></i>' + esc(tb.chip + ' ' + tb.n + ' · ' + (tb.name || ROLE(tb.role))) + '</span>';
+    });
+    $('rlLeg').innerHTML = h;
+  }
+  function drawRoll() {
+    RL.raf = 0;
+    if (!RL.open || !cur.res) return;
+    if (RL.path !== cur.path || !RL.notes) buildNotes();
+    var cv = $('rlCv'), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#0c0a14'; g.fillRect(0, 0, W, H);
+    var list = shown(), sec = songSec(), GUT = 40, DR = RL.view === 'timbre' ? 0 : 14;
+    var lo = 999, hi = -1; list.forEach(function (x) { if (x.n < lo) lo = x.n; if (x.n > hi) hi = x.n; });
+    if (hi < 0) { lo = 48; hi = 72; }
+    lo -= 2; hi += 2; if (hi - lo < 24) { var mid = (lo + hi) >> 1; lo = mid - 12; hi = mid + 12; }
+    var rows = hi - lo + 1, rh = (H - DR) / rows, px = W * 0.22, t0 = sec - (px - GUT) / RL.pps, t1 = sec + (W - px) / RL.pps;
+    function X(t) { return px + (t - sec) * RL.pps; } function Y(n) { return (hi - n) * rh; }
+    // fundo: teclas pretas mais escuras, linha em cada Dó
+    for (var n = lo; n <= hi; n++) {
+      var y = Y(n);
+      if (BLACK[n % 12]) { g.fillStyle = '#100d1b'; g.fillRect(GUT, y, W - GUT, rh); }
+      if (n % 12 === 0) { g.fillStyle = '#2c2547'; g.fillRect(GUT, y + rh - 1, W - GUT, 1); }
+    }
+    // grade de tempo (1 s)
+    g.fillStyle = '#1b1730';
+    for (var s = Math.ceil(t0); s < t1; s++) g.fillRect(X(s), 0, 1, H - DR);
+    // notas
+    var now = {}, hovered = null, mx = RL.mx, my = RL.my;
+    g.font = '600 10px Oxanium,sans-serif'; g.textBaseline = 'middle';
+    list.forEach(function (x) {
+      if (x.t1 < t0 || x.t0 > t1) return;
+      var xa = Math.max(GUT, X(x.t0)), xb = X(x.t1), y = Y(x.n), w = xb - xa;
+      if (w < 1) return;
+      var playing = sec >= x.t0 && sec < x.t1, col = colorOf(x.tb), dim = RL.view !== 'timbre' && x.tb !== cur.timbre;
+      g.globalAlpha = playing ? 1 : (dim ? 0.55 : 0.85);
+      g.fillStyle = col; g.fillRect(xa, y + 1, Math.max(2, w - 1), Math.max(2, rh - 2));
+      if (playing) { g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(xa + 0.5, y + 1.5, Math.max(2, w - 2), Math.max(2, rh - 3)); if (x.tb === cur.timbre || RL.view !== 'all') now[x.n] = 1; }
+      if (w > 26 && rh >= 9) { g.globalAlpha = 1; g.fillStyle = '#0c0a14'; g.fillText(nn(x.n), xa + 3, y + rh / 2 + 0.5); }
+      if (mx != null && mx >= xa && mx <= xb && my >= y && my <= y + rh) hovered = x;
+    });
+    g.globalAlpha = 1;
+    // bateria / ruído numa faixa embaixo
+    if (DR) {
+      g.fillStyle = '#13101f'; g.fillRect(GUT, H - DR, W - GUT, DR);
+      var dl = RL.view === 'all' ? RL.drums : RL.drums.filter(function (x) { return 'c:' + x.c === RL.view; });
+      dl.forEach(function (x) {
+        if (x.t1 < t0 || x.t0 > t1) return;
+        g.fillStyle = sec >= x.t0 && sec < x.t1 ? '#fff' : '#6f6699';
+        g.fillRect(Math.max(GUT, X(x.t0)), H - DR + 3, Math.max(2, X(x.t1) - X(x.t0) - 1), DR - 6);
+      });
+    }
+    // régua de notas à esquerda
+    g.fillStyle = '#13101f'; g.fillRect(0, 0, GUT, H);
+    for (n = lo; n <= hi; n++) {
+      y = Y(n);
+      g.fillStyle = BLACK[n % 12] ? '#1a1726' : '#2a2640'; g.fillRect(GUT - 10, y + 0.5, 10, Math.max(1, rh - 1));
+      if (now[n]) { g.fillStyle = '#c084fc'; g.fillRect(GUT - 10, y + 0.5, 10, Math.max(1, rh - 1)); }
+      if (n % 12 === 0 || (rh >= 11 && !BLACK[n % 12]) || now[n]) { g.fillStyle = now[n] ? '#fff' : (n % 12 === 0 ? '#a99fd0' : '#6f6699'); g.fillText(nn(n), 3, y + rh / 2 + 0.5); }
+    }
+    if (DR) { g.fillStyle = '#6f6699'; g.fillText('🥁', 8, H - DR / 2); }
+    // linha de onde a música está
+    g.fillStyle = '#fff'; g.fillRect(px, 0, 1.5, H);
+    // teclado de baixo: acende as teclas que a música está tocando
+    var keys = Object.keys(now).join(',');
+    if (keys !== RL.litKey) {
+      RL.litKey = keys;
+      Object.keys(RL.lit).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.remove('sg'); });
+      RL.lit = now;
+      if ($('rlKeys').checked) Object.keys(now).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.add('sg'); });
+    }
+    // dica sobre a nota embaixo do mouse
+    var tip = $('rlTip');
+    if (hovered) {
+      tip.style.display = 'block';
+      tip.innerHTML = '<b>' + noteLabel(hovered.n) + '</b> · ' + esc(LBL(hovered.c.split(' · ').slice(1).join(' · ') || hovered.c)) +
+        (hovered.tb ? '<br>' + esc(hovered.tb.chip + ' ' + hovered.tb.n + ' · ' + (hovered.tb.name || ROLE(hovered.tb.role))) + (hovered.tb !== cur.timbre ? ' · ' + T('clique para usar', 'click to use') : '') : '');
+      tip.style.left = Math.min(W - 180, mx + 12) + 'px'; tip.style.top = Math.max(0, my - 40) + 'px';
+    } else tip.style.display = 'none';
+    RL.hover = hovered;
+    if (RL.lastLegend !== RL.view + '|' + tIdx(cur.timbre) + '|' + cur.path) { RL.lastLegend = RL.view + '|' + tIdx(cur.timbre) + '|' + cur.path; legend(list); }
+    if (pPlaying && !pPaused && RL.manual == null) RL.raf = requestAnimationFrame(drawRoll);
+  }
+  function rollKick() { if (RL.open && !RL.raf) RL.raf = requestAnimationFrame(drawRoll); }
+  function rollShow() {
+    $('roll').hidden = !RL.open; $('bRoll').classList.toggle('on', RL.open);
+    if (!RL.open) { Object.keys(RL.lit).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.remove('sg'); }); RL.lit = {}; RL.litKey = ''; }
+    rollKick();
+  }
+  $('bRoll').onclick = function () { RL.open = !RL.open; try { localStorage.setItem('rgRoll', RL.open ? '1' : '0'); } catch (e) {} rollShow(); };
+  $('rlView').onchange = function () { RL.view = this.value; RL.lastLegend = ''; rollKick(); };
+  $('rlZin').onclick = function () { RL.pps = Math.min(600, RL.pps * 1.35); rollKick(); };
+  $('rlZout').onclick = function () { RL.pps = Math.max(20, RL.pps / 1.35); rollKick(); };
+  $('rlKeys').onchange = function () { RL.litKey = ''; rollKick(); };
+  $('rlLeg').addEventListener('click', function (e) { var l = e.target.closest('[data-tk]'); if (l && +l.dataset.tk >= 0) { pickTimbre(+l.dataset.tk); RL.lastLegend = ''; rollKick(); } });
+  (function () {
+    var cv = $('rlCv'), drag = null;
+    cv.addEventListener('pointermove', function (e) {
+      var r = cv.getBoundingClientRect(); RL.mx = e.clientX - r.left; RL.my = e.clientY - r.top;
+      if (drag) { var dx = e.clientX - drag.x; if (Math.abs(dx) > 3) drag.moved = true; RL.manual = Math.max(0, drag.s - dx / RL.pps); }
+      rollKick();
+    });
+    cv.addEventListener('pointerleave', function () { RL.mx = RL.my = null; rollKick(); });
+    cv.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, s: songSec(), moved: false }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointerup', function () {
+      var d = drag; drag = null; if (!d) return;
+      if (d.moved) {
+        // arrastou: com a música tocando, pula para onde parou; parada, só fica olhando ali
+        if (pLoaded && durMs) { pSend({ type: 'seek', ms: Math.round(RL.manual * 1000) }); RL.pos = RL.manual * 1000; RL.at = performance.now(); RL.manual = null; }
+        rollKick(); return;
+      }
+      if (RL.hover && RL.hover.tb && RL.hover.tb !== cur.timbre) { var k = tIdx(RL.hover.tb); if (k >= 0) { pickTimbre(k); RL.lastLegend = ''; } }
+      rollKick();
+    });
+    cv.addEventListener('wheel', function (e) { if (!e.ctrlKey && Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; e.preventDefault(); RL.pps = Math.max(20, Math.min(600, RL.pps * (e.deltaY < 0 ? 1.15 : 1 / 1.15))); rollKick(); }, { passive: false });
+    window.addEventListener('resize', rollKick);
+  })();
+
   function playBtn() { $('bPlay').innerHTML = pPlaying && !pPaused ? T('❚❚ Pausar música','❚❚ Pause song') : T('▶ Tocar música','▶ Play song'); }
   $('bPlay').onclick = function () {
     wake();
@@ -3421,6 +3635,7 @@ var RGMIDI = (function () {
     langMark(); qPh(); renderList(); playBtn(); modeBtn(); setMidi(midiState);
     if (cur.path && isLocal(cur.path) && !(cur.res && cur.res.info && cur.res.info.game)) $('sGame').textContent = T('Arquivo local', 'Local file');
     refreshTimbres(); if (ED.t) renderEd();
+    if (RL.notes) { buildNotes(); RL.lastLegend = ''; rollKick(); }
     if (voices) renderChans(); else if (!pLoaded) resetChans();
     if (EMBED) try { window.parent.postMessage({ type: 'rg-lang', lang: l }, '*'); } catch (e) {}
   });
