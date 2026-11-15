@@ -88,7 +88,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu aparelho. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip" data-en-title="Open a song, instrument, wavetable or sample from your device. Mega Drive and Master System VGMs open straight as a project, with the chip's sounds" data-en="📂 Open local file">📂 Abrir arquivo local</button>
   <button class="btn" id="bMidi" title="Converter um VGM (arquivo local) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a VGM (local file) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
-  <span class="note" id="note" data-en="Saving (Ctrl+S) or exporting downloads the file (it goes to Downloads). Nothing is stored in the browser.">Salvar (Ctrl+S) ou exportar baixa o arquivo (vai para os Downloads). Nada fica guardado no navegador.</span>
+  <span class="note" id="note" data-en="Open and save: Chiptune collection and your computer folders (Connect a folder). Without a folder, saving downloads the file.">Abrir e salvar: Acervo Chiptunes e as pastas do seu computador (Conectar pasta). Sem pasta conectada, salvar baixa o arquivo.</span>
   <div class="sp"></div>
   <button class="btn" id="bBack">← Chiptune Studio</button>
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" data-en-title="Close and go back to the blog" style="display:none">✕</button>
@@ -117,7 +117,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     print: function (t) { console.log(t); },
     printErr: function (t) { console.warn(t); },
     setStatus: function () {},
-    onRgReady: function () { ready = true; setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); setTimeout(checkInbox, 600); },
+    onRgReady: function () { ready = true; vfsInit(); setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); setTimeout(checkInbox, 600); },
     onAbort: function () { $('loadTxt').textContent = T('O Tracker parou com um erro. Recarregue a página.','The Tracker stopped with an error. Reload the page.'); $('load').style.display = 'grid'; }
   };
 
@@ -147,13 +147,14 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
       notify('🎛 ' + fn + ' — ' + (o.instruments - o.samples) + T(' instrumentos',' instruments') + (o.samples ? ', ' + o.samples + ' samples' : '') + T(', linha = ',', row = ') + o.rowFrames + T(' quadro',' frame') + (o.rowFrames === 1 ? '' : 's') + (o.missing && o.missing.length ? T(' · ficou de fora: ',' · left out: ') + o.missing.join(', ') : ''));
     }).catch(function (e) { notify('🎛 ' + name + ': ' + (e.message || e)); });
   }
-  function openFiles(list) {
+  function openFiles(list, fhs) {
     if (!ready) { alert(T('Espere o Tracker terminar de carregar.','Wait for the Tracker to finish loading.')); return; }
     Array.prototype.forEach.call(list, function (f, i) {
       f.arrayBuffer().then(function (ab) {
         if (isVGM(f.name)) { vgmToFur(new Uint8Array(ab), f.name, i * 250); return; }
         var safe = f.name.replace(/[\/\\]/g, '_');
         var path = HOME + '/' + folderFor(safe) + '/' + safe;
+        if (fhs && fhs[i]) handles[path] = fhs[i]; else delete handles[path];
         importing[path] = 1;
         Module.FS.writeFile(path, new Uint8Array(ab));
         delete importing[path];
@@ -162,7 +163,15 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     });
     $('canvas').focus();
   }
-  $('bOpen').onclick = function () { $('fileIn').value = ''; $('fileIn').click(); };
+  // abrir pelo seletor do sistema; quando o navegador permite (Chrome/Edge), lembra o arquivo para salvar de volta nele
+  function pickOpen() {
+    if (window.showOpenFilePicker) {
+      window.showOpenFilePicker({ multiple: true }).then(function (hs) {
+        return Promise.all(hs.map(function (h) { return h.getFile(); })).then(function (fs) { openFiles(fs, hs); });
+      }).catch(function (e) { if (e && e.name !== 'AbortError') { $('fileIn').value = ''; $('fileIn').click(); } });
+    } else { $('fileIn').value = ''; $('fileIn').click(); }
+  }
+  $('bOpen').onclick = pickOpen;
   $('fileIn').onchange = function () { if (this.files.length) openFiles(this.files); };
 
   // arrastar e soltar arquivos em cima do Tracker
@@ -187,18 +196,181 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     FS.close = function (stream) {
       var path = stream && stream.path, wrote = stream && (stream.flags & 3) !== 0;
       var r = origClose.apply(this, arguments);
-      if (wrote && path && !hidden(path) && !importing[path]) { pending[path] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 500); }
+      if (wrote && path && !importing[path] && isVirt(path)) { vfsSaved(path); return r; }
+      if (wrote && path && !hidden(path) && !importing[path]) { pending[path] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 150); }
       return r;
     };
+  }
+
+  // ── lugares do seletor de arquivos do Furnace: acervo do blog e pastas do computador ──
+  // /Acervo     = pasta Chiptunes do repositório (lista vem do chiptunes-index.json; o arquivo só baixa ao abrir)
+  // /Computador = pastas que a pessoa conectou (Chrome/Edge); abrir lê do computador, salvar grava lá
+  var ACV = '/Acervo', PC = '/Computador';
+  var vfsLoaded = {}, acvIndex = null, acvFiles = {}, dirs = [], dirsReady = null;
+  function isVirt(p) { return p.indexOf(ACV + '/') === 0 || p.indexOf(PC + '/') === 0; }
+  function mkdirp(p) { var parts = p.split('/').filter(Boolean), cur = ''; parts.forEach(function (x) { cur += '/' + x; try { Module.FS.mkdir(cur); } catch (e) {} }); }
+  function exists(p) { try { Module.FS.stat(p); return true; } catch (e) { return false; } }
+  function placeholder(p) { if (!exists(p)) { importing[p] = 1; Module.FS.writeFile(p, new Uint8Array(0)); delete importing[p]; } }
+  // pastas conectadas ficam lembradas (só a autorização do navegador, não os arquivos)
+  function idb() { return new Promise(function (ok, no) { var r = indexedDB.open('rg-tracker-pastas', 1); r.onupgradeneeded = function () { r.result.createObjectStore('dirs'); }; r.onsuccess = function () { ok(r.result); }; r.onerror = function () { no(r.error); }; }); }
+  function idbAll() { return idb().then(function (db) { return new Promise(function (ok) { var out = [], c = db.transaction('dirs').objectStore('dirs').openCursor(); c.onsuccess = function () { var x = c.result; if (x) { out.push({ name: x.key, handle: x.value }); x.continue(); } else ok(out); }; c.onerror = function () { ok(out); }; }); }).catch(function () { return []; }); }
+  function idbPut(name, h) { return idb().then(function (db) { db.transaction('dirs', 'readwrite').objectStore('dirs').put(h, name); }).catch(function () {}); }
+  function vfsInit() {
+    mkdirp(ACV); mkdirp(PC);
+    dirsReady = (window.showDirectoryPicker ? idbAll() : Promise.resolve([])).then(function (list) { dirs = list; dirs.forEach(function (d) { mkdirp(PC + '/' + d.name); }); });
+  }
+  function loadIndex() {
+    if (acvIndex) return Promise.resolve(acvIndex);
+    return fetch('chiptunes-index.json?v=' + Math.floor(Date.now() / 3.6e6)).then(function (r) { return r.json(); }).then(function (j) { acvIndex = j; return j; });
+  }
+  function acvNode(p) { // nó do índice para /Acervo/a/b
+    var parts = p.slice(ACV.length).split('/').filter(Boolean), node = { children: acvIndex };
+    for (var i = 0; i < parts.length; i++) { var n = (node.children || []).filter(function (c) { return c.name === parts[i]; })[0]; if (!n) return null; node = n; }
+    return node;
+  }
+  function dirByPath(p) { // [pasta conectada, resto do caminho]
+    var rest = p.slice(PC.length + 1), i = rest.indexOf('/'), top = i < 0 ? rest : rest.slice(0, i);
+    var d = dirs.filter(function (x) { return x.name === top; })[0];
+    return d ? [d, i < 0 ? '' : rest.slice(i + 1)] : null;
+  }
+  function allow(h) {
+    if (!h.queryPermission) return Promise.resolve(true);
+    return h.queryPermission({ mode: 'readwrite' }).then(function (s) { return s === 'granted' ? true : h.requestPermission({ mode: 'readwrite' }).then(function (s2) { return s2 === 'granted'; }); });
+  }
+  function walk(h, rest, create) {
+    var parts = rest.split('/').filter(Boolean);
+    return parts.reduce(function (pr, x) { return pr.then(function (d) { return d.getDirectoryHandle(x, create ? { create: true } : undefined); }); }, Promise.resolve(h));
+  }
+  Module.rgPrepareDir = function (p) {
+    if (p === ACV || p.indexOf(ACV + '/') === 0) {
+      return loadIndex().then(function () {
+        var n = acvNode(p); if (!n) return;
+        (n.children || []).forEach(function (c) { var q = p + '/' + c.name; if (c.type === 'dir') mkdirp(q); else { acvFiles[q] = c.path; placeholder(q); } });
+      });
+    }
+    if (p === PC) return dirsReady;
+    if (p.indexOf(PC + '/') === 0) {
+      return dirsReady.then(function () {
+        var x = dirByPath(p); if (!x) return;
+        return allow(x[0].handle).then(function (ok) {
+          if (!ok) { notify(T('Sem permissão para a pasta ', 'No permission for the folder ') + x[0].name); return; }
+          return walk(x[0].handle, x[1]).then(function (dh) {
+            var it = dh.values(), seen = {};
+            function next() {
+              return it.next().then(function (r) {
+                if (r.done) return;
+                var e = r.value, q = p + '/' + e.name; seen[e.name] = 1;
+                if (e.kind === 'directory') mkdirp(q); else placeholder(q);
+                return next();
+              });
+            }
+            return next().then(function () { // o que foi apagado no computador some da lista
+              try { Module.FS.readdir(p).forEach(function (n) { if (n === '.' || n === '..' || seen[n]) return; var q = p + '/' + n; try { if (Module.FS.isFile(Module.FS.stat(q).mode)) { Module.FS.unlink(q); delete vfsLoaded[q]; } } catch (e) {} }); } catch (e) {}
+            });
+          });
+        });
+      });
+    }
+    return Promise.resolve();
+  };
+  // na hora de abrir: traz o conteúdo do acervo ou do computador; VGM vira projeto (devolve true = a página cuidou)
+  Module.rgEnsure = function (p, open) {
+    if (!isVirt(p) || !exists(p)) return Promise.resolve(false);
+    var name = p.split('/').pop();
+    var get = vfsLoaded[p] ? Promise.resolve(Module.FS.readFile(p)) :
+      p.indexOf(ACV + '/') === 0 ? (acvFiles[p] ? fetch('../' + acvFiles[p].split('/').map(encodeURIComponent).join('/')).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); }) : Promise.resolve(null)) :
+      dirsReady.then(function () { var x = dirByPath(p), parent = x[1].split('/').slice(0, -1).join('/'); return walk(x[0].handle, parent).then(function (dh) { return dh.getFileHandle(name); }).then(function (fh) { return fh.getFile(); }).then(function (f) { return f.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); }); });
+    return get.then(function (u8) {
+      if (!u8) return false;
+      if (!vfsLoaded[p]) { importing[p] = 1; Module.FS.writeFile(p, u8); delete importing[p]; vfsLoaded[p] = 1; }
+      if (open && isVGM(name)) { vgmToFur(u8, name, 0); return true; }
+      return false;
+    });
+  };
+  // o Furnace salvou dentro de um lugar: grava de verdade na pasta do computador
+  function vfsSaved(p) {
+    var name = p.split('/').pop();
+    if (p.indexOf(ACV + '/') === 0) { // o acervo é só leitura: baixa para não perder
+      download(p); toast2(T('O acervo é só para leitura — baixei ', 'The library is read-only — downloaded ') + name); return;
+    }
+    vfsLoaded[p] = 1;
+    var data = Module.FS.readFile(p);
+    dirsReady.then(function () {
+      var x = dirByPath(p); if (!x) throw new Error('?');
+      var parent = x[1].split('/').slice(0, -1).join('/');
+      return allow(x[0].handle).then(function (ok) { if (!ok) throw new Error('perm'); return walk(x[0].handle, parent, true); })
+        .then(function (dh) { return dh.getFileHandle(name, { create: true }); }).then(function (fh) { return writeTo(fh, data); })
+        .then(function () { lastSaved = p; toast2(T('💾 Salvo em ', '💾 Saved to ') + x[0].name + '/' + (x[1] || name)); });
+    }).catch(function () { download(p); toast2(T('Não consegui gravar na pasta — baixei ', 'Could not write to the folder — downloaded ') + name); });
+  }
+  function toast2(txt) {
+    $('tTxt').textContent = txt;
+    $('tMidi').style.display = $('tFur').style.display = lastSaved && isVGM(lastSaved) ? '' : 'none';
+    $('toast').classList.add('show');
+  }
+  // lista do painel da esquerda: título, depois "tipo<TAB>nome<TAB>caminho"
+  Module.rgPlaces = function () {
+    var out = [T('Lugares', 'Places'), 'a\t' + T('Acervo Chiptunes', 'Chiptune collection') + '\t' + ACV];
+    dirs.forEach(function (d) { out.push('c\t' + d.name + '\t' + PC + '/' + d.name); });
+    if (window.showDirectoryPicker) out.push('+\t' + T('Conectar pasta do computador…', 'Connect a computer folder…') + '\t');
+    return out.join('\n');
+  };
+  Module.rgConnect = function () {
+    return window.showDirectoryPicker({ mode: 'readwrite' }).then(function (h) {
+      return dirsReady.then(function () {
+        return Promise.all(dirs.map(function (d) { return d.handle.isSameEntry(h); })).then(function (same) {
+          var i = same.indexOf(true);
+          if (i >= 0) return PC + '/' + dirs[i].name;
+          var name = h.name, n = 2; while (dirs.some(function (d) { return d.name === name; })) name = h.name + ' (' + (n++) + ')';
+          dirs.push({ name: name, handle: h }); idbPut(name, h); mkdirp(PC + '/' + name);
+          return PC + '/' + name;
+        });
+      });
+    }).catch(function () { return ''; });
+  };
+  Module.rgDefaultDir = function (save) {
+    if (dirs.length) return PC + '/' + dirs[0].name;
+    return save ? '' : ACV;
+  };
+
+  // ── salvar no computador ──
+  // Chrome/Edge: o sistema pergunta onde guardar (como num programa); depois disso, Ctrl+S grava no mesmo arquivo.
+  // Outros navegadores: baixa o arquivo (pasta Downloads).
+  var handles = {};
+  function writeTo(h, data) { return h.createWritable().then(function (w) { return w.write(data).then(function () { return w.close(); }); }); }
+  function ext(name) { var m = /\.[^.\/]+$/.exec(name); return m ? m[0].toLowerCase() : ''; }
+  function saveOne(p) {
+    var data = Module.FS.readFile(p), name = p.split('/').pop();
+    if (handles[p]) return writeTo(handles[p], data).then(function () { return 'saved'; });
+    if (!window.showSaveFilePicker) { download(p); return Promise.resolve('dl'); }
+    var opt = { suggestedName: name };
+    if (ext(name)) opt.types = [{ description: name.split('.').pop().toUpperCase(), accept: { 'application/octet-stream': [ext(name)] } }];
+    return window.showSaveFilePicker(opt).then(function (h) { handles[p] = h; return writeTo(h, data).then(function () { return 'saved'; }); });
+  }
+  function saveMany(paths) {
+    if (!window.showDirectoryPicker) { paths.forEach(function (p, i) { setTimeout(function () { download(p); }, i * 300); }); return Promise.resolve('dl'); }
+    return window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) {
+      return paths.reduce(function (pr, p) {
+        return pr.then(function () { return dir.getFileHandle(p.split('/').pop(), { create: true }).then(function (h) { return writeTo(h, Module.FS.readFile(p)); }); });
+      }, Promise.resolve()).then(function () { return 'saved'; });
+    });
   }
   function flushSaved() {
     var paths = Object.keys(pending); pending = {};
     if (!paths.length) return;
-    paths.forEach(function (p, i) { setTimeout(function () { download(p); }, i * 300); });
     lastSaved = paths[paths.length - 1];
-    $('tTxt').textContent = T('⬇ Baixado: ','⬇ Downloaded: ') + lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
-    $('tMidi').style.display = $('tFur').style.display = isVGM(lastSaved) ? '' : 'none';
-    $('toast').classList.add('show');
+    var nm = lastSaved.split('/').pop() + (paths.length > 1 ? ' (+' + (paths.length - 1) + ')' : '');
+    (paths.length > 1 ? saveMany(paths) : saveOne(paths[0])).then(function (how) {
+      $('tTxt').textContent = (how === 'saved' ? T('💾 Salvo: ', '💾 Saved: ') : T('⬇ Baixado: ', '⬇ Downloaded: ')) + nm;
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') { $('tTxt').textContent = T('Não salvo (cancelado): ', 'Not saved (cancelled): ') + nm; return; }
+      // sem permissão ou erro do navegador: baixa para não perder o trabalho
+      paths.forEach(function (p, i) { setTimeout(function () { download(p); }, i * 300); });
+      $('tTxt').textContent = T('⬇ Baixado: ', '⬇ Downloaded: ') + nm;
+    }).then(function () {
+      $('tMidi').style.display = $('tFur').style.display = isVGM(lastSaved) ? '' : 'none';
+      $('toast').classList.add('show');
+    });
   }
   $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
   $('tFur').onclick = function () { if (lastSaved) vgmToFur(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); $('canvas').focus(); };
