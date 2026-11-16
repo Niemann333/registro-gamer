@@ -20,6 +20,16 @@
   <div id="root"></div>
   <div id="status">Inicializando...</div>
   <script>
+    // modo debug (?debug=1 no blog): manda erros e avisos do tocador para o painel de debug do gadget
+    var RG_DEBUG = /[?&]debug=1/.test(location.search);
+    function rgDbg(m) { if (RG_DEBUG) try { parent.postMessage({ type: 'rg-debug', from: 'chiptuneplayer', msg: String(m).slice(0, 300) }, '*'); } catch (e) {} }
+    if (RG_DEBUG) {
+      window.addEventListener('error', function (e) { rgDbg('ERRO: ' + (e.message || (e.target && (e.target.src || e.target.href)) || e)); }, true);
+      window.addEventListener('unhandledrejection', function (e) { rgDbg('ERRO (promise): ' + (e.reason && (e.reason.message || e.reason))); });
+      var _ce = console.error; console.error = function () { rgDbg('console.error: ' + Array.prototype.join.call(arguments, ' ')); return _ce.apply(console, arguments); };
+      rgDbg('carregado: ' + location.href.slice(0, 200));
+    }
+
     var _ctx       = null;
     var _ctxStart  = 0;
     var _scp       = null;
@@ -218,7 +228,7 @@
       if (window.ChipPlayer && window.ChipPlayer.playContext) return window.ChipPlayer;
       return null;
     }
-    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; }
+    function setStatus(m, c) { var el = document.getElementById('status'); el.textContent = m; el.className = c || ''; rgDbg('status: ' + m); }
 
     function startPoller(isVGM) {
       if (_posTimer) clearInterval(_posTimer);
@@ -352,14 +362,10 @@
       }
     }
 
-    if ('serviceWorker' in navigator) {
-      var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
-      navigator.serviceWorker.register(swPath).then(function(reg) {
-        if (reg.installing) reg.installing.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
-        else if (reg.waiting) reg.waiting.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
-        else loadBundle();
-      }).catch(loadBundle);
-    } else loadBundle();
+    // O service worker foi desativado (o sw.js só se remove). Registrar de novo fazia a página recarregar
+    // em loop e nada tocava; agora só remove algum que tenha ficado e carrega o tocador direto.
+    try { if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }); } catch (e) {}
+    loadBundle();
 
     function loadBundle() {
       var s = document.createElement('script');

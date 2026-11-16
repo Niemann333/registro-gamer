@@ -300,14 +300,10 @@
       }
     }
 
-    if ('serviceWorker' in navigator) {
-      var swPath = (location.pathname.replace(/\/[^/]*$/, '') || '') + '/sw.js';
-      navigator.serviceWorker.register(swPath).then(function(reg) {
-        if (reg.installing) reg.installing.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
-        else if (reg.waiting) reg.waiting.addEventListener('statechange', function() { if (this.state === 'activated') location.reload(); });
-        else loadBundle();
-      }).catch(loadBundle);
-    } else loadBundle();
+    // O service worker foi desativado (o sw.js só se remove). Registrar de novo fazia a página recarregar
+    // em loop e nada tocava; agora só remove algum que tenha ficado e carrega o tocador direto.
+    try { if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }); } catch (e) {}
+    loadBundle();
 
     function loadBundle() {
       var s = document.createElement('script');
