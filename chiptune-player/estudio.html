@@ -3397,13 +3397,17 @@ var RGMIDI = (function () {
     var res = cur.res; RL.notes = []; RL.drums = []; RL.path = cur.path;
     if (!res || !res.midi) return;
     var open = {}, SR = 44100;
-    function close(c, t) { var o = open[c]; if (o) { o.t1 = t / SR; if (o.t1 > o.t0) (o.drum ? RL.drums : RL.notes).push(o); delete open[c]; } }
+    function close(c, t) { var o = open[c]; if (o) { o.t1 = t / SR; if (o.t1 > o.t0) { if (o.p) o.fx = bendKind(o.p); (o.drum ? RL.drums : RL.notes).push(o); } delete open[c]; } }
     res.midi.events.forEach(function (e) {
       if (e.k === 'on') {
         close(e.c, e.t);
         var tb = e.tb && res.timbres.indexOf(e.tb) >= 0 ? e.tb : null, drum = !e.n || (tb && tb.type === 'psg' && tb.wave === 'noise');
         var key = drum ? 0 : Math.round(e.n - (tb && tb.tune || 0));
-        open[e.c] = { c: e.c, t0: e.t / SR, t1: 0, n: key, tb: tb, drum: drum, v: e.v };
+        open[e.c] = { c: e.c, t0: e.t / SR, t1: 0, n: key, tb: tb, drum: drum, v: e.v, f: drum ? 0 : e.n - (tb && tb.tune || 0) - key };
+      } else if (e.k === 'pitch') {
+        // efeitos durante a nota (vibrato, slide, bend, arpejo): a altura muda sem tocar a nota de novo
+        var o = open[e.c];
+        if (o && !o.drum) { (o.p || (o.p = [])).push([e.t / SR - o.t0, e.n - (o.tb && o.tb.tune || 0) - o.n]); }
       } else if (e.k === 'off') close(e.c, e.t);
       else if (e.k === 'hit') RL.drums.push({ c: e.c, t0: e.t / SR, t1: e.t / SR + 0.08, n: 0, tb: null, drum: true });
     });
@@ -3417,6 +3421,31 @@ var RGMIDI = (function () {
       chans.map(function (c) { return '<option value="c:' + esc(c.id) + '">' + esc(c.chip + ' · ' + LBL(c.label)) + '</option>'; }).join('');
     if (!/^(timbre|all)$/.test(RL.view) && !chans.some(function (c) { return 'c:' + c.id === RL.view; })) RL.view = 'timbre';
     sel.value = RL.view;
+  }
+  // altura da nota (em semitons, relativa à tecla) num instante dt depois do início
+  function bendAt(x, dt) {
+    var d = x.f || 0, p = x.p;
+    if (p) for (var i = 0; i < p.length && p[i][0] <= dt; i++) d = p[i][1];
+    return d;
+  }
+  // que efeito é: vibrato (sobe e desce em volta da nota), arpejo (pulos de semitons inteiros), slide/bend
+  function bendKind(p) {
+    var prev = 0, rev = 0, dir = 0, step = 0, mn = 0, mx = 0, intg = 0;
+    for (var i = 0; i < p.length; i++) {
+      var d = p[i][1], dd = d - prev, sg = dd > 0.005 ? 1 : dd < -0.005 ? -1 : 0;
+      if (sg && dir && sg !== dir) rev++; if (sg) dir = sg;
+      step = Math.max(step, Math.abs(dd)); mn = Math.min(mn, d); mx = Math.max(mx, d);
+      if (Math.abs(d - Math.round(d)) < 0.08) intg++;
+      prev = d;
+    }
+    if (step >= 0.9 && intg >= p.length * 0.8 && rev >= 1) return 'arp';
+    if (mx - mn <= 2.5 && rev >= 2) return 'vib';
+    if (prev > 0.3) return 'up';
+    if (prev < -0.3) return 'down';
+    return 'bend';
+  }
+  function bendName(k) {
+    return { vib: T('vibrato', 'vibrato'), arp: T('arpejo', 'arpeggio'), up: T('slide para cima', 'slide up'), down: T('slide para baixo', 'slide down'), bend: T('bend', 'bend') }[k] || '';
   }
   function shown() {
     if (!RL.notes) return [];
@@ -3461,6 +3490,12 @@ var RGMIDI = (function () {
     g.fillStyle = '#0c0a14'; g.fillRect(0, 0, W, H);
     var list = shown(), sec = songSec(), GUT = 40, DR = RL.view === 'timbre' ? 0 : 14;
     var lo = 999, hi = -1; list.forEach(function (x) { if (x.n < lo) lo = x.n; if (x.n > hi) hi = x.n; });
+    // uma ou outra nota perdida bem longe (ex.: fim de um slide muito grande) não pode achatar o roll todo:
+    // com bastante nota, a faixa vai de 0,5% a 99,5% das notas (as de fora continuam aparecendo se couberem)
+    if (list.length >= 40) {
+      var ks = list.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; }), cut = Math.floor(ks.length * 0.005);
+      lo = ks[cut]; hi = ks[ks.length - 1 - cut];
+    }
     Object.keys(down).forEach(function (k) { k = +k; if (k < lo) lo = k; if (k > hi) hi = k; });
     if (hi < 0) { lo = 48; hi = 72; }
     lo -= 2; hi += 2; if (hi - lo < 24) { var mid = (lo + hi) >> 1; lo = mid - 12; hi = mid + 12; }
@@ -3471,7 +3506,7 @@ var RGMIDI = (function () {
     function wrap(arr) {
       if (!lpS || t1 <= totS) return arr;
       return arr.concat(arr.filter(function (x) { return x.t0 >= totS - lpS && x.t0 + lpS < t1; })
-        .map(function (x) { return { c: x.c, t0: x.t0 + lpS, t1: x.t1 + lpS, n: x.n, tb: x.tb, drum: x.drum }; }));
+        .map(function (x) { return { c: x.c, t0: x.t0 + lpS, t1: x.t1 + lpS, n: x.n, tb: x.tb, drum: x.drum, f: x.f, p: x.p, fx: x.fx }; }));
     }
     list = wrap(list);
     // fundo: teclas pretas mais escuras, linha em cada Dó
@@ -3486,17 +3521,46 @@ var RGMIDI = (function () {
     // notas
     var now = {}, hovered = null, mx = RL.mx, my = RL.my;
     g.font = '600 10px Oxanium,sans-serif'; g.textBaseline = 'middle';
+    g.save(); g.beginPath(); g.rect(GUT, 0, W - GUT, H - DR); g.clip();
     list.forEach(function (x) {
       if (x.t1 < t0 || x.t0 > t1) return;
       var xa = Math.max(GUT, X(x.t0)), xb = X(x.t1), y = Y(x.n), w = xb - xa;
       if (w < 1) return;
       var playing = sec >= x.t0 && sec < x.t1, col = colorOf(x.tb), dim = RL.view !== 'timbre' && x.tb !== cur.timbre;
-      g.globalAlpha = playing ? 1 : (dim ? 0.55 : 0.85);
-      g.fillStyle = col; g.fillRect(xa, y + 1, Math.max(2, w - 1), Math.max(2, rh - 2));
-      if (playing) { g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(xa + 0.5, y + 1.5, Math.max(2, w - 2), Math.max(2, rh - 3)); if (x.tb === cur.timbre || RL.view !== 'all') now[x.n] = 1; }
+      var al = playing ? 1 : (dim ? 0.55 : 0.85);
+      if (!x.p) {
+        g.globalAlpha = al;
+        g.fillStyle = col; g.fillRect(xa, y + 1, Math.max(2, w - 1), Math.max(2, rh - 2));
+        if (playing) { g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(xa + 0.5, y + 1.5, Math.max(2, w - 2), Math.max(2, rh - 3)); if (x.tb === cur.timbre || RL.view !== 'all') now[x.n] = 1; }
+      } else {
+        // nota com efeito: a nota tocada fica como um contorno apagado, e por cima vai a altura de verdade,
+        // quadro a quadro (vibrato ondula, slide sobe/desce, arpejo pula, bend entorta)
+        g.globalAlpha = al * 0.28; g.fillStyle = col; g.fillRect(xa, y + 1, Math.max(2, w - 1), Math.max(2, rh - 2));
+        g.globalAlpha = al * 0.6; g.strokeStyle = col; g.lineWidth = 1; g.strokeRect(xa + 0.5, y + 1.5, Math.max(2, w - 2), Math.max(2, rh - 3));
+        var pts = [[0, x.f || 0]].concat(x.p), bh = Math.max(2, rh - 2), line = [];
+        g.globalAlpha = al; g.fillStyle = col;
+        for (var i = 0; i < pts.length; i++) {
+          var sa = x.t0 + pts[i][0], sb = i + 1 < pts.length ? x.t0 + pts[i + 1][0] : x.t1;
+          if (sb < t0 || sa > t1) continue;
+          var ya = Y(x.n + pts[i][1]), a = Math.max(GUT, X(sa)), b = Math.min(W, X(sb));
+          if (b > a) { g.fillRect(a, ya + 1, b - a + 0.7, bh); line.push(a, ya + rh / 2, b, ya + rh / 2); }
+        }
+        // linha no meio da faixa: deixa o desenho do efeito fácil de ver mesmo com as notas finas
+        if (line.length) {
+          g.globalAlpha = playing ? 1 : 0.7; g.strokeStyle = playing ? '#fff' : '#f5f3ff'; g.lineWidth = playing ? 1.6 : 1; g.beginPath();
+          g.moveTo(line[0], line[1]);
+          for (var j = 0; j < line.length; j += 4) { g.lineTo(line[j], line[j + 1]); g.lineTo(line[j + 2], line[j + 3]); }
+          g.stroke();
+        }
+        if (playing && (x.tb === cur.timbre || RL.view !== 'all')) now[Math.round(x.n + bendAt(x, sec - x.t0))] = 1;
+      }
       if (w > 26 && rh >= 9) { g.globalAlpha = 1; g.fillStyle = '#0c0a14'; g.fillText(nn(x.n), xa + 3, y + rh / 2 + 0.5); }
-      if (mx != null && mx >= xa && mx <= xb && my >= y && my <= y + rh) hovered = x;
+      if (mx != null && mx >= xa && mx <= xb) {
+        var yh = x.p ? Y(x.n + bendAt(x, (mx - px) / RL.pps + sec - x.t0)) : y;
+        if ((my >= y && my <= y + rh) || (my >= yh && my <= yh + rh)) hovered = x;
+      }
     });
+    g.restore();
     g.globalAlpha = 1;
     var playing = pPlaying && !pPaused, held = {};
     RL.user = RL.user.filter(function (u) { return u.t1 == null || (playing ? X(u.t1) > GUT : false); });
@@ -3546,6 +3610,7 @@ var RGMIDI = (function () {
     if (hovered) {
       tip.style.display = 'block';
       tip.innerHTML = '<b>' + noteLabel(hovered.n) + '</b> · ' + esc(LBL(hovered.c.split(' · ').slice(1).join(' · ') || hovered.c)) +
+        (hovered.fx ? '<br>' + T('Efeito: ', 'Effect: ') + '<b>' + bendName(hovered.fx) + '</b>' : '') +
         (hovered.tb ? '<br>' + esc(hovered.tb.chip + ' ' + hovered.tb.n + ' · ' + (hovered.tb.name || ROLE(hovered.tb.role))) + (hovered.tb !== cur.timbre ? ' · ' + T('clique para usar', 'click to use') : '') : '');
       tip.style.left = Math.min(W - 180, mx + 12) + 'px'; tip.style.top = Math.max(0, my - 40) + 'px';
     } else tip.style.display = 'none';
