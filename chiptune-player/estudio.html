@@ -2548,9 +2548,9 @@ var RGMIDI = (function () {
     else if (st === 0x80 || (st === 0x90 && d[2] === 0)) noteOff(d[1]);
     else if (st === 0xB0) {
       if (d[1] === 64) send({ t: 'sus', on: d[2] >= 64 });
-      else if (d[1] === 1) send({ t: 'mod', v: d[2] / 127 });
+      else if (d[1] === 1) { send({ t: 'mod', v: d[2] / 127 }); if (typeof RL !== 'undefined') rollUserWheel('m', d[2] / 127); }
       else if (d[1] === 123 || d[1] === 120) allOff();
-    } else if (st === 0xE0) send({ t: 'bend', v: (((d[2] << 7) | d[1]) - 8192) / 8192 * 2 });
+    } else if (st === 0xE0) { var bv = (((d[2] << 7) | d[1]) - 8192) / 8192 * 2; send({ t: 'bend', v: bv }); if (typeof RL !== 'undefined') rollUserWheel('b', bv); }
   }
   if (navigator.requestMIDIAccess) {
     navigator.requestMIDIAccess({ sysex: false }).then(function (acc) {
@@ -3571,7 +3571,19 @@ var RGMIDI = (function () {
       if (u.t1 == null) held[u.n] = 1;
       g.shadowColor = '#38bdf8'; g.shadowBlur = u.t1 == null ? 12 : 0;
       g.fillStyle = u.t1 == null ? '#7dd3fc' : 'rgba(56,189,248,.55)';
-      g.fillRect(xa, y + 1, xb - xa, Math.max(3, rh - 2));
+      if (!u.b || !userBent(u)) g.fillRect(xa, y + 1, xb - xa, Math.max(3, rh - 2));
+      else {
+        // com bend/modulação: a faixa azul segue a altura de verdade (contorno apagado na tecla apertada)
+        g.shadowBlur = 0; g.globalAlpha = 0.35; g.fillRect(xa, y + 1, xb - xa, Math.max(3, rh - 2)); g.globalAlpha = 1;
+        g.shadowBlur = u.t1 == null ? 12 : 0;
+        var st = 2, ln = [];
+        for (var xx = xa; xx < xb; xx += st) {
+          var tt = sec + (xx - px) / RL.pps, yy = Y(u.n + userBend(u, Math.min(tt, e)));
+          g.fillRect(xx, yy + 1, Math.min(st, xb - xx) + 0.6, Math.max(3, rh - 2)); ln.push(xx, yy + rh / 2);
+        }
+        g.shadowBlur = 0;
+        if (ln.length) { g.strokeStyle = '#e0f2fe'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(ln[0], ln[1]); for (var q = 2; q < ln.length; q += 2) g.lineTo(ln[q], ln[q + 1]); g.stroke(); }
+      }
       g.shadowBlur = 0;
       if (u.t1 == null && rh >= 9) { g.fillStyle = '#0c0a14'; g.fillText(nn(u.n), xa + 3, y + rh / 2 + 0.5); }
     });
@@ -3619,7 +3631,18 @@ var RGMIDI = (function () {
     if (pPlaying && !pPaused && RL.manual == null) RL.raf = requestAnimationFrame(drawRoll);
   }
   // o que você toca aparece no piano roll (em azul), na linha de onde a música está
-  function rollUserOn(n) { RL.user.push({ n: n, t0: songSec(), t1: null }); if (RL.user.length > 200) RL.user.shift(); rollKick(); }
+  // as rodas do teclado MIDI (pitch bend e modulação) entortam / fazem vibrar o som: a nota azul mostra isso também
+  var WHEEL = { b: 0, m: 0 };
+  function rollUserOn(n) { RL.user.push({ n: n, t0: songSec(), t1: null, b: [[0, WHEEL.b]], m: [[0, WHEEL.m]] }); if (RL.user.length > 200) RL.user.shift(); rollKick(); }
+  function rollUserWheel(k, v) {
+    WHEEL[k] = v; var t = songSec();
+    RL.user.forEach(function (u) { if (u.t1 == null) u[k].push([Math.max(0, t - u.t0), v]); });
+    rollKick();
+  }
+  function wheelAt(arr, dt) { var v = arr[0][1]; for (var i = 1; i < arr.length && arr[i][0] <= dt; i++) v = arr[i][1]; return v; }
+  // altura da nota azul (semitons acima/abaixo da tecla): bend + vibrato da roda de modulação (±0,5 semitom, 5,5 por segundo, igual ao som)
+  function userBend(u, t) { var dt = t - u.t0, m = wheelAt(u.m, dt); return wheelAt(u.b, dt) + (m ? m * 0.5 * Math.sin(2 * Math.PI * 5.5 * t) : 0); }
+  function userBent(u) { return u.b.length > 1 || u.m.length > 1 || u.b[0][1] || u.m[0][1]; }
   function rollUserOff(n) {
     // fecha toda nota aberta dessa tecla (a mesma tecla pode ter sido apertada por mais de um lugar: PC, MIDI, tela)
     var t = songSec();
