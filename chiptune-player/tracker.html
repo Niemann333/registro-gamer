@@ -32,6 +32,8 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 .drop{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(57,255,20,.15);border:3px dashed var(--ac2);font-size:20px;font-weight:700}
 .drop.show{display:grid}
 @media (max-width:760px){.note,.logo span{display:none}}
+/* celular: barra enxuta (o Furnace fica no modo celular dele) */
+@media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}}
 </style>
 <script>
 /* Registro Gamer — idioma do blog (PT | EN). O mesmo bloco vai em todos os gadgets: o primeiro que carregar cria. */
@@ -114,6 +116,13 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   window.Module = {
     canvas: $('canvas'),
     rgLang: rgI18n.lang, // idioma do Furnace (en_US ou pt_BR), lido quando o programa inicia
+    // modo celular do Furnace: liga sozinho em celular/tablet (ou com ?mobile=1 / ?mobile=0 para forçar)
+    rgMobile: (function () {
+      var q = /[?&]mobile=([01])/.exec(location.search); if (q) return q[1] === '1';
+      var ua = navigator.userAgent || '';
+      return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)) ||
+        !!(window.matchMedia && matchMedia('(hover:none) and (pointer:coarse)').matches);
+    })(),
     print: function (t) { console.log(t); },
     printErr: function (t) { console.warn(t); },
     setStatus: function () {},
