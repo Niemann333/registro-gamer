@@ -95,9 +95,26 @@ input,select{font:inherit;color:inherit}
 .btn.pri{background:linear-gradient(135deg,var(--ac),#7c3aed);border-color:transparent;color:#fff;box-shadow:0 4px 18px #a855f744}
 .btn.sm{padding:4px 9px;font-size:12px;border-radius:7px}
 a.btn{text-decoration:none;color:inherit}
-.trk{display:none}
-html.pc .trk{display:inline-flex}
+.trk{display:inline-flex}
+@media (max-width:480px){html.mob #btnTracker .tt{display:none}}
+/* celular estreito: cabeçalho cabe na tela (o título encurta com "…" se faltar espaço) */
+@media (max-width:480px){html.mob .top{gap:6px;padding:8px 10px;min-width:0;max-width:100%}html.mob .logo{min-width:0;flex:0 1 auto;gap:8px}html.mob .logo>div:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}html.mob .top .sp{flex:1 1 0;min-width:0}html.mob .top>*:not(.logo):not(.sp){flex-shrink:0}}
 .btn:disabled{opacity:.4;cursor:default}
+/* Tracker em destaque: é a suíte completa de criação (patterns, compassos, instrumentos, chips) */
+html.pc #btnTracker{background:linear-gradient(135deg,var(--ac),#7c3aed);border-color:transparent;color:#fff;box-shadow:0 4px 18px #a855f755;padding:7px 14px;font-size:13px;font-weight:700}
+html.pc #btnTracker:hover{filter:brightness(1.12)}
+.trkBan{display:flex;align-items:center;gap:12px;margin:12px 12px 2px;padding:12px 14px;border-radius:14px;text-decoration:none;color:#fff;
+  background:linear-gradient(120deg,#7c3aed 0%,#a855f7 55%,#c084fc 100%);box-shadow:0 6px 24px #a855f74d,inset 0 1px 0 #ffffff33;position:relative;overflow:hidden;transition:transform .15s,filter .15s}
+.trkBan:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.trkBan:active{transform:translateY(0)}
+.trkBan::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff2e 50%,transparent 70%);transform:translateX(-100%);animation:trkShine 4.5s ease-in-out infinite}
+@keyframes trkShine{0%,70%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.trkBan .ti{flex:none;width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:22px;background:#ffffff26;box-shadow:inset 0 0 0 1px #ffffff40}
+.trkBan .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.trkBan b{font:700 17px/1.2 Oxanium,system-ui,sans-serif;letter-spacing:.05em}
+.trkBan small{font-size:11.5px;line-height:1.35;color:#f3e8ffdd}
+.trkBan .go{flex:none;font-size:26px;line-height:1;opacity:.9}
+@media (prefers-reduced-motion:reduce){.trkBan::after{animation:none;display:none}}
 /* corpo */
 .main{display:grid;grid-template-columns:330px 1fr;min-height:0}
 .panel{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:rgba(19,16,31,.6)}
@@ -324,7 +341,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
     <div class="lang" id="langSw"><button type="button" data-l="pt">PT</button><button type="button" data-l="en">EN</button></div>
     <div class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span class="txt" id="midiTxt" data-en="MIDI: searching…">MIDI: procurando…</span></div>
     <button class="btn sm" id="btnMode" title="Alternar entre o modo computador e o modo celular">📱</button>
-    <a class="btn sm trk" id="btnTracker" href="tracker.html" title="Abrir o Tracker (Furnace) — só no computador" data-en-title="Open the Tracker (Furnace) — desktop only">🎛 Tracker</a>
+    <a class="btn sm trk" id="btnTracker" href="tracker.html" title="Abrir o Tracker (Furnace)" data-en-title="Open the Tracker (Furnace)">🎛<span class="tt"> Tracker</span></a>
     <button class="btn sm" id="btnClose" title="Fechar o Chiptune Studio" data-en-title="Close Chiptune Studio" data-en="✕ Close">✕ Fechar</button>
   </header>
 
@@ -332,6 +349,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 
   <div class="main m-songs" id="main">
     <aside class="panel">
+      <a class="trkBan" id="trkBan" href="tracker.html"><span class="ti">🎛</span><span class="tx"><b data-en="Open Tracker">Acessar Tracker</b></span><span class="go">›</span></a>
       <div class="tabs"><button class="tab on" id="tabAc" data-en="Library">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir um arquivo VGM do seu aparelho (computador, celular, tablet…)" data-en-title="Open a VGM file from your device (computer, phone, tablet…)">📂 Local</button></div>
       <input type="file" id="pcIn" accept=".vgm,.vgz" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo (VGM)…" autocomplete="off"></div>
@@ -406,7 +424,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   <div class="dhd"><b data-en="Furnace project (.fur)">Projeto do Furnace (.fur)</b><button class="btn sm" id="fdX">✕</button></div>
   <div class="dsub" data-en="Converts straight from the VGM, without going through MIDI: FM instruments keep the chip's original registers, the PSG keeps each sound's volume envelope and the drums use the game's own samples. Opens in the Tracker here and in Furnace on your computer.">Converte direto do VGM, sem passar pelo MIDI: os instrumentos FM saem com os registradores originais do chip, o PSG com o envelope de volume de cada timbre e a bateria com os samples do próprio jogo. Abre no Tracker daqui e no Furnace do computador.</div>
   <div class="dlist" id="fdBody"><div class="msg">Convertendo…</div></div>
-  <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker (só no computador)" data-en-title="Open this project in the Tracker (desktop only)" data-en="🎛 Open in Tracker">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled data-en="⬇ Download .fur">⬇ Baixar .fur</button></div>
+  <div class="dft"><span class="dinfo" id="fdInfo"></span><button class="btn trk" id="fdTrk" disabled title="Abrir este projeto no Tracker" data-en-title="Open this project in the Tracker" data-en="🎛 Open in Tracker">🎛 Abrir no Tracker</button><button class="btn pri" id="fdGo" disabled data-en="⬇ Download .fur">⬇ Baixar .fur</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
 
@@ -2864,7 +2882,7 @@ var RGMIDI = (function () {
       rq.onsuccess = function () {
         var tx = rq.result.transaction('f', 'readwrite');
         tx.objectStore('f').put({ name: o.name, bytes: o.bytes, t: Date.now() }, 'next');
-        tx.oncomplete = function () { location.href = 'tracker.html?lang=' + rgI18n.lang; };
+        tx.oncomplete = function () { location.href = trkUrl(); };
         tx.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
       };
       rq.onerror = function () { $('fdInfo').textContent = 'Não deu para passar o arquivo ao Tracker; baixe o .fur e abra por lá.'; };
@@ -3689,18 +3707,21 @@ var RGMIDI = (function () {
   setOct(4); setMidi();
   // o <html> também recebe outras classes (ex.: piano roll grande), então o modo é lido por classe, não pelo nome inteiro
   function isPc() { return document.documentElement.classList.contains('pc'); }
+  // o Tracker abre no mesmo modo do Studio (celular = tela do Furnace para celular)
+  function trkHref() { $('btnTracker').href = $('trkBan').href = trkUrl(); }
+  function trkUrl() { return 'tracker.html?lang=' + rgI18n.lang + '&mobile=' + (isPc() ? '0' : '1'); }
   if (isPc()) mtab('songs');
   function modeBtn() { var pc = isPc(); $('btnMode').textContent = pc ? '📱' : '🖥'; $('btnMode').title = pc ? T('Mudar para o modo celular','Switch to phone mode') : T('Mudar para o modo computador','Switch to desktop mode'); }
   $('btnMode').onclick = function () {
     var nm = isPc() ? 'mob' : 'pc', h = document.documentElement.classList;
-    h.remove('pc', 'mob'); h.add(nm); lsSet('rgStudioMode', nm); modeBtn(); buildKb(); rollKick();
+    h.remove('pc', 'mob'); h.add(nm); lsSet('rgStudioMode', nm); modeBtn(); trkHref(); buildKb(); rollKick();
     toast(nm === 'pc' ? T('Modo computador','Desktop mode') : T('Modo celular','Phone mode'));
   };
   modeBtn();
   // ───────────────────── idioma (PT | EN) ─────────────────────
   function langMark() {
     $('langSw').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-l') === rgI18n.lang); });
-    $('btnTracker').href = 'tracker.html?lang=' + rgI18n.lang;
+    trkHref();
   }
   $('langSw').addEventListener('click', function (e) { var b = e.target.closest('button[data-l]'); if (b) rgI18n.set(b.getAttribute('data-l')); });
   rgI18n.on(function (l) {
