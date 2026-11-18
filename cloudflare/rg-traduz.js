@@ -54,17 +54,20 @@ export default {
     }
     if (!soTitulo && html.length > MAX_HTML) return resposta({ erro: 'post grande demais para traduzir' }, 413, cors);
 
-    // DeepL: chave do plano gratuito termina em ":fx"
-    const api = env.DEEPL_KEY.trim().endsWith(':fx') ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
-    const dl = await fetch(api, {
-      method: 'POST',
-      headers: { 'Authorization': 'DeepL-Auth-Key ' + env.DEEPL_KEY.trim(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: soTitulo ? [titulo] : [titulo, html],
-        source_lang: 'PT', target_lang: 'EN-US',
-        tag_handling: 'html'          // mantém imagens, links e formatação do post
-      })
+    // DeepL: chave gratuita (terminada em ":fx") usa o endereço api-free; se a DeepL disser que é o
+    // endereço errado (403), tenta o outro — assim funciona com qualquer tipo de chave
+    const chave = env.DEEPL_KEY.trim();
+    const FREE = 'https://api-free.deepl.com/v2/translate', PAGO = 'https://api.deepl.com/v2/translate';
+    const corpo = JSON.stringify({
+      text: soTitulo ? [titulo] : [titulo, html],
+      source_lang: 'PT', target_lang: 'EN-US',
+      tag_handling: 'html'          // mantém imagens, links e formatação do post
     });
+    const pedir = api => fetch(api, { method: 'POST', headers: { 'Authorization': 'DeepL-Auth-Key ' + chave, 'Content-Type': 'application/json' }, body: corpo });
+    const primeiro = chave.endsWith(':fx') ? FREE : PAGO;
+    let dl = await pedir(primeiro);
+    if (dl.status === 403) dl = await pedir(primeiro === FREE ? PAGO : FREE);
+    if (dl.status === 456) return resposta({ erro: 'cota de caracteres da DeepL acabou' }, 502, cors);
     if (!dl.ok) return resposta({ erro: 'DeepL respondeu ' + dl.status }, 502, cors);
     const tr = ((await dl.json()).translations || []).map(x => x.text);
     const out = soTitulo ? { titulo: tr[0] || titulo } : { titulo: tr[0] || titulo, html: tr[1] || html };
