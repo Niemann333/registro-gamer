@@ -16,6 +16,22 @@ const BLOG = 'https://lucniemanngames.blogspot.com';
 const ORIGENS = /^https:\/\/(lucniemanngames\.blogspot\.com|www\.lucniemanngames\.blogspot\.com|niemann333\.github\.io)$/;
 const MAX_HTML = 120000;   // a DeepL aceita até ~128 KB por pedido
 
+// A DeepL, em inglês, troca muitas vírgulas por travessão ("around 11 years old—Luis had a PC").
+// Aqui o travessão volta a ser vírgula, como no texto original. Vale também para o que já estava guardado.
+function semTravessao(t) {
+  return String(t || '')
+    .replace(/\s*[\u2014\u2015]\s*/g, ', ')            // — (travessão)
+    .replace(/(\S)\s+\u2013\s+(\S)/g, '$1, $2')        // – (meia-risca com espaços)
+    .replace(/,\s*([.,;:!?)])/g, '$1')                    // vírgula antes de outra pontuação
+    .replace(/([(>"\u201c])\s*,\s*/g, '$1')              // vírgula logo no começo
+    .replace(/,\s*(<\/(p|div|li|h\d)>)/gi, '$1');        // vírgula no fim do parágrafo
+}
+function limpo(o) {
+  const out = { titulo: semTravessao(o.titulo) };
+  if (o.html != null) out.html = semTravessao(o.html);
+  return out;
+}
+
 function resposta(obj, status, cors) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 }
@@ -47,10 +63,10 @@ export default {
 
     const kPost = `${id}:${editado}:post`, kTit = `${id}:${editado}:titulo`;
     const guardado = await env.TRAD.get(kPost, 'json');
-    if (guardado) return resposta(soTitulo ? { titulo: guardado.titulo } : guardado, 200, cors);
+    if (guardado) return resposta(limpo(soTitulo ? { titulo: guardado.titulo } : guardado), 200, cors);
     if (soTitulo) {
       const t = await env.TRAD.get(kTit, 'json');
-      if (t) return resposta(t, 200, cors);
+      if (t) return resposta(limpo(t), 200, cors);
     }
     if (!soTitulo && html.length > MAX_HTML) return resposta({ erro: 'post grande demais para traduzir' }, 413, cors);
 
@@ -72,6 +88,6 @@ export default {
     const tr = ((await dl.json()).translations || []).map(x => x.text);
     const out = soTitulo ? { titulo: tr[0] || titulo } : { titulo: tr[0] || titulo, html: tr[1] || html };
     ctx.waitUntil(env.TRAD.put(soTitulo ? kTit : kPost, JSON.stringify(out)));
-    return resposta(out, 200, cors);
+    return resposta(limpo(out), 200, cors);
   }
 };
