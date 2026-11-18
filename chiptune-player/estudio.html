@@ -105,6 +105,7 @@ html.pc #btnTracker{background:linear-gradient(135deg,var(--ac),#7c3aed);border-
 html.pc #btnTracker:hover{filter:brightness(1.12)}
 .trkBan{display:flex;align-items:center;gap:12px;margin:12px 12px 2px;padding:12px 14px;border-radius:14px;text-decoration:none;color:#fff;
   background:linear-gradient(120deg,#7c3aed 0%,#a855f7 55%,#c084fc 100%);box-shadow:0 6px 24px #a855f74d,inset 0 1px 0 #ffffff33;position:relative;overflow:hidden;transition:transform .15s,filter .15s}
+.trkBan{flex-shrink:0}
 .trkBan:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .trkBan:active{transform:translateY(0)}
 .trkBan::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff2e 50%,transparent 70%);transform:translateX(-100%);animation:trkShine 4.5s ease-in-out infinite}
@@ -213,6 +214,10 @@ input[type=range]{accent-color:var(--ac);width:90px}
 .toast{position:fixed;left:50%;bottom:calc(var(--kbH) + 90px);transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:9px 14px;font-size:13px;z-index:40;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
 .mtabs{display:none}
+/* faixa de navegação do teclado (celular): o teclado todo em miniatura; arrastar anda, pinça muda o tamanho das teclas */
+.kbnav{display:none;position:relative;height:24px;margin:0 0 6px;border-radius:6px;overflow:hidden;touch-action:none;cursor:grab;background:#0c0a14;box-shadow:inset 0 0 0 1px var(--line2)}
+.kbnav canvas{display:block;width:100%;height:100%}
+html.mob .kbnav{display:block}
 /* modo celular (escolhido automaticamente ou pelo botão 📱/🖥) */
 html.mob {--kbH:132px}
 html.mob .app{grid-template-rows:auto auto minmax(0,1fr) auto} /* topo, abas, conteúdo, teclado */
@@ -331,6 +336,24 @@ html.pc .kbwrap{padding-bottom:10px}
 html.pc .kbbar{margin-bottom:0}
 html.pc .hint{font-size:12px;color:var(--tx2)}
 @media (max-width:480px){html.mob .grid{grid-template-columns:1fr}.pill .txt{display:none}}
+/* celular deitado: tudo mais compacto para caber lista + teclado */
+@media (orientation:landscape) and (max-height:520px){
+  html.mob {--kbH:max(92px,30vh)}
+  html.mob .top{padding:4px 10px}
+  html.mob .mtabs button{padding:6px}
+  html.mob .trkBan{margin:6px 10px 0;padding:5px 12px}
+  html.mob .trkBan .ti{width:28px;height:28px;font-size:16px;border-radius:8px}
+  html.mob .trkBan b{font-size:14px}
+  html.mob .kbwrap{padding:4px 10px calc(4px + env(safe-area-inset-bottom))}
+  html.mob .kbbar{flex-wrap:nowrap;overflow-x:auto;margin-bottom:4px;scrollbar-width:none}
+  html.mob .kbbar::-webkit-scrollbar{display:none}
+  html.mob .kbbar>*{flex-shrink:0}
+  html.mob .kbnav{height:20px;margin-bottom:4px}
+  /* pouca altura: o painel inteiro rola junto (faixa do Tracker, abas, busca e lista) */
+  html.mob .panel{overflow-y:auto}
+  html.mob .panel>*{flex-shrink:0}
+  html.mob .panel .list{flex:none;overflow:visible}
+}
 </style>
 </head>
 <body>
@@ -408,6 +431,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
       <button class="btn sm" id="panic" title="Calar todas as notas" data-en-title="Silence all notes" data-en="Panic">Calar</button>
       <span class="hint" data-en="PC keyboard: Z S X D C… and Q 2 W 3 E… · ← → octave">Teclado do PC: Z S X D C… e Q 2 W 3 E… · ← → oitava</span>
     </div>
+    <div class="kbnav" id="kbNav" title="Arraste para andar pelo teclado · pinça com dois dedos para mudar o tamanho das teclas" data-en-title="Drag to move along the keyboard · pinch with two fingers to change the key size"><canvas id="kbNavCv"></canvas></div>
     <div class="kb" id="kb"></div>
   </footer>
 </div>
@@ -2586,9 +2610,9 @@ var RGMIDI = (function () {
   });
   window.addEventListener('keyup', function (e) { var n = pcHeld[e.code]; if (n != null) { delete pcHeld[e.code]; noteOff(n); } });
   window.addEventListener('blur', function () { Object.keys(pcHeld).forEach(function (c) { noteOff(pcHeld[c]); delete pcHeld[c]; }); });
-  function setOct(o) { octave = Math.max(0, Math.min(8, o)); $('octV').textContent = 'C' + octave; buildKb(); }
-  $('octDn').onclick = function () { setOct(octave - 1); };
-  $('octUp').onclick = function () { setOct(octave + 1); };
+  function setOct(o) { octave = Math.max(0, Math.min(8, o)); $('octV').textContent = 'C' + octave; kbStartW = whiteIdx(12 * octave); buildKb(); }
+  $('octDn').onclick = function () { if (isMob()) { kbStartW -= 7; buildKb(); } else setOct(octave - 1); };
+  $('octUp').onclick = function () { if (isMob()) { kbStartW += 7; buildKb(); } else setOct(octave + 1); };
   $('hold').onchange = function () { send({ t: 'hold', on: this.checked }); };
   $('kVol').oninput = function () { send({ t: 'vol', v: +this.value }); };
   $('panic').onclick = allOff;
@@ -2596,10 +2620,25 @@ var RGMIDI = (function () {
   // ───────────────────── teclado na tela (touch) ─────────────────────
   var kbFirst = 48, kbKeys = {};
   var BLACK = { 1: 1, 3: 1, 6: 1, 8: 1, 10: 1 };
+  // posição do teclado contada em teclas brancas (7 por oitava); no celular dá para começar em qualquer tecla branca
+  var WOFS = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6], WNOTE = [0, 2, 4, 5, 7, 9, 11];
+  function whiteIdx(n) { return Math.floor(n / 12) * 7 + WOFS[n % 12]; }
+  function whiteNote(i) { return Math.floor(i / 7) * 12 + WNOTE[i % 7]; }
+  var KW_MIN = whiteIdx(12), KW_MAX = whiteIdx(108); // C0 … C8
+  var kbStartW = whiteIdx(48), kbWhitesMob = +lsGet('rgKbWhites') || 0, kbShown = 10;
+  function isMob() { return document.documentElement.classList.contains('mob'); }
   function buildKb() {
     var kb = $('kb'), w = kb.clientWidth || window.innerWidth;
     var whites = Math.max(8, Math.min(36, Math.floor(w / (w < 600 ? 38 : 34))));
-    kbFirst = 12 * octave; // começa no C da fileira de baixo do PC
+    if (isMob()) {
+      // celular: o tamanho das teclas é o da pinça (fica salvo); a posição é a da faixa de navegação
+      if (kbWhitesMob) whites = kbWhitesMob;
+      whites = Math.max(5, Math.min(KW_MAX - KW_MIN + 1, whites));
+      kbStartW = Math.max(KW_MIN, Math.min(KW_MAX - whites + 1, kbStartW));
+      kbFirst = whiteNote(kbStartW);
+      $('octV').textContent = nn(kbFirst);
+    } else { kbFirst = 12 * octave; $('octV').textContent = 'C' + octave; } // começa no C da fileira de baixo do PC
+    kbShown = whites;
     var html = '', n = kbFirst, wi = 0, notes = [];
     while (wi < whites) { if (!BLACK[n % 12]) wi++; notes.push(n); n++; }
     if (BLACK[n % 12]) notes.push(n);
@@ -2616,8 +2655,77 @@ var RGMIDI = (function () {
     });
     kb.innerHTML = html;
     kbKeys = {}; kb.querySelectorAll('[data-n]').forEach(function (el) { kbKeys[el.dataset.n] = el; });
+    if (typeof RL !== 'undefined') RL.litKey = ''; // o piano roll acende de novo as teclas da música
+    kbNavDraw();
   }
-  function paintKey(n, on) { var el = kbKeys[n]; if (el) el.classList.toggle('dn', on && !!down[n]); }
+  function paintKey(n, on) { var el = kbKeys[n]; if (el) el.classList.toggle('dn', on && !!down[n]); kbNavDraw(); }
+
+  // ── faixa de navegação (celular) ──
+  var navRaf = 0;
+  function kbNavDraw() { if (!navRaf) navRaf = requestAnimationFrame(kbNavPaint); }
+  function kbNavPaint() {
+    navRaf = 0;
+    var cv = $('kbNavCv'); if (!cv || !isMob()) return;
+    var W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1; if (!W) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    var nW = KW_MAX - KW_MIN + 1, kw = W / nW, t = cur.timbre, lo = t ? t.slo : -1, hi = t ? t.shi : -1;
+    var lit = (typeof RL !== 'undefined' && RL.open && $('rlKeys').checked) ? RL.lit : {};
+    for (var i = 0; i < nW; i++) { // teclas brancas
+      var n = whiteNote(KW_MIN + i), x = i * kw;
+      g.fillStyle = down[n] ? '#c49bff' : lit[n] ? '#e9d5ff' : (n >= lo && n <= hi ? '#efe6ff' : '#d9d6e8');
+      g.fillRect(x + 0.5, 0, Math.max(1, kw - 1), H);
+    }
+    for (i = 0; i < nW; i++) { // pretas
+      n = whiteNote(KW_MIN + i) + 1;
+      if (!BLACK[n % 12] || n > 108) continue;
+      g.fillStyle = down[n] ? '#7c3aed' : lit[n] ? '#a855f7' : '#1a1726';
+      g.fillRect((i + 1) * kw - kw * 0.32, 0, kw * 0.64, H * 0.6);
+    }
+    g.font = '600 8px Oxanium,system-ui,sans-serif'; g.textBaseline = 'bottom';
+    for (i = 0; i < nW; i += 7) { g.fillStyle = '#6c6690'; g.fillText(nn(whiteNote(KW_MIN + i)), i * kw + 2, H - 1); }
+    // janela: o trecho que está no teclado de baixo
+    var wx = (kbStartW - KW_MIN) * kw, ww = kbShown * kw;
+    g.fillStyle = 'rgba(12,10,20,.55)'; g.fillRect(0, 0, wx, H); g.fillRect(wx + ww, 0, W - wx - ww, H);
+    g.strokeStyle = '#a855f7'; g.lineWidth = 2; g.strokeRect(wx + 1, 1, ww - 2, H - 2);
+  }
+  (function () {
+    var nav = $('kbNav'), pts = {}, pinch = null, raf = 0, pendStart = null;
+    function wAt(x) { var r = nav.getBoundingClientRect(); return KW_MIN + (x - r.left) / r.width * (KW_MAX - KW_MIN + 1); }
+    function apply() { raf = 0; buildKb(); }
+    function later() { if (!raf) raf = requestAnimationFrame(apply); }
+    function centerOn(x) { kbStartW = Math.round(wAt(x) - kbShown / 2); later(); }
+    nav.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); try { nav.setPointerCapture(e.pointerId); } catch (x) {}
+      pts[e.pointerId] = e.clientX;
+      var ids = Object.keys(pts);
+      if (ids.length === 2) { var a = pts[ids[0]], b = pts[ids[1]]; pinch = { d: Math.abs(a - b) || 1, w: kbShown, c: wAt((a + b) / 2) }; }
+      else if (ids.length === 1) centerOn(e.clientX);
+    });
+    nav.addEventListener('pointermove', function (e) {
+      if (!(e.pointerId in pts)) return;
+      pts[e.pointerId] = e.clientX;
+      var ids = Object.keys(pts);
+      if (pinch && ids.length >= 2) {
+        // pinça: abrir os dedos = teclas maiores (menos teclas na tela); fechar = mais teclas
+        var a = pts[ids[0]], b = pts[ids[1]], d = Math.abs(a - b) || 1;
+        kbWhitesMob = Math.max(5, Math.min(KW_MAX - KW_MIN + 1, Math.round(pinch.w * pinch.d / d)));
+        kbShown = kbWhitesMob; kbStartW = Math.round(pinch.c - kbWhitesMob / 2); later();
+      } else if (!pinch) centerOn(e.clientX);
+    });
+    function up(e) {
+      delete pts[e.pointerId];
+      if (pinch && Object.keys(pts).length < 2) { pinch = null; lsSet('rgKbWhites', String(kbWhitesMob)); pts = {}; }
+    }
+    nav.addEventListener('pointerup', up); nav.addEventListener('pointercancel', up);
+    // pinça também funciona com o mouse: rodinha + Ctrl muda o tamanho, rodinha sozinha anda
+    nav.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      if (e.ctrlKey) { kbWhitesMob = Math.max(5, Math.min(KW_MAX - KW_MIN + 1, kbShown + (e.deltaY > 0 ? 1 : -1))); lsSet('rgKbWhites', String(kbWhitesMob)); }
+      else kbStartW += (e.deltaY || e.deltaX) > 0 ? 2 : -2;
+      later();
+    }, { passive: false });
+  })();
   var ptr = {};
   function keyAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.dataset && el.dataset.n != null && el.closest('#kb') ? +el.dataset.n : -1; }
   $('kb').addEventListener('pointerdown', function (e) {
@@ -3616,6 +3724,7 @@ var RGMIDI = (function () {
       Object.keys(RL.lit).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.remove('sg'); });
       RL.lit = now;
       if ($('rlKeys').checked) Object.keys(now).forEach(function (k) { var el = kbKeys[k]; if (el) el.classList.add('sg'); });
+      kbNavDraw();
     }
     // dica sobre a nota embaixo do mouse
     var tip = $('rlTip');
