@@ -306,6 +306,18 @@ html.mob .edglob{grid-template-columns:1fr}
 html.mob #rlCv{height:150px}
 /* piano roll grande: ocupa a área toda acima do teclado */
 html.rollbig .main{grid-template-columns:1fr}
+/* celular: sem as abas, a tela fica topo / piano roll (todo o resto) / teclado embaixo */
+html.mob.rollbig .app{grid-template-rows:auto minmax(0,1fr) auto}
+/* celular, piano roll ampliado: sem título nem downloads; barras numa linha só (rolam de lado) para sobrar tela para as notas */
+html.mob.rollbig .song,html.mob.rollbig #bRoll,html.mob.rollbig #bMidi,html.mob.rollbig #bFur,html.mob.rollbig .musicbar .vol{display:none!important}
+html.mob.rollbig .musicbar{flex-wrap:nowrap;padding:6px 12px;gap:8px}
+html.mob.rollbig .musicbar>*{flex-shrink:0}
+html.mob.rollbig .musicbar .prog{flex:1 1 40px;min-width:40px}
+html.mob.rollbig .chans,html.mob.rollbig .rbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:5px 12px}
+html.mob.rollbig .chans::-webkit-scrollbar,html.mob.rollbig .rbar::-webkit-scrollbar{display:none}
+html.mob.rollbig .chans>*,html.mob.rollbig .rbar>*{flex-shrink:0}
+html.mob.rollbig .rbar .lgs{flex:none;flex-wrap:nowrap}
+html.mob.rollbig #rlBig{order:-1} /* "Reduzir" sempre à vista, no começo da barra */
 html.rollbig .main .panel,html.rollbig #timbres,html.rollbig #ed,html.rollbig .mtabs{display:none!important}
 html.rollbig .main .stage{display:flex!important}
 html.rollbig #songHead{flex:1;display:flex!important;flex-direction:column;min-height:0}
