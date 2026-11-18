@@ -6,6 +6,7 @@
  *   • Chip Player JS (chip-core.wasm): VGM/VGZ, SPC, NSF, GBS, AY, MOD/S3M/XM/IT, SID, MIDI
  *   • Players de Juergen Wothke: PSF (PS1), GSF (GBA), USF (N64), 2SF (DS), KSS (MSX)
  *   • ASAP: SAP (Atari 8-bit)
+ *   • Áudio gravado (MP3, WAV, OGG, FLAC, M4A/AAC, OPUS, WEBM...): decodificador do próprio navegador
  *
  * O áudio dos motores próprios passa por um buffer de ~1 s (AudioWorklet):
  * se a página engasgar por um instante, o som continua saindo do buffer.
@@ -58,6 +59,9 @@
   var EXT_AHX = /\.(ahx|thx)$/i;
   var EXT_OMPT = /\.mptm$/i;                 // OpenMPT: só o libopenmpt toca certo (tempo moderno, swing...)
   var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
+  // Áudio gravado: quem decodifica é o próprio navegador (nada a mais para baixar). O que cada navegador
+  // abre varia: AIFF e CAF, por exemplo, só no Safari; se não abrir, avisa "formato não suportado".
+  var EXT_AUDIO = /\.(mp3|mp2|mpga|wav|wave|bwf|ogg|oga|opus|flac|m4a|m4b|mp4|aac|adts|webm|weba|aif|aiff|aifc|caf|3gp|3ga)$/i;
 
   // ───────────────────────── arquivos do computador ─────────────────────────
   // A página manda os bytes (load com "files"); aqui eles viram endereços blob: e qualquer pedido para
@@ -327,7 +331,7 @@
         });
         break;
       }
-      if (!voiceMuted && !t.fading) {
+      if (!voiceMuted && !t.fading && !t.engine.noSilenceEnd) {
         if (t.heard && t.silentMs >= SILENCE_END_MS) res = { ended: true };
         if (!t.heard && t.renderedMs >= NOSOUND_END_MS) res = { ended: true };
       }
@@ -793,6 +797,95 @@
     };
   }
 
+  // ───────────────────────── motor: áudio gravado (MP3, WAV, OGG, FLAC...) ─────────────────────────
+  // O arquivo é decodificado inteiro (já na taxa do player) e as amostras vão para o mesmo buffer dos
+  // outros formatos: visualizador, volume automático, posição, pausar e avançar funcionam igual.
+  // AIFF/AIFC sem compressão (o Chrome e o Firefox não abrem; só o Safari): leitura própria, bem simples
+  function readAiff(u8) {
+    var dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    function id(o) { return String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]); }
+    if (u8.length < 12 || id(0) !== 'FORM' || (id(8) !== 'AIFF' && id(8) !== 'AIFC')) return null;
+    var nc = 0, frames = 0, bits = 0, rate = 0, comp = 'NONE', data = -1, o = 12;
+    while (o + 8 <= u8.length) {
+      var ck = id(o), sz = dv.getUint32(o + 4), b = o + 8;
+      if (ck === 'COMM') {
+        nc = dv.getUint16(b); frames = dv.getUint32(b + 2); bits = dv.getUint16(b + 6);
+        var ex = dv.getUint16(b + 8) & 0x7fff, hi = dv.getUint32(b + 10);   // taxa em ponto flutuante de 80 bits
+        rate = hi * Math.pow(2, ex - 16383 - 31);
+        if (id(8) === 'AIFC' && sz >= 22) comp = id(b + 18);
+      } else if (ck === 'SSND') data = b + 8 + dv.getUint32(b);
+      o = b + sz + (sz & 1);
+    }
+    if (!nc || !frames || data < 0 || !rate) return null;
+    var le = comp === 'sowt', flt = comp === 'fl32' || comp === 'FL32';
+    if (comp !== 'NONE' && comp !== 'twos' && !le && !flt) return null;   // AIFC comprimido: não
+    var bps = flt ? 4 : Math.ceil(bits / 8), out = [];
+    frames = Math.min(frames, Math.floor((u8.length - data) / (bps * nc)));
+    for (var c = 0; c < nc; c++) out.push(new Float32Array(frames));
+    for (var f = 0, q = data; f < frames; f++) for (c = 0; c < nc; c++, q += bps) {
+      var v;
+      if (flt) v = dv.getFloat32(q, le);
+      else if (bps === 1) v = dv.getInt8(q) / 128;
+      else if (bps === 2) v = dv.getInt16(q, le) / 32768;
+      else if (bps === 3) v = (le ? (u8[q + 2] << 24 | u8[q + 1] << 16 | u8[q] << 8) : (u8[q] << 24 | u8[q + 1] << 16 | u8[q + 2] << 8)) / 2147483648;
+      else v = dv.getInt32(q, le) / 2147483648;
+      out[c][f] = v;
+    }
+    return { rate: Math.round(rate), ch: out };
+  }
+  // amostras numa taxa qualquer → AudioBuffer na taxa do player
+  function resampleTo(chs, rate) {
+    var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    var n = chs.length, len = chs[0].length, outLen = Math.max(1, Math.round(len * SR / rate));
+    var oc = new OAC(n, outLen, SR), ab = oc.createBuffer(n, len, rate);
+    for (var c = 0; c < n; c++) ab.getChannelData(c).set(chs[c]);
+    var src = oc.createBufferSource(); src.buffer = ab; src.connect(oc.destination); src.start();
+    return oc.startRendering();
+  }
+  function makeAudioEngine() {
+    var ch = [], len = 0, pos = 0, ended = false;
+    return {
+      kind: 'ring',
+      noSilenceEnd: true,      // gravação pode ter silêncio longo de propósito: só termina no fim do arquivo
+      load: function (data) {
+        var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        var dec = new OAC(2, 1, SR);   // decodifica já na taxa do player
+        var buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+        return new Promise(function (ok, fail) {
+          var pr = dec.decodeAudioData(buf, ok, function () {
+            var aif = null; try { aif = readAiff(data); } catch (e) {}
+            if (aif) resampleTo(aif.ch, aif.rate).then(ok, fail);
+            else fail(new Error('Formato de áudio não suportado neste navegador'));
+          });
+          if (pr && pr.catch) pr.catch(function () {});
+        }).then(function (ab) {
+          ch = [];
+          for (var c = 0; c < ab.numberOfChannels; c++) ch.push(ab.getChannelData(c));
+          len = ab.length; pos = 0; ended = false;
+          if (!len) throw new Error('Arquivo de áudio vazio');
+        });
+      },
+      render: function (l, r, n) {
+        var L = ch[0], R = ch[1] || ch[0], k = Math.min(n, len - pos);
+        if (k > 0) { l.set(L.subarray(pos, pos + k)); r.set(R.subarray(pos, pos + k)); }
+        if (k < n) { l.fill(0, Math.max(0, k)); r.fill(0, Math.max(0, k)); ended = true; }
+        pos += Math.max(0, k);
+        return { ended: ended };
+      },
+      posMs: function () { return pos * 1000 / SR; },
+      durInfo: function () { var d = len * 1000 / SR; return { durMs: d, own: false, report: d }; },
+      seek: function (ms) { pos = Math.max(0, Math.min(len, Math.round(ms * SR / 1000))); ended = pos >= len; },
+      voices: function () { return { names: [], mask: [], groups: [] }; },
+      setVoiceMask: function () {},
+      numSubtunes: function () { return 1; },
+      subtune: function () { return 0; },
+      durations: function () { return [len * 1000 / SR]; },
+      playSubtune: function () {},
+      title: function () { return ''; },
+      stop: function () { ch = []; len = 0; pos = 0; }   // libera a memória do áudio decodificado
+    };
+  }
+
   // ───────────────────────── motor: Wothke (PSF/GSF/USF/2SF/KSS) ─────────────────────────
   var spPromise = null, wothkeAdapters = {}, wothkeActive = null, wothkeScripts = {};
   var WOTHKE = {
@@ -915,6 +1008,8 @@
       enginePromise = Promise.all([ensureRing(), loadAhx()]).then(function () { return makeAhxEngine(); });
     } else if (EXT_OMPT.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadOmpt()]).then(function (a) { return makeOmptEngine(a[1]); });
+    } else if (EXT_AUDIO.test(name)) {
+      enginePromise = ensureRing().then(function () { return makeAudioEngine(); });
     } else if (EXT_CHIP.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadChipCore(), loadChipPlayers()]).then(function (a) {
         return makeChipEngine(a[1], a[2], chipClassFor(ext), ext);
