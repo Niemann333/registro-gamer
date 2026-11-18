@@ -6,7 +6,9 @@
  *   • Chip Player JS (chip-core.wasm): VGM/VGZ, SPC, NSF, GBS, AY, MOD/S3M/XM/IT, SID, MIDI
  *   • Players de Juergen Wothke: PSF (PS1), GSF (GBA), USF (N64), 2SF (DS), KSS (MSX)
  *   • ASAP: SAP (Atari 8-bit)
- *   • Áudio gravado (MP3, WAV, OGG, FLAC, M4A/AAC, OPUS, WEBM...): decodificador do próprio navegador
+ *   • Áudio gravado (MP3, WAV, OGG, FLAC, M4A/AAC, OPUS, WEBM...): decodificador do próprio navegador;
+ *     o que ele não abre (WMA, APE, WavPack, Musepack, ALAC, TTA, TAK, AC-3, DTS, DSD...) vai para o
+ *     rg-audiodec.wasm (FFmpeg mínimo, só baixado quando um arquivo desses é aberto)
  *
  * O áudio dos motores próprios passa por um buffer de ~1 s (AudioWorklet):
  * se a página engasgar por um instante, o som continua saindo do buffer.
@@ -61,7 +63,7 @@
   var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
   // Áudio gravado: quem decodifica é o próprio navegador (nada a mais para baixar). O que cada navegador
   // abre varia: AIFF e CAF, por exemplo, só no Safari; se não abrir, avisa "formato não suportado".
-  var EXT_AUDIO = /\.(mp3|mp2|mpga|wav|wave|bwf|ogg|oga|opus|flac|m4a|m4b|mp4|aac|adts|webm|weba|aif|aiff|aifc|caf|3gp|3ga)$/i;
+  var EXT_AUDIO = /\.(mp3|mp2|mpga|wav|wave|bwf|ogg|oga|opus|flac|m4a|m4b|mp4|aac|adts|webm|weba|aif|aiff|aifc|caf|3gp|3ga|wma|asf|ape|wv|mpc|mpp|mp\+|alac|tta|tak|shn|ac3|eac3|ec3|dts|dtshd|dsf|dff|amr|awb|ra|rm|aa|w64)$/i;
 
   // ───────────────────────── arquivos do computador ─────────────────────────
   // A página manda os bytes (load com "files"); aqui eles viram endereços blob: e qualquer pedido para
@@ -842,12 +844,35 @@
     var src = oc.createBufferSource(); src.buffer = ab; src.connect(oc.destination); src.start();
     return oc.startRendering();
   }
+  // decodificador próprio (FFmpeg mínimo em WebAssembly): só carrega quando precisa
+  var audioDecPromise = null;
+  function loadAudioDec() {
+    if (!audioDecPromise) audioDecPromise = loadScript(BASE + 'rg-audiodec.js?v=1').then(function () {
+      return self.RGAudioDec({ locateFile: function (f) { return BASE + f + '?v=1'; } });
+    }).catch(function (e) { audioDecPromise = null; throw e; });
+    return audioDecPromise;
+  }
+  function decodeWithLib(data, name) {
+    return loadAudioDec().then(function (M) {
+      var p = M._malloc(data.length); M.HEAPU8.set(data, p);
+      var nm = 'x.' + (String(name).split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9+]/g, '');
+      var nl = M.lengthBytesUTF8(nm) + 1, np = M._malloc(nl); M.stringToUTF8(nm, np, nl);
+      var n = M._rg_decode(p, data.length, np);
+      M._free(p); M._free(np);
+      if (n <= 0) { M._rg_free(); throw new Error('Formato de áudio não suportado'); }
+      var rate = M._rg_rate(), lp = M._rg_left() >> 2, rp = M._rg_right() >> 2;
+      var L = M.HEAPF32.slice(lp, lp + n), R = M.HEAPF32.slice(rp, rp + n);
+      var title = M.UTF8ToString(M._rg_title());
+      M._rg_free();
+      return resampleTo([L, R], rate).then(function (ab) { ab._title = title; return ab; });
+    });
+  }
   function makeAudioEngine() {
-    var ch = [], len = 0, pos = 0, ended = false;
+    var ch = [], len = 0, pos = 0, ended = false, title = '';
     return {
       kind: 'ring',
       noSilenceEnd: true,      // gravação pode ter silêncio longo de propósito: só termina no fim do arquivo
-      load: function (data) {
+      load: function (data, name) {
         var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
         var dec = new OAC(2, 1, SR);   // decodifica já na taxa do player
         var buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
@@ -855,11 +880,11 @@
           var pr = dec.decodeAudioData(buf, ok, function () {
             var aif = null; try { aif = readAiff(data); } catch (e) {}
             if (aif) resampleTo(aif.ch, aif.rate).then(ok, fail);
-            else fail(new Error('Formato de áudio não suportado neste navegador'));
+            else decodeWithLib(data, name).then(ok, fail);   // WMA, APE, WavPack, ALAC...
           });
           if (pr && pr.catch) pr.catch(function () {});
         }).then(function (ab) {
-          ch = [];
+          ch = []; title = ab._title || '';
           for (var c = 0; c < ab.numberOfChannels; c++) ch.push(ab.getChannelData(c));
           len = ab.length; pos = 0; ended = false;
           if (!len) throw new Error('Arquivo de áudio vazio');
@@ -881,7 +906,7 @@
       subtune: function () { return 0; },
       durations: function () { return [len * 1000 / SR]; },
       playSubtune: function () {},
-      title: function () { return ''; },
+      title: function () { return title; },
       stop: function () { ch = []; len = 0; pos = 0; }   // libera a memória do áudio decodificado
     };
   }
