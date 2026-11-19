@@ -181,7 +181,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
       var o = RGFUR.build(r, { lang: rgI18n.lang });
       var fn = RGFUR.fileName(r, name.replace(/\.[^.]+$/, ''));
       openBytes(fn, o.bytes, delay);
-      notify('🎛 ' + fn + ' — ' + (o.instruments - o.samples) + T(' instrumentos',' instruments') + (o.samples ? ', ' + o.samples + ' samples' : '') + T(', linha = ',', row = ') + o.rowFrames + T(' quadro',' frame') + (o.rowFrames === 1 ? '' : 's') + (o.missing && o.missing.length ? T(' · ficou de fora: ',' · left out: ') + o.missing.join(', ') : ''));
+      notify('🎛 ' + fn + ' — ' + (o.instruments - o.samples) + T(' instrumentos',' instruments') + (o.samples ? ', ' + o.samples + ' samples' : '') + T(', linha = ',', row = ') + o.rowFrames + T(' quadro',' frame') + (o.rowFrames === 1 ? '' : 's') + (o.missing && o.missing.length ? T(' · ficou de fora: ',' · left out: ') + o.missing.join(', ') : '') + (o.sampled && o.sampled.length ? T(' · virou sample: ',' · as samples: ') + o.sampled.join(', ') : ''));
     }).catch(function (e) { notify('🎛 ' + name + ': ' + (e.message || e)); });
   }
   function openFiles(list, fhs) {

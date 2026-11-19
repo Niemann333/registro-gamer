@@ -156,7 +156,7 @@ var RGVGM = (function () {
       v.map(q).join(',') + '|' + d.join(',');
     var env = v.map(function (x) { return Math.round(x * 1000) / 1000; });
     return this.add(key, function () {
-      return { type: 'psg', wave: w.k, chipKind: w.ck, tbl: w.tbl || null, nmode: w.nmode || '', env: env, duty: d };
+      return { type: 'psg', wave: w.k, chipKind: w.ck, tbl: w.tbl || null, nmode: w.nmode || '', env: env, duty: d, raw: w.raw || null, rmax: w.rmax || 15 };
     }, ch.label, r.note, ch.chip);
   };
 
@@ -546,7 +546,7 @@ var RGVGM = (function () {
       pc.vol = fds.halt || !fds.freq ? 0 : vol;
       pc.freq = cpu * fds.freq / 65536 / 64;
       var tbl = []; for (var i = 0; i < 32; i++) tbl.push(Math.round((fds.w[i * 2] + fds.w[i * 2 + 1]) / 2 * 15 / 63));
-      pc.wave = { k: 'wave', ck: 'fds', tbl: tbl, duty: null };
+      pc.wave = { k: 'wave', ck: 'fds', tbl: tbl, duty: null, raw: Array.prototype.slice.call(fds.w), rmax: 63 };
     }
     function nesWrite(a, d) {
       if (a >= 0x20) { fdsWrite(a, d); return; }
@@ -638,7 +638,7 @@ var RGVGM = (function () {
       var tbl = []; for (var i = 0; i < 16; i++) { tbl.push(gb.r[0x20 + i] >> 4); tbl.push(gb.r[0x20 + i] & 15); }
       gb.ch[2].vol = (gb.env[2].on && (gb.r[0x0A] & 0x80)) ? [0, 1, 0.5, 0.25][lvl] : 0;
       gb.ch[2].freq = 65536 / (2048 - wx);
-      gb.ch[2].wave = { k: 'wave', ck: 'gb', tbl: tbl, duty: null };
+      gb.ch[2].wave = { k: 'wave', ck: 'gb', tbl: tbl, duty: null, raw: tbl.slice(), rmax: 15 };
       var n3 = gb.r[0x12];
       gb.ch[3].vol = gb.env[3].on ? gb.env[3].v / 15 : 0;
       gb.ch[3].wave = { k: 'noise', ck: 'gb', nmode: (n3 & 8) ? 'periodic' : 'white', nrate: n3 >> 4 };
@@ -681,7 +681,7 @@ var RGVGM = (function () {
         if (i >= 4 && (c.noise & 0x80)) { pc.wave = { k: 'noise', ck: 'pce', nmode: 'white', nrate: c.noise & 31 }; pc.freq = 0; }
         else {
           pc.freq = huc.clock / (32 * (c.freq || 0x1000));
-          pc.wave = { k: 'wave', ck: 'pce', tbl: c.wave.map(function (x) { return Math.round(x * 15 / 31); }), duty: null };
+          pc.wave = { k: 'wave', ck: 'pce', tbl: c.wave.map(function (x) { return Math.round(x * 15 / 31); }), duty: null, raw: c.wave.slice(), rmax: 31 };
         }
       }
     }
@@ -715,7 +715,7 @@ var RGVGM = (function () {
         var pc = scc.ch[i], on = (scc.key & (1 << i)) && scc.per[i] > 8;
         pc.vol = on ? scc.vol[i] / 15 : 0;
         pc.freq = scc.clock / (32 * (scc.per[i] + 1));
-        pc.wave = { k: 'wave', ck: 'scc', tbl: Array.prototype.map.call(scc.w[i], function (x) { return Math.round((x + 128) * 15 / 255); }), duty: null };
+        pc.wave = { k: 'wave', ck: 'scc', tbl: Array.prototype.map.call(scc.w[i], function (x) { return Math.round((x + 128) * 15 / 255); }), duty: null, raw: Array.prototype.map.call(scc.w[i], function (x) { return x + 128; }), rmax: 255 };
       }
     }
 
@@ -751,7 +751,7 @@ var RGVGM = (function () {
         if (c === 5) { pc.wave = { k: 'noise', ck: 'vsu', nmode: 'white', nrate: (R[5] >> 4) & 7 }; pc.freq = 0; continue; }
         pc.freq = vsu.clock / ((2048 - fq) * 32);
         var wv = vsu.w[Math.min(4, R[6] & 7)];
-        pc.wave = { k: 'wave', ck: 'vsu', tbl: Array.prototype.map.call(wv, function (x) { return Math.round(x * 15 / 63); }), duty: null };
+        pc.wave = { k: 'wave', ck: 'vsu', tbl: Array.prototype.map.call(wv, function (x) { return Math.round(x * 15 / 63); }), duty: null, raw: Array.prototype.slice.call(wv), rmax: 63 };
       }
     }
 
@@ -774,7 +774,7 @@ var RGVGM = (function () {
         var f = R[0x80 + c * 2] | ((R[0x81 + c * 2] & 7) << 8);
         pc.freq = ws.clock / ((2048 - f) * 32);
         var tbl = []; for (var i = 0; i < 16; i++) { var by = ws.ram[(base + c * 16 + i) & 0x3FFF]; tbl.push(by & 15); tbl.push(by >> 4); }
-        pc.wave = { k: 'wave', ck: 'ws', tbl: tbl, duty: null };
+        pc.wave = { k: 'wave', ck: 'ws', tbl: tbl, duty: null, raw: tbl.slice(), rmax: 15 };
       }
     }
 
@@ -1449,7 +1449,8 @@ var RGVGM = (function () {
         pc.freq = x1Tick() * fr * ((fl & 0x80) ? 1 : 2) / 262144;
         var wb = 0x1000 + (M[o + 1] & 0x1F) * 128, tbl = [];
         for (var i = 0; i < 32; i++) tbl.push(Math.round((((M[wb + i * 4] << 24) >> 24) + 128) * 15 / 255));
-        pc.wave = { k: 'wave', ck: 'x1', tbl: tbl, duty: null };
+        var raw1 = []; for (i = 0; i < 128; i++) raw1.push(((M[wb + i] << 24) >> 24) + 128);
+        pc.wave = { k: 'wave', ck: 'x1', tbl: tbl, duty: null, raw: raw1, rmax: 255 };
       }
     }
 
@@ -2289,7 +2290,7 @@ var RGVGM = (function () {
     function segTimbres(res, hits, map, chip, label) {
       var uses = {}; hits.forEach(function (h) { if (map[h.id]) uses[h.id] = (uses[h.id] || 0) + 1; });
       var ids = Object.keys(uses).sort(function (a, b2) { return uses[b2] - uses[a]; }).slice(0, 40);
-      var n0 = res.timbres.filter(function (x) { return x.chip === chip; }).length;
+      var n0 = res.timbres.filter(function (x) { return x.chip === chip; }).length, byId = {};
       ids.forEach(function (id) {
         var sp = map[id], u = sp.data, f = new Float32Array(u.length);
         for (var i = 0; i < u.length; i++) f[i] = (u[i] - 128) / 128;
@@ -2298,15 +2299,27 @@ var RGVGM = (function () {
         var tb = { type: 'pcm', pcmId: s.id, rate: s.rate, len: s.len, loop: s.loop, base: s.base, drum: s.drum, tune: 0,
           chip: chip, count: uses[id], chans: ch, chanList: [label], lo: drum ? 999 : s.base, hi: drum ? -999 : s.base, median: drum ? 60 : s.base, n: ++n0, dac: id };
         tb.role = drum ? 'Percussão' : roleOf(tb);
-        res.timbres.push(tb);
+        res.timbres.push(tb); byId[id] = tb;
       });
       if (ids.length && res.chips.indexOf(chip) < 0) res.chips.push(chip);
+      return byId;
     }
     function pwmTimbres(res) {
       if (!PW || !PW.n) return;
       var cut = dacSegments(PW), map = {};
       cut.list.forEach(function (x) { map[x.id] = x; });
-      segTimbres(res, cut.hits, map, '32X PWM', 'PWM');
+      var byId = segTimbres(res, cut.hits, map, '32X PWM', 'PWM');
+      // notas do PWM (para o MIDI e o Furnace): cada batida recortada vira uma nota do sample
+      if (res.midi) {
+        var id = '32X PWM · PWM', n = 0;
+        cut.hits.forEach(function (h) {
+          var tb = byId[h.id]; if (!tb) return; n++;
+          var ev = { c: id, t: h.t, k: 'on', n: tb.base != null ? tb.base : tb.drum, v: 1, pan: 64, tb: tb };
+          if (tb.base == null) ev.noise = { ck: 'drum', d: tb.drum };
+          res.midi.events.push(ev);
+        });
+        if (n) { res.midi.events.sort(function (a, b2) { return a.t - b2.t; }); res.midi.chans.push({ id: id, chip: '32X PWM', label: 'PWM', kind: 'pcm', notes: n }); }
+      }
     }
     // tamanho e ponto de volta (loop) da música: o piano roll e o conversor usam
     res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
@@ -2846,7 +2859,8 @@ var RGMIDI = (function () {
    Converte o resultado de RGVGM.parse(buf, {events:true, pcm:true}) num módulo do Furnace,
    com os timbres exatos dos chips (instrumentos FM com os registradores originais,
    envelopes do PSG como macro de volume, samples do DAC do jeito que estão no VGM).
-   Fase 1: Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489).
+   Todos os chips do VGM: cada chip vira o sistema equivalente do Furnace; chips que o Furnace não tem
+   viram samples num ES5506 de reserva.
    Gera o formato da versão 228 (abre no Furnace 0.6.8 e mais novos). */
 ;(function (root) {
   'use strict';
@@ -2883,100 +2897,297 @@ var RGMIDI = (function () {
   // detune do hardware (0..7) → valor interno do Furnace (3 = sem detune)
   var DT = [3, 4, 5, 6, 3, 2, 1, 0];
 
-  // ---------- canais suportados ----------
-  // mapa id do evento → índice do canal no Furnace, por sistema
+  // ---------- famílias de canal (como cada tipo de canal do Furnace recebe notas, volume e instrumento) ----------
+  // nOff: soma na nota MIDI para virar a nota do Furnace (0 = C-5); vmax/vol: coluna de volume; ins: tipo do instrumento
+  function linV(m) { return function (v) { return Math.max(0, Math.min(m, Math.round(v * m))); }; }
+  function dbV(m, step) { return function (v) { return Math.max(0, Math.min(m, m - Math.round(dB(v) / step))); }; }
+  var FAM = {
+    fm:    { ins: 'fm', it: 1, nOff: 48, vmax: 127, vol: fmVol, pan: 'fm' },
+    opm:   { ins: 'fm', it: 33, nOff: 48, vmax: 127, vol: fmVol, pan: 'fm' },
+    opl:   { ins: 'opl', it: 14, nOff: 48, vmax: 63, vol: dbV(63, 0.75), pan: null },
+    opll:  { ins: 'opl', it: 13, nOff: 48, vmax: 15, vol: dbV(15, 3), pan: null },
+    sn:    { ins: 'psg', it: 0, nOff: 24, vmax: 15, vol: snVol, early: 1 },
+    ay:    { ins: 'psg', it: 6, nOff: 48, vmax: 15, vol: dbV(15, 1.5) },
+    ay8930:{ ins: 'psg', it: 7, nOff: 48, vmax: 31, vol: dbV(31, 0.75) },
+    gb:    { ins: 'psg', it: 2, nOff: 48, vmax: 15, vol: linV(15) },
+    gbW:   { ins: 'psg', it: 2, nOff: 60, vmax: 15, vol: linV(15) },
+    nes:   { ins: 'psg', it: 34, nOff: 36, vmax: 15, vol: linV(15) },
+    nesT:  { ins: 'psg', it: 34, nOff: 48, vmax: 15, vol: linV(15) },
+    pce:   { ins: 'psg', it: 5, nOff: 36, vmax: 31, vol: dbV(31, 1.5) },
+    scc:   { ins: 'psg', it: 18, nOff: 36, vmax: 15, vol: linV(15) },
+    vsu:   { ins: 'psg', it: 16, nOff: 48, vmax: 15, vol: linV(15) },
+    ws:    { ins: 'psg', it: 22, nOff: 36, vmax: 15, vol: linV(15) },
+    saa:   { ins: 'psg', it: 9, nOff: 48, vmax: 15, vol: linV(15) },
+    pokey: { ins: 'psg', it: 20, nOff: 48, vmax: 15, vol: linV(15) },
+    x1:    { ins: 'psg', it: 25, nOff: 36, vmax: 15, vol: linV(15) },
+    fds:   { ins: 'psg', it: 15, nOff: 36, vmax: 32, vol: linV(32) },
+    dac:   { ins: 'smp', it: 4, nOff: 48, vmax: 127, vol: fmVol },
+    rhythm:{ ins: 'rhythm', it: 37, nOff: 48, vmax: 31, vol: dbV(31, 0.75) },
+    oplDrum:  { ins: 'opl', it: 14, nOff: 48, vmax: 63, vol: dbV(63, 0.75) },
+    opllDrum: { ins: 'opl', it: 13, nOff: 48, vmax: 15, vol: dbV(15, 3) }
+  };
+  // canais de sample: tipo de instrumento do chip, volume máximo e se o chip toca numa taxa fixa (o sample é refeito nessa taxa)
+  function pcmFam(it, vmax, opt) { opt = opt || {}; return { ins: 'smp', it: it, nOff: 48, vmax: vmax, vol: opt.db ? dbV(vmax, opt.db) : linV(vmax), fixed: opt.fixed || 0, pan: opt.pan ? 'pcm' : null }; }
+
+  // ---------- chips → sistemas do Furnace ----------
+  // cada entrada devolve { id, n, name, ch: [{n: nome, s: curto, f: família}], at(label, ev) → índice do canal }
+  function numOf(l) { var m = /(\d+)\s*$/.exec(l); return m ? +m[1] : 0; }
+  function chans(list) { return list.map(function (x) { return { n: x[0], s: x[1], f: x[2] }; }); }
+  function seq(n, name, short, f) { var a = []; for (var i = 1; i <= n; i++) a.push([name + ' ' + i, short + i, f]); return a; }
+  var DRUM_OPL = { 36: 0, 35: 0, 38: 1, 40: 1, 45: 2, 47: 2, 48: 2, 50: 2, 41: 2, 43: 2, 49: 3, 51: 3, 57: 3, 42: 4, 44: 4, 46: 4, 37: 1, 39: 1 };
+  function SYSDEF(base, labels, res) {
+    var has = function (re) { return labels.some(function (l) { return re.test(l); }); };
+    switch (base) {
+      case 'YM2612': return { id: 0x83, name: 'YM2612', ch: chans(seq(6, 'FM', 'F', 'fm')), at: function (l) { return /DAC/.test(l) ? 5 : numOf(l) - 1; }, dac: 5 };
+      case 'SN76489': return { id: 0x03, name: 'SN76489', ch: chans(seq(3, 'PSG', 'S', 'sn').concat([[tr('Ruído', 'Noise'), 'NO', 'sn']])), at: function (l) { return /Ruído/.test(l) ? 3 : numOf(l) - 1; } };
+      case 'YM2151': return { id: 0x82, name: 'YM2151', ch: chans(seq(8, 'FM', 'F', 'opm')), at: function (l) { return numOf(l) - 1; } };
+      case 'YM2203': return { id: 0x8d, name: 'YM2203', ch: chans(seq(3, 'FM', 'F', 'fm').concat(seq(3, 'SSG', 'S', 'ay'))),
+        at: function (l) { var m = /SSG ([ABC])/.exec(l); return m ? 3 + 'ABC'.indexOf(m[1]) : numOf(l) - 1; } };
+      case 'YM2608': return { id: 0x8e, name: 'YM2608', ch: chans(seq(6, 'FM', 'F', 'fm').concat(seq(3, 'SSG', 'S', 'ay'),
+          [['Kick', 'BD', 'rhythm'], ['Snare', 'SD', 'rhythm'], ['Top', 'TP', 'rhythm'], ['HiHat', 'HH', 'rhythm'], ['Tom', 'TM', 'rhythm'], ['Rim', 'RM', 'rhythm'], ['ADPCM-B', 'PB', pcmFam(38, 255)]])),
+        at: function (l) {
+          var m = /SSG ([ABC])/.exec(l); if (m) return 6 + 'ABC'.indexOf(m[1]);
+          if (/ADPCM-B/.test(l)) return 15;
+          var r = ['Bumbo', 'Caixa', 'Prato', 'Chimbal', 'Tom', 'Aro'].findIndex(function (x) { return l.indexOf('· ' + x) >= 0 || l === 'Bateria · ' + x; }); if (r >= 0) return 9 + r;
+          return numOf(l) - 1;
+        } };
+      case 'YM2610': {
+        var B = has(/FM [14]$/);   // YM2610B usa os 6 canais FM
+        if (B) return { id: 0x9e, name: 'YM2610B', ch: chans(seq(6, 'FM', 'F', 'fm').concat(seq(3, 'SSG', 'S', 'ay'), seq(6, 'ADPCM-A', 'PA', pcmFam(37, 31, { fixed: 18518, db: 0.75 })), [['ADPCM-B', 'PB', pcmFam(38, 255)]])),
+          at: function (l) { var m = /SSG ([ABC])/.exec(l); if (m) return 6 + 'ABC'.indexOf(m[1]); if (/ADPCM-A/.test(l)) return 8 + numOf(l); if (/ADPCM-B/.test(l)) return 15; return numOf(l) - 1; } };
+        return { id: 0xa5, name: 'YM2610', ch: chans(seq(4, 'FM', 'F', 'fm').concat(seq(3, 'SSG', 'S', 'ay'), seq(6, 'ADPCM-A', 'PA', pcmFam(37, 31, { fixed: 18518, db: 0.75 })), [['ADPCM-B', 'PB', pcmFam(38, 255)]])),
+          at: function (l) { var m = /SSG ([ABC])/.exec(l); if (m) return 4 + 'ABC'.indexOf(m[1]); if (/ADPCM-A/.test(l)) return 6 + numOf(l); if (/ADPCM-B/.test(l)) return 13; return { 2: 0, 3: 1, 5: 2, 6: 3 }[numOf(l)]; } };
+      }
+      case 'YM2413': case 'YM3526': case 'YM3812': case 'Y8950': case 'YMF262': {
+        var dr = has(/Bateria/), opll = base === 'YM2413', n = base === 'YMF262' ? 18 : 9, f = opll ? 'opll' : 'opl';
+        var id = { YM2413: [0x89, 0xa7], YM3526: [0x8f, 0xa2], YM3812: [0x90, 0xa3], Y8950: [0xb2, 0xb3], YMF262: [0x91, 0xa4] }[base][dr ? 1 : 0];
+        var nm = n - (dr ? 3 : 0), list = seq(nm, 'FM', 'F', f);
+        if (dr) list = list.concat(opll ? [['Kick', 'BD', 'opllDrum'], ['Snare', 'SD', 'opllDrum'], ['Tom', 'TM', 'opllDrum'], ['Top', 'TP', 'opllDrum'], ['HiHat', 'HH', 'opllDrum']]
+          : [['Kick/FM 7', 'BD', 'oplDrum'], ['Snare', 'SD', 'oplDrum'], ['Tom', 'TM', 'oplDrum'], ['Top', 'TP', 'oplDrum'], ['HiHat', 'HH', 'oplDrum']]);
+        if (base === 'YMF262' && dr) list = seq(6, 'FM', 'F', f).concat(list.slice(6, 11), seq(9, 'FM', 'F', f).map(function (x, i) { return ['FM ' + (10 + i), 'F' + (10 + i), f]; }));
+        if (base === 'Y8950') list.push(['ADPCM', 'P', pcmFam(38, 255)]);
+        var drum0 = base === 'YMF262' && dr ? 6 : nm;
+        return { id: id, name: base + (dr ? ' ' + tr('com bateria', 'with drums') : ''), ch: chans(list),
+          at: function (l, e) {
+            if (/ADPCM/.test(l)) return list.length - 1;
+            if (/Bateria/.test(l)) { var k = e && e.noise ? DRUM_OPL[e.noise.d] : null; return drum0 + (k == null ? 0 : k); }
+            var c = numOf(l) - 1; if (dr && c >= 6 && c < 9) return null;   // canais 7-9 viram bateria no modo ritmo
+            if (base === 'YMF262' && dr && c >= 9) return c + 2;
+            return c;
+          } };
+      }
+      case 'YMF278B': return { id: 0xae, name: 'YMF278B (OPL4)', ch: chans(seq(18, 'FM', 'F', 'opl').concat(seq(24, 'PCM', 'P', pcmFam(28, 127, { pan: 1 })))),
+        at: function (l) { return /PCM/.test(l) ? 17 + numOf(l) : numOf(l) - 1; } };
+      case 'AY-3-8910': return { id: 0x80, name: 'AY-3-8910', ch: chans(seq(3, 'PSG', 'S', 'ay')), at: function (l) { var m = /SSG ([ABC])/.exec(l); return m ? 'ABC'.indexOf(m[1]) : null; } };
+      case 'AY8930': return { id: 0x9a, name: 'AY8930', ch: chans(seq(3, 'PSG', 'S', 'ay8930')), at: function (l) { var m = /SSG ([ABC])/.exec(l); return m ? 'ABC'.indexOf(m[1]) : null; } };
+      case 'Game Boy': return { id: 0x04, name: 'Game Boy', ch: chans([['Pulse 1', 'S1', 'gb'], ['Pulse 2', 'S2', 'gb'], ['Wave', 'WA', 'gbW'], ['Noise', 'NO', 'gb']]),
+        at: function (l) { return /Ruído/.test(l) ? 3 : /Onda/.test(l) ? 2 : numOf(l) - 1; } };
+      case 'NES APU': return { id: 0x06, name: 'NES', ch: chans([['Pulse 1', 'S1', 'nes'], ['Pulse 2', 'S2', 'nes'], ['Triangle', 'TR', 'nesT'], ['Noise', 'NO', 'nes'], ['DPCM', 'DMC', pcmFam(4, 15)]]),
+        at: function (l) { return /DPCM/.test(l) ? 4 : /Ruído/.test(l) ? 3 : /Tri/.test(l) ? 2 : numOf(l) - 1; } };
+      case 'NES FDS': return { id: 0x8a, name: 'FDS', ch: chans([['FDS', 'FDS', 'fds']]), at: function () { return 0; } };
+      case 'HuC6280': return { id: 0x05, name: 'PC Engine', ch: chans(seq(6, 'Channel', 'C', 'pce')), at: function (l) { return numOf(l) - 1; } };
+      case 'K051649': case 'K052539': return { id: base === 'K052539' ? 0xb4 : 0xa1, name: base === 'K052539' ? 'SCC+' : 'SCC', ch: chans(seq(5, 'Channel', 'C', 'scc')), at: function (l) { return numOf(l) - 1; } };
+      case 'VSU': return { id: 0x9c, name: 'Virtual Boy', ch: chans(seq(5, 'Channel', 'C', 'vsu').concat([['Noise', 'NO', 'vsu']])), at: function (l) { return /Ruído/.test(l) ? 5 : numOf(l) - 1; } };
+      case 'WonderSwan': return { id: 0x96, name: 'WonderSwan', ch: chans([['Wave', 'W1', 'ws'], ['Wave/PCM', 'W2', 'ws'], ['Wave/Sweep', 'W3', 'ws'], ['Wave/Noise', 'W4', 'ws']]),
+        at: function (l) { return /PCM/.test(l) ? null : numOf(l) - 1; } };
+      case 'SAA1099': return { id: 0x97, name: 'SAA1099', ch: chans(seq(6, 'PSG', 'S', 'saa')), at: function (l) { return numOf(l) - 1; } };
+      case 'Pokey': return { id: 0x94, name: 'POKEY', ch: chans(seq(4, 'Channel', 'C', 'pokey')), at: function (l) { return numOf(l) - 1; } };
+      case 'X1-010': return { id: 0xb0, name: 'X1-010', ch: chans(seq(16, 'Channel', 'C', 'x1')), at: function (l) { return numOf(l) - 1; } };
+      case 'SegaPCM': return { id: 0x9b, name: 'SegaPCM', ch: chans(seq(16, 'PCM', 'P', pcmFam(39, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'OKIM6295': return { id: 0xaa, name: 'MSM6295', ch: chans(seq(4, 'ADPCM', 'A', pcmFam(36, 8, { fixed: 8000, db: 3 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'K053260': return { id: 0xcc, name: 'K053260', ch: chans(seq(4, 'PCM', 'P', pcmFam(50, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'RF5C68': case 'RF5C164': return { id: 0x95, name: 'RF5C68', ch: chans(seq(8, 'PCM', 'P', pcmFam(42, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'C140': return { id: 0xce, name: 'C140', ch: chans(seq(24, 'PCM', 'P', pcmFam(53, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'C219': return { id: 0xcf, name: 'C219', ch: chans(seq(16, 'PCM', 'P', pcmFam(54, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'QSound': return { id: 0xe0, name: 'QSound', ch: chans(seq(16, 'PCM', 'P', pcmFam(40, 255, { pan: 1 })).concat(seq(3, 'ADPCM', 'A', pcmFam(40, 255)))), at: function (l) { return numOf(l) - 1; } };
+      case 'YMZ280B': return { id: 0xb8, name: 'YMZ280B', ch: chans(seq(8, 'PCM', 'P', pcmFam(41, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'GA20': return { id: 0xc7, name: 'GA20', ch: chans(seq(4, 'PCM', 'P', pcmFam(46, 255))), at: function (l) { return numOf(l) - 1; } };
+      case 'MultiPCM': return { id: 0x92, name: 'MultiPCM', ch: chans(seq(28, 'PCM', 'P', pcmFam(28, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'ES5506': case 'ES5505': return { id: 0xb1, name: 'ES5506', ch: chans(seq(32, 'PCM', 'P', pcmFam(27, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+    }
+    return null;   // sem sistema equivalente no Furnace: vai para os canais de sample de reserva (ES5506)
+  }
+  var FALLBACK_FAM = pcmFam(27, 255, { pan: 1 });
+  // instrumentos padrão para as peças de bateria do OPL/OPLL (o VGM só diz qual peça bateu)
+  var DOP = function (o) { var b = { ksr: 0, mul: 1, egt: 0, tl: 0, vib: 0, ar: 15, am: 0, ksl: 0, dr: 5, sl: 5, rr: 7, ws: 0 }; for (var k in o) b[k] = o[k]; return b; };
+  var DEF_OPL = { type: 'opl', oplKind: 'opl2', alg: 0, fb: 0, four: false, ops: [DOP({ tl: 12 }), DOP({})] };
+  var DEF_OPLL = { type: 'opl', oplKind: 'opll', alg: 0, fb: 0, four: false, ops: [DOP({ tl: 12 }), DOP({})] };
+
   function layout(res) {
-    var has = {};
-    (res.chips || []).forEach(function (c) { has[(c.name || c.chip || c.id || c).toString()] = 1; });
-    var ids = res.midi.chans.map(function (c) { return c.id; });
-    var ym = ids.some(function (i) { return /^YM2612/.test(i); });
-    var sn = ids.some(function (i) { return /^SN76489/.test(i); });
-    var outros = ids.filter(function (i) { return !/^(YM2612|SN76489)/.test(i); }).map(function (b) { return b.split(' · ')[0]; })
-      .concat(res.unsupported || []).filter(function (v, k, a) { return a.indexOf(v) === k; });
-    if (!ym && !sn) throw new Error('Este VGM usa ' + (outros.length ? outros.join(', ') : 'um chip') +
-      ', que o conversor para Furnace ainda não aceita. Por enquanto: Mega Drive e Master System (YM2612 e SN76489).');
-    var L = { sys: [], map: {}, names: [], shorts: [], kind: [] };
-    if (ym) {
-      L.sys.push({ id: 0x83, n: 6, vol: 1, pan: 0, fr: 1 });
-      for (var k = 1; k <= 6; k++) { L.map['YM2612 · FM ' + k] = k - 1; L.names.push('FM ' + k); L.shorts.push('F' + k); L.kind.push('fm'); }
-      L.map['YM2612 · DAC'] = 5; L.names[5] = 'FM 6 / DAC'; L.shorts[5] = 'DAC';
+    var L = { sys: [], map: {}, names: [], shorts: [], fam: [], route: {}, missing: [], fallback: [] };
+    var byChip = {}, order = [];
+    res.midi.chans.forEach(function (c) { var k = c.chip.replace(' SSG', ''); if (!byChip[k]) { byChip[k] = []; order.push(k); } byChip[k].push(c); }); // o SSG dos OPN fica no mesmo sistema
+    // o DAC do YM2612 aparece como canal próprio: garante que o YM2612 exista
+    if (res.dacHits && res.dacHits.length && !byChip.YM2612) { byChip.YM2612 = [{ id: 'YM2612 · DAC', label: 'DAC', chip: 'YM2612' }]; order.unshift('YM2612'); }
+    if (!order.length) throw new Error(tr('Esta música não tem notas que dê para converter.', 'This song has no notes that can be converted.'));
+    // YM2612 e SN76489 juntos = Mega Drive (o SN vai logo depois do YM, como no Furnace)
+    var iY = order.indexOf('YM2612'), iS = order.indexOf('SN76489');
+    if (iY > iS && iS >= 0) { order.splice(iY, 1); order.splice(iS, 0, 'YM2612'); }
+    var fb = [];   // canais sem sistema no Furnace
+    function addSys(def, chipName) {
+      if (L.sys.length >= 32 || L.names.length + def.ch.length > 128) return null;
+      var base = L.names.length;
+      L.sys.push({ id: def.id, n: def.ch.length, vol: 1, pan: 0, fr: 1, name: def.name });
+      def.ch.forEach(function (c) { L.names.push(c.n + (chipName && / #2$/.test(chipName) ? ' #2' : '')); L.shorts.push(c.s); L.fam.push(typeof c.f === 'string' ? FAM[c.f] : c.f); });
+      return base;
     }
-    if (sn || ym) {
-      var o = L.names.length;
-      L.sys.push({ id: 0x03, n: 4, vol: ym ? 0.5 : 1, pan: 0, fr: ym ? 0.5 : 1 });
-      for (var j = 1; j <= 3; j++) { L.map['SN76489 · PSG ' + j] = o + j - 1; L.names.push('PSG ' + j); L.shorts.push('S' + j); L.kind.push('sn'); }
-      L.map['SN76489 · Ruído'] = o + 3; L.names.push(tr('Ruído', 'Noise')); L.shorts.push('NO'); L.kind.push('noise');
+    order.forEach(function (chip) {
+      var base = chip.replace(/ #2$/, ''), cl = byChip[chip], labels = cl.map(function (c) { return c.label; });
+      var def = SYSDEF(base, labels, res);
+      if (!def) { cl.forEach(function (c) { fb.push(c); }); L.missing.push(chip); return; }
+      // canais que o sistema do Furnace não tem (ex.: PCM do WonderSwan) vão para a reserva
+      var own = cl.filter(function (c) { if (/Bateria/.test(c.label) || /^FM /.test(c.label) || def.at(c.label, null) != null) return true; fb.push(c); return false; });
+      if (!own.length) return;
+      var at = addSys(def, chip);
+      if (at == null) { own.forEach(function (c) { fb.push(c); }); return; }
+      own.forEach(function (c) { L.route[c.id] = { base: at, def: def, label: c.label }; });
+    });
+    // reserva: até 32 canais de sample por ES5506 (timbres de chips que o Furnace não tem viram samples)
+    for (var i = 0; i < fb.length; i += 32) {
+      var part = fb.slice(i, i + 32), def = { id: 0xb1, name: 'ES5506', ch: part.map(function (c, k) { return { n: c.chip + ' · ' + c.label, s: 'X' + (k + 1), f: FALLBACK_FAM }; }) };
+      while (def.ch.length < 32) def.ch.push({ n: 'PCM ' + (def.ch.length + 1), s: 'P' + (def.ch.length + 1), f: FALLBACK_FAM });
+      var at2 = addSys(def, null); if (at2 == null) break;
+      part.forEach(function (c, k) { L.route[c.id] = { base: at2, def: { at: function () { return k; } }, label: c.label, fb: true }; L.fallback.push(c.chip); });
     }
+    // volume relativo quando há vários chips (o Mega Drive usa PSG a meio volume, como antes)
+    var hasYM = L.sys.some(function (s) { return s.id === 0x83; });
+    L.sys.forEach(function (s) { if (s.id === 0x03 && hasYM) { s.vol = 0.5; s.fr = 0.5; } });
     L.chans = L.names.length;
-    L.missing = outros;
-    L.system = ym ? 'Sega Genesis/Mega Drive' : 'Sega Master System';
+    L.system = L.sys.map(function (s) { return s.name; }).filter(function (v, k, a) { return a.indexOf(v) === k; }).join(' + ');
+    if (hasYM && L.sys.length <= 2 && L.sys.every(function (s) { return s.id === 0x83 || s.id === 0x03; })) L.system = 'Sega Genesis/Mega Drive';
+    else if (L.sys.length === 1 && L.sys[0].id === 0x03) L.system = 'Sega Master System';
+    L.missing = L.missing.filter(function (v, k, a) { return a.indexOf(v) === k; });
+    L.fallback = L.fallback.filter(function (v, k, a) { return a.indexOf(v) === k; });
     return L;
+  }
+  // canal do Furnace de um evento
+  function chanOf(L, e) {
+    var r = L.route[e.c]; if (!r) return null;
+    var k = r.def.at(r.label, e); if (k == null || k < 0) return null;
+    return r.base + k;
   }
 
   // ---------- instrumentos ----------
-  function insFM(w, tb, name) {
-    var at = w.block('INS2'); w.s(228); w.s(1);
-    var f = w.tag('NA') || 0; var a = w.n; w.s(0); w.str(name); patchS(w, a);
-    w.tag('FM'); a = w.n; w.s(0);
-    w.c(0xF0 | 4);
-    w.c(((tb.alg & 7) << 4) | (tb.fb & 7));
-    w.c(((tb.ams & 3) << 3) | (tb.fms & 7));
-    w.c(0x20);
-    w.c(0);
-    // ordem do Furnace (registrador +0,+4,+8,+12) a partir da nossa (+0,+8,+4,+12)
-    [0, 2, 1, 3].forEach(function (m) {
-      var o = tb.ops[m];
-      w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
-      w.c(o.tl & 127);
-      w.c(((o.ks & 3) << 6) | (o.ar & 31));
-      w.c((o.am ? 128 : 0) | (o.d1r & 31));
-      w.c((2 << 5) | (o.d2r & 31));
-      w.c(((o.sl & 15) << 4) | (o.rr & 15));
-      w.c(o.ssg & 15);
-      w.c((o.dt2 & 3) << 3);
-    });
-    patchS(w, a);
-    w.tag('EN');
-    w.end(at);
-  }
   function patchS(w, a) { var s = w.n, len = s - a - 2; w.n = a; w.s(len); w.n = s; }
-
-  function insSTD(w, name, vols) {
-    var at = w.block('INS2'); w.s(228); w.s(0);
-    w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
-    if (vols && vols.length) {
-      w.tag('MA'); a = w.n; w.s(0);
-      w.s(8);
-      w.c(0); w.c(vols.length); w.c(255); w.c(255); w.c(0); w.c(0); w.c(0); w.c(1);
-      vols.forEach(function (v) { w.c(v); });
-      w.c(255);
+  // macros: [[código, valores, tamanho da palavra (0 = 8 bits sem sinal, 2 = 16 bits)]]
+  function macros(w, mac) {
+    if (!mac.length) return;
+    w.tag('MA'); var a = w.n; w.s(0); w.s(8);
+    mac.forEach(function (m) {
+      var big = m[2] === 2;
+      w.c(m[0]); w.c(m[1].length); w.c(255); w.c(255); w.c(0); w.c(big ? 0x80 : 0); w.c(0); w.c(1);
+      m[1].forEach(function (v) { if (big) w.s(v); else w.c(v); });
+    });
+    w.c(255);
+    patchS(w, a);
+  }
+  // corpo de um instrumento (tipo + blocos); usado no .fui e dentro do .fur
+  // x: { it: tipo do Furnace, wave: índice da wavetable, smp: índice do sample, vmax }
+  function insBody(w, t, name, x) {
+    x = x || {};
+    var a;
+    if (x.kind === 'smp' || x.kind === 'rhythm') {
+      w.s(x.it); w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      if (x.kind === 'smp') { w.tag('SM'); a = w.n; w.s(0); w.s(x.smp); w.c(2); w.c(0); patchS(w, a); }
+      if (x.mac && x.mac.length) macros(w, x.mac);
+      w.tag('EN'); return;
+    }
+    if (t.type === 'opl') {
+      // Furnace: OPL = 14, OPLL = 13; no 4-op a ordem dos operadores é 1, 3, 2, 4
+      var opll = t.oplKind === 'opll', n4 = t.four && !opll;
+      w.s(x.it != null ? x.it : (opll ? 13 : 14));
+      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      w.tag('FM'); a = w.n; w.s(0);
+      var ord = n4 ? [0, 2, 1, 3] : [0, 1], en2 = 0;
+      ord.forEach(function (m, i) { if (!t.ops[m].off) en2 |= 16 << i; });
+      w.c(en2 | (n4 ? 4 : 2));
+      w.c(((t.alg & (n4 ? 3 : 1)) << 4) | (t.fb & 7));
+      w.c(0);
+      w.c(n4 ? 32 : 0); w.c(0);
+      ord.forEach(function (m) {
+        var o = t.ops[m];
+        w.c((o.ksr ? 128 : 0) | (o.mul & 15));
+        w.c((!opll && o.egt ? 128 : 0) | (o.tl & 63));
+        w.c((o.vib ? 32 : 0) | (o.ar & 15));
+        w.c((o.am ? 128 : 0) | ((o.ksl & 3) << 5) | (o.dr & 15));
+        w.c(2 << 5);
+        w.c(((o.sl & 15) << 4) | (o.rr & 15));
+        w.c(opll && o.egt ? 8 : 0);
+        w.c(o.ws & 7);
+      });
       patchS(w, a);
+    } else if (t.type === 'fm') {
+      w.s(x.it != null ? x.it : (t.fmKind === 'opm' ? 33 : 1));
+      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      w.tag('FM'); a = w.n; w.s(0);
+      var en = 0; [0, 2, 1, 3].forEach(function (m, i) { if (!t.ops[m].off) en |= 16 << i; });
+      w.c(en | 4);
+      w.c(((t.alg & 7) << 4) | (t.fb & 7));
+      w.c(((t.ams & 3) << 3) | (t.fms & 7));
+      w.c(0x20); w.c(0);
+      // ordem do Furnace (registrador +0,+4,+8,+12) a partir da nossa (+0,+8,+4,+12)
+      [0, 2, 1, 3].forEach(function (m) {
+        var o = t.ops[m];
+        w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
+        w.c(o.tl & 127);
+        w.c(((o.ks & 3) << 6) | (o.ar & 31));
+        w.c((o.am ? 128 : 0) | (o.d1r & 31));
+        w.c((2 << 5) | (o.d2r & 31));
+        w.c(((o.sl & 15) << 4) | (o.rr & 15));
+        w.c((o.ssg || 0) & 15);
+        w.c(((o.dt2 || 0) & 3) << 3);
+      });
+      patchS(w, a);
+    } else {
+      var type = x.it != null ? x.it : ({ sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25, mikey: 23, ay8930: 7, fds: 15 }[t.chipKind] || 0);
+      w.s(type);
+      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
+      if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
+      var vmax = x.vmax || (type === 5 ? 31 : type === 7 ? 31 : type === 15 ? 32 : 15); // PC Engine e AY8930: 0 a 31; FDS: 0 a 32
+      var vols = (t.env || [1]).slice(0, 255).map(function (v) { return Math.max(0, Math.min(vmax, Math.round(v * vmax))); });
+      while (vols.length > 1 && vols[vols.length - 1] === vols[vols.length - 2]) vols.pop();
+      var mac = [];
+      if (!(vols.length === 1 && vols[0] === vmax)) mac.push([0, vols]);
+      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb' || t.chipKind === 'ay8930')) {
+        var a89 = t.chipKind === 'ay8930';  // AY8930: largura do pulso de 0 a 8 vai no macro EX1 do Furnace
+        var d = (t.duty || []).slice(0, 255).map(function (v) { return v < 0 ? (a89 ? 4 : 2) : (a89 ? Math.min(8, v) : v & 3); });
+        while (d.length > 1 && d[d.length - 1] === d[d.length - 2]) d.pop();
+        if (d.length) mac.push([a89 ? 5 : 2, d]);
+      }
+      if (t.wave === 'noise' && (t.chipKind === 'sn' || t.chipKind === 'nes')) mac.push([2, [t.nmode === 'periodic' ? (t.chipKind === 'sn' ? 0 : 1) : (t.chipKind === 'sn' ? 1 : 0)]]);
+      if (x.wave != null) mac.push([3, [x.wave]]);
+      if (type === 20) mac.push([3, [t.wave === 'noise' ? (t.nmode === 'periodic' ? 2 : 0) : 5]]); // POKEY: 5 = tom puro
+      if (type === 6 || type === 7) mac.push([3, [t.wave === 'noise' ? 2 : 1]]);                      // AY: 1 = tom, 2 = ruído
+      if (x.mac) mac = mac.concat(x.mac);
+      macros(w, mac);
     }
     w.tag('EN');
-    w.end(at);
   }
+  function insBlock(w, t, name, x) { var at = w.block('INS2'); w.s(228); insBody(w, t, name, x); w.end(at); }
 
-  function insSample(w, name, smpIdx) {
-    var at = w.block('INS2'); w.s(228); w.s(4);
-    w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
-    w.tag('SM'); a = w.n; w.s(0);
-    w.s(smpIdx); w.c(2); w.c(0);
-    patchS(w, a);
-    w.tag('EN');
-    w.end(at);
-  }
-
-  function sampleBlock(w, name, data, rate) {
+  // sample → SMP2 (16 bits; o Furnace converte para o formato de cada chip ao abrir)
+  function sampleBlock(w, s) {
     var at = w.block('SMP2');
-    w.str(name);
-    w.i(data.length); w.i(rate); w.i(rate);
-    w.c(8); w.c(0); w.c(0); w.c(0);
-    w.i(-1); w.i(-1);
+    w.str(s.name);
+    var n = s.data.length;
+    w.i(n); w.i(Math.round(s.rate)); w.i(Math.round(s.c4 || s.rate));
+    w.c(s.u8 ? 8 : 16); w.c(0); w.c(0); w.c(0);
+    if (s.loop != null && s.loop >= 0 && s.loop < n - 1) { w.i(s.loop); w.i(n); } else { w.i(-1); w.i(-1); }
     for (var k = 0; k < 4; k++) w.i(-1);
-    var s = new Uint8Array(data.length);
-    for (var j = 0; j < data.length; j++) s[j] = (data[j] - 128) & 255; // DAC sem sinal → 8 bits com sinal
-    w.bytes(s);
+    if (s.u8) { // DAC do YM2612: sem sinal → 8 bits com sinal
+      var b8 = new Uint8Array(n); for (var j = 0; j < n; j++) b8[j] = (s.data[j] - 128) & 255; w.bytes(b8);
+    } else {
+      var b16 = new Uint8Array(n * 2);
+      for (var q = 0; q < n; q++) { var v = Math.max(-32768, Math.min(32767, Math.round(s.data[q] * 32767))); b16[q * 2] = v & 255; b16[q * 2 + 1] = (v >> 8) & 255; }
+      w.bytes(b16);
+    }
     w.end(at);
+  }
+  function resample(d, from, to) {
+    if (Math.abs(from - to) < 1) return d;
+    var n = Math.max(1, Math.floor(d.length * to / from)), o = new Float32Array(n), r = from / to;
+    for (var i = 0; i < n; i++) { var x = i * r, k = Math.floor(x), f = x - k, a = d[Math.min(k, d.length - 1)], b = d[Math.min(k + 1, d.length - 1)]; o[i] = a + (b - a) * f; }
+    return o;
   }
 
   // envelope normalizado (pico 1, um valor por quadro) → macro de volume 0..15 do SN
@@ -2990,12 +3201,67 @@ var RGMIDI = (function () {
     return out;
   }
 
+  // ---------- timbres sem equivalente no Furnace → sample ----------
+  // FM do YMF271 (OPX): toca a nota Dó 4 por 1,2 s no mesmo modelo do teclado do Studio
+  var OPXA4 = [[[0, 4, 1, 2], 8, 0], [[0, 4, 1, 2], 8, 2], [[0, 5, 0, 2], 8, 0], [[0, 4, 0, 3], 8, 0], [[0, 0, 1, 6], 8, 0], [[0, 0, 1, 6], 8, 2],
+    [[0, 0, 1, 2], 12, 0], [[0, 0, 1, 2], 12, 2], [[0, 4, 0, 2], 9, 0], [[0, 0, 0, 6], 9, 0], [[0, 0, 1, 0], 14, 0], [[0, 0, 1, 0], 14, 2],
+    [[0, 1, 1, 1], 14, 0], [[0, 4, 0, 0], 11, 0], [[0, 0, 1, 2], 13, 0], [[0, 0, 0, 0], 15, 0]];
+  var OPXA3 = [[[0, 4, 1], 2, 0], [[0, 4, 1], 2, 2], [[0, 5, 0], 2, 0], [[0, 4, 0], 3, 0], [[0, 0, 1], 6, 0], [[0, 0, 1], 6, 2], [[0, 0, 0], 7, 0], [[0, 0, 1], 7, 0]];
+  var OPXA2 = [[[0, 1], 2, 0], [[0, 1], 2, 1], [[0, 0], 3, 0], [[0, 1], 3, 0]];
+  var OPX_ML = [128, 64, 32, 16, 8, 256, 512, 1024];
+  function opxWaveF(ws, x) {
+    x -= Math.floor(x); var s = Math.sin(2 * Math.PI * x);
+    switch (ws) { case 1: return s * Math.abs(s); case 2: return Math.abs(s); case 3: return x < 0.5 ? s : 0; case 4: return x < 0.5 ? Math.sin(4 * Math.PI * x) : 0; case 5: return x < 0.5 ? Math.abs(Math.sin(4 * Math.PI * x)) : 0; case 6: return 0.5; default: return s; }
+  }
+  function renderOPX(t, rate) {
+    var n = t.ops.length, A = n === 4 ? OPXA4[t.alg & 15] : n === 3 ? OPXA3[t.alg & 7] : n === 2 ? OPXA2[t.alg & 3] : [[0], 1, 0];
+    var f = 261.6256, len = Math.round(rate * 1.2), out = new Float32Array(len), ph = new Float64Array(n), o = new Float64Array(n), env = [], st = [], fb0 = 0, fb1 = 0;
+    var dtRate = 44100 / rate;
+    for (var k = 0; k < n; k++) { env.push(1023); st.push(0); }
+    function rateOf(r) { return r ? Math.min(63, r) : 0; }
+    var egc = 0, egAcc = 0;
+    for (var i = 0; i < len; i++) {
+      egAcc += 22050 / rate;
+      while (egAcc >= 1) { egAcc -= 1; egc++;
+        for (k = 0; k < n; k++) {
+          var op = t.ops[k], r = rateOf([op.ar * 2, op.d1r * 2, op.d2r * 2, op.rr * 4][st[k]] || 0); if (!r || st[k] > 2) continue;
+          var sh = r < 48 ? Math.max(0, 11 - (r >> 2)) : 0; if (egc & ((1 << sh) - 1)) continue;
+          var inc = r < 48 ? [1, 1, 2, 2][r & 3] : Math.min(8, 1 << ((r - 48) >> 2));
+          if (st[k] === 0) { env[k] -= Math.max(1, (env[k] * inc) >> 4); if (r >= 62 || env[k] <= 0) { env[k] = 0; st[k] = 1; } }
+          else { env[k] += inc; var sl = op.sl === 15 ? 992 : op.sl * 32; if (st[k] === 1 && env[k] >= sl) st[k] = 2; if (env[k] >= 1023) env[k] = 1023; }
+        }
+      }
+      var y = 0;
+      for (k = 0; k < n; k++) {
+        var lv = env[k] + (t.ops[k].tl << 3), amp = lv >= 1023 ? 0 : Math.pow(2, -lv / 64), mod = 0;
+        if (k === 0) { var fbv = t.ops[0].fb & 7; mod = fbv ? (fb0 + fb1) * Math.pow(2, fbv - 7) : 0; }
+        else { var sum = 0; for (var q = 0; q < n; q++) if (A[0][k] & (1 << q)) sum += o[q]; mod = sum * OPX_ML[t.ops[k].fb & 7] / 32; }
+        var v = amp ? opxWaveF(t.ops[k].ws, ph[k] + mod) * amp : 0;
+        o[k] = v; if (k === A[2]) { fb0 = fb1; fb1 = v; }
+        if (A[1] & (1 << k)) y += v;
+        ph[k] += f * (t.ops[k].mul ? t.ops[k].mul : 0.5) / rate;
+      }
+      out[i] = Math.max(-1, Math.min(1, y * 0.5));
+    }
+    // som que segura: repete o último trecho; som que some: toca uma vez
+    var tail = 0; for (i = len - 2000; i < len; i++) tail = Math.max(tail, Math.abs(out[i]));
+    return { data: out, rate: rate, loop: tail > 0.01 ? len - Math.round(rate / f) * 40 : -1, base: 60 };
+  }
+  // onda de 32 passos (PSG sem equivalente) → sample de um ciclo que repete
+  function renderWave(t) {
+    var tbl = t.tbl || [15, 0], rate = 32 * 261.6256 * 4, cyc = 128, d = new Float32Array(cyc * 4);
+    if (t.wave === 'noise') { d = new Float32Array(16000); var lf = 1; for (var i = 0; i < d.length; i++) { lf = (lf >> 1) | ((((lf ^ (lf >> 1)) & 1)) << 14); d[i] = (lf & 1) ? 0.6 : -0.6; } return { data: d, rate: 16000, loop: 0, base: null }; }
+    for (var j = 0; j < d.length; j++) d[j] = (tbl[Math.floor((j % cyc) * 32 / cyc)] / 7.5 - 1) * 0.7;
+    return { data: d, rate: rate, loop: 0, base: 60 };
+  }
+
   // ---------- conversão principal ----------
   // idioma dos nomes gravados no projeto (instrumentos, canais, comentário)
   var EN = false;
   function tr(pt, en) { return EN ? en : pt; }
   var ROLE_EN = { 'Percussão': 'Drums', 'Baixo': 'Bass', 'Melodia': 'Lead', 'Acompanhamento': 'Backing' };
   function role(r) { return EN ? ROLE_EN[r] || r : r; }
+  var WAVE_SPEC = { pce: [32, 31], scc: [32, 255], vsu: [32, 63], ws: [32, 15], gb: [32, 15], fds: [64, 63], x1: [128, 255] };
   function build(res, opts) {
     opts = opts || {};
     EN = opts.lang === 'en';
@@ -3003,10 +3269,8 @@ var RGMIDI = (function () {
     var L = opts.layout || layout(res);
     var hz = res.rateHz === 50 ? 50 : 60;
     var spt = 44100 / hz;
+    var pcmData = (typeof RGVGM !== 'undefined' && RGVGM.pcmData) ? RGVGM.pcmData : function () { return null; };
 
-    // instrumentos: timbres FM, timbres PSG e um por sample do DAC
-    var insList = [], insOf = new Map(), smpList = [], smpOf = {};
-    var nFM = 0, nPSG = 0, nNoise = 0;
     // batidas do DAC: recortes do fluxo (res.dacHits) quando existirem; senão os 'hit' dos eventos
     var events = res.midi.events;
     if (res.dacHits && res.dacHits.length) {
@@ -3014,80 +3278,126 @@ var RGMIDI = (function () {
         .concat(res.dacHits.map(function (h) { return { c: 'YM2612 · DAC', t: h.t, k: 'hit', id: h.id }; }))
         .sort(function (a, b) { return a.t - b.t; });
     }
-    // assinatura do timbre (o que vai para o instrumento): timbres iguais viram um instrumento só
-    function sigOf(t) {
-      if (t.type === 'fm') return 'f' + [t.alg, t.fb, t.ams, t.fms].join(',') + '|' + t.ops.map(function (o) {
-        return [DT[o.dt & 7], o.mul, o.tl, o.ks, o.ar, o.am ? 1 : 0, o.d1r, o.d2r, o.sl, o.rr, o.ssg & 15, o.dt2 & 3].join(',');
-      }).join('|');
-      return 's' + (envMacro(t.env) || []).join(',');
-    }
-    var bySig = {}, uses = new Map();
-    events.forEach(function (e) {
-      if (e.tb) uses.set(e.tb, (uses.get(e.tb) || 0) + 1);
-      if (e.k === 'hit' && smpOf[e.id] == null && res.pcm && res.pcm[e.id]) {
-        smpOf[e.id] = smpList.length;
-        smpList.push({ id: e.id, name: tr('Bateria ', 'Drum ') + (smpList.length + 1), data: res.pcm[e.id].data, rate: res.pcm[e.id].rate });
-      }
-    });
-    if (smpList.length > 160) throw new Error('Samples de bateria demais para um módulo (' + smpList.length + ').');
-    // agrupa por assinatura, do mais usado para o menos usado
-    var groups = [];
-    Array.from(uses.keys()).forEach(function (t) {
-      var k = sigOf(t), g = bySig[k];
-      if (!g) { g = bySig[k] = { sig: k, tb: t, kind: t.type === 'fm' ? 'fm' : 'std', n: 0, members: [] }; groups.push(g); }
-      g.n += uses.get(t); g.members.push(t);
-    });
-    groups.sort(function (a, b) { return b.n - a.n; });
-    // limite do módulo: os timbres raros vão para o parecido mais próximo
-    var room = 255 - smpList.length, kept = groups.slice(0, room), merged = 0;
-    function dist(a, b) {
-      if (a.kind !== b.kind) return 1e9;
-      if (a.kind === 'std') {
-        var x = envMacro(a.tb.env) || [15], y = envMacro(b.tb.env) || [15], d = 0;
-        for (var i = 0; i < Math.max(x.length, y.length); i++) d += Math.abs((x[Math.min(i, x.length - 1)]) - (y[Math.min(i, y.length - 1)]));
-        return d;
-      }
-      var p = a.tb, q = b.tb, dd = (p.alg !== q.alg ? 1000 : 0) + Math.abs(p.fb - q.fb) * 4;
-      for (var o = 0; o < 4; o++) {
-        var u = p.ops[o], w2 = q.ops[o];
-        dd += Math.abs(u.tl - w2.tl) + Math.abs(u.ar - w2.ar) + Math.abs(u.d1r - w2.d1r) + Math.abs(u.d2r - w2.d2r) +
-          Math.abs(u.sl - w2.sl) * 2 + Math.abs(u.rr - w2.rr) * 2 + (u.mul !== w2.mul ? 30 : 0) + ((u.dt & 3) !== (w2.dt & 3) ? 3 : 0);
-      }
-      return dd;
-    }
-    groups.forEach(function (g, gi) {
-      var target = g;
-      if (gi >= room) {
-        var best = null, bd = 1e18;
-        kept.forEach(function (k) { var d = dist(g, k); if (d < bd) { bd = d; best = k; } });
-        target = best || kept[0]; merged++;
-      }
-      if (target.idx == null) {
-        var t = target.tb, name;
-        if (t.type === 'fm') name = 'FM ' + (++nFM) + (t.role ? ' · ' + role(t.role) : '');
-        else if (t.wave === 'noise') name = tr('Ruído ', 'Noise ') + (++nNoise);
-        else name = 'PSG ' + (++nPSG) + (t.role ? ' · ' + role(t.role) : '');
-        target.idx = insList.length; insList.push({ kind: target.kind, tb: t, name: name });
-      }
-      g.members.forEach(function (t) { insOf.set(t, target.idx); });
-    });
-    smpList.forEach(function (s, k) { s.ins = insList.length; insList.push({ kind: 'smp', smp: k, name: s.name }); });
-
-    // eventos por canal, em quadros
-    var per = [];
+    // eventos por canal do Furnace
+    var per = [], famOfEv = [];
     for (var c = 0; c < L.chans; c++) per.push([]);
     events.forEach(function (e) {
-      var ch = L.map[e.c]; if (ch == null) return;
-      if (e.k === 'hit' && smpOf[e.id] == null) return;
+      var ch = chanOf(L, e); if (ch == null || ch >= L.chans) return;
       per[ch].push({ f: Math.round(e.t / spt), e: e });
     });
     per.forEach(function (l) { l.sort(function (a, b) { return a.f - b.f; }); });
+
+    // ---- instrumentos, wavetables e samples ----
+    var insList = [], insBy = {}, smpList = [], smpBy = {}, waves = [], waveBy = {};
+    var cnt = {};
+    function nameFor(kind, t) { cnt[kind] = (cnt[kind] || 0) + 1; return kind + ' ' + cnt[kind] + (t && t.role ? ' · ' + role(t.role) : ''); }
+    function waveIdx(t) {
+      var sp = WAVE_SPEC[t.chipKind]; if (!sp || !t.tbl) return null;
+      var src = t.raw || t.tbl, mx = t.raw ? (t.rmax || 15) : 15, wd = sp[0], hi = sp[1], dv = [];
+      for (var i = 0; i < wd; i++) { var v = src[Math.floor(i * src.length / wd)]; dv.push(Math.max(0, Math.min(hi, Math.round(v * hi / mx)))); }
+      var key = t.chipKind + ':' + dv.join(',');
+      if (waveBy[key] == null) { waveBy[key] = waves.length; waves.push({ data: dv, max: hi }); }
+      return waveBy[key];
+    }
+    function addSample(key, mk) {
+      if (smpBy[key] != null) return smpBy[key];
+      var s = mk(); if (!s) return null;
+      s.name = s.name || tr('Sample ', 'Sample ') + (smpList.length + 1);
+      smpBy[key] = smpList.length; smpList.push(s); return smpBy[key];
+    }
+    // sample de um timbre "pcm": taxa C-4 para a nota escrita soar na altura certa
+    function pcmSample(t, fam) {
+      return addSample('p' + t.pcmId + ':' + (fam.fixed || 0), function () {
+        var d = pcmData(t.pcmId); if (!d || !d.length) return null;
+        var rate = t.rate, loop = t.loop;
+        if (fam.fixed) { d = resample(d, rate, fam.fixed); loop = loop >= 0 ? Math.round(loop * fam.fixed / rate) : -1; rate = fam.fixed; }
+        var c4 = t.base != null && !fam.fixed ? rate * Math.pow(2, (60 - t.base) / 12) : rate;
+        return { data: d, rate: rate, c4: c4, loop: loop, name: (t.chip || '') + ' ' + (t.base == null ? tr('bateria', 'drum') : tr('sample', 'sample')) + ' ' + (smpList.length + 1) };
+      });
+    }
+    function insFor(t, fam, chIdx) {
+      if (!t && fam === FAM.oplDrum) t = DEF_OPL;
+      if (!t && fam === FAM.opllDrum) t = DEF_OPLL;
+      if (!t) return null;
+      var key;
+      if (fam === FALLBACK_FAM && t.type !== 'pcm') {
+        // timbre de chip sem equivalente: vira sample
+        key = 'fbk:' + (t.pcmId || JSON.stringify([t.type, t.alg, t.ops, t.tbl, t.wave]));
+        if (insBy[key] == null) {
+          var si;
+          if (t.type === 'pcm') si = pcmSample(t, fam);
+          else si = addSample(key, function () { var r = t.type === 'opx' ? renderOPX(t, 32000) : renderWave(t); r.c4 = r.base != null ? r.rate * Math.pow(2, (60 - r.base) / 12) : r.rate; r.name = (t.chip || '') + ' ' + (smpList.length + 1); return r; });
+          if (si == null) return null;
+          insBy[key] = insList.length; insList.push({ t: t, name: nameFor(t.type === 'opx' ? 'FM' : 'Sample', t), x: { kind: 'smp', it: fam.it, smp: si } });
+        }
+        return insBy[key];
+      }
+      if (fam.ins === 'smp') {
+        if (t.type !== 'pcm') return null;
+        var si2 = pcmSample(t, fam); if (si2 == null) return null;
+        key = 's' + fam.it + ':' + si2;
+        if (insBy[key] == null) { insBy[key] = insList.length; insList.push({ t: t, name: nameFor(t.base == null ? tr('Bateria', 'Drum') : 'Sample', t), x: { kind: 'smp', it: fam.it, smp: si2 } }); }
+        return insBy[key];
+      }
+      if (fam.ins === 'rhythm') {
+        key = 'rhythm'; if (insBy[key] == null) { insBy[key] = insList.length; insList.push({ t: t, name: tr('Bateria interna', 'Rhythm'), x: { kind: 'rhythm', it: 37 } }); }
+        return insBy[key];
+      }
+      if (fam.ins === 'fm') {
+        if (t.type !== 'fm') return null;
+        key = 'f' + fam.it + '|' + [t.alg, t.fb, t.ams, t.fms].join(',') + '|' + t.ops.map(function (o) { return [DT[o.dt & 7], o.mul, o.tl, o.ks, o.ar, o.am ? 1 : 0, o.d1r, o.d2r, o.sl, o.rr, o.ssg & 15, o.dt2 & 3].join(','); }).join('|');
+        if (insBy[key] == null) { insBy[key] = insList.length; insList.push({ t: t, name: nameFor('FM', t), x: { it: fam.it } }); }
+        return insBy[key];
+      }
+      if (fam.ins === 'opl') {
+        if (t.type !== 'opl') return null;
+        key = 'o' + fam.it + '|' + JSON.stringify([t.alg, t.fb, t.four, t.ops]);
+        if (insBy[key] == null) { insBy[key] = insList.length; insList.push({ t: t, name: nameFor('FM', t), x: { it: fam.it } }); }
+        return insBy[key];
+      }
+      // PSG
+      if (t.type !== 'psg') return null;
+      var wi = t.wave === 'wave' ? waveIdx(t) : null;
+      key = 'g' + fam.it + '|' + t.wave + '|' + t.nmode + '|' + (wi == null ? '' : wi) + '|' + (t.env || []).map(function (v) { return Math.round(v * fam.vmax); }).join(',') + '|' + (t.duty || []).join(',');
+      if (insBy[key] == null) {
+        insBy[key] = insList.length;
+        insList.push({ t: t, name: nameFor(t.wave === 'noise' ? tr('Ruído', 'Noise') : t.wave === 'wave' ? tr('Onda', 'Wave') : 'PSG', t), x: { it: fam.it, wave: wi, vmax: fam.vmax } });
+      }
+      return insBy[key];
+    }
+    // DAC do YM2612 (batidas recortadas)
+    var hitSmp = {};
+    function hitIns(id) {
+      if (hitSmp[id] != null) return hitSmp[id];
+      var p = res.pcm && res.pcm[id]; if (!p) return (hitSmp[id] = null);
+      var si = addSample('dac:' + id, function () { return { data: p.data, rate: p.rate, c4: p.rate, u8: true, loop: -1, name: tr('Bateria ', 'Drum ') + (smpList.length + 1) }; });
+      hitSmp[id] = insList.length; insList.push({ t: null, name: tr('Bateria ', 'Drum ') + (cnt.dac = (cnt.dac || 0) + 1), x: { kind: 'smp', it: 4, smp: si } });
+      return hitSmp[id];
+    }
+    // instrumento de cada nota (na ordem do tempo)
+    for (c = 0; c < L.chans; c++) per[c].forEach(function (x) {
+      var e = x.e;
+      if (e.k === 'hit') x.ins = hitIns(e.id);
+      else if (e.k === 'on') x.ins = insFor(e.tb, L.fam[c], c);
+    });
+    if (smpList.length > 255) throw new Error(tr('Samples demais para um módulo (', 'Too many samples for one module (') + smpList.length + ').');
+    if (insList.length > 255) {
+      // limite do módulo: os instrumentos de PSG mais raros juntam com o primeiro do mesmo tipo
+      var uses = new Array(insList.length).fill(0);
+      per.forEach(function (l) { l.forEach(function (x) { if (x.ins != null) uses[x.ins]++; }); });
+      var ord = insList.map(function (_, i) { return i; }).sort(function (a, b) { return uses[b] - uses[a]; });
+      var keep = {}, remap = {}, kept = [];
+      ord.forEach(function (i, k) { if (k < 255) { keep[i] = kept.length; kept.push(insList[i]); } });
+      ord.forEach(function (i) { if (keep[i] == null) { var it = insList[i].x.it, alt = kept.findIndex(function (y) { return y.x.it === it && y.x.kind === insList[i].x.kind; }); remap[i] = alt >= 0 ? alt : 0; } else remap[i] = keep[i]; });
+      per.forEach(function (l) { l.forEach(function (x) { if (x.ins != null) x.ins = remap[x.ins]; }); });
+      insList = kept;
+    }
 
     var totalF = Math.ceil((res.totalSamples || 0) / spt);
     per.forEach(function (l) { if (l.length) totalF = Math.max(totalF, l[l.length - 1].f + 1); });
 
     // quadros por linha: o maior R em que quase não há duas notas na mesma linha do mesmo canal
-    var onsets = per.map(function (l, ch) { var sh = L.kind[ch] !== 'fm' ? 1 : 0; return l.filter(function (x) { return x.e.k === 'on' || x.e.k === 'hit'; }).map(function (x) { return Math.max(0, x.f - sh); }); });
+    var onsets = per.map(function (l, ch) { var sh = L.fam[ch].early || 0; return l.filter(function (x) { return x.e.k === 'on' || x.e.k === 'hit'; }).map(function (x) { return Math.max(0, x.f - sh); }); });
     var nOn = onsets.reduce(function (s, l) { return s + l.length; }, 0) || 1;
     function bestPhase(R) {
       var h = new Array(R).fill(0);
@@ -3137,25 +3447,28 @@ var RGMIDI = (function () {
     var lfoNow = null, noteMax = 179;
     function clampNote(x) { return Math.max(0, Math.min(noteMax, x)); }
     function panOf(p) { return p < 32 ? 0x10 : p > 96 ? 0x01 : 0x11; }
+    function panPcm(p) { var l = Math.round(Math.min(1, (127 - p) / 64) * 15), r = Math.round(Math.min(1, p / 63) * 15); return (l << 4) | r; }
     function splitPitch(n) { var b = Math.round(n), f = Math.round((n - b) * 128); if (Math.abs(f) < 8) f = 0; return { b: b, f: f }; }
     for (c = 0; c < L.chans; c++) {
-      var isFM = L.kind[c] === 'fm', isSN = !isFM;
+      var F = L.fam[c], isFM = F.ins === 'fm' || F.ins === 'opl', isEnv = F.ins === 'psg', isSN = F === FAM.sn, isPCM = F.ins === 'smp' || F.ins === 'rhythm';
+      var isAY = F === FAM.ay || F === FAM.ay8930;
       // no Furnace o PSG (SN76489) soa 2 oitavas acima do FM para a mesma nota escrita (convenção herdada do DefleMask):
       // escreve 2 oitavas abaixo para soar na altura original
-      var nOff = isFM ? 48 : 24;
-      var st = { vol: -1, fine: 0, leg: false, note: -1, pan: 0x11, noise: null };
+      var nOff = F.nOff;
+      var st = { vol: -1, fine: 0, leg: false, note: -1, pan: 0x11, noise: null, ay: 1, nf: -1 };
       // agrupa os eventos do canal por linha
       var rows = new Map();
       per[c].forEach(function (x) {
         // o PSG do Furnace solta a nota um quadro depois: adianta um quadro para ficar no tempo certo
-        var P = pos(isSN && x.f > 0 ? x.f - 1 : x.f);
+        var P = pos(F.early && x.f > 0 ? x.f - 1 : x.f);
         if (P.r > lastRow) return;
         var l = rows.get(P.r); if (!l) rows.set(P.r, l = []);
-        l.push({ e: x.e, d: P.d });
+        l.push({ e: x.e, d: P.d, ins: x.ins });
       });
       var keys = Array.from(rows.keys()).sort(function (a, b) { return a - b; });
       var carry = { pitch: null, vol: null };
       var setPitch = function (cl, n, d, allowLegato) {
+        if (isPCM && F.fixed) return;   // sample em taxa fixa: não muda de altura
         var p = splitPitch(n);
         if (p.b !== st.note && st.note >= 0 && allowLegato) {
           if (!st.leg) { cl.fx[0xEA] = 0xFF; st.leg = true; }
@@ -3172,35 +3485,56 @@ var RGMIDI = (function () {
         evs.forEach(function (x) {
           var e = x.e, d = x.d;
           if (e.k === 'on' || e.k === 'hit') {
-            var n, ins, vol = -1, fixedNoise = false;
-            if (e.k === 'hit') { n = 60; ins = smpList[smpOf[e.id]].ins; }
+            if (x.ins == null) return;   // timbre que este canal não aceita
+            var n, ins = x.ins, vol = -1, fixedNoise = false, drum = false;
+            if (e.k === 'hit') { n = 60; }
             else {
-              ins = insOf.get(e.tb);
-              if (e.noise) {
+              var tb = e.tb;
+              if (isPCM) {
+                drum = !tb || tb.base == null || F.fixed || F.ins === 'rhythm';
+                n = drum ? 60 : e.n;
+                vol = F.vol(e.v);
+              } else if (e.noise && isSN) {
                 var nm = (e.noise.r === 3 ? 0x10 : 0) | (e.noise.m === 'white' ? 1 : 0);
                 if (nm !== st.noise) { cl.fx[0x20] = nm; st.noise = nm; }
                 n = e.noise.r === 3 ? midiOfHz(e.noise.f || 440) : 60 + (2 - e.noise.r);
                 fixedNoise = e.noise.r !== 3;
-              } else n = e.n;
-              // PSG: o envelope (macro) já começa no nível do 1º quadro; o volume da nota é o pico
-              var e0 = !isFM && e.tb && e.tb.env && e.tb.env.length ? e.tb.env[0] : 1;
-              vol = isFM ? fmVol(e.v) : snVol(e0 > 0.01 ? Math.min(1, e.v / e0) : e.v);
+              } else if (e.noise && e.noise.ck === 'drum') {
+                n = 60;   // bateria do modo ritmo do OPL/OPLL: cada peça tem o seu canal
+              } else if (e.noise) {
+                // ruído dos outros PSG: o modo vai em efeito; a "nota" vem da taxa do ruído
+                if (isAY) { if (st.ay !== 2) { cl.fx[0x20] = 2; st.ay = 2; } var nr = e.noise.r & 31; if (nr !== st.nf) { cl.fx[0x21] = nr; st.nf = nr; } n = 60; }
+                else { n = 84 - Math.min(15, e.noise.r || 0) * 2; }
+                if (F === FAM.pce && st.noise !== 1) { cl.fx[0x11] = 1; st.noise = 1; }
+                if (F === FAM.ws && st.noise !== 1) { cl.fx[0x11] = 1 + ((e.noise.r || 0) & 7); st.noise = 1; }
+                if (F === FAM.saa && st.noise !== 1) { cl.fx[0x10] = 0x10; st.noise = 1; }
+              } else {
+                n = e.n;
+                if (isAY && st.ay !== 1) { cl.fx[0x20] = 1; st.ay = 1; }
+                if ((F === FAM.pce || F === FAM.ws) && st.noise === 1) { cl.fx[0x11] = 0; st.noise = 0; }
+                if (F === FAM.saa && st.noise !== 0) { cl.fx[0x10] = 0x01; st.noise = 0; }
+              }
+              if (!isPCM) {
+                // PSG: o envelope (macro) já começa no nível do 1º quadro; o volume da nota é o pico
+                var e0 = isEnv && tb && tb.env && tb.env.length ? tb.env[0] : 1;
+                vol = isEnv ? F.vol(e0 > 0.01 ? Math.min(1, e.v / e0) : e.v) : F.vol(e.v);
+              }
             }
             var p = splitPitch(n);
             cl.note = clampNote(p.b + (fixedNoise ? 48 : nOff)); cl.ins = ins; if (vol >= 0) { cl.vol = vol; st.vol = vol; }
             cl.d = d;
             if (d) cl.fx[0xED] = d; else delete cl.fx[0xED];
             delete cl.fx[0xEC];
-            if (p.f !== st.fine) { cl.fx[0xE5] = 0x80 + p.f; st.fine = p.f; }
+            if (!drum && p.f !== st.fine) { cl.fx[0xE5] = 0x80 + p.f; st.fine = p.f; }
             if (st.leg) { cl.fx[0xEA] = 0; st.leg = false; }
-            if (isFM && e.pan != null && e.k !== 'hit') {
-              var pv = panOf(e.pan); if (pv !== st.pan) { cl.fx[0x08] = pv; st.pan = pv; }
+            if (F.pan && e.pan != null && e.k !== 'hit') {
+              var pv = F.pan === 'fm' ? panOf(e.pan) : panPcm(e.pan); if (pv !== st.pan) { cl.fx[0x08] = pv; st.pan = pv; }
             }
-            if (e.tb && e.tb.type === 'fm' && e.tb.lfo != null) {
+            if (e.tb && e.tb.type === 'fm' && e.tb.lfo != null && F === FAM.fm) {
               var lv = e.tb.lfo < 0 ? 0 : 0x10 | (e.tb.lfo & 7);
               if (lv !== lfoNow) { cl.fx[0x10] = lv; lfoNow = lv; }
             }
-            st.note = p.b; seenOn = true; lastPitch = null; lastVol = null;
+            st.note = drum ? -1 : p.b; seenOn = true; lastPitch = null; lastVol = null;
             st.playing = true;
           } else if (e.k === 'off') {
             st.playing = false;
@@ -3212,21 +3546,22 @@ var RGMIDI = (function () {
             }
           } else if (e.k === 'vol') {
             // no PSG o envelope do timbre (macro de volume) já faz essas mudanças durante a nota
-            if (isSN && st.playing) return;
-            var v2 = isFM ? fmVol(e.v) : snVol(e.v);
+            if (isEnv && st.playing) return;
+            var v2 = F.vol(e.v);
             if (seenOn || hasVol) lastVol = v2; // depois da nota/1º volume: vale na linha seguinte
             else if (!hasOn) { if (v2 !== st.vol) { cl.vol = v2; st.vol = v2; } hasVol = true; }
             else lastVol = v2;
           } else if (e.k === 'pitch') {
+            if (st.note < 0) return;
             if (seenOn || hasPitch || hasOn) lastPitch = e.n;
             else { setPitch(cl, e.n, d, true); hasPitch = true; }
-          } else if (e.k === 'pan' && isFM) {
-            var pv2 = panOf(e.pan);
+          } else if (e.k === 'pan' && F.pan) {
+            var pv2 = F.pan === 'fm' ? panOf(e.pan) : panPcm(e.pan);
             if (pv2 !== st.pan) { cl.fx[0x08] = pv2; st.pan = pv2; }
           }
         });
         // o que ficou do quadro anterior entra no começo desta linha (se a linha não tem o seu)
-        if (!hasOn) {
+        if (!hasOn && cl) {
           if (carry.pitch != null && !hasPitch) setPitch(cl, carry.pitch, 0, true);
           if (carry.vol != null && !hasVol && carry.vol !== st.vol) { cl.vol = carry.vol; st.vol = carry.vol; }
         }
@@ -3318,7 +3653,6 @@ var RGMIDI = (function () {
     w.f(hz);
     w.s(patLen); w.s(nOrd);
     w.c(4); w.c(16);
-    var waves = opts.waves || [];
     w.s(insList.length); w.s(waves.length); w.s(smpList.length);
     w.i(pats.length);
     var k;
@@ -3340,7 +3674,8 @@ var RGMIDI = (function () {
     for (c = 0; c < L.chans; c++) w.str(L.names[c]);
     for (c = 0; c < L.chans; c++) w.str(L.shorts[c]);
     w.str(tr('Convertido de VGM pelo Chiptune Studio (Registro Gamer).', 'Converted from VGM by Chiptune Studio (Registro Gamer).') + (info.game ? tr('\nJogo: ', '\nGame: ') + info.game : '') +
-      tr('\nLinha = ', '\nRow = ') + R + tr(' quadro(s) a ', ' frame(s) at ') + hz + ' Hz.');
+      tr('\nLinha = ', '\nRow = ') + R + tr(' quadro(s) a ', ' frame(s) at ') + hz + ' Hz.' +
+      (L.fallback.length ? tr('\nSem equivalente no Furnace (viraram samples no ES5506): ', '\nNo Furnace equivalent (turned into samples on the ES5506): ') + L.fallback.join(', ') + '.' : ''));
     w.f(1);
     [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 4, 0, 0, 1, 1, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0].forEach(function (v) { w.c(v); });
     w.s(150); w.s(150);
@@ -3358,16 +3693,14 @@ var RGMIDI = (function () {
 
     insList.forEach(function (it, j) {
       w.patchI(insPtr + j * 4, w.n);
-      if (it.kind === 'fm') insFM(w, it.tb, it.name);
-      else if (it.kind === 'std') insSTD(w, it.name, envMacro(it.tb.env));
-      else insSample(w, it.name, it.smp);
+      insBlock(w, it.t || {}, it.name, it.x);
     });
     waves.forEach(function (wv, j) {
       w.patchI(wavPtr + j * 4, w.n);
       var wb = w.block('WAVE'); w.str(''); w.i(wv.data.length); w.i(0); w.i(wv.max);
       wv.data.forEach(function (v) { w.i(v); }); w.end(wb);
     });
-    smpList.forEach(function (s, j) { w.patchI(smpPtr + j * 4, w.n); sampleBlock(w, s.name, s.data, s.rate); });
+    smpList.forEach(function (s, j) { w.patchI(smpPtr + j * 4, w.n); sampleBlock(w, s); });
     pats.forEach(function (p, j) {
       w.patchI(patPtr + j * 4, w.n);
       var pb = w.block('PATN');
@@ -3377,7 +3710,7 @@ var RGMIDI = (function () {
     });
 
     return { bytes: w.out(), rowFrames: R, hz: hz, patLen: patLen, orders: nOrd, rows: lastRow + 1, loopRow: loopRow,
-      fxStats: opts.debug ? fxStats : undefined, grid: opts.debug ? grid : undefined, lead: lead, missing: L.missing || [], instruments: insList.length, merged: merged, samples: smpList.length, patterns: pats.length, system: L.system };
+      fxStats: opts.debug ? fxStats : undefined, grid: opts.debug ? grid : undefined, lead: lead, missing: [], sampled: (L.fallback || []).filter(function (v, k, a) { return a.indexOf(v) === k; }), instruments: insList.length, merged: 0, samples: smpList.length, patterns: pats.length, system: L.system, waves: waves.length };
   }
 
   function fileName(res, fb) {
@@ -3391,74 +3724,7 @@ var RGMIDI = (function () {
   function fui(t, name) {
     var w = new Wr();
     w.tag('FINS'); w.s(228);
-    if (t.type === 'opl') {
-      // Furnace: OPL = 14, OPLL = 13; no 4-op a ordem dos operadores é 1, 3, 2, 4
-      var opll = t.oplKind === 'opll', n4 = t.four && !opll;
-      w.c(opll ? 13 : 14); w.c(0);
-      w.tag('NA'); var an = w.n; w.s(0); w.str(name); patchS(w, an);
-      w.tag('FM'); an = w.n; w.s(0);
-      var ord = n4 ? [0, 2, 1, 3] : [0, 1], en2 = 0;
-      ord.forEach(function (m, i) { if (!t.ops[m].off) en2 |= 16 << i; });
-      w.c(en2 | (n4 ? 4 : 2));
-      w.c(((t.alg & (n4 ? 3 : 1)) << 4) | (t.fb & 7));
-      w.c(0);
-      w.c(n4 ? 32 : 0); w.c(0);
-      ord.forEach(function (m) {
-        var o = t.ops[m];
-        w.c((o.ksr ? 128 : 0) | (o.mul & 15));
-        w.c((!opll && o.egt ? 128 : 0) | (o.tl & 63));
-        w.c((o.vib ? 32 : 0) | (o.ar & 15));
-        w.c((o.am ? 128 : 0) | ((o.ksl & 3) << 5) | (o.dr & 15));
-        w.c(2 << 5);
-        w.c(((o.sl & 15) << 4) | (o.rr & 15));
-        w.c(opll && o.egt ? 8 : 0);
-        w.c(o.ws & 7);
-      });
-      patchS(w, an);
-    } else if (t.type === 'fm') {
-      w.c(t.fmKind === 'opm' ? 33 : 1); w.c(0);
-      w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
-      w.tag('FM'); a = w.n; w.s(0);
-      var en = 0; [0, 2, 1, 3].forEach(function (m, i) { if (!t.ops[m].off) en |= 16 << i; });
-      w.c(en | 4);
-      w.c(((t.alg & 7) << 4) | (t.fb & 7));
-      w.c(((t.ams & 3) << 3) | (t.fms & 7));
-      w.c(0x20); w.c(0);
-      [0, 2, 1, 3].forEach(function (m) {
-        var o = t.ops[m];
-        w.c(((DT[o.dt & 7] & 7) << 4) | (o.mul & 15));
-        w.c(o.tl & 127);
-        w.c(((o.ks & 3) << 6) | (o.ar & 31));
-        w.c((o.am ? 128 : 0) | (o.d1r & 31));
-        w.c((2 << 5) | (o.d2r & 31));
-        w.c(((o.sl & 15) << 4) | (o.rr & 15));
-        w.c((o.ssg || 0) & 15);
-        w.c(((o.dt2 || 0) & 3) << 3);
-      });
-      patchS(w, a);
-    } else {
-      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25, mikey: 23, ay8930: 7, fds: 15 }[t.chipKind] || 0;
-      w.c(type); w.c(0);
-      w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
-      if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
-      var vmax = type === 5 ? 31 : 15; // PC Engine: volume de 0 a 31
-      var vols = (t.env || [1]).slice(0, 255).map(function (x) { return Math.max(0, Math.min(vmax, Math.round(x * vmax))); });
-      var mac = [[0, vols]];
-      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb' || t.chipKind === 'ay8930')) {
-        var a89 = t.chipKind === 'ay8930';  // AY8930: largura do pulso de 0 a 8 vai no macro EX1 do Furnace
-        var d = (t.duty || []).slice(0, 255).map(function (x) { return x < 0 ? (a89 ? 4 : 2) : (a89 ? Math.min(8, x) : x & 3); });
-        if (d.length) mac.push([a89 ? 5 : 2, d]);
-      }
-      if (t.wave === 'noise' && (t.chipKind === 'sn' || t.chipKind === 'nes')) mac.push([2, [t.nmode === 'periodic' ? (t.chipKind === 'sn' ? 0 : 1) : (t.chipKind === 'sn' ? 1 : 0)]]);
-      w.tag('MA'); a = w.n; w.s(0); w.s(8);
-      mac.forEach(function (m) {
-        w.c(m[0]); w.c(m[1].length); w.c(255); w.c(255); w.c(0); w.c(0); w.c(0); w.c(1);
-        m[1].forEach(function (v) { w.c(v); });
-      });
-      w.c(255);
-      patchS(w, a);
-    }
-    w.tag('EN');
+    insBody(w, t, name, {});
     return w.out();
   }
   // lê um .fui (ou o INS2 de dentro de um .fur) e devolve o timbre FM no formato do Chiptune Studio
