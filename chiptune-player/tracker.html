@@ -31,9 +31,18 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 .toast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drop{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(57,255,20,.15);border:3px dashed var(--ac2);font-size:20px;font-weight:700}
 .drop.show{display:grid}
+/* aviso antes de importar VGM */
+.imp{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#000a;padding:16px}
+.imp.show{display:grid}
+.imp .box{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto;background:#0b1d0b;border:1px solid var(--line2);border-radius:12px;padding:16px 18px;box-shadow:0 10px 40px #000c}
+.imp h3{margin:0 0 8px;font-size:17px;color:var(--ac2)}
+.imp p,.imp li{font-size:13.5px;line-height:1.45;margin:6px 0}
+.imp ul{margin:6px 0 4px;padding-left:20px}
+.imp .fn{font-weight:700;color:#fff;word-break:break-all}
+.imp .row{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
 @media (max-width:760px){.note,.logo span{display:none}}
 /* celular: barra enxuta (o Furnace fica no modo celular dele) */
-@media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}}
+@media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}.btn .lbl{display:none}}
 /* celular deitado: barra baixa e só o essencial (sobra altura para os padrões) */
 @media (max-height:500px) and (pointer:coarse){:root{--barH:36px}.pill,#bMidi,.note,.logo span{display:none}.btn{padding:4px 10px;font-size:12px}.logo i{width:24px;height:24px}}
 </style>
@@ -89,10 +98,11 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <body>
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
-  <button class="btn pri" id="bOpen" title="Abrir música, instrumento, wavetable ou sample do seu aparelho. VGM do Mega Drive e do Master System abre direto como projeto, com os timbres do chip" data-en-title="Open a song, instrument, wavetable or sample from your device. Mega Drive and Master System VGMs open straight as a project, with the chip's sounds" data-en="📂 Open local file">📂 Abrir arquivo local</button>
+  <button class="btn pri" id="bOpen" title="Abrir um projeto do seu aparelho: Furnace (.fur), DefleMask (.dmf), módulos (MOD, XM, S3M, IT, FTM…), instrumentos, wavetables ou samples" data-en-title="Open a project from your device: Furnace (.fur), DefleMask (.dmf), modules (MOD, XM, S3M, IT, FTM…), instruments, wavetables or samples">📂 <span class="lbl" data-en="Open project">Abrir projeto</span></button>
+  <button class="btn" id="bImp" title="Importar uma gravação de chip (VGM do Mega Drive ou do Master System) e transformar em projeto. É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chip recording (Mega Drive or Master System VGM) and turn it into a project. It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import VGM">Importar VGM</span></button>
   <button class="btn" id="bMidi" title="Converter um VGM (arquivo local) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a VGM (local file) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
-  <span class="note" id="note" data-en="Open and save: Chiptune collection and your computer folders (Connect a folder). Without a folder, saving downloads the file.">Abrir e salvar: Acervo Chiptunes e as pastas do seu computador (Conectar pasta). Sem pasta conectada, salvar baixa o arquivo.</span>
+  <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
   <div class="sp"></div>
   <button class="btn" id="bLand" style="display:none" title="Tela deitada (paisagem) em tela cheia: mostra mais da música" data-en-title="Landscape, full screen: shows more of the song">⟲</button>
   <button class="btn" id="bBack">← Chiptune Studio</button>
@@ -100,11 +110,23 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 </div>
 <input type="file" id="fileIn" multiple hidden>
 <input type="file" id="midiIn" accept=".vgm,.vgz" multiple hidden>
+<input type="file" id="impIn" accept=".vgm,.vgz" hidden>
 <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
 <div id="load"><div><div class="big">🎛️</div><h2 data-en="Loading the Tracker">Carregando o Tracker</h2>
   <p id="loadTxt" data-en="The first time it is about 10 MB; after that the program is cached in the browser and opens fast.">Na primeira vez são cerca de 10 MB; depois fica guardado no navegador e abre rápido.</p><div class="spin"></div></div></div>
 
-<div class="toast" id="toast"><span id="tTxt"></span><button class="btn" id="tFur" style="display:none" title="Abrir este VGM como projeto (timbres do chip)" data-en-title="Open this VGM as a project (chip sounds)" data-en="🎛 Open as project">🎛 Abrir como projeto</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar" data-en-title="Convert this VGM to MIDI and download it">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
+<div class="toast" id="toast"><span id="tTxt"></span><button class="btn" id="tFur" style="display:none" title="Importar este VGM como projeto (timbres do chip)" data-en-title="Import this VGM as a project (chip sounds)" data-en="⤵ Import as project">⤵ Importar como projeto</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar" data-en-title="Convert this VGM to MIDI and download it">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
+<div class="imp" id="imp"><div class="box">
+  <h3 data-en="⤵ Import VGM">⤵ Importar VGM</h3>
+  <p id="impFn" class="fn"></p>
+  <p data-en="A VGM is not a project: it is a recording of what the console chip played. Importing rebuilds patterns, instruments and samples from that recording, so:">Um VGM não é um projeto: é uma gravação do que o chip do console tocou. A importação reconstrói padrões, instrumentos e samples a partir dessa gravação, por isso:</p>
+  <ul>
+    <li data-en="the reading is not 100% accurate: tempo, effects and some sounds may differ from the original;">a leitura não é 100% fiel: tempo, efeitos e alguns timbres podem sair diferentes do original;</li>
+    <li data-en="for now only Mega Drive / Genesis (YM2612 + SN76489) and Master System (SN76489);">por enquanto só Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489);</li>
+    <li data-en="the result opens as a new project; save it (File → Save) to keep it.">o resultado abre como um projeto novo; salve (Arquivo → Salvar) para guardar.</li>
+  </ul>
+  <div class="row"><button class="btn" id="impNo" data-en="Cancel">Cancelar</button><button class="btn pri" id="impGo" data-en="Choose VGM…">Escolher VGM…</button></div>
+</div></div>
 <div class="drop" id="drop" data-en="Drop the file to open it in the Tracker">Solte o arquivo para abrir no Tracker</div>
 
 <script>
@@ -163,7 +185,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     if (!ready) { alert(T('Espere o Tracker terminar de carregar.','Wait for the Tracker to finish loading.')); return; }
     Array.prototype.forEach.call(list, function (f, i) {
       f.arrayBuffer().then(function (ab) {
-        if (isVGM(f.name)) { vgmToFur(new Uint8Array(ab), f.name, i * 250); return; }
+        if (isVGM(f.name)) { askImport(new Uint8Array(ab), f.name); return; }
         var safe = f.name.replace(/[\/\\]/g, '_');
         var path = HOME + '/' + folderFor(safe) + '/' + safe;
         if (fhs && fhs[i]) handles[path] = fhs[i]; else delete handles[path];
@@ -184,6 +206,29 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     } else { $('fileIn').value = ''; $('fileIn').click(); }
   }
   $('bOpen').onclick = pickOpen;
+
+  // ── importar VGM: é uma conversão (não um projeto), então sempre passa por este aviso ──
+  var impData = null;
+  function askImport(u8, name) {
+    impData = u8 ? { u8: u8, name: name } : null;
+    $('impFn').textContent = name || '';
+    $('impFn').style.display = name ? '' : 'none';
+    $('impGo').textContent = u8 ? T('⤵ Importar', '⤵ Import') : T('Escolher VGM…', 'Choose VGM…');
+    $('imp').classList.add('show');
+  }
+  function closeImport() { $('imp').classList.remove('show'); impData = null; $('canvas').focus(); }
+  $('bImp').onclick = function () { askImport(null, ''); };
+  $('impNo').onclick = closeImport;
+  $('imp').onclick = function (e) { if (e.target === this) closeImport(); };
+  $('impGo').onclick = function () {
+    if (impData) { var d = impData; closeImport(); vgmToFur(d.u8, d.name, 0); return; }
+    $('impIn').value = ''; $('impIn').click();
+  };
+  $('impIn').onchange = function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    if (!ready) { alert(T('Espere o Tracker terminar de carregar.', 'Wait for the Tracker to finish loading.')); return; }
+    f.arrayBuffer().then(function (ab) { closeImport(); vgmToFur(new Uint8Array(ab), f.name, 0); });
+  };
   $('fileIn').onchange = function () { if (this.files.length) openFiles(this.files); };
 
   // arrastar e soltar arquivos em cima do Tracker
@@ -217,9 +262,11 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   // ── lugares do seletor de arquivos do Furnace: acervo do blog e pastas do computador ──
   // /Acervo     = pasta Chiptunes do repositório (lista vem do chiptunes-index.json; o arquivo só baixa ao abrir)
   // /Computador = pastas que a pessoa conectou (Chrome/Edge); abrir lê do computador, salvar grava lá
-  var ACV = '/Acervo', PC = '/Computador';
+  // /Aparelho   = arquivos que a pessoa escolheu do celular/computador pelo seletor do sistema (funciona em qualquer navegador)
+  var ACV = '/Acervo', PC = '/Computador', DEV = '/Aparelho';
+  var RAWBASE = 'https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
   var vfsLoaded = {}, acvIndex = null, acvFiles = {}, dirs = [], dirsReady = null;
-  function isVirt(p) { return p.indexOf(ACV + '/') === 0 || p.indexOf(PC + '/') === 0; }
+  function isVirt(p) { return p.indexOf(ACV + '/') === 0 || p.indexOf(PC + '/') === 0 || p.indexOf(DEV + '/') === 0; }
   function mkdirp(p) { var parts = p.split('/').filter(Boolean), cur = ''; parts.forEach(function (x) { cur += '/' + x; try { Module.FS.mkdir(cur); } catch (e) {} }); }
   function exists(p) { try { Module.FS.stat(p); return true; } catch (e) { return false; } }
   function placeholder(p) { if (!exists(p)) { importing[p] = 1; Module.FS.writeFile(p, new Uint8Array(0)); delete importing[p]; } }
@@ -228,7 +275,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   function idbAll() { return idb().then(function (db) { return new Promise(function (ok) { var out = [], c = db.transaction('dirs').objectStore('dirs').openCursor(); c.onsuccess = function () { var x = c.result; if (x) { out.push({ name: x.key, handle: x.value }); x.continue(); } else ok(out); }; c.onerror = function () { ok(out); }; }); }).catch(function () { return []; }); }
   function idbPut(name, h) { return idb().then(function (db) { db.transaction('dirs', 'readwrite').objectStore('dirs').put(h, name); }).catch(function () {}); }
   function vfsInit() {
-    mkdirp(ACV); mkdirp(PC);
+    mkdirp(ACV); mkdirp(PC); mkdirp(DEV);
     dirsReady = (window.showDirectoryPicker ? idbAll() : Promise.resolve([])).then(function (list) { dirs = list; dirs.forEach(function (d) { mkdirp(PC + '/' + d.name); }); });
   }
   function loadIndex() {
@@ -285,23 +332,46 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     }
     return Promise.resolve();
   };
+  function acvFetch(rel) {
+    var enc = rel.split('/').map(encodeURIComponent).join('/');
+    var get = function (u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }); };
+    return get(RAWBASE + enc).catch(function () { return get('../' + enc); }).then(function (b) { return new Uint8Array(b); })
+      .catch(function (e) { notify(T('Não consegui baixar a música do acervo. Confira a internet.', 'Could not download the song from the collection. Check your connection.')); throw e; });
+  }
+  // ── "Arquivos do aparelho": abre o seletor do sistema (celular ou computador) e coloca os arquivos em /Aparelho ──
+  var devPending = '';
+  Module.rgPickDevice = function () {
+    var inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.style.display = 'none';
+    inp.onchange = function () {
+      var fs = [].slice.call(inp.files || []); inp.remove();
+      if (!fs.length) return;
+      Promise.all(fs.map(function (f) { return f.arrayBuffer().then(function (b) { var q = DEV + '/' + f.name.replace(/\//g, '_'); importing[q] = 1; Module.FS.writeFile(q, new Uint8Array(b)); delete importing[q]; vfsLoaded[q] = 1; return q; }); }))
+        .then(function (qs) { devPending = qs.length === 1 ? qs[0] : DEV; });
+    };
+    document.body.appendChild(inp); inp.click();
+  };
+  // o seletor do Furnace pergunta a cada quadro se chegou arquivo novo (vai direto para lá)
+  Module.rgDevicePending = function () { var p = devPending; devPending = ''; return p; };
+
   // na hora de abrir: traz o conteúdo do acervo ou do computador; VGM vira projeto (devolve true = a página cuidou)
   Module.rgEnsure = function (p, open) {
     if (!isVirt(p) || !exists(p)) return Promise.resolve(false);
     var name = p.split('/').pop();
     var get = vfsLoaded[p] ? Promise.resolve(Module.FS.readFile(p)) :
-      p.indexOf(ACV + '/') === 0 ? (acvFiles[p] ? fetch('../' + acvFiles[p].split('/').map(encodeURIComponent).join('/')).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); }) : Promise.resolve(null)) :
+      p.indexOf(ACV + '/') === 0 ? (acvFiles[p] ? acvFetch(acvFiles[p]) : Promise.resolve(null)) :
+      p.indexOf(DEV + '/') === 0 ? Promise.resolve(null) :
       dirsReady.then(function () { var x = dirByPath(p), parent = x[1].split('/').slice(0, -1).join('/'); return walk(x[0].handle, parent).then(function (dh) { return dh.getFileHandle(name); }).then(function (fh) { return fh.getFile(); }).then(function (f) { return f.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); }); });
     return get.then(function (u8) {
       if (!u8) return false;
       if (!vfsLoaded[p]) { importing[p] = 1; Module.FS.writeFile(p, u8); delete importing[p]; vfsLoaded[p] = 1; }
-      if (open && isVGM(name)) { vgmToFur(u8, name, 0); return true; }
+      if (open && isVGM(name)) { askImport(u8, name); return true; }
       return false;
     });
   };
   // o Furnace salvou dentro de um lugar: grava de verdade na pasta do computador
   function vfsSaved(p) {
     var name = p.split('/').pop();
+    if (p.indexOf(DEV + '/') === 0) { vfsLoaded[p] = 1; pending[p] = 1; clearTimeout(pendT); pendT = setTimeout(flushSaved, 150); return; }
     if (p.indexOf(ACV + '/') === 0) { // o acervo é só leitura: baixa para não perder
       download(p); toast2(T('O acervo é só para leitura — baixei ', 'The library is read-only — downloaded ') + name); return;
     }
@@ -325,6 +395,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     var out = [T('Lugares', 'Places'), 'a\t' + T('Acervo Chiptunes', 'Chiptune collection') + '\t' + ACV];
     dirs.forEach(function (d) { out.push('c\t' + d.name + '\t' + PC + '/' + d.name); });
     if (window.showDirectoryPicker) out.push('+\t' + T('Conectar pasta do computador…', 'Connect a computer folder…') + '\t');
+    out.push('u\t' + T('Arquivos do aparelho…', 'Files on this device…') + '\t' + DEV);
     return out.join('\n');
   };
   Module.rgConnect = function () {
@@ -385,7 +456,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     });
   }
   $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
-  $('tFur').onclick = function () { if (lastSaved) vgmToFur(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); $('canvas').focus(); };
+  $('tFur').onclick = function () { if (lastSaved) askImport(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
 
   // projeto mandado pelo Chiptune Studio (botão "Abrir no Tracker")
   function checkInbox() {
