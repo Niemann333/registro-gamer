@@ -5,6 +5,7 @@ var RGVGM = (function () {
   'use strict';
   var FRAME = 735; // 1/60 s em amostras de 44100 Hz
 
+  var PCMSTORE = { n: 0, map: {} };   // samples decodificados (fora do timbre, que vai e volta como JSON)
   function u32(b, o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; }
   function midiOf(f) { return f > 0 ? 69 + 12 * Math.log2(f / 440) : 0; }
 
@@ -182,8 +183,7 @@ var RGVGM = (function () {
     };
     var dual = { ym3812: hdual(0x50), sn: hdual(0x0C), ym2612: ver >= 0x110 && hdual(0x2C), ym2151: ver >= 0x110 && hdual(0x30), ym2203: hdual(0x44), ay: hdual(0x74) };
     // antes da v1.10 o campo 0x10 vale para YM2413, YM2612 e YM2151: o que aparece nos comandos decide
-    [['YM2413', 0x10], ['SegaPCM', 0x38], ['RF5C68', 0x40],
-     ['OKIM6295', 0x98], ['QSound', 0xB4], ['K051649', 0x9C], ['YMF278B', 0x60], ['YMZ280B', 0x68]].forEach(function (x) {
+    [['YM2413', 0x10], ['QSound', 0xB4], ['K051649', 0x9C], ['YMF278B', 0x60], ['YMZ280B', 0x68]].forEach(function (x) {
       if (x[0] === 'YM2413') return;
       if (hclk(x[1])) unsupported.push(x[0]);
     });
@@ -656,6 +656,328 @@ var RGVGM = (function () {
     var ssg = {};
     ['ym2203', 'ym2608', 'ym2610'].forEach(function (n) { if (clk[n]) { ssg[n] = makeAY(clk[n] / 4, fm[n].chip + ' SSG'); ays.push(ssg[n]); } });
 
+    // ───────────── chips de sample (PCM / ADPCM) ─────────────
+    // O "timbre" é o próprio sample do jogo. A nota sai da afinação do sample (detectada) e da velocidade em que o chip toca;
+    // sample sem afinação definida (bateria, voz) vira nota de bateria.
+    var ROM = {};                  // tipo do bloco de dados do VGM → memória do chip (ROM de samples)
+    function romPut(type, total, start, data) {
+      var r = ROM[type];
+      if (!r || r.length < Math.max(total, start + data.length)) { var nr = new Uint8Array(Math.max(total, start + data.length, r ? r.length : 0)); if (r) nr.set(r); r = ROM[type] = nr; }
+      r.set(data, start);
+    }
+    var STREAMBLK = {};            // tipo do bloco (0x00-0x3F) → lista de blocos {data}
+    var smpDone = {};              // amostras já decodificadas (pelo endereço)
+    function pcmSample(chipName, key, decode, rate) {
+      var k = chipName + '|' + key;
+      if (smpDone[k]) return smpDone[k];
+      var d = decode(); if (!d || d.data.length < 16) return (smpDone[k] = null);
+      var data = d.data, srate = rate;
+      // no máximo 4 s (e no máximo 32 kHz) para não pesar o navegador
+      if (srate > 32000) { var f = Math.ceil(srate / 32000), nd = new Float32Array(Math.floor(data.length / f)); for (var i = 0; i < nd.length; i++) nd[i] = data[i * f]; data = nd; srate /= f; d.loop = d.loop >= 0 ? Math.floor(d.loop / f) : -1; }
+      if (data.length > srate * 4) data = data.subarray(0, Math.floor(srate * 4));
+      var id = 's' + (PCMSTORE.n++);
+      var lp0 = d.loop >= 0 && d.loop < data.length ? d.loop : -1, info = pcmPitch(data, srate);
+      if (!info.pitched && lp0 >= 0 && data.length - lp0 <= 1024 && data.length - lp0 >= 8) info = { pitched: true, note: midiOf(srate / (data.length - lp0)) };
+      var s = { id: id, rate: srate, len: data.length, loop: d.loop >= 0 && d.loop < data.length ? d.loop : -1, base: info.pitched ? info.note : null, drum: info.pitched ? null : drumOf(data, srate) };
+      PCMSTORE.map[id] = data;
+      return (smpDone[k] = s);
+    }
+    // afinação do sample: autocorrelação num trecho depois do ataque
+    function pcmPitch(x, rate) {
+      var n = x.length, st = Math.min(Math.floor(rate * 0.03), Math.floor(n * 0.2)), W = Math.min(2048, n - st);
+      if (W < 256) return { pitched: false };
+      var minLag = Math.floor(rate / 1200), maxLag = Math.min(Math.floor(rate / 40), Math.floor(W / 2));
+      var e0 = 0; for (var i = 0; i < W; i++) e0 += x[st + i] * x[st + i];
+      if (e0 < 1e-6) return { pitched: false };
+      var best = 0, bestLag = 0, prev = 1, rising = false, first = 0;
+      for (var lag = minLag; lag <= maxLag; lag++) {
+        var c = 0, e1 = 0;
+        for (i = 0; i < W - lag; i++) { c += x[st + i] * x[st + i + lag]; e1 += x[st + i + lag] * x[st + i + lag]; }
+        var r = c / Math.sqrt(e0 * e1 + 1e-12);
+        if (r > prev) rising = true;
+        if (rising && r < prev && prev > 0.8 && !first) { first = lag - 1; best = prev; bestLag = lag - 1; break; }
+        if (r > best) { best = r; bestLag = lag; }
+        prev = r;
+      }
+      if (best < 0.8 || !bestLag) return { pitched: false };
+      return { pitched: true, note: midiOf(rate / bestLag) };
+    }
+    // peça de bateria pelo "brilho" (cruzamentos de zero) e pela duração
+    function drumOf(x, rate) {
+      var n = Math.min(x.length, Math.floor(rate * 0.25)), z = 0;
+      for (var i = 1; i < n; i++) if ((x[i - 1] < 0) !== (x[i] < 0)) z++;
+      var zcr = z * rate / (2 * Math.max(1, n)), dur = x.length / rate;
+      if (zcr < 250) return 36;               // bumbo
+      if (zcr < 1500) return dur > 0.35 ? 45 : 38;  // tom / caixa
+      return dur > 0.5 ? 49 : 42;             // prato / chimbal
+    }
+    // um canal de chip de sample: registra as notas (com o sample como timbre)
+    function PCMChan(chipName, label) { this.chip = chipName; this.label = label; this.id = chipName + ' · ' + label; this.on = null; this.seen = false; this.nDrum = 0; this.nTone = 0; }
+    PCMChan.prototype.keyOn = function (s, playRate, vol, pan, at) {
+      if (!s) return;
+      if (at != null) { var tsave = t; t = at; this.keyOn(s, playRate, vol, pan); t = tsave; pcmOutOfOrder = true; return; }
+      this.keyOff();
+      var drum = s.base == null, note = drum ? 60 : s.base + 12 * Math.log2(playRate / s.rate);
+      var self = this;
+      var tbObj = col.add(this.chip + '|pcm|' + s.id, function () {
+        return { type: 'pcm', pcmId: s.id, rate: s.rate, len: s.len, loop: s.loop, base: s.base, drum: s.drum, tune: 0 };
+      }, this.label, drum ? 0 : note, this.chip);
+      if (drum) this.nDrum++; else this.nTone++;
+      if (!REC) return;
+      if (!this.seen) { this.seen = true; mchan(this.id, this.chip, this.label, 'pcm'); }
+      var ev = { c: this.id, t: t, k: 'on', n: drum ? s.drum : note, v: vol, pan: pan == null ? 64 : pan, tb: tbObj };
+      if (drum) ev.noise = { ck: 'drum', d: s.drum };
+      REC.push(ev);
+      this.on = { s: s, rate: playRate, n: note, v: vol, drum: drum };
+    };
+    PCMChan.prototype.keyOff = function (at) { if (this.on && REC) REC.push({ c: this.id, t: at != null ? at : t, k: 'off' }); this.on = null; };
+    var pcmOutOfOrder = false;
+    PCMChan.prototype.setRate = function (r) {
+      var o = this.on; if (!o || o.drum || !REC || !r) return;
+      var n = o.s.base + 12 * Math.log2(r / o.s.rate);
+      if (Math.abs(n - o.n) > 0.05) { REC.push({ c: this.id, t: t, k: 'pitch', n: n }); o.n = n; }
+    };
+    PCMChan.prototype.setVol = function (v) { var o = this.on; if (!o || !REC) return; if (Math.abs(v - o.v) > 0.02) { REC.push({ c: this.id, t: t, k: 'vol', v: v }); o.v = v; } };
+    var pcmChans = [];
+    function pcmChanSet(chipName, n, label) { var a = []; for (var i = 0; i < n; i++) { var c = new PCMChan(chipName, label + ' ' + (i + 1)); a.push(c); pcmChans.push(c); } return a; }
+
+    // ADPCM da OKI (Dialogic, 4 bits): OKIM6295 lê o nibble alto primeiro; OKIM6258, o baixo
+    var OKI_STEP = [16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552];
+    var OKI_IDX = [-1, -1, -1, -1, 2, 4, 6, 8];
+    function okiDecode(mem, start, end, lowFirst) {
+      var n = Math.max(0, Math.min(end, mem.length) - start), out = new Float32Array(n * 2), sig = 0, idx = 0, o = 0;
+      function nib(v) {
+        var step = OKI_STEP[idx], diff = ((2 * (v & 7) + 1) * step) >> 3;
+        sig += (v & 8) ? -diff : diff; if (sig > 2047) sig = 2047; else if (sig < -2048) sig = -2048;
+        idx += OKI_IDX[v & 7]; if (idx < 0) idx = 0; else if (idx > 48) idx = 48;
+        out[o++] = sig / 2048;
+      }
+      for (var i = 0; i < n; i++) { var by = mem[start + i]; if (lowFirst) { nib(by & 15); nib(by >> 4); } else { nib(by >> 4); nib(by & 15); } }
+      return { data: out, loop: -1 };
+    }
+
+    // ── OKIM6295: 4 vozes, frases (samples) numa tabela na ROM ──
+    var oki = null;
+    if (hclk(0x98)) {
+      var okc = hclk(0x98);
+      oki = { clock: okc, pin7: (u32(b, 0x98) >> 31) & 1, cmd: -1, bank: 0, ch: pcmChanSet('OKIM6295', 4, 'Voz') };
+    }
+    function okiRate() { return oki.clock / (oki.pin7 ? 132 : 165); }
+    var OKI_ATT = [0, -3.2, -6, -9.2, -12, -14.5, -18, -20.5, -24, -24, -24, -24, -24, -24, -24, -24];
+    function okiWrite(a, d) {
+      if (a === 0x0C) { oki.pin7 = d & 1; return; }
+      if (a === 0x0E || a === 0x0F) { oki.bank = d; return; }
+      if (a !== 0) return;
+      if (oki.cmd >= 0) {
+        var ph = oki.cmd, mem = ROM[0x8B]; oki.cmd = -1;
+        if (!mem) return;
+        var base = (oki.bank & 0x0F) * 0x40000, o = base + ph * 8;
+        if (o + 6 > mem.length) return;
+        var st = base + (((mem[o] << 16) | (mem[o + 1] << 8) | mem[o + 2]) & 0x3FFFF), en = base + (((mem[o + 3] << 16) | (mem[o + 4] << 8) | mem[o + 5]) & 0x3FFFF);
+        if (en <= st) return;
+        var s = pcmSample('OKIM6295', st, function () { return okiDecode(mem, st, en + 1, false); }, okiRate());
+        var vol = Math.pow(10, OKI_ATT[d & 15] / 20);
+        for (var v = 0; v < 4; v++) if (d & (0x10 << v)) oki.ch[v].keyOn(s, okiRate(), vol);
+        return;
+      }
+      if (d & 0x80) { oki.cmd = d & 0x7F; return; }
+      for (var w = 0; w < 4; w++) if (d & (0x08 << w)) oki.ch[w].keyOff();
+    }
+
+    // ── OKIM6258 (X68000): ADPCM mandado em fluxo (stream) pelo VGM: cada bloco iniciado = um sample ──
+    var oki58 = null;
+    if (hclk(0x90)) {
+      var o58f = b.length > 0x94 ? b[0x94] : 0;
+      oki58 = { clock: hclk(0x90), div: [1024, 768, 512, 512][o58f & 3], ch: pcmChanSet('OKIM6258', 1, 'ADPCM'), buf: new Uint8Array(1 << 16), tt: new Float64Array(1 << 16), n: 0 };
+    }
+    function oki58Rate() { return oki58.clock / oki58.div; }
+    function oki58Write(a, d) {
+      if (a === 0x0C) { oki58.div = [1024, 768, 512, 512][d & 3]; return; }
+      if (a !== 1) return;
+      if (oki58.n === oki58.buf.length) { var nb = new Uint8Array(oki58.n * 2); nb.set(oki58.buf); oki58.buf = nb; var nt = new Float64Array(oki58.n * 2); nt.set(oki58.tt); oki58.tt = nt; }
+      oki58.buf[oki58.n] = d; oki58.tt[oki58.n] = t; oki58.n++;
+    }
+    // o driver manda ADPCM sem parar (silêncio entre os sons): recorta cada som pelo volume do sinal decodificado
+    function oki58Finish() {
+      if (!oki58 || oki58.n < 64) return;
+      var N = oki58.n, sig = okiDecode(oki58.buf, 0, N, true).data, W = 32, nw = Math.floor(sig.length / W), rms = new Float32Array(nw), i, k;
+      // tira o "desvio" lento do decodificador (o sinal anda devagar mesmo no silêncio)
+      var avg = 0; for (i = 0; i < sig.length; i++) { avg += (sig[i] - avg) * 0.002; sig[i] -= avg; }
+      for (k = 0; k < nw; k++) { var e = 0; for (i = 0; i < W; i++) e += sig[k * W + i] * sig[k * W + i]; rms[k] = Math.sqrt(e / W); }
+      var sorted = Array.prototype.slice.call(rms).sort(function (a, b2) { return a - b2; });
+      var thr = Math.max(0.01, sorted[Math.floor(nw * 0.3)] * 4, sorted[Math.floor(nw * 0.98)] * 0.08);
+      var rate = oki58Rate(), regs = [], on = -1, quiet = 0;
+      for (k = 0; k < nw; k++) {
+        if (rms[k] > thr) { if (on < 0) on = k; quiet = 0; }
+        else if (on >= 0 && ++quiet >= 12) { regs.push([on, k - quiet + 1]); on = -1; quiet = 0; }
+      }
+      if (on >= 0) regs.push([on, nw]);
+      regs.forEach(function (r) {
+        var a0 = r[0] * W, a1 = Math.min(sig.length, r[1] * W + W * 4), b0 = a0 >> 1;
+        if (a1 - a0 < rate * 0.02) return;
+        // mesmo som = mesmos bytes no começo
+        var fp = []; for (var q = b0; q < Math.min(N, b0 + 40); q++) fp.push(oki58.buf[q]);
+        var seg = sig.slice(a0, a1);
+        var s = pcmSample('OKIM6258', fp.join('.'), function () { return { data: seg, loop: -1 }; }, rate);
+        oki58.ch[0].keyOn(s, rate, 1, 64, oki58.tt[Math.min(N - 1, b0)]);
+        oki58.ch[0].keyOff(oki58.tt[Math.min(N - 1, (a1 >> 1))]);
+      });
+    }
+
+    // ── SegaPCM (arcades da Sega): 16 canais de 8 bits, afinação pelo registrador "delta" ──
+    var spcm = null;
+    if (hclk(0x38)) {
+      spcm = { clock: hclk(0x38), ifr: u32(b, 0x3C), r: new Uint8Array(0x100), ch: pcmChanSet('SegaPCM', 16, 'Canal') };
+      for (var spi = 0; spi < 16; spi++) spcm.r[0x86 + 8 * spi] = 1; // começa tudo desligado
+      // banco: bits do registrador 0x86 (máscara e deslocamento vêm do cabeçalho)
+      spcm.bshift = (spcm.ifr & 0x0F) || 12; spcm.bmask = 0x70 | ((spcm.ifr >> 16) & 0xFC);
+    }
+    function spcmRate(c) { return spcm.clock / 128 * spcm.r[0x07 + 8 * c] / 128; }
+    function spcmWrite(a, d) {
+      a &= 0x7FF; if (a >= 0x100) return;
+      var old = spcm.r[a]; spcm.r[a] = d;
+      var c = (a >> 3) & 15, reg = a & 0x87;
+      if (reg === 0x84 || reg === 0x85) spcm.dirty = (spcm.dirty || 0) | (1 << c);
+      if (reg === 0x86) {
+        var was = !(old & 1), now = !(d & 1), dirty = (spcm.dirty || 0) & (1 << c);
+        if (now && (!was || dirty)) {
+          spcm.dirty &= ~(1 << c);
+          var mem = ROM[0x80]; if (!mem) return;
+          var bank = (d & spcm.bmask) << spcm.bshift;
+          var st = bank + ((spcm.r[0x85 + 8 * c] << 8) | spcm.r[0x84 + 8 * c]), en = bank + ((spcm.r[0x06 + 8 * c] + 1) << 8);
+          var lp = bank + ((spcm.r[0x05 + 8 * c] << 8) | spcm.r[0x04 + 8 * c]), loops = !(d & 2);
+          if (en <= st || st >= mem.length) return;
+          var s = pcmSample('SegaPCM', st + ':' + en + ':' + (loops ? lp : -1), function () {
+            var n = Math.min(en, mem.length) - st, out = new Float32Array(n);
+            for (var i = 0; i < n; i++) out[i] = (mem[st + i] - 128) / 128;
+            return { data: out, loop: loops && lp >= st && lp < en ? lp - st : -1 };
+          }, spcm.clock / 128);
+          var vl = spcm.r[0x02 + 8 * c] & 0x7F, vr = spcm.r[0x03 + 8 * c] & 0x7F;
+          spcm.ch[c].keyOn(s, spcmRate(c), Math.max(vl, vr) / 127, vl + vr ? Math.round(64 + 63 * (vr - vl) / (vl + vr)) : 64);
+        } else if (!now && was) spcm.ch[c].keyOff();
+      } else if (reg === 0x07) spcm.ch[c].setRate(spcmRate(c));
+      else if (reg === 0x02 || reg === 0x03) spcm.ch[c].setVol(Math.max(spcm.r[0x02 + 8 * c] & 0x7F, spcm.r[0x03 + 8 * c] & 0x7F) / 127);
+    }
+
+    // ── K053260 (Konami): 4 canais, PCM de 8 bits ou ADPCM de 4 bits ──
+    var k53 = null;
+    var K53_DPCM = [0, 1, 2, 4, 8, 16, 32, 64, -128, -64, -32, -16, -8, -4, -2, -1];
+    if (hclk(0xAC)) k53 = { clock: hclk(0xAC), r: new Uint8Array(0x40), ch: pcmChanSet('K053260', 4, 'Canal') };
+    function k53Rate(c) { var o = 0x08 + c * 8, p = ((k53.r[o + 1] & 0x0F) << 8) | k53.r[o]; return k53.clock / (0x1000 - p) / 2; }
+    function k53Write(a, d) {
+      if (a >= 0x40) return;
+      var old = k53.r[a]; k53.r[a] = d;
+      if (a === 0x28) {
+        for (var c = 0; c < 4; c++) {
+          var on = d & (1 << c), was = old & (1 << c);
+          if (on && !was) {
+            var mem = ROM[0x8E]; if (!mem) continue;
+            var o = 0x08 + c * 8, len = (k53.r[o + 3] << 8) | k53.r[o + 2], st = (k53.r[o + 6] << 16) | (k53.r[o + 5] << 8) | k53.r[o + 4];
+            var adpcm = (k53.r[0x2A] >> (4 + c)) & 1, loops = (k53.r[0x2A] >> c) & 1;
+            if (!len || st >= mem.length) continue;
+            var s = pcmSample('K053260', st + ':' + len + ':' + adpcm, function () {
+              var n = Math.min(len, mem.length - st), out, i;
+              if (adpcm) { out = new Float32Array(n * 2); var acc = 0; for (i = 0; i < n * 2; i++) { var by = mem[st + (i >> 1)], nb = (i & 1) ? by >> 4 : by & 15; acc = ((acc + K53_DPCM[nb]) << 24) >> 24; out[i] = acc / 128; } }
+              else { out = new Float32Array(n); for (i = 0; i < n; i++) out[i] = ((mem[st + i] << 24) >> 24) / 128; }
+              return { data: out, loop: loops ? 0 : -1 };
+            }, k53Rate(c));
+            k53.ch[c].keyOn(s, k53Rate(c), (k53.r[o + 7] & 0x7F) / 127);
+          } else if (!on && was) k53.ch[c].keyOff();
+        }
+      } else if (a >= 0x08 && a < 0x28) {
+        var cc = (a - 0x08) >> 3, rr = (a - 0x08) & 7;
+        if (rr <= 1) k53.ch[cc].setRate(k53Rate(cc)); else if (rr === 7) k53.ch[cc].setVol((d & 0x7F) / 127);
+      }
+    }
+
+    // ── RF5C68 (Sega CD / System 18): 8 canais tocando de uma RAM de 64 KB; 0xFF marca o fim (e volta ao loop) ──
+    var rf = null;
+    if (hclk(0x40)) rf = { clock: hclk(0x40), ram: new Uint8Array(0x10000), sel: 0, bank: 0, on: 0xFF, c: [], ch: pcmChanSet('RF5C68', 8, 'Canal') };
+    if (rf) for (var rfi = 0; rfi < 8; rfi++) rf.c.push({ env: 255, pan: 255, fd: 0, ls: 0, st: 0 });
+    function rfRate(c) { return rf.clock / 384 * rf.c[c].fd / 2048; }
+    function rfWrite(a, d) {
+      var cur = rf.c[rf.sel];
+      switch (a) {
+        case 0x00: cur.env = d; rf.ch[rf.sel].setVol(d / 255); break;
+        case 0x01: cur.pan = d; break;
+        case 0x02: cur.fd = (cur.fd & 0xFF00) | d; rf.ch[rf.sel].setRate(rfRate(rf.sel)); break;
+        case 0x03: cur.fd = (cur.fd & 0xFF) | (d << 8); rf.ch[rf.sel].setRate(rfRate(rf.sel)); break;
+        case 0x04: cur.ls = (cur.ls & 0xFF00) | d; break;
+        case 0x05: cur.ls = (cur.ls & 0xFF) | (d << 8); break;
+        case 0x06: cur.st = d << 8; break;
+        case 0x07: if (d & 0x40) rf.sel = d & 7; else rf.bank = (d & 15) << 12; break;
+        case 0x08:
+          var old = rf.on; rf.on = d;
+          for (var c = 0; c < 8; c++) {
+            var now = !(d & (1 << c)), was = !(old & (1 << c));
+            if (now && !was) {
+              var ch = rf.c[c], st = ch.st, ls = ch.ls;
+              var fp = st + ':' + ls; for (var fq = 0; fq < 96; fq += 3) fp += ',' + rf.ram[(st + fq) & 0xFFFF];
+              var s = pcmSample('RF5C68', fp, function () {
+                // até achar o 0xFF (fim do sample); o byte tem sinal e módulo (bit 7 = positivo)
+                var out = [], i = st;
+                while (i < 0x10000 && rf.ram[i] !== 0xFF && out.length < 0x10000) { var v = rf.ram[i]; out.push((v & 0x80 ? (v & 0x7F) : -(v & 0x7F)) / 128); i++; }
+                return { data: new Float32Array(out), loop: ls >= st && ls < i ? ls - st : -1 };
+              }, rf.clock / 384);
+              var pl = ch.pan & 15, pr = ch.pan >> 4;
+              rf.ch[c].keyOn(s, rfRate(c), ch.env / 255, pl + pr ? Math.round(64 + 63 * (pr - pl) / (pl + pr)) : 64);
+            } else if (!now && was) rf.ch[c].keyOff();
+          }
+          break;
+      }
+    }
+    var rfVer = 0; // muda quando a RAM é reescrita (o mesmo endereço pode ter outro sample)
+    function rfMem(a, d) { if (rf.ram[a & 0xFFFF] !== d) rfVer++; rf.ram[a & 0xFFFF] = d; }
+
+    // ── C352 (Namco): 32 vozes, PCM de 8 bits ou mu-law ──
+    var c352 = null;
+    if (hclk(0xDC)) c352 = { clock: hclk(0xDC), div: (hdrLen > 0xD6 && b[0xD6]) ? b[0xD6] * 4 : 288, r: new Uint16Array(0x208), ch: pcmChanSet('C352', 32, 'Voz') };
+    function c352Rate(v) { return c352.clock / c352.div * c352.r[v * 8 + 2] / 65536; }
+    function c352Mulaw(x) { var s = x & 0x80 ? -1 : 1, e = (x >> 4) & 7, m = x & 15; return s * (((m << 1) + 33) << e) / 8192; }
+    function c352Write(a, d) {
+      if (a >= 0x208) return;
+      c352.r[a] = d;
+      if (a < 0x100) {
+        var v = a >> 3, reg = a & 7;
+        if (reg === 2) c352.ch[v].setRate(c352Rate(v));
+        if (reg === 0) c352.ch[v].setVol(Math.max(d >> 8, d & 0xFF) / 255);
+        if (reg === 3 && (d & 0x2000)) c352.ch[v].keyOff();
+        return;
+      }
+      if (a === 0x202) { // dispara as vozes marcadas com KEYON
+        var mem = ROM[0x92]; if (!mem) return;
+        for (var vv = 0; vv < 32; vv++) {
+          var fl = c352.r[vv * 8 + 3];
+          if (!(fl & 0x4000)) continue;
+          c352.r[vv * 8 + 3] = (fl & ~0x4000) | 0x8000;
+          if (fl & 0x0010) continue; // ruído
+          var bank = c352.r[vv * 8 + 4] & 0xFF, st = (bank << 16) | c352.r[vv * 8 + 5], en = (bank << 16) | c352.r[vv * 8 + 6], lp = (bank << 16) | c352.r[vv * 8 + 7];
+          if (en <= st || st >= mem.length) continue;
+          var mu = !!(fl & 0x0008), loops = !!(fl & 0x0003), pingpong = !!(fl & 0x0002);
+          var s = pcmSample('C352', st + ':' + en + ':' + mu + ':' + (fl & 3), function () {
+            var n = Math.min(en + 1, mem.length) - st, out = new Float32Array(pingpong ? n * 2 : n);
+            for (var i = 0; i < n; i++) out[i] = mu ? c352Mulaw(mem[st + i]) : ((mem[st + i] << 24) >> 24) / 128;
+            if (pingpong) for (i = 0; i < n; i++) out[n + i] = out[n - 1 - i]; // loop de ida e volta vira ida + volta
+            var l0 = lp >= st && lp <= en ? lp - st : 0;
+            return { data: out, loop: loops ? l0 : -1 };
+          }, c352.clock / c352.div);
+          var vr = c352.r[vv * 8];
+          c352.ch[vv].keyOn(s, c352Rate(vv), Math.max(vr >> 8, vr & 0xFF) / 255);
+        }
+      }
+    }
+
+    // fluxos (streams) do VGM para chips de sample que não são o DAC do YM2612
+    var strm = {}, strmF = {};
+    function streamHit(sid, blk, len, freq) {
+      var chipT = streamChip[sid];
+      if (chipT === 0x17 && oki58) { // OKIM6258
+        var key = 'b' + blk.id + ':' + blk.off + ':' + len;
+        var s = pcmSample('OKIM6258', key, function () { return okiDecode(blk.data, blk.off, Math.min(blk.data.length, blk.off + len), true); }, freq ? freq * 2 : oki58Rate());
+        oki58.ch[0].keyOn(s, freq ? freq * 2 : oki58Rate(), 1);
+      }
+    }
+
     // ── percorre os comandos ──
     var p = hdrLen, t = 0, nextFrame = FRAME, end = b.length, guard = 0;
     var dacSeek = null, dacLast = -1e9, dacSeen = false, streamChip = {};
@@ -741,6 +1063,13 @@ var RGVGM = (function () {
         if (c === 0xA2 || c === 0xA3) { if (fm.ym2612b) opnWrite(fm.ym2612b, c - 0xA2, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xA4) { if (fm.ym2151b) opmWrite(fm.ym2151b, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xA5) { aa = b[p + 1]; if (fm.ym2203b && aa >= 0x10) opnWrite(fm.ym2203b, 0, aa, b[p + 2]); p += 3; continue; }
+        if (c === 0xB7) { aa = b[p + 1]; if (oki58 && !(aa & 0x80)) oki58Write(aa & 0x7F, b[p + 2]); p += 3; continue; }
+        if (c === 0xB8) { aa = b[p + 1]; if (oki && !(aa & 0x80)) okiWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
+        if (c === 0xC0) { if (spcm) spcmWrite(b[p + 1] | (b[p + 2] << 8), b[p + 3]); p += 4; continue; }
+        if (c === 0xBA) { aa = b[p + 1]; if (k53 && !(aa & 0x80)) k53Write(aa & 0x7F, b[p + 2]); p += 3; continue; }
+        if (c === 0xB0) { if (rf) rfWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC1) { if (rf) rfMem(rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xE1) { if (c352) c352Write((b[p + 1] << 8) | b[p + 2], (b[p + 3] << 8) | b[p + 4]); p += 5; continue; }
         if (c === 0xB9) { aa = b[p + 1]; if (huc && !(aa & 0x80)) hucWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0x52 || c === 0x53) { if (fm.ym2612) opnWrite(fm.ym2612, c - 0x52, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x54) { if (fm.ym2151) opmWrite(fm.ym2151, b[p + 1], b[p + 2]); p += 3; continue; }
@@ -767,8 +1096,25 @@ var RGVGM = (function () {
         }
         if (c === 0xE0) { dacSeek = u32(b, p + 1); dacEnd(); if (DS) { DS.ptr = dacSeek; DS.seeks.push(t); } p += 5; continue; }
         if (c === 0x90) { streamChip[b[p + 1]] = b[p + 2] & 0x7F; p += 5; continue; }
-        if (c === 0x91) { if (PCM) PCM.streamBank[b[p + 1]] = b[p + 2]; p += 5; continue; }
-        if (c === 0x92) { if (PCM) PCM.streamFreq[b[p + 1]] = u32(b, p + 2); p += 6; continue; }
+        if (c === 0x91) { if (PCM) PCM.streamBank[b[p + 1]] = b[p + 2]; strm[b[p + 1]] = b[p + 2]; p += 5; continue; }
+        if (c === 0x92) { if (PCM) PCM.streamFreq[b[p + 1]] = u32(b, p + 2); strmF[b[p + 1]] = u32(b, p + 2); p += 6; continue; }
+        if (c === 0x95 && streamChip[b[p + 1]] !== 2) {
+          var blks = STREAMBLK[strm[b[p + 1]]];
+          var bk = blks && blks[b[p + 2] | (b[p + 3] << 8)];
+          if (bk) streamHit(b[p + 1], bk, bk.data.length, strmF[b[p + 1]] || 0);
+          p += 5; continue;
+        }
+        if (c === 0x93 && streamChip[b[p + 1]] !== 2) {
+          var bl2 = STREAMBLK[strm[b[p + 1]]];
+          if (bl2 && bl2.length) {
+            // o deslocamento é dentro do banco todo (blocos do mesmo tipo em sequência)
+            var whole = bl2.whole; if (!whole) { var tot = 0; bl2.forEach(function (x) { tot += x.data.length; }); whole = bl2.whole = { id: 'w', data: new Uint8Array(tot), off: 0 }; var oo = 0; bl2.forEach(function (x) { whole.data.set(x.data, oo); oo += x.data.length; }); }
+            var so = u32(b, p + 2), lm = b[p + 6], sl = u32(b, p + 7), fq = strmF[b[p + 1]] || 0;
+            var lnb = (lm & 15) === 2 ? Math.round(sl * (fq || 15625) / 1000 / 2) : (lm & 15) === 3 ? whole.data.length - so : sl;
+            streamHit(b[p + 1], { id: 'w' + so, data: whole.data, off: so }, Math.max(0, Math.min(lnb, whole.data.length - so)), fq);
+          }
+          p += 11; continue;
+        }
         if (c === 0x95) {
           var sid = b[p + 1], bid = b[p + 2] | (b[p + 3] << 8);
           if (streamChip[sid] === 2) {
@@ -798,9 +1144,23 @@ var RGVGM = (function () {
         if (c === 0x67) {
           var bsz = u32(b, p + 3) & 0x7FFFFFFF, btype = b[p + 2];
           if (PCM && btype === 0x00) { PCM.blocks.push({ start: pcmLen, len: bsz }); PCM.bank.push(b.subarray(p + 7, p + 7 + bsz)); pcmLen += bsz; }
+          if (btype >= 0x80 && btype < 0xC0 && bsz > 8) romPut(btype, u32(b, p + 7), u32(b, p + 11), b.subarray(p + 15, p + 7 + bsz));
+          if (btype === 0xC0 && rf && bsz > 2) { var ra = b[p + 7] | (b[p + 8] << 8); for (var ri = 0; ri < bsz - 2; ri++) rfMem(ra + ri, b[p + 9 + ri]); }
+          if (btype < 0x40 && btype !== 0x00) { (STREAMBLK[btype] = STREAMBLK[btype] || []).push({ id: (STREAMBLK[btype] || []).length, data: b.subarray(p + 7, p + 7 + bsz), off: 0 }); }
           p += 7 + bsz; continue;
         }
-        if (c === 0x68) { p += 12; continue; }
+        if (c === 0x68) {
+          // copia um pedaço do banco de dados para a RAM do chip (usado pelo RF5C68 do Sega CD / System 18)
+          var ct = b[p + 2], rd = b[p + 3] | (b[p + 4] << 8) | (b[p + 5] << 16), wr = b[p + 6] | (b[p + 7] << 8) | (b[p + 8] << 16), cl = b[p + 9] | (b[p + 10] << 8) | (b[p + 11] << 16);
+          if (!cl) cl = 0x1000000;
+          var src = STREAMBLK[ct];
+          if (ct === 0x01 && rf && src) {
+            if (!src.whole || src.whole.n !== src.length) { var tot2 = 0; src.forEach(function (x) { tot2 += x.data.length; }); var wd = new Uint8Array(tot2), o2 = 0; src.forEach(function (x) { wd.set(x.data, o2); o2 += x.data.length; }); src.whole = { id: 'w', data: wd, off: 0, n: src.length }; }
+            var W2 = src.whole.data;
+            for (var ci = 0; ci < cl && rd + ci < W2.length; ci++) rfMem(wr + ci, W2[rd + ci]);
+          }
+          p += 12; continue;
+        }
         if (c >= 0x90 && c <= 0x95) { p += [5, 5, 6, 11, 2, 5][c - 0x90]; continue; }
         if (c >= 0x30 && c <= 0x3F) { p += 2; continue; }
         if (c >= 0x40 && c <= 0x4E) { p += 3; continue; }
@@ -819,6 +1179,11 @@ var RGVGM = (function () {
     if (REC) {
       for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
       for (var ok2 in opl) for (var ch3 = 0; ch3 < opl[ok2].nch; ch3++) oplOff(opl[ok2], ch3);
+      pcmChans.forEach(function (c) { c.keyOff(); });
+      oki58Finish();
+      if (pcmOutOfOrder) REC.sort(function (x, y) { return x.t - y.t; });
+      // canal de sample: se a maioria das notas for bateria, vai para o canal 10 do MIDI
+      mchans.forEach(function (m) { if (m.kind !== 'pcm') return; var pc = pcmChans.filter(function (c) { return c.id === m.id; })[0]; m.kind = pc && pc.nDrum > pc.nTone ? 'noise' : 'psg'; });
       chans.forEach(function (c) { if (c.mOn) { REC.push({ c: c.id, t: t, k: 'off' }); c.mOn = false; } });
     }
     // papel (Melodia/Baixo/...) de todos os timbres, inclusive os que não vão para a lista
@@ -834,7 +1199,7 @@ var RGVGM = (function () {
     });
     list.sort(function (a, b2) { return b2.count - a.count; });
     var perChip = {};
-    list = list.filter(function (x) { perChip[x.chip] = (perChip[x.chip] || 0) + 1; return perChip[x.chip] <= (x.type === 'fm' || x.type === 'opl' ? 40 : 16); });
+    list = list.filter(function (x) { perChip[x.chip] = (perChip[x.chip] || 0) + 1; return perChip[x.chip] <= (x.type === 'fm' || x.type === 'opl' || x.type === 'pcm' ? 40 : 16); });
     var num = {};
     list.forEach(function (x) {
       num[x.chip] = (num[x.chip] || 0) + 1;
@@ -846,7 +1211,10 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
-    if (huc) chips.push('HuC6280'); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
+    if (huc) chips.push('HuC6280');
+    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [c352, 'C352']].forEach(function (x) {
+      if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
+    }); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
     var res = { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
     if (REC) {
       // só canais que tocaram alguma nota
@@ -996,7 +1364,7 @@ var RGVGM = (function () {
     return new Response(stream).arrayBuffer().then(function (ab) { return new Uint8Array(ab); });
   }
 
-  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS };
+  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS, pcmData: function (id) { return PCMSTORE.map[id] || null; } };
 })();
 
 
