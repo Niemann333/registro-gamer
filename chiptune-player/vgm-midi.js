@@ -5,6 +5,9 @@ var RGVGM = (function () {
   'use strict';
   var FRAME = 735; // 1/60 s em amostras de 44100 Hz
 
+  var Y08_B64 = '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';
+  var Y08_BIN = null;
+  function Y08_ROM() { if (!Y08_BIN) { var bs = atob(Y08_B64); Y08_BIN = new Uint8Array(bs.length); for (var i = 0; i < bs.length; i++) Y08_BIN[i] = bs.charCodeAt(i); } return Y08_BIN; }
   var PCMSTORE = { n: 0, map: {} };   // samples decodificados (fora do timbre, que vai e volta como JSON)
   function u32(b, o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; }
   function midiOf(f) { return f > 0 ? 69 + 12 * Math.log2(f / 440) : 0; }
@@ -158,7 +161,7 @@ var RGVGM = (function () {
   };
 
   // ───────────── leitura principal ─────────────
-  function parse(buf, opts) {
+  function parse1(buf, opts) {
     var REC = opts && opts.events ? [] : null;   // notas no tempo, para converter em MIDI
     var mchans = [];                            // canais encontrados (ordem de criação)
     var b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
@@ -513,7 +516,40 @@ var RGVGM = (function () {
       dmcCh.keyOn(s, rate, 1);
       dmcUntil = loop ? 1e15 : t + len * 8 / rate * 44100;
     }
+    // ── canal extra do Famicom Disk System (FDS): onda desenhada de 64 passos (6 bits) com envelope de volume ──
+    var fds = null;
+    function fdsInit() {
+      if (fds) return;
+      fds = { w: new Uint8Array(64), ww: false, freq: 0, halt: true, envHalt: false, envDis: true, envUp: false, envSpd: 0, envOut: 0, envT: 0, mes: 0xE8, mv: 0, ch: null };
+      fds.ch = new PSGChan(col, 'FDS', 'NES FDS', REC); mchan(fds.ch.id, fds.ch.chip, fds.ch.label, 'psg'); chans.push(fds.ch);
+    }
+    if (clk.nes && (u32(b, 0x84) & 0x80000000)) fdsInit();
+    function fdsWrite(a, d) {   // VGM: 0x20-0x3E = $4080-$409E, 0x3F = $4023, 0x40-0x7F = $4040-$407F (onda)
+      fdsInit();
+      if (a >= 0x40) { if (fds.ww) fds.w[a - 0x40] = d & 63; return; }
+      if (a === 0x3F) return;
+      switch (a - 0x20) {
+        case 0: fds.envDis = !!(d & 0x80); fds.envUp = !!(d & 0x40); fds.envSpd = d & 63; fds.envT = 0; if (fds.envDis) fds.envOut = fds.envSpd; break;
+        case 2: fds.freq = (fds.freq & 0xF00) | d; break;
+        case 3: fds.freq = (fds.freq & 0xFF) | ((d & 15) << 8); var wasH = fds.halt; fds.halt = !!(d & 0x80); fds.envHalt = !!(d & 0x40); if (wasH && !fds.halt) fds.ch.trig = true; break;
+        case 9: fds.ww = !!(d & 0x80); fds.mv = d & 3; break;
+        case 10: fds.mes = d; fds.envT = 0; break;
+      }
+    }
+    function fdsFrame() {
+      var cpu = nes ? nes.clock : 1789773;
+      if (!fds.envDis && !fds.envHalt && !fds.halt && fds.mes) {
+        fds.envT += cpu / 60; var per = (fds.envSpd + 1) * fds.mes * 8;
+        while (fds.envT >= per) { fds.envT -= per; if (fds.envUp) { if (fds.envOut < 32) fds.envOut++; } else if (fds.envOut > 0) fds.envOut--; }
+      }
+      var pc = fds.ch, vol = Math.min(32, fds.envOut) / 32 * [1, 2 / 3, 0.5, 0.4][fds.mv];
+      pc.vol = fds.halt || !fds.freq ? 0 : vol;
+      pc.freq = cpu * fds.freq / 65536 / 64;
+      var tbl = []; for (var i = 0; i < 32; i++) tbl.push(Math.round((fds.w[i * 2] + fds.w[i * 2 + 1]) / 2 * 15 / 63));
+      pc.wave = { k: 'wave', ck: 'fds', tbl: tbl, duty: null };
+    }
     function nesWrite(a, d) {
+      if (a >= 0x20) { fdsWrite(a, d); return; }
       if (a > 0x17) return;
       if (a === 0x15) { if (!(d & 0x10)) { if (dmcCh) dmcCh.keyOff(); dmcUntil = 0; } else if (t >= dmcUntil) { nes.r[0x15] = d; dmcStart(); } }
       nes.r[a] = d;
@@ -786,25 +822,37 @@ var RGVGM = (function () {
     }
 
     // ── AY-3-8910 / SSG dos chips OPN ──
-    function makeAY(clock, chipName) {
-      var ay = { clock: clock, r: new Uint8Array(16), ch: [] };
+    function makeAY(clock, chipName, is8930) {
+      var ay = { clock: clock, r: new Uint8Array(32), ch: [], x: !!is8930, mode: 0 };
       for (var i = 0; i < 3; i++) { var pc = new PSGChan(col, 'SSG ' + 'ABC'[i], chipName, REC); mchan(pc.id, chipName, pc.label, 'psg'); ay.ch.push(pc); chans.push(pc); }
       return ay;
     }
+    // AY8930: no modo expandido (registrador 13 com 101x no nibble de cima) ganha um 2º banco de registradores,
+    // período de 16 bits, volume de 5 bits, largura de pulso por canal (3,125% a 96,875%) e máscaras de ruído
+    function ayX(ay) { return ay.x && (ay.mode & 0xE) === 0xA; }
+    function ayW(ay, a, d) {
+      a &= 15;
+      if (a === 13) { var was = ayX(ay); ay.r[13] = d; if (ay.x) { ay.mode = d >> 4; if (was !== ayX(ay)) for (var i = 0; i < 13; i++) { ay.r[i] = 0; ay.r[i + 16] = 0; } } return; }
+      ay.r[a + (ayX(ay) ? (ay.mode & 1) << 4 : 0)] = d;
+    }
     function ayFrame(ay) {
+      var X = ayX(ay);
       for (var i = 0; i < 3; i++) {
-        var p = ay.r[i * 2] | ((ay.r[i * 2 + 1] & 15) << 8), mix = ay.r[7], amp = ay.r[8 + i];
+        var p = ay.r[i * 2] | ((ay.r[i * 2 + 1] & (X ? 0xFF : 15)) << 8), mix = ay.r[7], amp = ay.r[8 + i];
         var toneOn = !(mix & (1 << i)), noiseOn = !(mix & (8 << i));
-        var v = (amp & 16) ? 1 : (amp & 15) ? Math.pow(10, -(15 - (amp & 15)) * 1.5 / 20) : 0;
+        var v = X ? ((amp & 0x20) ? 1 : (amp & 31) ? Math.pow(10, -(31 - (amp & 31)) * 0.75 / 20) : 0)
+                  : ((amp & 16) ? 1 : (amp & 15) ? Math.pow(10, -(15 - (amp & 15)) * 1.5 / 20) : 0);
         var c = ay.ch[i];
         c.vol = (toneOn || noiseOn) ? v : 0;
         c.freq = ay.clock / (16 * (p || 1));
-        c.wave = toneOn ? { k: 'pulse', ck: 'ay', duty: 2 } : { k: 'noise', ck: 'ay', nmode: 'white', nrate: ay.r[6] & 31 };
+        if (toneOn) c.wave = X ? { k: 'pulse', ck: 'ay8930', duty: Math.min(8, ay.r[0x16 + i] & 15) } : { k: 'pulse', ck: 'ay', duty: 2 };
+        else c.wave = { k: 'noise', ck: 'ay', nmode: 'white', nrate: ay.r[6] & (X ? 0xFF : 31) };
       }
     }
     var ays = [];
-    var ay = clk.ay ? makeAY(clk.ay, 'AY-3-8910') : null; if (ay) ays.push(ay);
-    var ay2 = dual.ay ? makeAY(clk.ay, 'AY-3-8910 #2') : null; if (ay2) ays.push(ay2);
+    var is8930 = hdrLen > 0x78 && b[0x78] === 0x03, ayName = is8930 ? 'AY8930' : 'AY-3-8910';
+    var ay = clk.ay ? makeAY(clk.ay, ayName, is8930) : null; if (ay) ays.push(ay);
+    var ay2 = dual.ay ? makeAY(clk.ay, ayName + ' #2', is8930) : null; if (ay2) ays.push(ay2);
     var ssg = {};
     ['ym2203', 'ym2608', 'ym2610'].forEach(function (n) { if (clk[n]) { ssg[n] = makeAY(clk[n] / 4, fm[n].chip + ' SSG'); ays.push(ssg[n]); } });
 
@@ -1199,15 +1247,25 @@ var RGVGM = (function () {
         y10a.ch[i].keyOn(s, rt, Math.pow(10, -att / 20), panLR(R[0x08 + i]));
       }
     }
-    // bateria interna do YM2608 (ROM do próprio chip, não vem no VGM): vira nota de bateria
+    // bateria interna do YM2608: 6 samples ADPCM gravados dentro do chip (não vêm no VGM).
+    // Os dados abaixo são os mesmos que o Furnace usa (refeitos a partir da saída do chip real).
     var Y08_DRUM = [36, 38, 49, 42, 45, 37]; // bumbo, caixa, prato, chimbal, tom, aro
-    var y08rSeen = false;
+    var Y08_NAME = ['Bumbo', 'Caixa', 'Prato', 'Chimbal', 'Tom', 'Aro'];
+    var Y08_POS = [0, 448, 1088, 7040, 7424, 8064, 8192];
+    var y08r = null;
     function y08Rhythm(d) {
-      if ((d & 0x80) || !REC) return;
-      var id = 'YM2608 · Bateria';
-      for (var i = 0; i < 6; i++) if (d & (1 << i)) {
-        if (!y08rSeen) { y08rSeen = true; mchan(id, 'YM2608', 'Bateria', 'noise'); }
-        REC.push({ c: id, t: t, k: 'on', n: Y08_DRUM[i], v: 0.9, pan: 64, noise: { ck: 'drum', d: Y08_DRUM[i] } }); REC.push({ c: id, t: t + 2205, k: 'off' });
+      if (!fm.ym2608) return;
+      if (!y08r) { y08r = { ch: [] }; for (var c = 0; c < 6; c++) { var pc = new PCMChan('YM2608', 'Bateria · ' + Y08_NAME[c]); pcmChans.push(pc); y08r.ch.push(pc); } }
+      for (var i = 0; i < 6; i++) {
+        if (!(d & (1 << i))) continue;
+        if (d & 0x80) { y08r.ch[i].keyOff(); continue; }
+        var rom = Y08_ROM(), st = Y08_POS[i], en = Y08_POS[i + 1];
+        var rt = clk.ym2608 / (i < 4 ? 432 : 864);     // bumbo, caixa, prato e chimbal a clock/432; tom e aro na metade
+        var s = pcmSample('YM2608', 'ritmo' + i, function () { return ymAdpcmA(rom, st, en); }, rt);
+        if (!s) continue;
+        s.base = null; s.drum = Y08_DRUM[i];
+        var R = fm.ym2608.regs[0], att = ((63 - (R[0x11] & 63)) + (31 - (R[0x18 + i] & 31))) * 0.75;
+        y08r.ch[i].keyOn(s, rt, Math.pow(10, -att / 20), panLR(R[0x18 + i] || 0xC0));
       }
     }
 
@@ -1963,6 +2021,7 @@ var RGVGM = (function () {
         if (REC) for (var fk in fm) if (fm[fk].mcur.length) fmFrame(fm[fk]);
         if (REC) for (var ok in opl) if (opl[ok].mcur.length) oplFrame(opl[ok]);
         if (nes) nesFrame();
+        if (fds) fdsFrame();
         if (gb) gbFrame();
         if (huc) hucFrame();
         if (scc) sccFrame();
@@ -1999,12 +2058,12 @@ var RGVGM = (function () {
         if (c === 0xA5) { aa = b[p + 1]; if (fm.ym2203b && aa >= 0x10) opnWrite(fm.ym2203b, 0, aa, b[p + 2]); p += 3; continue; }
         if (c === 0xB7) { aa = b[p + 1]; if (oki58 && !(aa & 0x80)) oki58Write(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0xB8) { aa = b[p + 1]; if (oki && !(aa & 0x80)) okiWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
-        if (c === 0xC0) { if (spcm) spcmWrite(b[p + 1] | (b[p + 2] << 8), b[p + 3]); p += 4; continue; }
+        if (c === 0xC0) { if (spcm && !(b[p + 2] & 0x80)) spcmWrite(b[p + 1] | (b[p + 2] << 8), b[p + 3]); p += 4; continue; }
         if (c === 0xBA) { aa = b[p + 1]; if (k53 && !(aa & 0x80)) k53Write(aa & 0x7F, b[p + 2]); p += 3; continue; }
-        if (c === 0xB0) { if (rf) rfWrite(rf, b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0xB1) { if (rf2) rfWrite(rf2, b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0xC1) { if (rf) rfMem(rf, rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
-        if (c === 0xC2) { if (rf2) rfMem(rf2, rf2.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xB0) { if (rf && !(b[p + 1] & 0x80)) rfWrite(rf, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xB1) { if (rf2 && !(b[p + 1] & 0x80)) rfWrite(rf2, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC1) { if (rf && !(b[p + 2] & 0x80)) rfMem(rf, rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xC2) { if (rf2 && !(b[p + 2] & 0x80)) rfMem(rf2, rf2.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
         if (c === 0xD6) { if (es5 && !(b[p + 1] & 0x80)) es5Write(b[p + 1], (b[p + 2] << 8) | b[p + 3]); p += 4; continue; }
         if (c === 0xD5) { if (es3 && !(b[p + 1] & 0x80)) es3Write(b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0xB6) { if (upd && !(b[p + 1] & 0x80)) updWrite(b[p + 1], b[p + 2]); p += 3; continue; }
@@ -2012,8 +2071,8 @@ var RGVGM = (function () {
         if (c === 0x40) { if (mikey) mikeyWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xD1) { if (opx && !(b[p + 1] & 0x80)) opxWrite(b[p + 1] & 0x7F, b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0xBE) { if (es6 && !(b[p + 1] & 0x80)) es6Write(b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0xBC) { if (ws) wsWrite(b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0xC6) { if (ws) ws.ram[((b[p + 1] << 8) | b[p + 2]) & 0x3FFF] = b[p + 3]; p += 4; continue; }
+        if (c === 0xBC) { if (ws && !(b[p + 1] & 0x80)) wsWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC6) { if (ws && !(b[p + 1] & 0x80)) ws.ram[((b[p + 1] << 8) | b[p + 2]) & 0x3FFF] = b[p + 3]; p += 4; continue; }
         if (c === 0xBD) { if (saa) saaWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xBB) { if (pokey) pokeyWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xBF) { if (ga20 && !(b[p + 1] & 0x80)) ga20Write(b[p + 1], b[p + 2]); p += 3; continue; }
@@ -2022,11 +2081,11 @@ var RGVGM = (function () {
         if (c === 0xD3) { if (k539 && !(b[p + 1] & 0x80)) k539Write((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0xB5) { if (mpcm && !(b[p + 1] & 0x80)) mpcmWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xC3) { if (mpcm && !(b[p + 1] & 0x80)) { var mbo = (b[p + 2] | (b[p + 3] << 8)) << 16; if (b[p + 1] & 1) mpcm.bank0 = mbo; if (b[p + 1] & 2) mpcm.bank1 = mbo; } p += 4; continue; }
-        if (c === 0xB2) { if (PW) pwmWrite(b[p + 1] >> 4, ((b[p + 1] & 15) << 8) | b[p + 2]); p += 3; continue; }
-        if (c === 0xD2) { if (scc) sccWrite(b[p + 1] & 0x7F, b[p + 2], b[p + 3]); p += 4; continue; }
-        if (c === 0xC7) { if (vsu) vsuWrite((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xB2) { if (PW && !(b[p + 1] & 0x80)) pwmWrite(b[p + 1] >> 4, ((b[p + 1] & 15) << 8) | b[p + 2]); p += 3; continue; }
+        if (c === 0xD2) { if (scc && !(b[p + 1] & 0x80)) sccWrite(b[p + 1] & 0x7F, b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xC7) { if (vsu && !(b[p + 1] & 0x80)) vsuWrite((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0x5D) { if (ymz) ymzWrite(b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0xD0) { var op4 = b[p + 1] & 0x7F; if (opl4) { if (op4 < 2) oplWrite(opl.ymf278b, op4, b[p + 2], b[p + 3]); else if (op4 === 2) opl4Write(b[p + 2], b[p + 3]); } p += 4; continue; }
+        if (c === 0xD0) { var op4 = b[p + 1] & 0x7F; if (opl4 && !(b[p + 1] & 0x80)) { if (op4 < 2) oplWrite(opl.ymf278b, op4, b[p + 2], b[p + 3]); else if (op4 === 2) opl4Write(b[p + 2], b[p + 3]); } p += 4; continue; }
         if (c === 0xC4) { if (qs) qsWrite(b[p + 3], (b[p + 1] << 8) | b[p + 2]); p += 4; continue; }
         if (c === 0xE1) { if (c352) c352Write((b[p + 1] << 8) | b[p + 2], (b[p + 3] << 8) | b[p + 4]); p += 5; continue; }
         if (c === 0xB9) { aa = b[p + 1]; if (huc && !(aa & 0x80)) hucWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
@@ -2035,7 +2094,7 @@ var RGVGM = (function () {
         if (c === 0x55) { var aa = b[p + 1]; if (fm.ym2203) { if (aa < 0x10) ssg.ym2203.r[aa] = b[p + 2]; else opnWrite(fm.ym2203, 0, aa, b[p + 2]); } p += 3; continue; }
         if (c === 0x56 || c === 0x57) { aa = b[p + 1]; if (fm.ym2608) { if (c === 0x57 && aa < 0x10) y08b.write(aa, b[p + 2]); else if (c === 0x56 && aa === 0x10) y08Rhythm(b[p + 2]); if (c === 0x56 && aa < 0x10) ssg.ym2608.r[aa] = b[p + 2]; else if (aa >= 0x20 || c === 0x56) opnWrite(fm.ym2608, c - 0x56, aa, b[p + 2]); } p += 3; continue; }
         if (c === 0x58 || c === 0x59) { aa = b[p + 1]; if (fm.ym2610) { if (c === 0x58 && aa >= 0x10 && aa < 0x20) y10b.write(aa - 0x10, b[p + 2]); else if (c === 0x59 && aa < 0x30) y10aWrite(aa, b[p + 2]); if (c === 0x58 && aa < 0x10) ssg.ym2610.r[aa] = b[p + 2]; else if (aa >= 0x20) opnWrite(fm.ym2610, c - 0x58, aa, b[p + 2]); } p += 3; continue; }
-        if (c === 0xA0) { aa = b[p + 1]; if (aa & 0x80) { if (ay2) ay2.r[aa & 15] = b[p + 2]; } else if (ay) ay.r[aa & 15] = b[p + 2]; p += 3; continue; }
+        if (c === 0xA0) { aa = b[p + 1]; if (aa & 0x80) { if (ay2) ayW(ay2, aa, b[p + 2]); } else if (ay) ayW(ay, aa, b[p + 2]); p += 3; continue; }
         if (c === 0xB3) { aa = b[p + 1]; if (gb && !(aa & 0x80)) gbWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0xB4) { aa = b[p + 1]; if (nes && !(aa & 0x80)) nesWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0x61) { advance(b[p + 1] | (b[p + 2] << 8)); p += 3; continue; }
@@ -2054,7 +2113,7 @@ var RGVGM = (function () {
           advance(c & 15); p++; continue;
         }
         if (c === 0xE0) { dacSeek = u32(b, p + 1); dacEnd(); if (DS) { DS.ptr = dacSeek; DS.seeks.push(t); } p += 5; continue; }
-        if (c === 0x90) { streamChip[b[p + 1]] = b[p + 2] & 0x7F; p += 5; continue; }
+        if (c === 0x90) { streamChip[b[p + 1]] = (b[p + 2] & 0x80) ? -1 : b[p + 2]; p += 5; continue; } // bit 7 = 2º chip (lido na 2ª passada)
         if (c === 0x91) { if (PCM) PCM.streamBank[b[p + 1]] = b[p + 2]; strm[b[p + 1]] = b[p + 2]; p += 5; continue; }
         if (c === 0x92) { if (PCM) PCM.streamFreq[b[p + 1]] = u32(b, p + 2); strmF[b[p + 1]] = u32(b, p + 2); p += 6; continue; }
         if (c === 0x95 && streamChip[b[p + 1]] !== 2) {
@@ -2102,6 +2161,7 @@ var RGVGM = (function () {
         if (c === 0x94) { if (DS && DS.st) { dsFlushStream(t); DS.st = null; } p += 2; continue; }
         if (c === 0x67) {
           var bsz = u32(b, p + 3) & 0x7FFFFFFF, btype = b[p + 2];
+          if ((u32(b, p + 3) & 0x80000000) && btype >= 0x40) { p += 7 + bsz; continue; } // dados do 2º chip: ficam para a 2ª passada
           if (PCM && btype === 0x00) { PCM.blocks.push({ start: pcmLen, len: bsz }); PCM.bank.push(b.subarray(p + 7, p + 7 + bsz)); pcmLen += bsz; }
           if (btype === 0x90 && bsz > 8) { var esa = u32(b, p + 11); romPut('es' + ((esa >>> 28) & 3), Math.min(u32(b, p + 7), 0x800000), esa & 0x0FFFFFFF, b.subarray(p + 15, p + 7 + bsz)); } // ES5506: 4 bancos
           else if (btype >= 0x80 && btype < 0xC0 && bsz > 8) romPut(btype, u32(b, p + 7), u32(b, p + 11), b.subarray(p + 15, p + 7 + bsz));
@@ -2178,11 +2238,11 @@ var RGVGM = (function () {
     var chips = [];
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
-    if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
+    if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (fds && col.list.some(function (tt) { return tt.chip === 'NES FDS'; })) chips.push('NES FDS'); if (gb) chips.push('Game Boy');
     if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
     [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506'], [es5, 'ES5505'], [es3, 'ES5503'], [upd, 'uPD7759'], [scsp, 'SCSP']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
-    }); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
+    }); if (ay) chips.push(ayName); if (ay2) chips.push(ayName + ' #2');
     chips = chips.filter(function (x, i) { return chips.indexOf(x) === i; });
     // chips "raros" só entram se tocaram de fato (cabeçalhos antigos às vezes trazem lixo nesses campos)
     var RARE = ['WonderSwan', 'SAA1099', 'Pokey', 'Mikey', 'K051649', 'K052539', 'VSU', 'X1-010'];
@@ -2250,6 +2310,85 @@ var RGVGM = (function () {
     }
     // tamanho e ponto de volta (loop) da música: o piano roll e o conversor usam
     res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
+    return res;
+  }
+
+
+  // ───────────── segunda cópia de um chip (placas com dois chips iguais) ─────────────
+  // A 1ª leitura cuida do 1º chip (e dos pares que já têm suporte direto: YM2612, YM2151, YM2203, YM3812, SN76489, AY).
+  // Para os outros, uma 2ª leitura usa uma cópia do VGM em que os comandos do 2º chip viram comandos "do 1º"
+  // e os do 1º viram comandos vazios; os timbres e notas dela entram com " #2" no nome do chip.
+  var DUAL2 = [ // [campo do clock no cabeçalho, chave, nomes dos chips nos timbres]
+    [0x10, 'ym2413', ['YM2413']], [0x38, 'segapcm', ['SegaPCM']], [0x40, 'rf5c68', ['RF5C68']], [0x48, 'ym2608', ['YM2608', 'YM2608 SSG']],
+    [0x4C, 'ym2610', ['YM2610', 'YM2610 SSG']], [0x54, 'ym3526', ['YM3526']], [0x58, 'y8950', ['Y8950']], [0x5C, 'ymf262', ['YMF262']],
+    [0x60, 'ymf278b', ['YMF278B']], [0x64, 'ymf271', ['YMF271']], [0x68, 'ymz280b', ['YMZ280B']], [0x6C, 'rf5c164', ['RF5C164']], [0x70, 'pwm', ['32X PWM']],
+    [0x80, 'gb', ['Game Boy']], [0x84, 'nes', ['NES APU', 'NES FDS']], [0x88, 'multipcm', ['MultiPCM']], [0x8C, 'upd7759', ['uPD7759']],
+    [0x90, 'okim6258', ['OKIM6258']], [0x98, 'okim6295', ['OKIM6295']], [0x9C, 'k051649', ['K051649', 'K052539']], [0xA0, 'k054539', ['K054539']],
+    [0xA4, 'huc6280', ['HuC6280']], [0xA8, 'c140', ['C140', 'C219']], [0xAC, 'k053260', ['K053260']], [0xB0, 'pokey', ['Pokey']], [0xB4, 'qsound', ['QSound']],
+    [0xB8, 'scsp', ['SCSP']], [0xC0, 'ws', ['WonderSwan']], [0xC4, 'vsu', ['VSU']], [0xC8, 'saa', ['SAA1099']], [0xCC, 'es5503', ['ES5503']],
+    [0xD0, 'es5506', ['ES5506', 'ES5505']], [0xD8, 'x1', ['X1-010']], [0xDC, 'c352', ['C352']], [0xE0, 'ga20', ['GA20']]];
+  // comando → [chave do chip, posição do byte que leva o bit do 2º chip (0 = o próprio comando muda), novo comando]
+  var CMD2 = {};
+  [[0x51, 'ym2413'], [0x56, 'ym2608'], [0x57, 'ym2608'], [0x58, 'ym2610'], [0x59, 'ym2610'], [0x5B, 'ym3526'], [0x5C, 'y8950'], [0x5D, 'ymz280b'], [0x5E, 'ymf262'], [0x5F, 'ymf262']]
+    .forEach(function (x) { CMD2[x[0]] = [x[1], -1]; CMD2[x[0] + 0x50] = [x[1], 0, x[0]]; });
+  [[0xB0, 'rf5c68'], [0xB1, 'rf5c164'], [0xB2, 'pwm'], [0xB3, 'gb'], [0xB4, 'nes'], [0xB5, 'multipcm'], [0xB6, 'upd7759'], [0xB7, 'okim6258'], [0xB8, 'okim6295'],
+   [0xB9, 'huc6280'], [0xBA, 'k053260'], [0xBB, 'pokey'], [0xBC, 'ws'], [0xBD, 'saa'], [0xBE, 'es5506'], [0xBF, 'ga20'],
+   [0xC3, 'multipcm'], [0xC5, 'scsp'], [0xC6, 'ws'], [0xC7, 'vsu'], [0xC8, 'x1'],
+   [0xD0, 'ymf278b'], [0xD1, 'ymf271'], [0xD2, 'k051649'], [0xD3, 'k054539'], [0xD4, 'c140'], [0xD5, 'es5503'], [0xD6, 'es5506'], [0xE1, 'c352']]
+    .forEach(function (x) { CMD2[x[0]] = [x[1], 1]; });
+  [[0xC0, 'segapcm'], [0xC1, 'rf5c68'], [0xC2, 'rf5c164']].forEach(function (x) { CMD2[x[0]] = [x[1], 2]; }); // endereço de 16 bits (byte de cima)
+  var STREAM2 = { 0x00: 'sn', 0x02: 'ym2612', 0x05: 'rf5c68', 0x10: 'rf5c164', 0x14: 'nes', 0x17: 'okim6258', 0x18: 'okim6295', 0x21: 'ws' };
+  function cmdLen(b, p) {
+    var c = b[p];
+    if (c === 0x67) return 7 + (u32(b, p + 3) & 0x7FFFFFFF);
+    if (c === 0x68) return 12;
+    if (c === 0x61) return 3; if (c === 0x62 || c === 0x63 || c === 0x66) return 1;
+    if (c >= 0x70 && c <= 0x8F) return 1;
+    if (c >= 0x90 && c <= 0x95) return [5, 5, 6, 11, 2, 5][c - 0x90];
+    if (c >= 0x30 && c <= 0x3F) return 2; if (c === 0x4F || c === 0x50) return 2;
+    if (c >= 0x40 && c <= 0x5F) return 3; if (c >= 0xA0 && c <= 0xBF) return 3;
+    if (c >= 0xC0 && c <= 0xDF) return 4; if (c >= 0xE0) return 5;
+    return 1;
+  }
+  function second(b, keys, start, end) {
+    var o = new Uint8Array(b), p = start;
+    var NOP = { 2: 0x31, 3: 0x41, 4: 0xC9, 5: 0xE2 };
+    while (p < end) {
+      var c = o[p], n = cmdLen(o, p);
+      if (c === 0x66) break;
+      if (c === 0x67) {
+        var sz = u32(o, p + 3), bt = o[p + 2];
+        if (bt >= 0x40) { if (sz & 0x80000000) o[p + 6] &= 0x7F; else o[p + 2] = 0x7F; } // só os dados do 2º chip
+      } else if (c === 0x90) {
+        var tt = o[p + 2]; if (keys[STREAM2[tt & 0x7F]]) o[p + 2] = (tt & 0x80) ? tt & 0x7F : 0x7F;
+      } else if (CMD2[c] && keys[CMD2[c][0]]) {
+        var m = CMD2[c];
+        if (m[1] === -1) { o[p] = NOP[n]; o[p + 1] = 0; o[p + 2] = 0; }      // comando do 1º chip: vira vazio
+        else if (m[1] === 0) o[p] = m[2];                                     // comando do 2º chip (0xA_): vira o do 1º
+        else if (o[p + m[1]] & 0x80) o[p + m[1]] &= 0x7F;                      // bit 7 marca o 2º chip: tira o bit
+        else { for (var k = 1; k < n; k++) o[p + k] = 0; o[p] = NOP[n]; }
+      }
+      p += n;
+    }
+    return o;
+  }
+  function parse(buf, opts) {
+    var b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    var res = parse1(b, opts);
+    var ver = u32(b, 8), hl = ver >= 0x150 ? 0x34 + u32(b, 0x34) : 0x40; if (ver >= 0x150 && !u32(b, 0x34)) hl = 0x40;
+    var keys = {}, names = {}, any = false;
+    DUAL2.forEach(function (d) { if (d[0] + 4 <= hl && (u32(b, d[0]) & 0x40000000) && (u32(b, d[0]) & 0x3FFFFFFF)) { keys[d[1]] = true; d[2].forEach(function (nm) { names[nm] = true; }); any = true; } });
+    if (!any) return res;
+    var start = hl, end = b.length, eof = u32(b, 4) + 4; if (eof > 4 && eof < end) end = eof;
+    var r2 = parse1(second(b, keys, start, end), { events: opts && opts.events });
+    var ren = {};
+    r2.timbres.forEach(function (tt) { if (names[tt.chip]) { tt.chip += ' #2'; res.timbres.push(tt); } });
+    r2.chips.forEach(function (c) { if (names[c] && res.chips.indexOf(c + ' #2') < 0) res.chips.push(c + ' #2'); });
+    if (res.midi && r2.midi) {
+      r2.midi.chans.forEach(function (m) { if (!names[m.chip]) return; var nid = m.id.replace(m.chip, m.chip + ' #2'); ren[m.id] = nid; m.id = nid; m.chip += ' #2'; res.midi.chans.push(m); });
+      r2.midi.events.forEach(function (e) { if (ren[e.c]) { e.c = ren[e.c]; res.midi.events.push(e); } });
+      res.midi.events.sort(function (x, y) { return x.t - y.t; });
+    }
     return res;
   }
 
@@ -3298,16 +3437,17 @@ var RGMIDI = (function () {
       });
       patchS(w, a);
     } else {
-      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25, mikey: 23 }[t.chipKind] || 0;
+      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25, mikey: 23, ay8930: 7, fds: 15 }[t.chipKind] || 0;
       w.c(type); w.c(0);
       w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
       if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
       var vmax = type === 5 ? 31 : 15; // PC Engine: volume de 0 a 31
       var vols = (t.env || [1]).slice(0, 255).map(function (x) { return Math.max(0, Math.min(vmax, Math.round(x * vmax))); });
       var mac = [[0, vols]];
-      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb')) {
-        var d = (t.duty || []).slice(0, 255).map(function (x) { return x < 0 ? 2 : x & 3; });
-        if (d.length) mac.push([2, d]);
+      if (t.wave === 'pulse' && (t.chipKind === 'nes' || t.chipKind === 'gb' || t.chipKind === 'ay8930')) {
+        var a89 = t.chipKind === 'ay8930';  // AY8930: largura do pulso de 0 a 8 vai no macro EX1 do Furnace
+        var d = (t.duty || []).slice(0, 255).map(function (x) { return x < 0 ? (a89 ? 4 : 2) : (a89 ? Math.min(8, x) : x & 3); });
+        if (d.length) mac.push([a89 ? 5 : 2, d]);
       }
       if (t.wave === 'noise' && (t.chipKind === 'sn' || t.chipKind === 'nes')) mac.push([2, [t.nmode === 'periodic' ? (t.chipKind === 'sn' ? 0 : 1) : (t.chipKind === 'sn' ? 1 : 0)]]);
       w.tag('MA'); a = w.n; w.s(0); w.s(8);
