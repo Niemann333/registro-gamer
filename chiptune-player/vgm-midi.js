@@ -497,8 +497,25 @@ var RGVGM = (function () {
       ['Pulso 1', 'Pulso 2', 'Triângulo', 'Ruído NES'].forEach(function (l) { var pc = new PSGChan(col, l, 'NES APU', REC); mchan(pc.id, pc.chip, l, /Ruído/.test(l) ? 'noise' : 'psg'); nes.ch.push(pc); chans.push(pc); });
       for (var k = 0; k < 4; k++) nes.env.push({ v: 15, acc: 0 });
     }
+    // DMC: samples de 1 bit (delta) lidos da memória do NES (bloco de dados 0xC2 do VGM)
+    var DMC_RATE = [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54];
+    var nesRam = null, dmcCh = null, dmcUntil = 0;
+    function dmcStart() {
+      if (!nesRam) return;
+      var st = 0xC000 + nes.r[0x12] * 64, len = nes.r[0x13] * 16 + 1, lvl = nes.r[0x11] & 127, loop = !!(nes.r[0x10] & 0x40);
+      var rate = nes.clock / DMC_RATE[nes.r[0x10] & 15];
+      if (!dmcCh) dmcCh = pcmChanSet('NES APU', 1, 'DPCM')[0];
+      var s = pcmSample('NES APU', st + ':' + len + ':' + (nes.r[0x10] & 0x4F), function () {
+        var out = new Float32Array(len * 8), v = lvl, o = 0;
+        for (var i = 0; i < len; i++) { var by = nesRam[(st + i) & 0xFFFF]; for (var k = 0; k < 8; k++) { if ((by >> k) & 1) { if (v <= 125) v += 2; } else if (v >= 2) v -= 2; out[o++] = (v - 64) / 64; } }
+        return { data: out, loop: loop ? 0 : -1 };
+      }, rate);
+      dmcCh.keyOn(s, rate, 1);
+      dmcUntil = loop ? 1e15 : t + len * 8 / rate * 44100;
+    }
     function nesWrite(a, d) {
       if (a > 0x17) return;
+      if (a === 0x15) { if (!(d & 0x10)) { if (dmcCh) dmcCh.keyOff(); dmcUntil = 0; } else if (t >= dmcUntil) { nes.r[0x15] = d; dmcStart(); } }
       nes.r[a] = d;
       var ch = a >> 2;
       if (a === 0x15) { nes.en = d; for (var i = 0; i < 4; i++) if (!(d & (1 << i))) nes.len[i] = 0; return; }
@@ -702,6 +719,72 @@ var RGVGM = (function () {
       }
     }
 
+    // ── WonderSwan: 4 canais de onda (32 passos de 4 bits, na RAM do console); o 4 também faz ruído ──
+    var ws = null;
+    if (hclk(0xC0)) {
+      ws = { clock: hclk(0xC0), r: new Uint8Array(0x100), ram: new Uint8Array(0x4000), ch: [] };
+      for (var wi = 0; wi < 4; wi++) { var wpc = new PSGChan(col, 'Canal ' + (wi + 1), 'WonderSwan', REC); mchan(wpc.id, wpc.chip, wpc.label, wi === 3 ? 'noise' : 'psg'); ws.ch.push(wpc); chans.push(wpc); }
+    }
+    function wsWrite(a, d) {
+      var p = 0x80 + (a & 0x7F), old = ws.r[p]; ws.r[p] = d;
+      if (p === 0x90) for (var i = 0; i < 4; i++) if ((d & (1 << i)) && !(old & (1 << i))) ws.ch[i].trig = true;
+    }
+    function wsFrame() {
+      var R = ws.r, ctl = R[0x90], base = (R[0x8F] << 6) & 0x3FFF;
+      for (var c = 0; c < 4; c++) {
+        var pc = ws.ch[c], v = R[0x88 + c], on = (ctl & (1 << c)) && !(c === 1 && (ctl & 0x20));
+        pc.vol = on ? Math.max(v >> 4, v & 15) / 15 : 0;
+        if (c === 3 && (ctl & 0x80)) { pc.wave = { k: 'noise', ck: 'ws', nmode: 'white', nrate: R[0x8E] & 7 }; pc.freq = 0; continue; }
+        var f = R[0x80 + c * 2] | ((R[0x81 + c * 2] & 7) << 8);
+        pc.freq = ws.clock / ((2048 - f) * 32);
+        var tbl = []; for (var i = 0; i < 16; i++) { var by = ws.ram[(base + c * 16 + i) & 0x3FFF]; tbl.push(by & 15); tbl.push(by >> 4); }
+        pc.wave = { k: 'wave', ck: 'ws', tbl: tbl, duty: null };
+      }
+    }
+
+    // ── SAA1099 (Philips, SAM Coupé e placas de PC): 6 canais quadrados com 2 geradores de ruído ──
+    var saa = null;
+    if (hclk(0xC8)) {
+      saa = { clock: hclk(0xC8), r: new Uint8Array(32), ch: [] };
+      for (var sa = 0; sa < 6; sa++) { var spc2 = new PSGChan(col, 'Canal ' + (sa + 1), 'SAA1099', REC); mchan(spc2.id, spc2.chip, spc2.label, 'psg'); saa.ch.push(spc2); chans.push(spc2); }
+    }
+    function saaWrite(a, d) { if (a & 0x80) return; a &= 0x1F; var old = saa.r[a]; saa.r[a] = d; if (a === 0x14 || a === 0x15) for (var i = 0; i < 6; i++) if ((d & (1 << i)) && !(old & (1 << i))) saa.ch[i].trig = true; }
+    function saaFrame() {
+      var R = saa.r, en = R[0x1C] & 1;
+      for (var c = 0; c < 6; c++) {
+        var pc = saa.ch[c], amp = R[c], tone = R[0x14] & (1 << c), nz = R[0x15] & (1 << c);
+        pc.vol = en && (tone || nz) ? Math.max(amp & 15, amp >> 4) / 15 : 0;
+        if (tone) {
+          var oc = (R[0x10 + (c >> 1)] >> ((c & 1) * 4)) & 7;
+          pc.freq = saa.clock / 512 * Math.pow(2, oc) / (511 - R[0x08 + c]);
+          pc.wave = { k: 'pulse', ck: 'saa', duty: 2 };
+        } else { pc.wave = { k: 'noise', ck: 'saa', nmode: 'white', nrate: (R[0x16] >> (c < 3 ? 0 : 4)) & 3 }; pc.freq = 0; }
+      }
+    }
+
+    // ── Pokey (Atari 8 bits e arcades da Atari): 4 canais de onda quadrada ou ruído ──
+    var pokey = null;
+    if (hclk(0xB0)) {
+      pokey = { clock: hclk(0xB0), r: new Uint8Array(16), ch: [] };
+      for (var pk = 0; pk < 4; pk++) { var ppc = new PSGChan(col, 'Canal ' + (pk + 1), 'Pokey', REC); mchan(ppc.id, ppc.chip, ppc.label, 'psg'); pokey.ch.push(ppc); chans.push(ppc); }
+    }
+    function pokeyWrite(a, d) { if (a & 0x80) return; a &= 15; var old = pokey.r[a]; pokey.r[a] = d; if (a < 8 && (a & 1) && !(old & 15) && (d & 15)) pokey.ch[a >> 1].trig = true; }
+    function pokeyFrame() {
+      var R = pokey.r, ac = R[8], base = (ac & 1) ? pokey.clock / 114 : pokey.clock / 28;
+      for (var c = 0; c < 4; c++) {
+        var pc = pokey.ch[c], audc = R[c * 2 + 1], dist = audc >> 5;
+        var joined = (c === 1 && (ac & 0x10)) || (c === 3 && (ac & 0x08));
+        var hidden = (c === 0 && (ac & 0x10)) || (c === 2 && (ac & 0x08));  // o canal de baixo do par só dá o tempo
+        pc.vol = hidden || (audc & 0x10) ? 0 : (audc & 15) / 15;
+        var fast = (c === 0 && (ac & 0x40)) || (c === 2 && (ac & 0x20)) || (joined && (ac & (c === 1 ? 0x40 : 0x20)));
+        var per = joined ? (R[c * 2 - 2] | (R[c * 2] << 8)) : R[c * 2];
+        var div = fast ? per + (joined ? 7 : 4) : per + 1;
+        var clk = fast ? pokey.clock : base;
+        if (dist === 5 || dist === 7) { pc.freq = clk / (2 * div); pc.wave = { k: 'pulse', ck: 'pokey', duty: 2 }; }
+        else { pc.freq = 0; pc.wave = { k: 'noise', ck: 'pokey', nmode: dist === 6 || dist === 2 ? 'periodic' : 'white', nrate: Math.min(15, Math.round(Math.log2(clk / (2 * div)))) }; }
+      }
+    }
+
     // ── AY-3-8910 / SSG dos chips OPN ──
     function makeAY(clock, chipName) {
       var ay = { clock: clock, r: new Uint8Array(16), ch: [] };
@@ -740,6 +823,10 @@ var RGVGM = (function () {
       var k = chipName + '|' + key;
       if (smpDone[k]) return smpDone[k];
       var d = decode(); if (!d || d.data.length < 16) return (smpDone[k] = null);
+      return (smpDone[k] = storeSmp(d, rate));
+    }
+    // guarda um sample decodificado (Float32 de -1 a 1) e descobre a nota (ou a peça de bateria)
+    function storeSmp(d, rate) {
       var data = d.data, srate = rate;
       // no máximo 4 s (e no máximo 32 kHz) para não pesar o navegador
       if (srate > 32000) { var f = Math.ceil(srate / 32000), nd = new Float32Array(Math.floor(data.length / f)); for (var i = 0; i < nd.length; i++) nd[i] = data[i * f]; data = nd; srate /= f; d.loop = d.loop >= 0 ? Math.floor(d.loop / f) : -1; }
@@ -749,7 +836,7 @@ var RGVGM = (function () {
       if (!info.pitched && lp0 >= 0 && data.length - lp0 <= 1024 && data.length - lp0 >= 8) info = { pitched: true, note: midiOf(srate / (data.length - lp0)) };
       var s = { id: id, rate: srate, len: data.length, loop: d.loop >= 0 && d.loop < data.length ? d.loop : -1, base: info.pitched ? info.note : null, drum: info.pitched ? null : drumOf(data, srate) };
       PCMSTORE.map[id] = data;
-      return (smpDone[k] = s);
+      return s;
     }
     // afinação do sample: autocorrelação num trecho depois do ataque
     function pcmPitch(x, rate) {
@@ -769,6 +856,11 @@ var RGVGM = (function () {
         prev = r;
       }
       if (best < 0.8 || !bestLag) return { pitched: false };
+      // um som com altura f cruza o zero pelo menos ~2f vezes por segundo: se cruza bem menos, a "altura" achada é falsa (bumbo, por exemplo)
+      var mean = 0; for (i = 0; i < W; i++) mean += x[st + i]; mean /= W;
+      var rms = Math.sqrt(e0 / W), hy = 0.25 * rms, side = 0, zc = 0; // cruzamentos com histerese: o chiado em volta do zero não conta
+      for (i = 0; i < W; i++) { var xv = x[st + i] - mean; if (xv > hy && side <= 0) { if (side < 0) zc++; side = 1; } else if (xv < -hy && side >= 0) { if (side > 0) zc++; side = -1; } }
+      if (rate / bestLag > 3 * (zc * rate / (2 * W))) return { pitched: false };
       return { pitched: true, note: midiOf(rate / bestLag) };
     }
     // peça de bateria pelo "brilho" (cruzamentos de zero) e pela duração
@@ -1068,10 +1160,11 @@ var RGVGM = (function () {
       return { data: out, loop: -1 };
     }
     function panLR(v) { var l = v & 0x80, r = v & 0x40; return l && !r ? 0 : r && !l ? 127 : 64; }
-    function DeltaT(chipName, clock, romType, fixedShift) {
+    function DeltaT(chipName, clock, romType, fixedShift, div, mono) {
+      this.div = div || 144; this.mono = !!mono;
       this.chip = chipName; this.clock = clock; this.rom = romType; this.fs = fixedShift; this.r = new Uint8Array(16); this.ch = pcmChanSet(chipName, 1, 'ADPCM-B'); this.used = false;
     }
-    DeltaT.prototype.rate = function () { return this.clock / 144 * ((this.r[0x0A] << 8) | this.r[0x09]) / 65536; };
+    DeltaT.prototype.rate = function () { return this.clock / this.div * ((this.r[0x0A] << 8) | this.r[0x09]) / 65536; };
     DeltaT.prototype.write = function (a, d) {
       var R = this.r; R[a] = d; var ch = this.ch[0];
       if (a === 0x09 || a === 0x0A) { ch.setRate(this.rate()); return; }
@@ -1084,10 +1177,11 @@ var RGVGM = (function () {
       var rep = !!(d & 0x10);
       var s = pcmSample(this.chip, 'b' + st + ':' + en + ':' + rep, function () { var x = ymDeltaT(mem, st, en); x.loop = rep ? 0 : -1; return x; }, rt);
       this.used = true;
-      ch.keyOn(s, rt, R[0x0B] / 255, panLR(R[1]));
+      ch.keyOn(s, rt, R[0x0B] / 255, this.mono ? 64 : panLR(R[1]));
     };
     var y08b = fm.ym2608 ? new DeltaT('YM2608', clk.ym2608, 0x81, 0) : null;
     var y10b = fm.ym2610 ? new DeltaT('YM2610', clk.ym2610, 0x83, 8) : null;
+    var y89b = opl.y8950 ? new DeltaT('Y8950', clk.y8950, 0x88, 0, 72, true) : null; // Y8950 (MSX-Audio): ADPCM nos registradores 0x07-0x12 do OPL
     var y10a = fm.ym2610 ? { r: new Uint8Array(0x30), ch: pcmChanSet('YM2610', 6, 'ADPCM-A'), used: false } : null;
     function y10aWrite(a, d) {
       var R = y10a.r; R[a] = d;
@@ -1236,6 +1330,233 @@ var RGVGM = (function () {
       ch.keyOn(s, rt, Math.pow(10, -((R[0x50 + c] >> 1) * 0.375) / 20), opl4Pan(d));
     }
 
+    // ── GA20 (Irem): 4 vozes de PCM de 8 bits; o byte 0 marca o fim do sample ──
+    var ga20 = null;
+    if (hclk(0xE0)) ga20 = { clock: hclk(0xE0), r: new Uint8Array(32), ch: pcmChanSet('GA20', 4, 'Voz') };
+    function ga20Rate(c) { return ga20.clock / 4 / Math.max(1, 0x100 - ga20.r[c * 8 + 4]); }
+    function ga20Write(a, d) {
+      a &= 0x1F; var R = ga20.r; R[a] = d; var c = a >> 3, k = a & 7, ch = ga20.ch[c];
+      if (k === 4) { ch.setRate(ga20Rate(c)); return; }
+      if (k === 5) { ch.setVol(d / (d + 10)); return; }
+      if (k !== 6) return;
+      if (!(d & 2)) { ch.keyOff(); return; }
+      var mem = ROM[0x93]; if (!mem) return;
+      var st = (R[c * 8] | (R[c * 8 + 1] << 8)) << 4;
+      if (st >= mem.length) return;
+      var s = pcmSample('GA20', st, function () {
+        var out = [], i = st; while (i < mem.length && mem[i] !== 0 && out.length < 0x40000) { out.push((mem[i] - 0x80) / 128); i++; }
+        return { data: new Float32Array(out), loop: -1 };
+      }, ga20Rate(c));
+      ch.keyOn(s, ga20Rate(c), R[c * 8 + 5] / (R[c * 8 + 5] + 10));
+    }
+
+    // ── X1-010 (Seta): 16 vozes; cada uma toca sample (PCM de 8 bits) ou onda desenhada de 128 passos com envelope ──
+    var x1 = null;
+    if (hclk(0xD8)) {
+      x1 = { clock: hclk(0xD8), m: new Uint8Array(0x2000), ch: pcmChanSet('X1-010', 16, 'Voz'), w: [], env: new Float64Array(16) };
+      for (var xi = 0; xi < 16; xi++) { var xpc = new PSGChan(col, 'Onda ' + (xi + 1), 'X1-010', REC); mchan(xpc.id, xpc.chip, xpc.label, 'psg'); x1.w.push(xpc); chans.push(xpc); }
+    }
+    function x1Tick() { return x1.clock / 512; }
+    function x1Write(a, d) {
+      a &= 0x1FFF; var M = x1.m, old = M[a]; M[a] = d;
+      if (a >= 0x80) return;                       // 0x80+: formas de onda e envelopes (memória)
+      var v = a >> 3, k = a & 7, o = v * 8, ch = x1.ch[v];
+      if (k !== 0) { if (k === 1 && !(M[o] & 2)) ch.setVol(Math.max(d >> 4, d & 15) / 15); return; }
+      var on = d & 1, was = old & 1;
+      if (on && !was) {
+        x1.env[v] = 0;
+        if (d & 2) { x1.w[v].trig = true; return; } // onda desenhada: o quadro a quadro cuida
+        var mem = ROM[0x91]; if (!mem) return;
+        var st = M[o + 4] << 12, en = ((0xFF ^ M[o + 5]) + 1) << 12, rt = x1Tick() * (M[o + 2]) * ((d & 0x80) ? 1 : 2) / 32;
+        if (en <= st || st >= mem.length || rt <= 0) return;
+        var s = pcmSample('X1-010', st + ':' + en, function () {
+          var n = Math.min(en, mem.length) - st, out = new Float32Array(n);
+          for (var i = 0; i < n; i++) out[i] = ((mem[st + i] << 24) >> 24) / 128;
+          return { data: out, loop: -1 };
+        }, rt);
+        ch.keyOn(s, rt, Math.max(M[o + 1] >> 4, M[o + 1] & 15) / 15);
+      } else if (!on && was) ch.keyOff();
+    }
+    function x1Frame() {
+      var M = x1.m, tk = x1Tick() / 60;
+      for (var v = 0; v < 16; v++) {
+        var o = v * 8, fl = M[o], pc = x1.w[v];
+        if (!(fl & 1) || !(fl & 2)) { pc.vol = 0; continue; }
+        var ev = 0x80 + (M[o + 5] & 0x1F) * 128 + ((x1.env[v] / 1024) & 127), eb = M[ev & 0x1FFF];
+        x1.env[v] += M[o + 4] * tk;
+        if ((fl & 4) && x1.env[v] >= 131072) { M[o] &= ~1; pc.vol = 0; continue; }
+        x1.env[v] %= 131072;
+        pc.vol = Math.max(eb >> 4, eb & 15) / 15;
+        var fr = M[o + 2] | (M[o + 3] << 8);
+        pc.freq = x1Tick() * fr * ((fl & 0x80) ? 1 : 2) / 262144;
+        var wb = 0x1000 + (M[o + 1] & 0x1F) * 128, tbl = [];
+        for (var i = 0; i < 32; i++) tbl.push(Math.round((((M[wb + i * 4] << 24) >> 24) + 128) * 15 / 255));
+        pc.wave = { k: 'wave', ck: 'x1', tbl: tbl, duty: null };
+      }
+    }
+
+    // ── C140 (Namco System 2 / 21) e C219 (Namco NA-1/NA-2): 24 / 16 vozes de PCM de 8 bits ou comprimido ──
+    var c140 = null;
+    if (hclk(0xA8)) {
+      var ctype = hdrLen > 0x96 ? b[0x96] : 0, cclk = hclk(0xA8);
+      c140 = { type: ctype, base: cclk > 1000000 ? cclk / 384 : cclk, r: new Uint8Array(0x200), ch: pcmChanSet(ctype === 2 ? 'C219' : 'C140', ctype === 2 ? 16 : 24, 'Voz') };
+    }
+    // tabelas de compressão (as mesmas do Furnace / MAME)
+    var C140_LAW = new Int16Array(256), C219_LAW = new Int16Array(256);
+    (function () {
+      for (var i = 0; i < 256; i++) {
+        var ex = i & 7, ma = (i >> 3) & 15;
+        C140_LAW[i] = (i & 0x80) ? (((ex ? 0xFE00 : 0xFF00) | (ma << 4)) << (ex ? ex - 1 : 0)) : (((ex ? 0x100 : 0) | (ma << 4)) << (ex ? ex - 1 : 0));
+      }
+      for (i = 0; i < 128; i++) {
+        var cs = i < 16 ? 0x20 * i : i < 24 ? 0x200 + 0x40 * i - 0x400 : i < 48 ? 0x400 + 0x80 * i - 0xC00 : i < 100 ? 0x1000 + 0x100 * i - 0x3000 : 0x4400 + 0x200 * i - 0xC800;
+        C219_LAW[i] = cs; C219_LAW[i + 128] = (~cs) & 0xFFE0;
+      }
+    })();
+    function c140Rate(v) { return c140.base * 2 * ((c140.r[v * 16 + 2] << 8) | c140.r[v * 16 + 3]) / 65536; }
+    function c140Write(a, d) {
+      a &= 0x1FF; var R = c140.r; R[a] = d;
+      if (a >= 0x180) return;
+      var v = a >> 4, k = a & 15, ch = c140.ch[v], o = v * 16; if (!ch) return;
+      if (k === 2 || k === 3) { ch.setRate(c140Rate(v)); return; }
+      if (k === 0 || k === 1) { ch.setVol(Math.max(R[o], R[o + 1]) / 255); return; }
+      if (k !== 5) return;
+      if (!(d & 0x80)) { ch.keyOff(); return; }
+      var mem = ROM[0x8D]; if (!mem) return;
+      var c219 = c140.type === 2, st = (R[o + 6] << 8) | R[o + 7], en = (R[o + 8] << 8) | R[o + 9], lp = (R[o + 10] << 8) | R[o + 11];
+      var comp = c219 ? !!(d & 1) : !!(d & 8), loop = !!(d & 0x10), inv = c219 && !!(d & 0x40);
+      if (c219 && (d & 4)) return;                // voz de ruído: sem sample
+      var bk = R[o + 4], bank = c140.type === 0 ? ((bk & 0x20) >> 2) | (bk & 7) : c140.type === 1 ? ((bk & 0x30) >> 1) | (bk & 7) : 0;
+      function rd(x) { // x = posição do sample
+        if (c219) return mem[(((R[[0x1F7, 0x1F1, 0x1F3, 0x1F5][v >> 2]] & 3) << 17) | ((x ^ 1) & 0x1FFFF)) % mem.length];
+        return mem[((bank << 16) | (x & 0xFFFF)) % mem.length];
+      }
+      if (en <= st) return;
+      var s0 = c219 ? st * 2 : st, n0 = c219 ? (en - st) * 2 : en - st;
+      var s = pcmSample(c219 ? 'C219' : 'C140', bank + ':' + s0 + ':' + n0 + ':' + comp + ':' + inv + ':' + (loop ? lp : -1), function () {
+        var out = new Float32Array(n0);
+        for (var i = 0; i < n0; i++) {
+          var x = rd(s0 + i), sv = comp ? (c219 ? C219_LAW[x] : C140_LAW[x]) : ((x << 24) >> 24) << 8;
+          out[i] = (inv ? -sv : sv) / 32768;
+        }
+        var l0 = loop ? (c219 ? lp * 2 : lp) - s0 : -1;
+        return { data: out, loop: l0 >= 0 && l0 < n0 ? l0 : -1 };
+      }, c140.base * 2);
+      var lv = R[o + 1], rv = R[o];
+      ch.keyOn(s, c140Rate(v), Math.max(lv, rv) / 255, lv + rv ? Math.round(64 + 63 * (rv - lv) / (lv + rv)) : 64);
+    }
+
+    // ── K054539 (Konami): 8 vozes de PCM de 8/16 bits ou DPCM de 4 bits ──
+    var k539 = null;
+    if (hclk(0xA0)) k539 = { clock: hclk(0xA0), r: new Uint8Array(0x230), ch: pcmChanSet('K054539', 8, 'Voz') };
+    var K539_DPCM = [0, 1, 4, 9, 16, 25, 36, 49, -64, -49, -36, -25, -16, -9, -4, -1];
+    function k539Rate(c) { var o = c * 0x20, R = k539.r; return 48000 * (R[o] | (R[o + 1] << 8) | (R[o + 2] << 16)) / 65536; }
+    function k539Vol(c) { return Math.pow(10, -36 * Math.min(0x40, k539.r[c * 0x20 + 3]) / 64 / 20); }
+    function k539Write(a, d) {
+      if (a >= 0x230) return;
+      var R = k539.r; R[a] = d;
+      if (a < 0x100) { var c0 = a >> 5, k = a & 0x1F; if (c0 < 8) { if (k <= 2) k539.ch[c0].setRate(k539Rate(c0)); else if (k === 3) k539.ch[c0].setVol(k539Vol(c0)); } return; }
+      if (a === 0x215) { for (var j = 0; j < 8; j++) if (d & (1 << j)) k539.ch[j].keyOff(); return; }
+      if (a !== 0x214) return;
+      var mem = ROM[0x8C]; if (!mem) return;
+      for (var c = 0; c < 8; c++) {
+        if (!(d & (1 << c))) continue;
+        var o = c * 0x20, st = R[o + 0x0C] | (R[o + 0x0D] << 8) | (R[o + 0x0E] << 16), lp = R[o + 8] | (R[o + 9] << 8) | (R[o + 10] << 16);
+        var typ = (R[0x200 + c * 2] >> 2) & 3, loop = R[0x201 + c * 2] & 1;
+        st %= mem.length;
+        var s = pcmSample('K054539', st + ':' + typ + ':' + (loop ? lp : -1), function () {
+          var out = [], i = st, lpi = -1;
+          if (typ === 0) { while (mem[i % mem.length] !== 0x80 && out.length < 0x40000) { if (i === lp) lpi = out.length; out.push(((mem[i % mem.length] << 24) >> 24) / 128); i++; } }
+          else if (typ === 1) { while (out.length < 0x40000) { var w = mem[i % mem.length] | (mem[(i + 1) % mem.length] << 8); if (w === 0x8000) break; if (i === lp) lpi = out.length; out.push(((w << 16) >> 16) / 32768); i += 2; } }
+          else { var cur = 0; while (out.length < 0x40000) { var by = mem[i % mem.length]; if (by === 0x88) break; if (i === lp) lpi = out.length; for (var h = 0; h < 2; h++) { cur += K539_DPCM[h ? by >> 4 : by & 15] << 8; cur = Math.max(-32768, Math.min(32767, cur)); out.push(cur / 32768); } i++; } }
+          return { data: new Float32Array(out), loop: loop ? Math.max(0, lpi) : -1 };
+        }, k539Rate(c) || 48000);
+        k539.ch[c].keyOn(s, k539Rate(c) || 48000, k539Vol(c));
+      }
+    }
+
+    // ── MultiPCM (Sega Model 1/2): 28 vozes; cada sample tem um cabeçalho de 12 bytes na ROM (como no OPL4) ──
+    var mpcm = null;
+    if (hclk(0x88)) mpcm = { clock: hclk(0x88), slot: 0, reg: 0, r: [], bank0: 0, bank1: 0, ch: pcmChanSet('MultiPCM', 28, 'Voz') };
+    if (mpcm) for (var mi = 0; mi < 28; mi++) mpcm.r.push(new Uint8Array(8));
+    var MPCM_SLOT = [0, 1, 2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 11, 12, 13, -1, 14, 15, 16, 17, 18, 19, 20, -1, 21, 22, 23, 24, 25, 26, 27, -1];
+    function mpcmRate(c) { var R = mpcm.r[c], oc = R[3] >> 4, fn = ((R[3] & 15) << 6) | (R[2] >> 2); if (oc & 8) oc -= 16; return mpcm.clock / 224 * Math.pow(2, oc) * (1024 + fn) / 1024; }
+    function mpcmWrite(port, d) {
+      if (port === 1) { mpcm.slot = MPCM_SLOT[d & 0x1F]; return; }
+      if (port === 2) { mpcm.reg = d > 7 ? 7 : d; return; }
+      var c = mpcm.slot; if (c < 0) return;
+      var R = mpcm.r[c], k = mpcm.reg, old = R[k], ch = mpcm.ch[c]; R[k] = d;
+      if (k === 2 || k === 3) { ch.setRate(mpcmRate(c)); return; }
+      if (k === 5) { ch.setVol(Math.pow(10, -((d >> 1) * 0.375) / 20)); return; }
+      if (k !== 4) return;
+      if ((old & 0x80) && !(d & 0x80)) { ch.keyOff(); return; }
+      if (!(d & 0x80) || (old & 0x80)) return;
+      var mem = ROM[0x89]; if (!mem) return;
+      var sn = R[1] | ((R[2] & 1) << 8), h = mem.subarray(sn * 12, sn * 12 + 12); if (h.length < 12) return;
+      var fmt = h[0] >> 6, st = ((h[0] & 0x3F) << 16) | (h[1] << 8) | h[2], lp = (h[3] << 8) | h[4], en = ((h[5] << 8) | h[6]) ^ 0xFFFF;
+      if (st & 0x100000) st = (st & 0xFFFFF) | ((st & 0x080000) ? mpcm.bank1 : mpcm.bank0);
+      if (!en) return;
+      var rt = mpcmRate(c);
+      var s = pcmSample('MultiPCM', fmt + ':' + st + ':' + lp + ':' + en, function () {
+        var out = new Float32Array(en);
+        for (var n = 0; n < en; n++) {
+          var v;
+          if (fmt & 1) { var o2 = st + (n >> 1) * 3, b1 = mem[(o2 + 1) % mem.length]; v = ((n & 1) ? (mem[(o2 + 2) % mem.length] << 8) | ((b1 & 15) << 4) : (mem[o2 % mem.length] << 8) | (b1 & 0xF0)) << 16 >> 16; }
+          else v = ((mem[(st + n) % mem.length] << 24) >> 24) * 256;
+          out[n] = v / 32768;
+        }
+        var l0 = lp < en ? lp : -1;
+        if (l0 >= 0) { var mx = 0; for (n = l0; n < en; n++) mx = Math.max(mx, Math.abs(out[n])); if (mx < 0.02) l0 = -1; }
+        return { data: out, loop: l0 };
+      }, rt);
+      var pn = R[0] >> 4;
+      ch.keyOn(s, rt, Math.pow(10, -((R[5] >> 1) * 0.375) / 20), pn === 0 ? 64 : pn < 8 ? Math.round(64 + pn * 9) : Math.round(64 - (16 - pn) * 9));
+    }
+
+    // ── ES5506 (Ensoniq OTTO: Taito F3 e outros): 32 vozes de PCM de 16 bits; registradores de 32 bits escritos byte a byte ──
+    var es6 = null;
+    if (hclk(0xD0) && (u32(b, 0xD0) & 0x80000000)) {
+      es6 = { clock: hclk(0xD0), latch: 0, page: 0, act: 0x1F, cr: new Uint32Array(32), fc: new Uint32Array(32), lv: new Uint32Array(32), rv: new Uint32Array(32), st: new Uint32Array(32), en: new Uint32Array(32), acc: new Uint32Array(32), on: [], ch: pcmChanSet('ES5506', 32, 'Voz') };
+      for (var ei = 0; ei < 32; ei++) es6.cr[ei] = 3;
+    }
+    function es6Out() { return es6.clock / (16 * (es6.act + 1)); }
+    function es6Rate(v) { return es6Out() * es6.fc[v] / 2048; }
+    function es6Vol(x) { return Math.pow(2, (((x >>> 4) & 0xFFF) - 0xFFF) / 256); } // volume em escala logarítmica (6 dB a cada 256)
+    function es6Write(a, d) {
+      var sh = 24 - ((a & 3) << 3);
+      es6.latch = ((es6.latch & ~(0xFF << sh)) | (d << sh)) >>> 0;
+      if ((a & 3) !== 3) return;
+      var reg = (a >> 2) & 15, v = es6.latch; es6.latch = 0;
+      if (reg === 15) { es6.page = v & 0x7F; return; }
+      if (reg >= 13 || (es6.page & 0x40)) return;
+      var vc = es6.page & 31, ch = es6.ch[vc];
+      if (es6.page & 0x20) {
+        if (reg === 0) es6Cr(vc, v); else if (reg === 1) es6.st[vc] = v; else if (reg === 2) es6.en[vc] = v; else if (reg === 3) es6.acc[vc] = v;
+        return;
+      }
+      if (reg === 0) es6Cr(vc, v);
+      else if (reg === 1) { es6.fc[vc] = v & 0x1FFFF; ch.setRate(es6Rate(vc)); }
+      else if (reg === 2 || reg === 4) { if (reg === 2) es6.lv[vc] = v; else es6.rv[vc] = v; ch.setVol(Math.max(es6Vol(es6.lv[vc]), es6Vol(es6.rv[vc]))); }
+      else if (reg === 11) es6.act = Math.max(4, v & 31);
+    }
+    function es6Cr(vc, v) {
+      es6.cr[vc] = v;
+      var on = (v & 3) === 0, ch = es6.ch[vc];
+      if (!on) { if (es6.on[vc]) ch.keyOff(); es6.on[vc] = false; return; }
+      if (es6.on[vc]) return;
+      es6.on[vc] = true;
+      var mem = ROM['es' + ((v >> 14) & 3)]; if (!mem) return;
+      var s0 = es6.acc[vc] >>> 11, ls = es6.st[vc] >>> 11, e0 = es6.en[vc] >>> 11, loop = !!(v & 8), rt = es6Rate(vc);
+      if (e0 <= s0 || s0 * 2 >= mem.length || rt <= 0) return;
+      var s = pcmSample('ES5506', ((v >> 14) & 3) + ':' + s0 + ':' + e0 + ':' + (loop ? ls : -1), function () {
+        var n = Math.min(e0, (mem.length >> 1) - 1) - s0 + 1, out = new Float32Array(Math.max(0, n));
+        for (var i = 0; i < n; i++) { var o = (s0 + i) * 2; out[i] = (((mem[o] | (mem[o + 1] << 8)) << 16) >> 16) / 32768; }
+        return { data: out, loop: loop && ls >= s0 && ls < e0 ? ls - s0 : -1 };
+      }, rt);
+      var l = es6Vol(es6.lv[vc]), r = es6Vol(es6.rv[vc]);
+      ch.keyOn(s, rt, Math.max(l, r), l + r ? Math.round(64 + 63 * (r - l) / (l + r)) : 64);
+    }
+
     // fluxos (streams) do VGM para chips de sample que não são o DAC do YM2612
     var strm = {}, strmF = {};
     function streamHit(sid, blk, len, freq) {
@@ -1244,13 +1565,31 @@ var RGVGM = (function () {
         var key = 'b' + blk.id + ':' + blk.off + ':' + len;
         var s = pcmSample('OKIM6258', key, function () { return okiDecode(blk.data, blk.off, Math.min(blk.data.length, blk.off + len), true); }, freq ? freq * 2 : oki58Rate());
         oki58.ch[0].keyOn(s, freq ? freq * 2 : oki58Rate(), 1);
+      } else if (chipT === 0x21 && ws) { // WonderSwan: voz de PCM de 8 bits mandada em fluxo
+        if (!ws.pcm) ws.pcm = pcmChanSet('WonderSwan', 1, 'PCM')[0];
+        var fr = freq || 24000;
+        var s2 = pcmSample('WonderSwan', 'b' + blk.id + ':' + blk.off + ':' + len, function () {
+          var out = new Float32Array(len); for (var i = 0; i < len; i++) out[i] = (blk.data[blk.off + i] - 128) / 128; return { data: out, loop: -1 };
+        }, fr);
+        ws.pcm.keyOn(s2, fr, 1);
       }
     }
 
     // ── percorre os comandos ──
+    var UNSUP = { 0xD6: 'ES5505', 0xD5: 'ES5503', 0xB6: 'uPD7759', 0xC5: 'SCSP', 0xD1: 'YMF271', 0x40: 'Mikey (Lynx)' };
     var p = hdrLen, t = 0, nextFrame = FRAME, end = b.length, guard = 0;
     var dacSeek = null, dacLast = -1e9, dacSeen = false, streamChip = {};
     var PCM = opts && opts.pcm ? { bank: [], blocks: [], ids: {}, streamFreq: {}, streamBank: {} } : null;
+    // PWM do 32X: o som sai como um fluxo de valores (como o DAC); vira 8 bits centrado em 128 para recortar igual
+    var PW = PCM && hclk(0x70) ? { v: new Uint8Array(1 << 16), t: new Float64Array(1 << 16), n: 0, seeks: [], cyc: 0, L: 0, R: 0 } : null;
+    function pwmWrite(r, v) {
+      if (r === 1) { PW.cyc = v; return; }
+      if (r === 2) { PW.L = v; return; }
+      if (r === 3) PW.R = v; else if (r === 4) PW.L = PW.R = v; else return;
+      var cy = PW.cyc || 0x5C3, x = Math.max(0, Math.min(255, Math.round((PW.L + PW.R) / 2 * 256 / cy)));
+      if (PW.n === PW.v.length) { var nv = new Uint8Array(PW.n * 2); nv.set(PW.v); PW.v = nv; var nt = new Float64Array(PW.n * 2); nt.set(PW.t); PW.t = nt; }
+      PW.v[PW.n] = x; PW.t[PW.n] = t; PW.n++;
+    }
     var pcmLen = 0, dacCur = null; // sample que o DAC está tocando agora (via 0x8n)
     // fluxo completo do DAC (valor + tempo de cada escrita), para recortar em samples exatos
     var DS = PCM ? { v: new Uint8Array(1 << 16), t: new Float64Array(1 << 16), n: 0, seeks: [], ptr: 0, st: null } : null;
@@ -1308,6 +1647,10 @@ var RGVGM = (function () {
         if (gb) gbFrame();
         if (huc) hucFrame();
         if (scc) sccFrame();
+        if (ws) wsFrame();
+        if (saa) saaFrame();
+        if (pokey) pokeyFrame();
+        if (x1) x1Frame();
         if (vsu) vsuFrame();
         for (var a = 0; a < ays.length; a++) ayFrame(ays[a]);
         for (var c = 0; c < chans.length; c++) chans[c].frame();
@@ -1327,7 +1670,7 @@ var RGVGM = (function () {
         if (c === 0x5A) { if (opl.ym3812) oplWrite(opl.ym3812, 0, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xAA) { if (opl.ym3812b) oplWrite(opl.ym3812b, 0, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x5B) { if (opl.ym3526) oplWrite(opl.ym3526, 0, b[p + 1], b[p + 2]); p += 3; continue; }
-        if (c === 0x5C) { if (opl.y8950) oplWrite(opl.y8950, 0, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0x5C) { if (y89b && b[p + 1] >= 0x07 && b[p + 1] <= 0x12) y89b.write(b[p + 1] - 0x07, b[p + 1] === 0x08 ? (b[p + 2] & 0x0F) | 0x80 : b[p + 2]); if (opl.y8950) oplWrite(opl.y8950, 0, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x5E || c === 0x5F) { if (opl.ymf262) oplWrite(opl.ymf262, c - 0x5E, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x50) { if (sn) snWrite(b[p + 1], sn); p += 2; continue; }
         if (c === 0x30) { if (sn2) snWrite(b[p + 1], sn2); p += 2; continue; }
@@ -1342,6 +1685,18 @@ var RGVGM = (function () {
         if (c === 0xB1) { if (rf2) rfWrite(rf2, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xC1) { if (rf) rfMem(rf, rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
         if (c === 0xC2) { if (rf2) rfMem(rf2, rf2.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xBE) { if (es6 && !(b[p + 1] & 0x80)) es6Write(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xBC) { if (ws) wsWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC6) { if (ws) ws.ram[((b[p + 1] << 8) | b[p + 2]) & 0x3FFF] = b[p + 3]; p += 4; continue; }
+        if (c === 0xBD) { if (saa) saaWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xBB) { if (pokey) pokeyWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xBF) { if (ga20 && !(b[p + 1] & 0x80)) ga20Write(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC8) { if (x1 && !(b[p + 1] & 0x80)) x1Write((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xD4) { if (c140 && !(b[p + 1] & 0x80)) c140Write((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xD3) { if (k539 && !(b[p + 1] & 0x80)) k539Write((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xB5) { if (mpcm && !(b[p + 1] & 0x80)) mpcmWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC3) { if (mpcm && !(b[p + 1] & 0x80)) { var mbo = (b[p + 2] | (b[p + 3] << 8)) << 16; if (b[p + 1] & 1) mpcm.bank0 = mbo; if (b[p + 1] & 2) mpcm.bank1 = mbo; } p += 4; continue; }
+        if (c === 0xB2) { if (PW) pwmWrite(b[p + 1] >> 4, ((b[p + 1] & 15) << 8) | b[p + 2]); p += 3; continue; }
         if (c === 0xD2) { if (scc) sccWrite(b[p + 1] & 0x7F, b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0xC7) { if (vsu) vsuWrite((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0x5D) { if (ymz) ymzWrite(b[p + 1], b[p + 2]); p += 3; continue; }
@@ -1422,7 +1777,9 @@ var RGVGM = (function () {
         if (c === 0x67) {
           var bsz = u32(b, p + 3) & 0x7FFFFFFF, btype = b[p + 2];
           if (PCM && btype === 0x00) { PCM.blocks.push({ start: pcmLen, len: bsz }); PCM.bank.push(b.subarray(p + 7, p + 7 + bsz)); pcmLen += bsz; }
-          if (btype >= 0x80 && btype < 0xC0 && bsz > 8) romPut(btype, u32(b, p + 7), u32(b, p + 11), b.subarray(p + 15, p + 7 + bsz));
+          if (btype === 0x90 && bsz > 8) { var esa = u32(b, p + 11); romPut('es' + ((esa >>> 28) & 3), Math.min(u32(b, p + 7), 0x800000), esa & 0x0FFFFFFF, b.subarray(p + 15, p + 7 + bsz)); } // ES5506: 4 bancos
+          else if (btype >= 0x80 && btype < 0xC0 && bsz > 8) romPut(btype, u32(b, p + 7), u32(b, p + 11), b.subarray(p + 15, p + 7 + bsz));
+          if (btype === 0xC2 && nes && bsz > 2) { if (!nesRam) nesRam = new Uint8Array(0x10000); var na = b[p + 7] | (b[p + 8] << 8); nesRam.set(b.subarray(p + 9, p + 7 + bsz).subarray(0, 0x10000 - na), na); }
           var rfB = btype === 0xC0 ? rf : btype === 0xC1 ? rf2 : null;
           if (rfB && bsz > 2) { var ra = b[p + 7] | (b[p + 8] << 8); for (var ri = 0; ri < bsz - 2; ri++) rfMem(rfB, ra + ri, b[p + 9 + ri]); }
           if (btype < 0x40 && btype !== 0x00) { (STREAMBLK[btype] = STREAMBLK[btype] || []).push({ id: (STREAMBLK[btype] || []).length, data: b.subarray(p + 7, p + 7 + bsz), off: 0 }); }
@@ -1441,6 +1798,7 @@ var RGVGM = (function () {
           }
           p += 12; continue;
         }
+        if (UNSUP[c] && unsupported.indexOf(UNSUP[c]) < 0) unsupported.push(UNSUP[c]); // chip que ainda não vira timbre
         if (c >= 0x90 && c <= 0x95) { p += [5, 5, 6, 11, 2, 5][c - 0x90]; continue; }
         if (c >= 0x30 && c <= 0x3F) { p += 2; continue; }
         if (c >= 0x40 && c <= 0x4E) { p += 3; continue; }
@@ -1491,8 +1849,8 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
-    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vsu) chips.push('VSU');
-    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B']].forEach(function (x) {
+    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
+    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
     }); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
     chips = chips.filter(function (x, i) { return chips.indexOf(x) === i; });
@@ -1524,8 +1882,38 @@ var RGVGM = (function () {
         res.dacCut = cut; // alternativa (o conversor escolhe a que der menos samples)
         if (!cut.bySeek || !Object.keys(smp).length) { res.dacHits = cut.hits; cut.list.forEach(function (x) { res.pcm[x.id] = x; }); }
       }
+      dacTimbres(res);
+      pwmTimbres(res);
       res.rateHz = ver >= 0x101 ? u32(b, 0x24) : 0;
       res.clocks = clk;
+    }
+    // samples do DAC do YM2612 (Mega Drive) viram timbres de sample, como os dos outros chips
+    function dacTimbres(res) {
+      var hits = res.dacHits && res.dacHits.length ? res.dacHits : (REC || []).filter(function (e) { return e.k === 'hit'; });
+      segTimbres(res, hits, res.pcm, 'YM2612', 'DAC (samples)');
+    }
+    // pedaços recortados de um fluxo (DAC do YM2612, PWM do 32X) → timbres de sample
+    function segTimbres(res, hits, map, chip, label) {
+      var uses = {}; hits.forEach(function (h) { if (map[h.id]) uses[h.id] = (uses[h.id] || 0) + 1; });
+      var ids = Object.keys(uses).sort(function (a, b2) { return uses[b2] - uses[a]; }).slice(0, 40);
+      var n0 = res.timbres.filter(function (x) { return x.chip === chip; }).length;
+      ids.forEach(function (id) {
+        var sp = map[id], u = sp.data, f = new Float32Array(u.length);
+        for (var i = 0; i < u.length; i++) f[i] = (u[i] - 128) / 128;
+        var s = storeSmp({ data: f, loop: -1 }, sp.rate || 8000); if (!s) return;
+        var drum = s.base == null, ch = {}; ch[label] = uses[id];
+        var tb = { type: 'pcm', pcmId: s.id, rate: s.rate, len: s.len, loop: s.loop, base: s.base, drum: s.drum, tune: 0,
+          chip: chip, count: uses[id], chans: ch, chanList: [label], lo: drum ? 999 : s.base, hi: drum ? -999 : s.base, median: drum ? 60 : s.base, n: ++n0, dac: id };
+        tb.role = drum ? 'Percussão' : roleOf(tb);
+        res.timbres.push(tb);
+      });
+      if (ids.length && res.chips.indexOf(chip) < 0) res.chips.push(chip);
+    }
+    function pwmTimbres(res) {
+      if (!PW || !PW.n) return;
+      var cut = dacSegments(PW), map = {};
+      cut.list.forEach(function (x) { map[x.id] = x; });
+      segTimbres(res, cut.hits, map, '32X PWM', 'PWM');
     }
     // tamanho e ponto de volta (loop) da música: o piano roll e o conversor usam
     res.loopSamples = u32(b, 0x20); res.totalSamples = u32(b, 0x18);
@@ -2577,7 +2965,7 @@ var RGMIDI = (function () {
       });
       patchS(w, a);
     } else {
-      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18 }[t.chipKind] || 0;
+      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25 }[t.chipKind] || 0;
       w.c(type); w.c(0);
       w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
       if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
