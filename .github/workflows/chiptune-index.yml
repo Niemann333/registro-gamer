@@ -4,6 +4,7 @@ on:
     paths:
       - 'Chiptunes/**'
       - 'tools/gerar_subfaixas.py'
+      - 'tools/gerar_indice_tracker.py'
   workflow_dispatch:
 permissions:
   contents: write
@@ -59,6 +60,8 @@ jobs:
           EOF
       - name: Gerar subfaixas.json (faixas dentro de NSF, GBS, SID, SAP, KSS)
         run: python3 tools/gerar_subfaixas.py
+      - name: Gerar tracker-index.json (o que o Tracker abre: projetos .fur/.dmf, módulos, VGM)
+        run: python3 tools/gerar_indice_tracker.py
       - name: Commit do índice
         run: |
           git config user.name "github-actions[bot]"
@@ -66,7 +69,7 @@ jobs:
           # O índice é gerado a partir das pastas: se o main mudou no meio do caminho,
           # em vez de tentar mesclar o JSON, pega o main novo e gera de novo.
           for tentativa in 1 2 3 4 5; do
-            git add chiptune-player/chiptunes-index.json chiptune-player/subfaixas.json
+            git add chiptune-player/chiptunes-index.json chiptune-player/subfaixas.json chiptune-player/tracker-index.json
             if git diff --staged --quiet; then echo "Nada mudou"; exit 0; fi
             git commit -q -m "ci: atualiza índice de chiptunes [skip ci]"
             if git push; then exit 0; fi
@@ -94,6 +97,7 @@ jobs:
               json.dump(scan("Chiptunes"), f, ensure_ascii=False)
           EOF
             python3 tools/gerar_subfaixas.py
+            python3 tools/gerar_indice_tracker.py
             sleep $((tentativa * 5))
           done
           echo "Não consegui gravar o índice depois de 5 tentativas"; exit 1
