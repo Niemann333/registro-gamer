@@ -834,7 +834,7 @@ var RGVGM = (function () {
       var id = 's' + (PCMSTORE.n++);
       var lp0 = d.loop >= 0 && d.loop < data.length ? d.loop : -1, info = pcmPitch(data, srate);
       if (!info.pitched && lp0 >= 0 && data.length - lp0 <= 1024 && data.length - lp0 >= 8) info = { pitched: true, note: midiOf(srate / (data.length - lp0)) };
-      var s = { id: id, rate: srate, len: data.length, loop: d.loop >= 0 && d.loop < data.length ? d.loop : -1, base: info.pitched ? info.note : null, drum: info.pitched ? null : drumOf(data, srate) };
+      var s = { id: id, r0: rate, rate: srate, len: data.length, loop: d.loop >= 0 && d.loop < data.length ? d.loop : -1, base: info.pitched ? info.note : null, drum: info.pitched ? null : drumOf(data, srate) };
       PCMSTORE.map[id] = data;
       return s;
     }
@@ -878,7 +878,7 @@ var RGVGM = (function () {
       if (!s) return;
       if (at != null) { var tsave = t; t = at; this.keyOn(s, playRate, vol, pan); t = tsave; pcmOutOfOrder = true; return; }
       this.keyOff();
-      var drum = s.base == null, note = drum ? 60 : s.base + 12 * Math.log2(playRate / s.rate);
+      var drum = s.base == null, note = drum ? 60 : s.base + 12 * Math.log2(playRate / (s.r0 || s.rate)); // r0: taxa antes de reduzir para 32 kHz
       var self = this;
       var tbObj = col.add(this.chip + '|pcm|' + s.id, function () {
         return { type: 'pcm', pcmId: s.id, rate: s.rate, len: s.len, loop: s.loop, base: s.base, drum: s.drum, tune: 0 };
@@ -895,7 +895,7 @@ var RGVGM = (function () {
     var pcmOutOfOrder = false;
     PCMChan.prototype.setRate = function (r) {
       var o = this.on; if (!o || o.drum || !REC || !r) return;
-      var n = o.s.base + 12 * Math.log2(r / o.s.rate);
+      var n = o.s.base + 12 * Math.log2(r / (o.s.r0 || o.s.rate));
       if (Math.abs(n - o.n) > 0.05) { REC.push({ c: this.id, t: t, k: 'pitch', n: n }); o.n = n; }
     };
     PCMChan.prototype.setVol = function (v) { var o = this.on; if (!o || !REC) return; if (Math.abs(v - o.v) > 0.02) { REC.push({ c: this.id, t: t, k: 'vol', v: v }); o.v = v; } };
@@ -1557,6 +1557,325 @@ var RGVGM = (function () {
       ch.keyOn(s, rt, Math.max(l, r), l + r ? Math.round(64 + 63 * (r - l) / (l + r)) : 64);
     }
 
+    // ── YMF271 (OPX, Yamaha: arcades da Seibu, Jaleco...): 12 grupos de 4 slots; cada grupo é FM de 4, 3+1 ou 2×2 operadores
+    //    (com 8 ligações a 16 algoritmos e várias formas de onda) ou PCM. FM vira timbre "opx"; PCM vira sample ──
+    var OPX_FMTAB = [0, 1, 2, -1, 3, 4, 5, -1, 6, 7, 8, -1, 9, 10, 11, -1], OPX_PCMTAB = [0, 4, 8, -1, 12, 16, 20, -1, 24, 28, 32, -1, 36, 40, 44, -1];
+    var opx = null;
+    if (hclk(0x64)) {
+      opx = { clock: hclk(0x64), latch: new Uint8Array(8), s: [], sync: new Uint8Array(12), rec: {}, pcm: {} };
+      for (var oi = 0; oi < 48; oi++) opx.s.push({ kon: 0, dt: 0, mul: 0, tl: 127, ks: 0, ar: 0, d1r: 0, d2r: 0, d1l: 0, rr: 0, fnum: 0, block: 0, latch: 0, fb: 0, wave: 0, acc: 0, alg: 0, lv: [0, 0, 0, 0], pst: 0, pen: 0, plp: 0, pfs: 0, p12: 0 });
+    }
+    function opxVoice(bank, g) {
+      switch (opx.sync[g]) {
+        case 0: return bank === 0 ? [g, g + 12, g + 24, g + 36] : null;
+        case 1: return bank === 0 ? [g, g + 24] : bank === 1 ? [g + 12, g + 36] : null;
+        case 2: return bank === 0 ? [g, g + 12, g + 24] : bank === 3 ? [g + 36] : null;
+        default: return [12 * bank + g];
+      }
+    }
+    function opxBlock(s) { return ((s.block ^ 8) - 8); }
+    function opxHz(s) { return 2 * s.fnum * Math.pow(2, opxBlock(s) - 7) * (opx.clock / 384) / 32768; }
+    function opxRec(bank, g) { // um "canal" por (grupo, banco) que dá nota
+      var id = 'YMF271 · G' + (g + 1) + (bank ? '.' + (bank + 1) : '');
+      var r = opx.rec[id]; if (!r) r = opx.rec[id] = { id: id, label: 'Grupo ' + (g + 1) + (bank ? '.' + (bank + 1) : ''), seen: false, on: null };
+      return r;
+    }
+    function opxOff(r) { if (r.on && REC) REC.push({ c: r.id, t: t, k: 'off' }); r.on = null; }
+    function opxKeyOn(bank, g) {
+      var sl = opxVoice(bank, g); if (!sl) return;
+      var head = opx.s[sl[0]], r = opxRec(bank, g);
+      var vol = Math.pow(2, -(head.lv[0] < 13 ? head.lv[0] : 16) / 2) * (head.lv[0] & 1 ? 0.75 : 1);
+      var lvl = Math.max(head.lv[0] < 13 ? 1 : 0, head.lv[1] < 13 ? 1 : 0); if (!lvl) vol = 0;
+      if (sl.length === 1 && head.wave === 7 && (sl[0] & 3) === 0) { opxPcm(sl[0], bank, g); return; }
+      if (head.wave === 7) return;
+      var n = sl.length, alg = n === 4 ? head.alg & 15 : n === 3 ? head.alg & 7 : n === 2 ? head.alg & 3 : 0;
+      var ops = sl.map(function (k) { var s = opx.s[k]; return { ar: s.ar, d1r: s.d1r, d2r: s.d2r, rr: s.rr, sl: s.d1l, tl: s.tl, ks: s.ks, mul: s.mul, dt: s.dt, ws: s.wave > 6 ? 0 : s.wave, fb: s.fb, acc: s.acc }; });
+      var note = midiOf(opxHz(head));
+      var key = 'YMF271|opx|' + n + ':' + alg + '|' + ops.map(function (o) { return [o.ar, o.d1r, o.d2r, o.rr, o.sl, o.tl, o.ks, o.mul, o.dt, o.ws, o.fb, o.acc].join(','); }).join('|');
+      var tbObj = col.add(key, function () { return { type: 'opx', mode: n, alg: alg, ops: ops, rate: opx.clock / 384, tune: 0 }; }, r.label, note, 'YMF271');
+      opxOff(r);
+      if (!REC) return;
+      if (!r.seen) { r.seen = true; mchan(r.id, 'YMF271', r.label, 'fm'); }
+      var ev = { c: r.id, t: t, k: 'on', n: note, v: Math.max(0.05, vol), pan: 64, tb: tbObj };
+      REC.push(ev); r.on = { n: note, head: sl[0] };
+    }
+    function opxPcm(k, bank, g) {
+      var s = opx.s[k], mem = ROM[0x85]; if (!mem) return;
+      var key = 'pcm' + k;
+      if (!opx.pcm[key]) opx.pcm[key] = pcmChanSet('YMF271', 1, 'PCM ' + (g + 1) + (bank ? '.' + (bank + 1) : ''))[0];
+      var ch = opx.pcm[key], fs = opx.clock / 384;
+      var step = (((s.fnum & 0x7FF) | 0x800) / 2048) * Math.pow(2, opxBlock(s)) * (s.mul ? s.mul : 0.5) / Math.pow(2, s.pfs);
+      var rt = fs * step, st = s.pst, en = s.pen, lp = s.plp, b12 = s.p12;
+      if (!en || st >= mem.length) return;
+      var smp = pcmSample('YMF271', st + ':' + en + ':' + lp + ':' + b12, function () {
+        var out = new Float32Array(en);
+        for (var i = 0; i < en; i++) {
+          var v;
+          if (!b12) v = ((mem[(st + i) % mem.length] << 24) >> 24) << 4;
+          else { var a3 = st + (i >> 1) * 3; v = (i & 1) ? (mem[(a3 + 2) % mem.length] << 4) | (mem[(a3 + 1) % mem.length] >> 4) : (mem[a3 % mem.length] << 4) | (mem[(a3 + 1) % mem.length] & 15); v = ((v & 0xFFF) ^ 0x800) - 0x800; }
+          out[i] = v / 2048;
+        }
+        var l0 = lp < en ? lp : -1;
+        if (l0 >= 0) { var mx = 0; for (i = l0; i < en; i++) mx = Math.max(mx, Math.abs(out[i])); if (mx < 0.02 || en - l0 < 4) l0 = -1; } // laço mudo no fim = toca uma vez
+        return { data: out, loop: l0 };
+      }, fs * (s.pfs ? 1 / Math.pow(2, s.pfs) : 1));
+      ch.keyOn(smp, rt, Math.pow(10, -(s.tl * 0.75) / 20));
+    }
+    function opxSlotReg(k, reg, d) {
+      var s = opx.s[k];
+      switch (reg) {
+        case 0x3: s.mul = d & 15; s.dt = (d >> 4) & 7; break;
+        case 0x4: s.tl = d & 0x7F; break;
+        case 0x5: s.ar = d & 31; s.ks = (d >> 5) & 7; break;
+        case 0x6: s.d1r = d & 31; break;
+        case 0x7: s.d2r = d & 31; break;
+        case 0x8: s.rr = d & 15; s.d1l = (d >> 4) & 15; break;
+        case 0x9: s.fnum = ((s.latch & 15) << 8) | d; s.block = s.latch >> 4; break;
+        case 0xA: s.latch = d; break;
+        case 0xB: s.wave = d & 7; s.fb = (d >> 4) & 7; s.acc = (d >> 7) & 1; break;
+        case 0xC: s.alg = d & 15; break;
+        case 0xD: s.lv[0] = d >> 4; s.lv[1] = d & 15; break;
+        case 0xE: s.lv[2] = d >> 4; s.lv[3] = d & 15; break;
+      }
+    }
+    function opxWrite(port, a, d) {
+      if (port === 4) {                                   // atributos de PCM
+        var k = OPX_PCMTAB[a & 15]; if (k < 0) return; var s = opx.s[k];
+        switch (a >> 4) {
+          case 0: s.pst = (s.pst & 0xFFFF00) | d; break; case 1: s.pst = (s.pst & 0xFF00FF) | (d << 8); break; case 2: s.pst = (s.pst & 0xFFFF) | ((d & 0x7F) << 16); break;
+          case 3: s.pen = (s.pen & 0xFFFF00) | d; break; case 4: s.pen = (s.pen & 0xFF00FF) | (d << 8); break; case 5: s.pen = (s.pen & 0xFFFF) | ((d & 0x7F) << 16); break;
+          case 6: s.plp = (s.plp & 0xFFFF00) | d; break; case 7: s.plp = (s.plp & 0xFF00FF) | (d << 8); break; case 8: s.plp = (s.plp & 0xFFFF) | ((d & 0x7F) << 16); break;
+          case 9: s.pfs = d & 3; s.p12 = (d >> 2) & 1; break;
+        }
+        return;
+      }
+      if (port === 6) { if ((a & 0xF0) === 0) { var gg = OPX_FMTAB[a & 15]; if (gg >= 0) opx.sync[gg] = d & 3; } return; }
+      if (port > 3) return;
+      var g = OPX_FMTAB[a & 15], reg = a >> 4; if (g < 0) return;
+      var bank = port, sl = opxVoice(bank, g);
+      var bcast = (reg === 0 || reg === 9 || reg === 0xA || reg === 0xC || reg === 0xD || reg === 0xE) && sl && opx.sync[g] !== 3;
+      if (reg !== 0) {
+        if (bcast) sl.forEach(function (k) { opxSlotReg(k, reg, d); }); else opxSlotReg(12 * bank + g, reg, d);
+        if (reg === 9 && sl) { var r = opxRec(bank, g); if (r.on && REC) { var nn = midiOf(opxHz(opx.s[sl[0]])); if (Math.abs(nn - r.on.n) > 0.05) { REC.push({ c: r.id, t: t, k: 'pitch', n: nn }); r.on.n = nn; } } }
+        return;
+      }
+      if (!sl) { opx.s[12 * bank + g].kon = d & 1; return; }
+      sl.forEach(function (k) { opx.s[k].kon = d & 1; });
+      if (d & 1) opxKeyOn(bank, g);
+      else { var hs = opx.s[sl[0]]; if (sl.length === 1 && hs.wave === 7) { var pc = opx.pcm['pcm' + sl[0]]; if (pc) pc.keyOff(); } else opxOff(opxRec(bank, g)); }
+    }
+
+    // ── ES5505 (Ensoniq OTTO, versão de 16 bits): 32 vozes; registradores de 16 bits ──
+    var es5 = null;
+    if (hclk(0xD0) && !(u32(b, 0xD0) & 0x80000000)) {
+      es5 = { clock: hclk(0xD0), page: 0, act: 0x1F, cr: new Uint16Array(32), fc: new Uint16Array(32), lv: new Uint8Array(32), rv: new Uint8Array(32), st: new Uint32Array(32), en: new Uint32Array(32), acc: new Uint32Array(32), on: [], ch: pcmChanSet('ES5505', 32, 'Voz') };
+      for (var e5 = 0; e5 < 32; e5++) es5.cr[e5] = 3;
+    }
+    function es5Rate(v) { return es5.clock / (16 * (es5.act + 1)) * es5.fc[v] / 512; }
+    function es5Vol(x) { return Math.pow(2, (x - 255) / 16); }
+    function es5Write(a, d) {
+      var reg = a & 15;
+      if (reg >= 12) { if (reg === 13) es5.act = Math.max(7, d & 31); else if (reg === 15) es5.page = d & 0x7F; return; }
+      if (es5.page & 0x60) return;
+      var vc = es5.page & 31, ch = es5.ch[vc];
+      switch (reg) {
+        case 0: es5Cr(vc, d); break;
+        case 1: es5.fc[vc] = (d >> 1) & 0x7FFF; ch.setRate(es5Rate(vc)); break;
+        case 2: es5.st[vc] = (es5.st[vc] & 0xFFFF) | ((d & 0x1FFF) << 16); break;
+        case 3: es5.st[vc] = (es5.st[vc] & 0x1FFF0000) | (d & 0xFFE0); break;
+        case 4: es5.en[vc] = (es5.en[vc] & 0xFFFF) | ((d & 0x1FFF) << 16); break;
+        case 5: es5.en[vc] = (es5.en[vc] & 0x1FFF0000) | (d & 0xFFE0); break;
+        case 8: es5.lv[vc] = d >> 8; ch.setVol(Math.max(es5Vol(es5.lv[vc]), es5Vol(es5.rv[vc]))); break;
+        case 9: es5.rv[vc] = d >> 8; ch.setVol(Math.max(es5Vol(es5.lv[vc]), es5Vol(es5.rv[vc]))); break;
+        case 10: es5.acc[vc] = (es5.acc[vc] & 0xFFFF) | ((d & 0x1FFF) << 16); break;
+        case 11: es5.acc[vc] = (es5.acc[vc] & 0x1FFF0000) | d; break;
+      }
+    }
+    function es5Cr(vc, v) {
+      es5.cr[vc] = v;
+      var on = (v & 3) === 0, ch = es5.ch[vc];
+      if (!on) { if (es5.on[vc]) ch.keyOff(); es5.on[vc] = false; return; }
+      if (es5.on[vc]) return;
+      es5.on[vc] = true;
+      var bk = (v >> 2) & 1, mem = ROM['es' + bk] || ROM['es0']; if (!mem) return;
+      var s0 = es5.acc[vc] >>> 9, ls = es5.st[vc] >>> 9, e0 = es5.en[vc] >>> 9, loop = !!(v & 8), rt = es5Rate(vc);
+      if (e0 <= s0 || s0 * 2 >= mem.length || rt <= 0) return;
+      var s = pcmSample('ES5505', bk + ':' + s0 + ':' + e0 + ':' + (loop ? ls : -1), function () {
+        var n = Math.min(e0, (mem.length >> 1) - 1) - s0 + 1, out = new Float32Array(Math.max(0, n));
+        for (var i = 0; i < n; i++) { var o = (s0 + i) * 2; out[i] = (((mem[o] | (mem[o + 1] << 8)) << 16) >> 16) / 32768; }
+        return { data: out, loop: loop && ls >= s0 && ls < e0 ? ls - s0 : -1 };
+      }, rt);
+      var l = es5Vol(es5.lv[vc]), r = es5Vol(es5.rv[vc]);
+      ch.keyOn(s, rt, Math.max(l, r), l + r ? Math.round(64 + 63 * (r - l) / (l + r)) : 64);
+    }
+
+    // ── ES5503 (Ensoniq DOC: Apple IIgs): 32 osciladores lendo ondas/samples de 8 bits da RAM; o byte 0 encerra ──
+    var es3 = null;
+    if (hclk(0xCC)) es3 = { clock: hclk(0xCC), r: new Uint8Array(0x100), osc: 1, ram: new Uint8Array(0x20000), ch: pcmChanSet('ES5503', 32, 'Oscilador') };
+    var ES3_SIZE = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768], ES3_WMASK = [0x1FF00, 0x1FE00, 0x1FC00, 0x1F800, 0x1F000, 0x1E000, 0x1C000, 0x18000];
+    function es3Out() { return es3.clock / 8 / (es3.osc + 2); }
+    function es3Step(o) { var R = es3.r, sz = (R[0xC0 + o] >> 3) & 7, res = R[0xC0 + o] & 7; return es3Out() * ((R[0x20 + o] << 8) | R[o]) / Math.pow(2, 9 + res - sz); } // amostras de onda por segundo
+    function es3Write(a, d) {
+      var R = es3.r, old = R[a]; R[a] = d;
+      if (a === 0xE1) { es3.osc = ((d >> 1) & 0x1F) + 1; return; }
+      if (a >= 0xE0) return;
+      var o = a & 0x1F, g = a & 0xE0, ch = es3.ch[o];
+      if (g === 0x00 || g === 0x20) { ch.setRate(es3Step(o)); return; }
+      if (g === 0x40) { ch.setVol(d / 255); return; }
+      if (g !== 0xA0) return;
+      if ((d & 1) && !(old & 1)) { ch.keyOff(); return; }
+      if ((d & 1) || !(old & 1)) return;   // liga quando o bit de parada (halt) cai
+      var sz = (R[0xC0 + o] >> 3) & 7, len = ES3_SIZE[sz], base = (((R[0x80 + o] << 8) | ((R[0xC0 + o] & 0x40) ? 0x10000 : 0)) & ES3_WMASK[sz]);
+      var mode = (d >> 1) & 3, rt = es3Step(o);
+      if (rt <= 0) return;
+      var s = pcmSample('ES5503', base + ':' + len + ':' + (mode === 0 ? 'L' : 'O') + ':' + es3.ram[base] + ':' + es3.ram[base + (len >> 1)], function () {
+        var out = [], i = 0;
+        for (; i < len; i++) { var x = es3.ram[(base + i) & 0x1FFFF]; if (!x) break; out.push((x - 0x80) / 128); }
+        return { data: new Float32Array(out), loop: mode === 0 && i === len ? 0 : -1 }; // modo livre: a onda repete
+      }, rt);
+      ch.keyOn(s, rt, R[0x40 + o] / 255, (d >> 4) & 1 ? 127 : 0);
+    }
+
+    // ── uPD7759 (NEC: Sega System 16/18, Mega Drive Pico...): ADPCM com tabela de samples na ROM ──
+    var UPD_STEP = [
+      [0, 0, 1, 2, 3, 5, 7, 10, 0, 0, -1, -2, -3, -5, -7, -10], [0, 1, 2, 3, 4, 6, 8, 13, 0, -1, -2, -3, -4, -6, -8, -13],
+      [0, 1, 2, 4, 5, 7, 10, 15, 0, -1, -2, -4, -5, -7, -10, -15], [0, 1, 3, 4, 6, 9, 13, 19, 0, -1, -3, -4, -6, -9, -13, -19],
+      [0, 2, 3, 5, 8, 11, 15, 23, 0, -2, -3, -5, -8, -11, -15, -23], [0, 2, 4, 7, 10, 14, 19, 29, 0, -2, -4, -7, -10, -14, -19, -29],
+      [0, 3, 5, 8, 12, 16, 22, 33, 0, -3, -5, -8, -12, -16, -22, -33], [1, 4, 7, 10, 15, 20, 29, 43, -1, -4, -7, -10, -15, -20, -29, -43],
+      [1, 4, 8, 13, 18, 25, 35, 53, -1, -4, -8, -13, -18, -25, -35, -53], [1, 6, 10, 16, 22, 31, 43, 64, -1, -6, -10, -16, -22, -31, -43, -64],
+      [2, 7, 12, 19, 27, 37, 51, 76, -2, -7, -12, -19, -27, -37, -51, -76], [2, 9, 16, 24, 34, 46, 64, 96, -2, -9, -16, -24, -34, -46, -64, -96],
+      [3, 11, 19, 29, 41, 57, 79, 117, -3, -11, -19, -29, -41, -57, -79, -117], [4, 13, 24, 36, 50, 69, 96, 143, -4, -13, -24, -36, -50, -69, -96, -143],
+      [4, 16, 29, 44, 62, 85, 118, 175, -4, -16, -29, -44, -62, -85, -118, -175], [6, 20, 36, 54, 76, 104, 144, 214, -6, -20, -36, -54, -76, -104, -144, -214]];
+    var UPD_STATE = [-1, -1, 0, 0, 1, 2, 2, 3, -1, -1, 0, 0, 1, 2, 2, 3];
+    // decodifica um sample a partir dos blocos (cabeçalho: silêncio / 256 nibbles / n nibbles / repetição); taxa de saída = clock / 4
+    function updDecode(rd) {
+      var out = [], smp = 0, st = 0, rep = 0, repAt = 0, pos = 0, firstValid = false, guard = 0;
+      function nib(n, rate) { smp += UPD_STEP[st][n]; st += UPD_STATE[n]; if (st < 0) st = 0; else if (st > 15) st = 15; for (var k = 0; k < rate; k++) out.push(Math.max(-1, Math.min(1, smp / 256))); }
+      while (out.length < 160000 * 3 && guard++ < 100000) {
+        if (rep) { rep--; pos = repAt; }
+        var h = rd(pos++); if (h == null) break;
+        var kind = h & 0xC0;
+        if (kind === 0x00) { if (h === 0 && firstValid) break; for (var z = 0; z < 256 * ((h & 0x3F) + 1); z++) out.push(0); smp = 0; st = 0; }
+        else if (kind === 0xC0) { rep = (h & 7) + 1; repAt = pos; }
+        else {
+          var rate = (h & 0x3F) + 1, cnt = kind === 0x40 ? 256 : (rd(pos++) || 0) + 1;
+          for (var i = 0; i < cnt; i += 2) { var by = rd(pos++); if (by == null) break; nib(by >> 4, rate); if (i + 1 < cnt) nib(by & 15, rate); }
+        }
+        if (h) firstValid = true;
+      }
+      return { data: new Float32Array(out), loop: -1 };
+    }
+    var upd = null;
+    if (hclk(0x8C)) upd = { clock: hclk(0x8C), master: !!(u32(b, 0x8C) & 0x80000000), reset: 1, start: 1, fifo: 0, bank: 0, buf: null, until: 0, ch: pcmChanSet('uPD7759', 1, 'ADPCM') };
+    function updFlush() { // modo escravo: o jogo mandou o sample byte a byte pela porta
+      var B = upd.buf; upd.buf = null;
+      if (!B || B.length < 8) return;
+      var fp = B.length + ':'; for (var q = 5; q < Math.min(B.length, 45); q++) fp += B[q] + ',';
+      var s = pcmSample('uPD7759', fp, function () { return updDecode(function (i) { return i + 5 < B.length ? B[i + 5] : null; }); }, upd.clock / 4);
+      upd.ch[0].keyOn(s, upd.clock / 4, 1, 64, B.t);
+    }
+    function updWrite(a, d) {
+      if (a === 0) { var o0 = upd.reset; upd.reset = d ? 1 : 0; if (o0 && !upd.reset) { if (upd.buf) updFlush(); upd.ch[0].keyOff(); upd.until = 0; } return; }
+      if (a === 3) { upd.bank = d << 17; return; }
+      if (a === 2) { upd.fifo = d; if (upd.buf) upd.buf.push(d); return; }
+      if (a !== 1) return;
+      var o1 = upd.start; upd.start = d ? 1 : 0;
+      if (o1 || !upd.start || !upd.reset) return;
+      if (!upd.master || !ROM[0x8A]) { if (upd.buf) updFlush(); upd.buf = []; upd.buf.t = t; return; }
+      if (t < upd.until) return;                 // ainda tocando: o chip ignora
+      var mem = ROM[0x8A], bs = upd.bank, req = upd.fifo;
+      function rb(i) { var x = bs + i; return x < mem.length ? mem[x] : null; }
+      if (req > rb(0)) return;
+      var off = ((rb(req * 2 + 5) << 9) | (rb(req * 2 + 6) << 1)) + 1;
+      var s = pcmSample('uPD7759', bs + ':' + req, function () { return updDecode(function (i) { return rb((off + i) & 0x1FFFF); }); }, upd.clock / 4);
+      if (!s) return;
+      upd.ch[0].keyOn(s, upd.clock / 4, 1);
+      upd.until = t + s.len / s.rate * 44100;
+    }
+
+    // ── SCSP (Sega Saturn / ST-V): 32 slots de PCM de 8/16 bits lidos da RAM de som ──
+    var scsp = null;
+    if (hclk(0xB8)) scsp = { clock: hclk(0xB8), r: new Uint16Array(0x200), on: [], ch: pcmChanSet('SCSP', 32, 'Slot') };
+    function scspRate(s) { var w = scsp.r[s * 16 + 8], oc = (w >> 11) & 15; if (oc & 8) oc -= 16; return 44100 * Math.pow(2, oc) * (1024 + (w & 0x3FF)) / 1024; }
+    function scspVol(s) { var R = scsp.r, tl = R[s * 16 + 6] & 0xFF, dl = (R[s * 16 + 0xB] >> 13) & 7; return dl ? Math.pow(10, -(tl * 0.375 + (7 - dl) * 6) / 20) : Math.pow(10, -tl * 0.375 / 20); }
+    function scspPan(s) { var p = (scsp.r[s * 16 + 0xB] >> 8) & 31; return p < 16 ? Math.round(64 + p * 4) : Math.round(64 - (p - 16) * 4); }
+    function scspWrite(a, d) {
+      if (a >= 0x400) return;
+      var w = a >> 1, R = scsp.r;
+      R[w] = (a & 1) ? (R[w] & 0xFF00) | d : (R[w] & 0x00FF) | (d << 8);
+      var s = w >> 4, k = w & 15;
+      if (k === 8) { scsp.ch[s].setRate(scspRate(s)); return; }
+      if (k === 6 || k === 0xB) { scsp.ch[s].setVol(scspVol(s)); return; }
+      if (k !== 0 || !(R[w] & 0x1000)) return;
+      R[w] &= ~0x1000;                            // KYONEX: executa o liga/desliga de todos os slots
+      var mem = ROM['scsp'];
+      for (var i = 0; i < 32; i++) {
+        var w0 = R[i * 16], kb = !!(w0 & 0x800);
+        if (!kb) { if (scsp.on[i]) scsp.ch[i].keyOff(); scsp.on[i] = false; continue; }
+        if (scsp.on[i]) continue;
+        scsp.on[i] = true;
+        if (!mem || ((w0 >> 7) & 3)) continue;     // 1 = ruído, 2/3 = silêncio
+        var b8 = !!(w0 & 0x10), sa = ((w0 & 0xF) << 16) | R[i * 16 + 1], lsa = R[i * 16 + 2], lea = R[i * 16 + 3], lp = (w0 >> 5) & 3, rt = scspRate(i);
+        if (!b8) sa &= 0x7FFFE;
+        if (!lea) continue;
+        var smp = pcmSample('SCSP', sa + ':' + b8 + ':' + lsa + ':' + lea + ':' + lp, function () {
+          var n = lea + 1, out = new Float32Array(n);
+          for (var j = 0; j < n; j++) {
+            var o = b8 ? sa + j : sa + j * 2;
+            out[j] = b8 ? ((mem[o % mem.length] << 24) >> 24) / 128 : ((((mem[o % mem.length] << 8) | mem[(o + 1) % mem.length]) << 16) >> 16) / 32768;
+          }
+          return { data: out, loop: lp && lsa < lea ? lsa : -1 };
+        }, rt);
+        scsp.ch[i].keyOn(smp, rt, scspVol(i), scspPan(i));
+      }
+    }
+
+    // ── Mikey (Atari Lynx): 4 canais; cada um é um registrador de deslocamento (LFSR) com realimentação escolhida ──
+    // dependendo das realimentações, o padrão repete rápido (vira uma onda com altura) ou demora (vira ruído)
+    var mikey = null;
+    if (hclk(0xE4)) {
+      mikey = { r: new Uint8Array(0x60), ch: [] };
+      for (var mk = 0; mk < 4; mk++) { var mpc = new PSGChan(col, 'Canal ' + (mk + 1), 'Mikey', REC); mchan(mpc.id, mpc.chip, mpc.label, 'psg'); mikey.ch.push(mpc); chans.push(mpc); }
+    }
+    var mikeyCache = {};
+    function mikeyPattern(taps, shift, integ) {   // simula o LFSR até repetir; devolve o ciclo em níveis de 0 a 1 (ou null se for longo = ruído)
+      var key = taps + ':' + shift + ':' + integ;
+      if (key in mikeyCache) return mikeyCache[key];
+      var seen = {}, sr = shift & 0xFFF, seq = [], res = null;
+      for (var i = 0; i < 4200; i++) {
+        if (seen[sr] != null) { var cyc = seq.slice(seen[sr]); res = cyc.length <= 256 ? cyc : null; break; }
+        seen[sr] = i;
+        var x = taps & sr, par = 0; while (x) { par ^= x & 1; x >>= 1; }
+        sr = ((sr << 1) & 0xFFE) | (par ^ 1); seq.push(sr & 1);
+      }
+      if (res && integ) { // modo integrador: cada bit sobe ou desce o nível (vira triângulo/serra)
+        var acc = 0, lv = [];
+        for (var r2 = 0; r2 < 2; r2++) for (var j = 0; j < res.length; j++) { acc = Math.max(-1, Math.min(1, acc + (res[j] ? 0.25 : -0.25))); if (r2) lv.push((acc + 1) / 2); }
+        res = lv;
+      }
+      return (mikeyCache[key] = res);
+    }
+    function mikeyWrite(a, d) {
+      if (a >= 0x60) return;
+      var old = mikey.r[a]; mikey.r[a] = d;
+      if (a >= 0x20 && a < 0x40 && (a & 7) === 5 && (d & 8) && !(old & 8)) mikey.ch[(a >> 3) & 3].trig = true;
+    }
+    function mikeyFrame() {
+      for (var c = 0; c < 4; c++) {
+        var o = 0x20 + c * 8, R = mikey.r, pc = mikey.ch[c];
+        var vol = Math.abs((R[o] << 24) >> 24), ctl = R[o + 5], fb = R[o + 1], other = R[o + 7];
+        var taps = (fb & 0x3F) | ((fb & 0xC0) << 4) | (ctl & 0x80), shift = R[o + 3] | ((other & 0xF0) << 4);
+        var clk = ctl & 7, rate = clk === 7 ? 0 : 1000000 / Math.pow(2, clk) / (R[o + 4] + 1);
+        pc.vol = (ctl & 8) && rate ? vol / 127 : 0;
+        var pat = mikeyPattern(taps, shift || 1, (ctl & 0x20) ? 1 : 0);
+        if (pat && pat.length >= 2) {
+          pc.freq = rate / pat.length;
+          var tbl = []; for (var i = 0; i < 32; i++) tbl.push(Math.round(pat[Math.floor(i * pat.length / 32)] * 15));
+          pc.wave = { k: 'wave', ck: 'mikey', tbl: tbl, duty: null };
+        } else { pc.freq = 0; pc.wave = { k: 'noise', ck: 'mikey', nmode: 'white', nrate: Math.min(15, Math.round(Math.log2(rate + 1))) }; }
+      }
+    }
+
     // fluxos (streams) do VGM para chips de sample que não são o DAC do YM2612
     var strm = {}, strmF = {};
     function streamHit(sid, blk, len, freq) {
@@ -1576,7 +1895,7 @@ var RGVGM = (function () {
     }
 
     // ── percorre os comandos ──
-    var UNSUP = { 0xD6: 'ES5505', 0xD5: 'ES5503', 0xB6: 'uPD7759', 0xC5: 'SCSP', 0xD1: 'YMF271', 0x40: 'Mikey (Lynx)' };
+    var UNSUP = {};
     var p = hdrLen, t = 0, nextFrame = FRAME, end = b.length, guard = 0;
     var dacSeek = null, dacLast = -1e9, dacSeen = false, streamChip = {};
     var PCM = opts && opts.pcm ? { bank: [], blocks: [], ids: {}, streamFreq: {}, streamBank: {} } : null;
@@ -1647,6 +1966,7 @@ var RGVGM = (function () {
         if (gb) gbFrame();
         if (huc) hucFrame();
         if (scc) sccFrame();
+        if (mikey) mikeyFrame();
         if (ws) wsFrame();
         if (saa) saaFrame();
         if (pokey) pokeyFrame();
@@ -1685,6 +2005,12 @@ var RGVGM = (function () {
         if (c === 0xB1) { if (rf2) rfWrite(rf2, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xC1) { if (rf) rfMem(rf, rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
         if (c === 0xC2) { if (rf2) rfMem(rf2, rf2.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xD6) { if (es5 && !(b[p + 1] & 0x80)) es5Write(b[p + 1], (b[p + 2] << 8) | b[p + 3]); p += 4; continue; }
+        if (c === 0xD5) { if (es3 && !(b[p + 1] & 0x80)) es3Write(b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0xB6) { if (upd && !(b[p + 1] & 0x80)) updWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xC5) { if (scsp && !(b[p + 1] & 0x80)) scspWrite(((b[p + 1] & 0x7F) << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
+        if (c === 0x40) { if (mikey) mikeyWrite(b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xD1) { if (opx && !(b[p + 1] & 0x80)) opxWrite(b[p + 1] & 0x7F, b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0xBE) { if (es6 && !(b[p + 1] & 0x80)) es6Write(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xBC) { if (ws) wsWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xC6) { if (ws) ws.ram[((b[p + 1] << 8) | b[p + 2]) & 0x3FFF] = b[p + 3]; p += 4; continue; }
@@ -1780,6 +2106,8 @@ var RGVGM = (function () {
           if (btype === 0x90 && bsz > 8) { var esa = u32(b, p + 11); romPut('es' + ((esa >>> 28) & 3), Math.min(u32(b, p + 7), 0x800000), esa & 0x0FFFFFFF, b.subarray(p + 15, p + 7 + bsz)); } // ES5506: 4 bancos
           else if (btype >= 0x80 && btype < 0xC0 && bsz > 8) romPut(btype, u32(b, p + 7), u32(b, p + 11), b.subarray(p + 15, p + 7 + bsz));
           if (btype === 0xC2 && nes && bsz > 2) { if (!nesRam) nesRam = new Uint8Array(0x10000); var na = b[p + 7] | (b[p + 8] << 8); nesRam.set(b.subarray(p + 9, p + 7 + bsz).subarray(0, 0x10000 - na), na); }
+          if (btype === 0xE0 && bsz > 4) romPut('scsp', 0x80000, u32(b, p + 7), b.subarray(p + 11, p + 7 + bsz));
+          if (btype === 0xE1 && es3 && bsz > 4) { var e3a = u32(b, p + 7); es3.ram.set(b.subarray(p + 11, p + 7 + bsz).subarray(0, Math.max(0, 0x20000 - e3a)), e3a & 0x1FFFF); }
           var rfB = btype === 0xC0 ? rf : btype === 0xC1 ? rf2 : null;
           if (rfB && bsz > 2) { var ra = b[p + 7] | (b[p + 8] << 8); for (var ri = 0; ri < bsz - 2; ri++) rfMem(rfB, ra + ri, b[p + 9 + ri]); }
           if (btype < 0x40 && btype !== 0x00) { (STREAMBLK[btype] = STREAMBLK[btype] || []).push({ id: (STREAMBLK[btype] || []).length, data: b.subarray(p + 7, p + 7 + bsz), off: 0 }); }
@@ -1817,6 +2145,8 @@ var RGVGM = (function () {
     if (REC) {
       for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
       for (var ok2 in opl) for (var ch3 = 0; ch3 < opl[ok2].nch; ch3++) oplOff(opl[ok2], ch3);
+      if (upd && upd.buf) updFlush();
+      if (opx) Object.keys(opx.rec).forEach(function (k) { opxOff(opx.rec[k]); });
       pcmChans.forEach(function (c) { c.keyOff(); });
       oki58Finish();
       if (pcmOutOfOrder) REC.sort(function (x, y) { return x.t - y.t; });
@@ -1849,11 +2179,14 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
-    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
-    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506']].forEach(function (x) {
+    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
+    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506'], [es5, 'ES5505'], [es3, 'ES5503'], [upd, 'uPD7759'], [scsp, 'SCSP']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
     }); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
     chips = chips.filter(function (x, i) { return chips.indexOf(x) === i; });
+    // chips "raros" só entram se tocaram de fato (cabeçalhos antigos às vezes trazem lixo nesses campos)
+    var RARE = ['WonderSwan', 'SAA1099', 'Pokey', 'Mikey', 'K051649', 'K052539', 'VSU', 'X1-010'];
+    chips = chips.filter(function (x) { return RARE.indexOf(x) < 0 || col.list.some(function (tt) { return tt.chip === x; }); });
     var res = { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
     if (REC) {
       // só canais que tocaram alguma nota
@@ -2157,7 +2490,7 @@ var RGMIDI = (function () {
   function program(tb) {
     if (!tb) return 80;
     if (tb.role === 'Baixo') return 38;              // Synth Bass 1
-    if (tb.type === 'fm' || tb.type === 'opl') return tb.role === 'Melodia' ? 81 : 62; // Lead 2 (saw) / Synth Brass 1
+    if (tb.type === 'fm' || tb.type === 'opl' || tb.type === 'opx') return tb.role === 'Melodia' ? 81 : 62; // Lead 2 (saw) / Synth Brass 1
     return 80;                                        // Lead 1 (square)
   }
 
@@ -2231,7 +2564,7 @@ var RGMIDI = (function () {
       var o = open[e.c];
       if (e.k === 'on') {
         if (o) { o.end = e.t; }
-        var tune = e.tb && (e.tb.type === 'fm' || e.tb.type === 'opl') ? -(e.tb.tune || 0) : 0; // altura real que o chip toca
+        var tune = e.tb && (e.tb.type === 'fm' || e.tb.type === 'opl' || e.tb.type === 'opx') ? -(e.tb.tune || 0) : 0; // altura real que o chip toca
         o = { t: e.t, end: null, n: e.n + tune, tune: tune, v: e.v, pan: e.pan, tb: e.tb, noise: e.noise, ev: [] };
         L.push(o); open[e.c] = o;
       } else if (!o) return;
@@ -2965,7 +3298,7 @@ var RGMIDI = (function () {
       });
       patchS(w, a);
     } else {
-      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25 }[t.chipKind] || 0;
+      var type = { sn: 0, gb: 2, ay: 6, nes: 34, pce: 5, vsu: 16, scc: 18, ws: 22, saa: 9, pokey: 20, x1: 25, mikey: 23 }[t.chipKind] || 0;
       w.c(type); w.c(0);
       w.tag('NA'); a = w.n; w.s(0); w.str(name); patchS(w, a);
       if (type === 2) { w.tag('GB'); a = w.n; w.s(0); w.c(15); w.c(64); w.c(1); w.c(0); patchS(w, a); }
