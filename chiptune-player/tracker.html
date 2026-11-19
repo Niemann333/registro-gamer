@@ -34,6 +34,8 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 @media (max-width:760px){.note,.logo span{display:none}}
 /* celular: barra enxuta (o Furnace fica no modo celular dele) */
 @media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}}
+/* celular deitado: barra baixa e só o essencial (sobra altura para os padrões) */
+@media (max-height:500px) and (pointer:coarse){:root{--barH:36px}.pill,#bMidi,.note,.logo span{display:none}.btn{padding:4px 10px;font-size:12px}.logo i{width:24px;height:24px}}
 </style>
 <script>
 /* Registro Gamer — idioma do blog (PT | EN). O mesmo bloco vai em todos os gadgets: o primeiro que carregar cria. */
@@ -92,6 +94,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="Open and save: Chiptune collection and your computer folders (Connect a folder). Without a folder, saving downloads the file.">Abrir e salvar: Acervo Chiptunes e as pastas do seu computador (Conectar pasta). Sem pasta conectada, salvar baixa o arquivo.</span>
   <div class="sp"></div>
+  <button class="btn" id="bLand" style="display:none" title="Tela deitada (paisagem) em tela cheia: mostra mais da música" data-en-title="Landscape, full screen: shows more of the song">⟲</button>
   <button class="btn" id="bBack">← Chiptune Studio</button>
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" data-en-title="Close and go back to the blog" style="display:none">✕</button>
 </div>
@@ -432,13 +435,36 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   rgI18n.on(function () { midiUI(); });
   $('tX').onclick = function () { $('toast').classList.remove('show'); };
 
-  $('bBack').onclick = function () { location.href = 'estudio.html?lang=' + rgI18n.lang; };
+  // ── celular: o Tracker abre deitado (paisagem), em tela cheia, no primeiro toque ──
+  // (o navegador só deixa travar a orientação em tela cheia e depois de um toque; no iPhone não dá: aparece uma dica)
+  function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function landscape() {
+    var el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+    var lock = function () { try { return screen.orientation && screen.orientation.lock ? screen.orientation.lock('landscape') : Promise.reject(); } catch (e) { return Promise.reject(e); } };
+    var p = isFull() || !req ? Promise.resolve() : Promise.resolve(req.call(el, { navigationUI: 'hide' }));
+    return p.then(lock).catch(function () {
+      if (innerHeight > innerWidth) { var dica = T('Dica: deite o celular (paisagem) para ver mais da música.', 'Tip: turn your phone sideways (landscape) to see more of the song.'); toast2(dica); setTimeout(function () { if ($('tTxt').textContent === dica) $('toast').classList.remove('show'); }, 7000); }
+    });
+  }
+  if (Module.rgMobile) {
+    $('bLand').style.display = '';
+    $('bLand').onclick = function () {
+      if (isFull()) { try { screen.orientation.unlock(); } catch (e) {} (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+      else landscape();
+    };
+    var primeiro = function () { window.removeEventListener('touchend', primeiro, true); window.removeEventListener('click', primeiro, true); landscape(); };
+    window.addEventListener('touchend', primeiro, true); window.addEventListener('click', primeiro, true);
+  }
+  function sairTelaCheia() { if (isFull()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {} }
+
+  $('bBack').onclick = function () { sairTelaCheia(); location.href = 'estudio.html?lang=' + rgI18n.lang; };
   // dentro do blog: botão ✕ fecha a camada do Chiptune Studio
   var EMBED = window.parent !== window;
   if (EMBED) {
     $('bClose').style.display = '';
     $('bClose').onclick = function () {
       if (unsaved() && !confirm(T('Fechar o Tracker? O projeto tem alterações que não foram salvas (Ctrl+S) e elas se perdem.','Close the Tracker? The project has unsaved changes (Ctrl+S) and they will be lost.'))) return;
+      sairTelaCheia();
       try { window.parent.postMessage({ type: 'rg-studio-close' }, '*'); } catch (e) {}
     };
   }

@@ -360,7 +360,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   html.mob .kbbar{flex-wrap:nowrap;overflow-x:auto;margin-bottom:4px;scrollbar-width:none}
   html.mob .kbbar::-webkit-scrollbar{display:none}
   html.mob .kbbar>*{flex-shrink:0}
-  html.mob .kbnav{height:20px;margin-bottom:4px}
+  html.mob .kbnav{height:28px;margin-bottom:4px}
   /* pouca altura: o painel inteiro rola junto (faixa do Tracker, abas, busca e lista) */
   html.mob .panel{overflow-y:auto}
   html.mob .panel>*{flex-shrink:0}
@@ -2738,20 +2738,54 @@ var RGMIDI = (function () {
       later();
     }, { passive: false });
   })();
-  var ptr = {};
+  var ptr = {}, px = {}, kbPinch = null, kbRaf = 0;
   function keyAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.dataset && el.dataset.n != null && el.closest('#kb') ? +el.dataset.n : -1; }
+  // pinça no próprio teclado (celular): dois dedos abrindo ou fechando mudam o tamanho das teclas.
+  // Dois dedos parados continuam sendo um acorde; só vira pinça quando a distância entre eles muda bastante.
+  function kbPinchVals() {
+    var ids = Object.keys(px); if (ids.length < 2) return null;
+    var a = px[ids[0]], b = px[ids[1]], r = $('kb').getBoundingClientRect();
+    return { d: Math.abs(a - b) || 1, m: ((a + b) / 2 - r.left) / (r.width || 1) };
+  }
   $('kb').addEventListener('pointerdown', function (e) {
     e.preventDefault(); wake();
     try { this.setPointerCapture(e.pointerId); } catch (x) {}
+    px[e.pointerId] = e.clientX;
+    if (kbPinch) { ptr[e.pointerId] = -1; var v0 = kbPinchVals(); if (kbPinch.on && v0) kbPinch = { on: true, d: v0.d, w: kbShown, c: kbStartW + v0.m * kbShown }; return; }
+    if (isMob() && Object.keys(px).length === 2) { var v = kbPinchVals(); kbPinch = { d0: v.d, on: false }; }
     var n = keyAt(e.clientX, e.clientY); if (n < 0) return;
     ptr[e.pointerId] = n; noteOn(n, 100);
   });
   $('kb').addEventListener('pointermove', function (e) {
-    if (!(e.pointerId in ptr)) return;
+    if (e.pointerId in px) px[e.pointerId] = e.clientX;
+    if (kbPinch) {
+      var v = kbPinchVals(); if (!v) return;
+      if (!kbPinch.on) {
+        if (Math.abs(v.d - kbPinch.d0) < 28) return movePtr(e); // ainda é acorde / glissando
+        // virou pinça: solta as notas e guarda o ponto do teclado que está entre os dedos
+        Object.keys(ptr).forEach(function (id) { if (ptr[id] >= 0) noteOff(ptr[id]); ptr[id] = -1; });
+        kbPinch = { on: true, d: v.d, w: kbShown, c: kbStartW + v.m * kbShown };
+      }
+      var w = Math.max(5, Math.min(KW_MAX - KW_MIN + 1, Math.round(kbPinch.w * kbPinch.d / v.d)));
+      kbWhitesMob = w; kbStartW = Math.round(kbPinch.c - v.m * w);
+      if (!kbRaf) kbRaf = requestAnimationFrame(function () { kbRaf = 0; buildKb(); });
+      return;
+    }
+    movePtr(e);
+  });
+  function movePtr(e) {
+    if (!(e.pointerId in ptr) || ptr[e.pointerId] === -1 && kbPinch) return;
     var n = keyAt(e.clientX, e.clientY);
     if (n !== ptr[e.pointerId]) { if (ptr[e.pointerId] >= 0) noteOff(ptr[e.pointerId]); ptr[e.pointerId] = n; if (n >= 0) noteOn(n, 100); }
-  });
-  function ptrUp(e) { if (e.pointerId in ptr) { if (ptr[e.pointerId] >= 0) noteOff(ptr[e.pointerId]); delete ptr[e.pointerId]; } }
+  }
+  function ptrUp(e) {
+    delete px[e.pointerId];
+    if (e.pointerId in ptr) { if (ptr[e.pointerId] >= 0) noteOff(ptr[e.pointerId]); delete ptr[e.pointerId]; }
+    if (kbPinch && Object.keys(px).length < 2) {
+      if (kbPinch.on) { lsSet('rgKbWhites', String(kbWhitesMob)); Object.keys(ptr).forEach(function (id) { ptr[id] = -1; }); }
+      if (!Object.keys(px).length || !kbPinch.on) kbPinch = null;
+    }
+  }
   $('kb').addEventListener('pointerup', ptrUp);
   $('kb').addEventListener('pointercancel', ptrUp);
   $('kb').addEventListener('contextmenu', function (e) { e.preventDefault(); });
