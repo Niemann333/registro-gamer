@@ -99,7 +99,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
   <button class="btn pri" id="bOpen" title="Abrir um projeto do seu aparelho: Furnace (.fur), DefleMask (.dmf), módulos (MOD, XM, S3M, IT, FTM…), instrumentos, wavetables ou samples" data-en-title="Open a project from your device: Furnace (.fur), DefleMask (.dmf), modules (MOD, XM, S3M, IT, FTM…), instruments, wavetables or samples">📂 <span class="lbl" data-en="Open project">Abrir projeto</span></button>
-  <button class="btn" id="bImp" title="Importar uma gravação de chip (VGM do Mega Drive ou do Master System) e transformar em projeto. É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chip recording (Mega Drive or Master System VGM) and turn it into a project. It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import VGM">Importar VGM</span></button>
+  <button class="btn" id="bImp" title="Importar um VGM (registro de instruções para o chip de som do Mega Drive ou do Master System) e transformar em projeto. É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chip recording (Mega Drive or Master System VGM) and turn it into a project. It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import VGM">Importar VGM</span></button>
   <button class="btn" id="bMidi" title="Converter um VGM (arquivo local) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a VGM (local file) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 VGM → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
@@ -119,7 +119,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div class="imp" id="imp"><div class="box">
   <h3 data-en="⤵ Import VGM">⤵ Importar VGM</h3>
   <p id="impFn" class="fn"></p>
-  <p data-en="A VGM is not a project: it is a recording of what the console chip played. Importing rebuilds patterns, instruments and samples from that recording, so:">Um VGM não é um projeto: é uma gravação do que o chip do console tocou. A importação reconstrói padrões, instrumentos e samples a partir dessa gravação, por isso:</p>
+  <p data-en="A VGM is not a project: it is a log of instructions for playback on the sound chip. Importing rebuilds patterns, instruments and samples from that recording, so:">Um VGM não é um projeto: é um registro com instruções para reprodução no chip de som. A importação reconstrói padrões, instrumentos e samples a partir dessa gravação, por isso:</p>
   <ul>
     <li data-en="the reading is not 100% accurate: tempo, effects and some sounds may differ from the original;">a leitura não é 100% fiel: tempo, efeitos e alguns timbres podem sair diferentes do original;</li>
     <li data-en="for now only Mega Drive / Genesis (YM2612 + SN76489) and Master System (SN76489);">por enquanto só Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489);</li>
