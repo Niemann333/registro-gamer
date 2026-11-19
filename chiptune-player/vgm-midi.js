@@ -183,7 +183,7 @@ var RGVGM = (function () {
     };
     var dual = { ym3812: hdual(0x50), sn: hdual(0x0C), ym2612: ver >= 0x110 && hdual(0x2C), ym2151: ver >= 0x110 && hdual(0x30), ym2203: hdual(0x44), ay: hdual(0x74) };
     // antes da v1.10 o campo 0x10 vale para YM2413, YM2612 e YM2151: o que aparece nos comandos decide
-    [['YM2413', 0x10], ['QSound', 0xB4], ['K051649', 0x9C], ['YMF278B', 0x60], ['YMZ280B', 0x68]].forEach(function (x) {
+    [['YM2413', 0x10], ['K051649', 0x9C], ['YMF278B', 0x60], ['YMZ280B', 0x68]].forEach(function (x) {
       if (x[0] === 'YM2413') return;
       if (hclk(x[1])) unsupported.push(x[0]);
     });
@@ -967,6 +967,113 @@ var RGVGM = (function () {
       }
     }
 
+    // ── ADPCM dos YM2608 (PC-98) e YM2610 (Neo Geo) ──
+    // ADPCM-B (DELTA-T): 1 voz com afinação; ADPCM-A (só YM2610): 6 vozes de samples fixos (bateria, vozes)
+    var YDT_F = [57, 57, 57, 57, 77, 102, 128, 153];
+    function ymDeltaT(mem, st, en) {
+      var n = Math.max(0, Math.min(en, mem.length) - st), out = new Float32Array(n * 2), acc = 0, step = 127, o = 0;
+      function nib(v) {
+        var diff = ((2 * (v & 7) + 1) * step) >> 3;
+        acc += (v & 8) ? -diff : diff; if (acc > 32767) acc = 32767; else if (acc < -32768) acc = -32768;
+        step = (step * YDT_F[v & 7]) >> 6; if (step < 127) step = 127; else if (step > 24576) step = 24576;
+        out[o++] = acc / 32768;
+      }
+      for (var i = 0; i < n; i++) { var by = mem[st + i]; nib(by >> 4); nib(by & 15); }
+      return { data: out, loop: -1 };
+    }
+    var YA_INC = [-1, -1, -1, -1, 2, 5, 7, 9];
+    function ymAdpcmA(mem, st, en) {
+      var n = Math.max(0, Math.min(en, mem.length) - st), out = new Float32Array(n * 2), acc = 0, idx = 0, o = 0;
+      function nib(v) {
+        var diff = ((2 * (v & 7) + 1) * OKI_STEP[idx]) >> 3;
+        acc = (((acc + ((v & 8) ? -diff : diff)) & 0xFFF) << 20) >> 20;
+        idx += YA_INC[v & 7]; if (idx < 0) idx = 0; else if (idx > 48) idx = 48;
+        out[o++] = acc / 2048;
+      }
+      for (var i = 0; i < n; i++) { var by = mem[st + i]; nib(by >> 4); nib(by & 15); }
+      return { data: out, loop: -1 };
+    }
+    function panLR(v) { var l = v & 0x80, r = v & 0x40; return l && !r ? 0 : r && !l ? 127 : 64; }
+    function DeltaT(chipName, clock, romType, fixedShift) {
+      this.chip = chipName; this.clock = clock; this.rom = romType; this.fs = fixedShift; this.r = new Uint8Array(16); this.ch = pcmChanSet(chipName, 1, 'ADPCM-B'); this.used = false;
+    }
+    DeltaT.prototype.rate = function () { return this.clock / 144 * ((this.r[0x0A] << 8) | this.r[0x09]) / 65536; };
+    DeltaT.prototype.write = function (a, d) {
+      var R = this.r; R[a] = d; var ch = this.ch[0];
+      if (a === 0x09 || a === 0x0A) { ch.setRate(this.rate()); return; }
+      if (a === 0x0B) { ch.setVol(d / 255); return; }
+      if (a !== 0x00) return;
+      if ((d & 1) || !(d & 0x80)) { ch.keyOff(); return; }
+      var mem = ROM[this.rom], sh = this.fs || ((R[1] & 3) ? 5 : 2), self = this;
+      var st = ((R[3] << 8) | R[2]) << sh, en = (((R[5] << 8) | R[4]) + 1) << sh, rt = this.rate();
+      if (!mem || en <= st || st >= mem.length || rt < 500) return;
+      var rep = !!(d & 0x10);
+      var s = pcmSample(this.chip, 'b' + st + ':' + en + ':' + rep, function () { var x = ymDeltaT(mem, st, en); x.loop = rep ? 0 : -1; return x; }, rt);
+      this.used = true;
+      ch.keyOn(s, rt, R[0x0B] / 255, panLR(R[1]));
+    };
+    var y08b = fm.ym2608 ? new DeltaT('YM2608', clk.ym2608, 0x81, 0) : null;
+    var y10b = fm.ym2610 ? new DeltaT('YM2610', clk.ym2610, 0x83, 8) : null;
+    var y10a = fm.ym2610 ? { r: new Uint8Array(0x30), ch: pcmChanSet('YM2610', 6, 'ADPCM-A'), used: false } : null;
+    function y10aWrite(a, d) {
+      var R = y10a.r; R[a] = d;
+      if (a !== 0x00) return;
+      for (var i = 0; i < 6; i++) {
+        if (!(d & (1 << i))) continue;
+        if (d & 0x80) { y10a.ch[i].keyOff(); continue; }
+        var mem = ROM[0x82]; if (!mem) return;
+        var st = ((R[0x18 + i] << 8) | R[0x10 + i]) << 8, en = (((R[0x28 + i] << 8) | R[0x20 + i]) + 1) << 8;
+        if (en <= st || st >= mem.length) continue;
+        var rt = clk.ym2610 / 432;
+        var s = pcmSample('YM2610', 'a' + st + ':' + en, function () { return ymAdpcmA(mem, st, en); }, rt);
+        var att = ((63 - (R[0x01] & 63)) + (31 - (R[0x08 + i] & 31))) * 0.75;
+        y10a.used = true;
+        y10a.ch[i].keyOn(s, rt, Math.pow(10, -att / 20), panLR(R[0x08 + i]));
+      }
+    }
+    // bateria interna do YM2608 (ROM do próprio chip, não vem no VGM): vira nota de bateria
+    var Y08_DRUM = [36, 38, 49, 42, 45, 37]; // bumbo, caixa, prato, chimbal, tom, aro
+    var y08rSeen = false;
+    function y08Rhythm(d) {
+      if ((d & 0x80) || !REC) return;
+      var id = 'YM2608 · Bateria';
+      for (var i = 0; i < 6; i++) if (d & (1 << i)) {
+        if (!y08rSeen) { y08rSeen = true; mchan(id, 'YM2608', 'Bateria', 'noise'); }
+        REC.push({ c: id, t: t, k: 'on', n: Y08_DRUM[i], v: 0.9, pan: 64, noise: { ck: 'drum', d: Y08_DRUM[i] } }); REC.push({ c: id, t: t + 2205, k: 'off' });
+      }
+    }
+
+    // ── QSound (Capcom CPS2): 16 vozes de PCM de 8 bits ──
+    // escrita: 1 (endereço) marca uma nota nova, que começa quando 2 (passo) deixa de ser 0;
+    // o banco de cada voz fica no registrador 0 da voz anterior (peculiaridade do chip)
+    var qs = null;
+    if (hclk(0xB4)) qs = { clock: hclk(0xB4), r: new Uint16Array(0x100), pend: [], pan: [], ch: pcmChanSet('QSound', 16, 'Voz') };
+    function qsBase() { return qs.clock / 166; }
+    function qsRate(c) { return qsBase() * qs.r[c * 8 + 2] / 4096; }
+    function qsWrite(reg, d) {
+      if (reg >= 0x80 && reg < 0x90) { var pp = Math.min(32, (d - 0x10) & 0x3F); qs.pan[reg - 0x80] = Math.round(pp * 127 / 32); return; }
+      if (reg >= 0x80) return;
+      qs.r[reg] = d;
+      var c = reg >> 3, k = reg & 7, ch = qs.ch[c];
+      if (k === 1) { qs.pend[c] = true; return; }
+      if (k === 6) { if (!d) ch.keyOff(); else ch.setVol(Math.min(1, d / 4096)); return; }
+      if (k !== 2 || !d) return;
+      if (!qs.pend[c]) { ch.setRate(qsRate(c)); return; }
+      qs.pend[c] = false;
+      var mem = ROM[0x8F]; if (!mem || !qs.r[c * 8 + 6]) return;
+      var bank = (qs.r[((c + 15) & 15) * 8] & 0x7F) << 16;
+      var st = bank | qs.r[c * 8 + 1], en = bank | qs.r[c * 8 + 5], ll = qs.r[c * 8 + 4];
+      if (en <= st) return;
+      var s = pcmSample('QSound', st + ':' + en + ':' + ll, function () {
+        var n = en - st, out = new Float32Array(n);
+        for (var i = 0; i < n; i++) out[i] = ((mem[(st + i) % mem.length] << 24) >> 24) / 128;
+        var lp = ll ? Math.max(0, n - ll) : -1;
+        if (lp >= 0) { var mx = 0; for (i = lp; i < n; i++) mx = Math.max(mx, Math.abs(out[i])); if (mx < 0.03) lp = -1; } // laço mudo no fim = toca uma vez
+        return { data: out, loop: lp };
+      }, qsBase());
+      ch.keyOn(s, qsRate(c), Math.min(1, qs.r[c * 8 + 6] / 4096), qs.pan[c]);
+    }
+
     // fluxos (streams) do VGM para chips de sample que não são o DAC do YM2612
     var strm = {}, strmF = {};
     function streamHit(sid, blk, len, freq) {
@@ -1069,13 +1176,14 @@ var RGVGM = (function () {
         if (c === 0xBA) { aa = b[p + 1]; if (k53 && !(aa & 0x80)) k53Write(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0xB0) { if (rf) rfWrite(b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0xC1) { if (rf) rfMem(rf.bank + ((b[p + 1] | (b[p + 2] << 8)) & 0x0FFF), b[p + 3]); p += 4; continue; }
+        if (c === 0xC4) { if (qs) qsWrite(b[p + 3], (b[p + 1] << 8) | b[p + 2]); p += 4; continue; }
         if (c === 0xE1) { if (c352) c352Write((b[p + 1] << 8) | b[p + 2], (b[p + 3] << 8) | b[p + 4]); p += 5; continue; }
         if (c === 0xB9) { aa = b[p + 1]; if (huc && !(aa & 0x80)) hucWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0x52 || c === 0x53) { if (fm.ym2612) opnWrite(fm.ym2612, c - 0x52, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x54) { if (fm.ym2151) opmWrite(fm.ym2151, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x55) { var aa = b[p + 1]; if (fm.ym2203) { if (aa < 0x10) ssg.ym2203.r[aa] = b[p + 2]; else opnWrite(fm.ym2203, 0, aa, b[p + 2]); } p += 3; continue; }
-        if (c === 0x56 || c === 0x57) { aa = b[p + 1]; if (fm.ym2608) { if (c === 0x56 && aa < 0x10) ssg.ym2608.r[aa] = b[p + 2]; else if (aa >= 0x20 || c === 0x56) opnWrite(fm.ym2608, c - 0x56, aa, b[p + 2]); } p += 3; continue; }
-        if (c === 0x58 || c === 0x59) { aa = b[p + 1]; if (fm.ym2610) { if (c === 0x58 && aa < 0x10) ssg.ym2610.r[aa] = b[p + 2]; else if (aa >= 0x20) opnWrite(fm.ym2610, c - 0x58, aa, b[p + 2]); } p += 3; continue; }
+        if (c === 0x56 || c === 0x57) { aa = b[p + 1]; if (fm.ym2608) { if (c === 0x57 && aa < 0x10) y08b.write(aa, b[p + 2]); else if (c === 0x56 && aa === 0x10) y08Rhythm(b[p + 2]); if (c === 0x56 && aa < 0x10) ssg.ym2608.r[aa] = b[p + 2]; else if (aa >= 0x20 || c === 0x56) opnWrite(fm.ym2608, c - 0x56, aa, b[p + 2]); } p += 3; continue; }
+        if (c === 0x58 || c === 0x59) { aa = b[p + 1]; if (fm.ym2610) { if (c === 0x58 && aa >= 0x10 && aa < 0x20) y10b.write(aa - 0x10, b[p + 2]); else if (c === 0x59 && aa < 0x30) y10aWrite(aa, b[p + 2]); if (c === 0x58 && aa < 0x10) ssg.ym2610.r[aa] = b[p + 2]; else if (aa >= 0x20) opnWrite(fm.ym2610, c - 0x58, aa, b[p + 2]); } p += 3; continue; }
         if (c === 0xA0) { aa = b[p + 1]; if (aa & 0x80) { if (ay2) ay2.r[aa & 15] = b[p + 2]; } else if (ay) ay.r[aa & 15] = b[p + 2]; p += 3; continue; }
         if (c === 0xB3) { aa = b[p + 1]; if (gb && !(aa & 0x80)) gbWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
         if (c === 0xB4) { aa = b[p + 1]; if (nes && !(aa & 0x80)) nesWrite(aa & 0x7F, b[p + 2]); p += 3; continue; }
@@ -1212,7 +1320,7 @@ var RGVGM = (function () {
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
     if (huc) chips.push('HuC6280');
-    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [c352, 'C352']].forEach(function (x) {
+    [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [c352, 'C352'], [qs, 'QSound']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
     }); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
     var res = { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
