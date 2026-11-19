@@ -878,7 +878,8 @@ var RGVGM = (function () {
       var data = d.data, srate = rate;
       // no máximo 4 s (e no máximo 32 kHz) para não pesar o navegador
       if (srate > 32000) { var f = Math.ceil(srate / 32000), nd = new Float32Array(Math.floor(data.length / f)); for (var i = 0; i < nd.length; i++) nd[i] = data[i * f]; data = nd; srate /= f; d.loop = d.loop >= 0 ? Math.floor(d.loop / f) : -1; }
-      if (data.length > srate * 4) data = data.subarray(0, Math.floor(srate * 4));
+      var maxSec = d.long ? 180 : 4;   // áudio em fluxo (gravado do jeito que tocou) pode ser longo
+      if (data.length > srate * maxSec) data = data.subarray(0, Math.floor(srate * maxSec));
       var id = 's' + (PCMSTORE.n++);
       var lp0 = d.loop >= 0 && d.loop < data.length ? d.loop : -1, info = pcmPitch(data, srate);
       if (!info.pitched && lp0 >= 0 && data.length - lp0 <= 1024 && data.length - lp0 >= 8) info = { pitched: true, note: midiOf(srate / (data.length - lp0)) };
@@ -927,7 +928,7 @@ var RGVGM = (function () {
       if (at != null) { var tsave = t; t = at; this.keyOn(s, playRate, vol, pan); t = tsave; pcmOutOfOrder = true; return; }
       this.keyOff();
       var drum = s.base == null, note = drum ? 60 : s.base + 12 * Math.log2(playRate / (s.r0 || s.rate)); // r0: taxa antes de reduzir para 32 kHz
-      var self = this;
+      var self = this; this.lastEv = null;
       var tbObj = col.add(this.chip + '|pcm|' + s.id, function () {
         return { type: 'pcm', pcmId: s.id, rate: s.rate, len: s.len, loop: s.loop, base: s.base, drum: s.drum, tune: 0 };
       }, this.label, drum ? 0 : note, this.chip);
@@ -937,6 +938,7 @@ var RGVGM = (function () {
       var ev = { c: this.id, t: t, k: 'on', n: drum ? s.drum : note, v: vol, pan: pan == null ? 64 : pan, tb: tbObj };
       if (drum) ev.noise = { ck: 'drum', d: s.drum };
       REC.push(ev);
+      this.lastEv = ev; this.lastTb = tbObj;
       this.on = { s: s, rate: playRate, n: note, v: vol, drum: drum };
     };
     PCMChan.prototype.keyOff = function (at) { if (this.on && REC) REC.push({ c: this.id, t: at != null ? at : t, k: 'off' }); this.on = null; };
@@ -1102,7 +1104,8 @@ var RGVGM = (function () {
     // ── RF5C68 (Sega CD / System 18): 8 canais tocando de uma RAM de 64 KB; 0xFF marca o fim (e volta ao loop) ──
     // o RF5C164 (Sega CD) é o mesmo chip com outro comando no VGM: os dois usam este código
     function makeRF(name, clock) {
-      var o = { name: name, clock: clock, ram: new Uint8Array(0x10000), sel: 0, bank: 0, on: 0xFF, c: [], ch: pcmChanSet(name, 8, 'Canal') };
+      // wt: quando cada byte da RAM foi escrito; cap: o que cada canal está tocando de fato (para o áudio mandado em fluxo)
+      var o = { name: name, clock: clock, ram: new Uint8Array(0x10000), wt: new Float64Array(0x10000).fill(-1), cap: [], sel: 0, bank: 0, on: 0xFF, c: [], ch: pcmChanSet(name, 8, 'Canal') };
       for (var i = 0; i < 8; i++) o.c.push({ env: 255, pan: 255, fd: 0, ls: 0, st: 0 });
       return o;
     }
@@ -1135,13 +1138,75 @@ var RGVGM = (function () {
               }, rf.clock / 384);
               var pl = ch.pan & 15, pr = ch.pan >> 4;
               rf.ch[c].keyOn(s, rfRate(rf, c), ch.env / 255, pl + pr ? Math.round(64 + 63 * (pr - pl) / (pl + pr)) : 64);
-            } else if (!now && was) rf.ch[c].keyOff();
+              rf.cap[c] = { t0: t, addr: st, ls: ls, frac: 0, rate: rfRate(rf, c), buf: [], dirty: false, done: false, ev: s ? rf.ch[c].lastEv : null, tb: s ? rf.ch[c].lastTb : null,
+                vol: ch.env / 255, pan: pl + pr ? Math.round(64 + 63 * (pr - pl) / (pl + pr)) : 64 };
+            } else if (!now && was) { rfCapEnd(rf, c); rf.ch[c].keyOff(); }
           }
           break;
       }
     }
     var rfVer = 0; // muda quando a RAM é reescrita (o mesmo endereço pode ter outro sample)
-    function rfMem(rf, a, d) { if (rf.ram[a & 0xFFFF] !== d) rfVer++; rf.ram[a & 0xFFFF] = d; }
+    function rfMem(rf, a, d) { if (rf.ram[a & 0xFFFF] !== d) rfVer++; rf.ram[a & 0xFFFF] = d; rf.wt[a & 0xFFFF] = t; }
+    // áudio em fluxo: o jogo vai escrevendo na RAM à frente do que o canal está tocando (Moonwalker, jogos de Sega CD...).
+    // Cada canal ligado anda pela RAM no ritmo do chip e guarda os bytes que passam; se tocou algo escrito depois da nota começar,
+    // a nota vira um sample com o áudio do jeito que tocou de fato
+    function rfCapAdv(rf, n) {
+      for (var c = 0; c < 8; c++) {
+        var k = rf.cap[c]; if (!k || k.done) continue;
+        k.frac += n * rfRate(rf, c) / 44100;
+        while (k.frac >= 1) {
+          k.frac--;
+          var v = rf.ram[k.addr];
+          if (v === 0xFF) { k.addr = k.ls & 0xFFFF; v = rf.ram[k.addr]; if (v === 0xFF) { k.done = true; break; } }
+          if (rf.wt[k.addr] > k.t0) k.dirty = true;
+          k.buf.push(v); k.addr = (k.addr + 1) & 0xFFFF;
+          if (k.buf.length >= k.rate * 180) { k.done = true; break; }
+        }
+      }
+    }
+    function rfCapEnd(rf, c) {
+      var k = rf.cap[c]; rf.cap[c] = null;
+      if (!k || !k.dirty || k.buf.length < 64) return;
+      var data = new Float32Array(k.buf.length);
+      for (var i = 0; i < data.length; i++) { var v = k.buf[i]; data[i] = (v & 0x80 ? (v & 0x7F) : -(v & 0x7F)) / 128; }
+      // o mesmo trecho tocado de novo (batida repetida, cortada em pontos diferentes) reaproveita o sample:
+      // se um é o começo do outro, fica o mais longo (o fim da nota corta na hora certa)
+      var B = k.buf, s2 = null, rr = Math.round(k.rate);
+      rf.caps = rf.caps || [];
+      for (var ci = 0; ci < rf.caps.length && !s2; ci++) {
+        var A = rf.caps[ci]; if (A.rate !== rr) continue;
+        var m = Math.min(A.buf.length, B.length), same = true;
+        for (var j = 0; j < m; j++) if (A.buf[j] !== B[j]) { same = false; break; }
+        if (!same) continue;
+        if (B.length > A.buf.length) {   // o novo é mais longo: o sample guardado cresce
+          A.buf = B; var sm = A.s, nd = data; if (sm.rate !== k.rate) { var ff = k.rate / sm.rate; nd = new Float32Array(Math.floor(data.length / ff)); for (j = 0; j < nd.length; j++) nd[j] = data[Math.floor(j * ff)]; }
+          if (nd.length > sm.rate * 180) nd = nd.subarray(0, Math.floor(sm.rate * 180));
+          PCMSTORE.map[sm.id] = nd; sm.len = nd.length; A.tbs.forEach(function (x) { x.len = nd.length; });
+        }
+        s2 = A.s;
+      }
+      var entry = null;
+      if (!s2) {
+        s2 = storeSmp({ data: data, loop: -1, long: true }, k.rate);
+        if (!s2) return;
+        entry = { rate: rr, buf: B, s: s2, tbs: [] }; rf.caps.push(entry);
+      } else entry = rf.caps.filter(function (x) { return x.s === s2; })[0];
+      if (s2.base != null) { s2.base = null; s2.drum = drumOf(PCMSTORE.map[s2.id], s2.rate); }   // toca na velocidade em que foi gravado
+      var pc = rf.ch[c];
+      if (!k.tb) {   // no começo da nota a RAM ainda não tinha um sample inteiro: a nota nasce agora, no tempo em que começou
+        if (rf.ch[c].on) rf.ch[c].keyOff();
+        pc.keyOn(s2, k.rate, k.vol, k.pan, k.t0);
+        if (entry && pc.lastTb && entry.tbs.indexOf(pc.lastTb) < 0) entry.tbs.push(pc.lastTb);
+        return;
+      }
+      var tb2 = col.add(pc.chip + '|pcm|' + s2.id, function () { return { type: 'pcm', pcmId: s2.id, rate: s2.rate, len: s2.len, loop: -1, base: null, drum: s2.drum, tune: 0, stream: true }; }, pc.label, 0, pc.chip);
+      if (entry && entry.tbs.indexOf(tb2) < 0) entry.tbs.push(tb2);
+      pc.nDrum++;
+      // o sample de antes (o que estava na RAM quando a nota começou) sai, se ficou sem uso
+      var old = k.tb;
+      if (old && --old.count <= 0) { var li = col.list.indexOf(old); if (li >= 0) col.list.splice(li, 1); delete col.map[old.key]; }
+      if (k.ev) { k.ev.tb = tb2; k.ev.n = s2.drum; k.ev.noise = { ck: 'drum', d: s2.drum }; }
+    }
 
     // ── C352 (Namco): 32 vozes, PCM de 8 bits ou mu-law ──
     var c352 = null;
@@ -2017,6 +2082,7 @@ var RGVGM = (function () {
     }
     var eofOff = u32(b, 4) + 4; if (eofOff > 4 && eofOff < end) end = eofOff;
     function advance(n) {
+      if (rf) rfCapAdv(rf, n); if (rf2) rfCapAdv(rf2, n);
       t += n;
       while (t >= nextFrame) {
         col.ft = nextFrame;
@@ -2204,6 +2270,7 @@ var RGVGM = (function () {
     if (DS) dsFlushStream(t + 1);
     advance(FRAME);
     chans.forEach(function (c) { c.finish(); });
+    [rf, rf2].forEach(function (r) { if (r) for (var rc = 0; rc < 8; rc++) rfCapEnd(r, rc); });
     dacEnd();
     if (REC) {
       for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
