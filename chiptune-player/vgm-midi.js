@@ -178,11 +178,11 @@ var RGVGM = (function () {
     var clk = {
       sn: hclk(0x0C), ym2413: hclk(0x10), ym2612: ver >= 0x110 ? hclk(0x2C) : hclk(0x10), ym2151: ver >= 0x110 ? hclk(0x30) : hclk(0x10),
       ym2203: hclk(0x44), ym2608: hclk(0x48), ym2610: hclk(0x4C), ay: hclk(0x74), gb: hclk(0x80), nes: hclk(0x84),
-      huc: hclk(0xA4)
+      huc: hclk(0xA4), ym3812: hclk(0x50), ym3526: hclk(0x54), y8950: hclk(0x58), ymf262: hclk(0x5C)
     };
-    var dual = { sn: hdual(0x0C), ym2612: ver >= 0x110 && hdual(0x2C), ym2151: ver >= 0x110 && hdual(0x30), ym2203: hdual(0x44), ay: hdual(0x74) };
+    var dual = { ym3812: hdual(0x50), sn: hdual(0x0C), ym2612: ver >= 0x110 && hdual(0x2C), ym2151: ver >= 0x110 && hdual(0x30), ym2203: hdual(0x44), ay: hdual(0x74) };
     // antes da v1.10 o campo 0x10 vale para YM2413, YM2612 e YM2151: o que aparece nos comandos decide
-    [['YM2413', 0x10], ['YM3812', 0x50], ['YM3526', 0x54], ['Y8950', 0x58], ['YMF262', 0x5C], ['SegaPCM', 0x38], ['RF5C68', 0x40],
+    [['YM2413', 0x10], ['SegaPCM', 0x38], ['RF5C68', 0x40],
      ['OKIM6295', 0x98], ['QSound', 0xB4], ['K051649', 0x9C], ['YMF278B', 0x60], ['YMZ280B', 0x68]].forEach(function (x) {
       if (x[0] === 'YM2413') return;
       if (hclk(x[1])) unsupported.push(x[0]);
@@ -262,6 +262,169 @@ var RGVGM = (function () {
       if (REC && chip.mcur[ch]) { REC.push({ c: chip.chip + ' · FM ' + (ch + 1), t: t, k: 'off' }); chip.mcur[ch] = null; }
     }
     var seenOPLL = false;
+    // ───────────── FM de 2 operadores: OPL (YM3526), OPL2 (YM3812), Y8950, OPL3 (YMF262) e OPLL (YM2413) ─────────────
+    // cada canal tem 2 operadores (ou 4, no modo 4-op do OPL3) com forma de onda própria (seno, meio seno...)
+    var OPL_SLOT = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21]; // operador → deslocamento no registrador
+    var OPL_CHOP = [0, 1, 2, 6, 7, 8, 12, 13, 14];                                   // canal → 1º operador (o 2º é +3)
+    var OPL_MUL = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15];
+    // instrumentos de fábrica do YM2413 (1 a 15): o chip só deixa 1 timbre "do usuário"; os outros vêm prontos
+    var OPLL_ROM = [null,
+      [0x71, 0x61, 0x1e, 0x17, 0xd0, 0x78, 0x00, 0x17], [0x13, 0x41, 0x1a, 0x0d, 0xd8, 0xf7, 0x23, 0x13], [0x13, 0x01, 0x99, 0x00, 0xf2, 0xc4, 0x21, 0x23],
+      [0x11, 0x61, 0x0e, 0x07, 0x8d, 0x64, 0x70, 0x27], [0x32, 0x21, 0x1e, 0x06, 0xe1, 0x76, 0x01, 0x28], [0x31, 0x22, 0x16, 0x05, 0xe0, 0x71, 0x00, 0x18],
+      [0x21, 0x61, 0x1d, 0x07, 0x82, 0x81, 0x11, 0x07], [0x33, 0x21, 0x2d, 0x13, 0xb0, 0x70, 0x00, 0x07], [0x61, 0x61, 0x1b, 0x06, 0x64, 0x65, 0x10, 0x17],
+      [0x41, 0x61, 0x0b, 0x18, 0x85, 0xf0, 0x81, 0x07], [0x33, 0x01, 0x83, 0x11, 0xea, 0xef, 0x10, 0x04], [0x17, 0xc1, 0x24, 0x07, 0xf8, 0xf8, 0x22, 0x12],
+      [0x61, 0x50, 0x0c, 0x05, 0xd2, 0xf5, 0x40, 0x42], [0x01, 0x01, 0x55, 0x03, 0xe9, 0x90, 0x03, 0x02], [0x41, 0x41, 0x89, 0x03, 0xf1, 0xe4, 0xc0, 0x13]];
+    var OPLL_NAMES = ['', 'Violino', 'Violão', 'Piano', 'Flauta', 'Clarinete', 'Oboé', 'Trompete', 'Órgão', 'Trompa', 'Sintetizador', 'Cravo', 'Vibrafone', 'Baixo sintetizado', 'Baixo acústico', 'Guitarra'];
+    // bateria do modo ritmo (BD, SD, TOM, CY, HH) → notas de bateria do General MIDI
+    var OPL_DRUM = [[16, 36, 'Bumbo'], [8, 38, 'Caixa'], [4, 45, 'Tom'], [2, 49, 'Prato'], [1, 42, 'Chimbal']];
+
+    function OPLChip(kind, name, clock, nch) {
+      this.kind = kind; this.chip = name; this.clock = clock; this.nch = nch;
+      this.regs = [new Uint8Array(256), new Uint8Array(256)];
+      this.keyed = new Uint8Array(nch); this.mcur = []; this.mseen = []; this.used = false; this.rhy = 0; this.drumSeen = false;
+      // taxa interna (amostras/s) do chip: OPL/OPL2/OPLL = clock/72, OPL3 = clock/288
+      this.rate = kind === 'opl3' ? clock / 288 : clock / 72;
+    }
+    function oplOp(R, slot) { // lê um operador dos registradores do OPL
+      var o = OPL_SLOT[slot];
+      return { am: R[0x20 + o] >> 7, vib: (R[0x20 + o] >> 6) & 1, egt: (R[0x20 + o] >> 5) & 1, ksr: (R[0x20 + o] >> 4) & 1, mul: R[0x20 + o] & 15,
+        ksl: R[0x40 + o] >> 6, tl: R[0x40 + o] & 63, ar: R[0x60 + o] >> 4, dr: R[0x60 + o] & 15, sl: R[0x80 + o] >> 4, rr: R[0x80 + o] & 15, ws: R[0xE0 + o] & 7 };
+    }
+    function opllPatch(chip, ch) {
+      var R = chip.regs[0], inst = R[0x30 + ch] >> 4, P = inst ? OPLL_ROM[inst] : [R[0], R[1], R[2], R[3], R[4], R[5], R[6], R[7]];
+      function op(m) {
+        var b0 = P[m], ar = P[4 + m];
+        return { am: b0 >> 7, vib: (b0 >> 6) & 1, egt: (b0 >> 5) & 1, ksr: (b0 >> 4) & 1, mul: b0 & 15,
+          ksl: m ? P[3] >> 6 : P[2] >> 6, tl: m ? (R[0x30 + ch] & 15) * 4 : P[2] & 63, ar: ar >> 4, dr: ar & 15, sl: P[6 + m] >> 4, rr: P[6 + m] & 15,
+          ws: m ? (P[3] >> 4) & 1 : (P[3] >> 3) & 1 };
+      }
+      return { inst: inst, fb: P[3] & 7, ops: [op(0), op(1)] };
+    }
+    // OPL3: o canal está ligado em 4 operadores? (devolve o canal par 0..2 / 9..11, ou -1)
+    function opl4of(chip, ch) {
+      if (chip.kind !== 'opl3' || !(chip.regs[1][5] & 1)) return -1;
+      var bank = ch >= 9 ? 1 : 0, c = ch % 9, en = chip.regs[1][4];
+      for (var k = 0; k < 3; k++) if ((en >> (k + bank * 3)) & 1) { if (c === k) return ch; if (c === k + 3) return ch - 3; }
+      return -1;
+    }
+    function oplSnapshot(chip, ch) {
+      var snap;
+      if (chip.kind === 'opll') {
+        var pt = opllPatch(chip, ch);
+        snap = { alg: 0, fb: pt.fb, ops: pt.ops, four: false, inst: pt.inst };
+      } else {
+        var bank = ch >= 9 ? 1 : 0, c = ch % 9, R = chip.regs[bank], s0 = OPL_CHOP[c];
+        var four = opl4of(chip, ch) === ch;
+        if (four) {
+          var R2 = R, c2 = c + 3, t0 = OPL_CHOP[c2];
+          snap = { four: true, fb: (R[0xC0 + c] >> 1) & 7, alg: (R[0xC0 + c] & 1) | ((R2[0xC0 + c2] & 1) << 1),
+            ops: [oplOp(R, s0), oplOp(R, s0 + 3), oplOp(R2, t0), oplOp(R2, t0 + 3)] };
+        } else snap = { four: false, fb: (R[0xC0 + c] >> 1) & 7, alg: R[0xC0 + c] & 1, ops: [oplOp(R, s0), oplOp(R, s0 + 3)] };
+        // forma de onda: OPL2 só tem 4 (e só com o bit de liberar); OPL e Y8950, só seno
+        snap.ops.forEach(function (o) {
+          if (chip.kind === 'opl' || chip.kind === 'y8950') o.ws = 0;
+          else if (chip.kind === 'opl2') o.ws = (chip.regs[0][1] & 0x20) ? o.ws & 3 : 0;
+          else if (!(chip.regs[1][5] & 1)) o.ws &= 3;
+        });
+      }
+      snap.dam = (chip.regs[0][0xBD] >> 7) & 1; snap.dvb = (chip.regs[0][0xBD] >> 6) & 1;
+      return snap;
+    }
+    var OPL_CAR = [[1], [0, 1]], OPL_CAR4 = [[3], [0, 3], [1, 3], [0, 2, 3]];
+    function oplCar(snap) { return snap.four ? OPL_CAR4[snap.alg] : OPL_CAR[snap.alg]; }
+    // estado do canal agora: nota, volume (0..1) e pan
+    function oplState(chip, ch) {
+      var bank = ch >= 9 ? 1 : 0, c = ch % 9, R = chip.regs[bank], fnum, block, f, pan = 64, v;
+      if (chip.kind === 'opll') {
+        R = chip.regs[0]; fnum = R[0x10 + ch] | ((R[0x20 + ch] & 1) << 8); block = (R[0x20 + ch] >> 1) & 7;
+        f = fnum * chip.rate * Math.pow(2, block) / 524288;
+        v = Math.pow(10, -(R[0x30 + ch] & 15) * 3 / 20);
+      } else {
+        fnum = R[0xA0 + c] | ((R[0xB0 + c] & 3) << 8); block = (R[0xB0 + c] >> 2) & 7;
+        f = fnum * chip.rate * Math.pow(2, block) / 1048576;
+        var snap = oplSnapshot(chip, ch), car = oplCar(snap), minTL = 63;
+        car.forEach(function (i) { minTL = Math.min(minTL, snap.ops[i].tl); });
+        v = Math.pow(10, -minTL * 0.75 / 20);
+        if (chip.kind === 'opl3') { var lr = (R[0xC0 + c] >> 4) & 3; pan = lr === 1 ? 0 : lr === 2 ? 127 : 64; }
+      }
+      return { n: midiOf(f), v: v, pan: pan };
+    }
+    function oplKey(chip, ch) {
+      var snap = oplSnapshot(chip, ch), car = oplCar(snap), minTL = 63;
+      car.forEach(function (i) { minTL = Math.min(minTL, snap.ops[i].tl); });
+      // volume da música mexe no TL das portadoras: normaliza a mais alta para 0
+      snap.ops.forEach(function (o, i) { if (car.indexOf(i) >= 0) o.tl -= minTL; });
+      var st = oplState(chip, ch), lbl = 'FM ' + (ch + 1);
+      var key = chip.chip + '|opl|' + snap.alg + '|' + snap.fb + '|' + (snap.four ? 4 : 2) + '|' + (snap.inst || 0) + '|' +
+        snap.ops.map(function (o) { return [o.am, o.vib, o.egt, o.ksr, o.mul, o.ksl, o.tl, o.ar, o.dr, o.sl, o.rr, o.ws].join('.'); }).join('/');
+      var tbObj = col.add(key, function () {
+        // afinação: se a portadora soa uma oitava acima/abaixo (MUL 0, 2, 4, 8), corrige o teclado
+        var best = null;
+        car.forEach(function (i) { var o = snap.ops[i]; if (!best || o.tl < best.tl) best = o; });
+        var mv = OPL_MUL[best.mul], tune = [0.5, 1, 2, 4, 8].indexOf(mv) >= 0 ? -12 * Math.log2(mv) : 0;
+        return { type: 'opl', oplKind: chip.kind, clock: chip.clock, rate: chip.rate, alg: snap.alg, fb: snap.fb, four: snap.four, ops: snap.ops,
+          dam: snap.dam, dvb: snap.dvb, tune: tune, opllInst: chip.kind === 'opll' ? snap.inst : undefined,
+          presetName: chip.kind === 'opll' && snap.inst ? OPLL_NAMES[snap.inst] : undefined };
+      }, lbl, st.n, chip.chip);
+      if (REC) {
+        var id = chip.chip + ' · ' + lbl;
+        if (!chip.mseen[ch]) { chip.mseen[ch] = 1; mchan(id, chip.chip, lbl, 'fm'); }
+        REC.push({ c: id, t: t, k: 'on', n: st.n, v: st.v, pan: st.pan, tb: tbObj });
+        chip.mcur[ch] = st;
+      }
+    }
+    function oplOff(chip, ch) {
+      if (REC && chip.mcur[ch]) { REC.push({ c: chip.chip + ' · FM ' + (ch + 1), t: t, k: 'off' }); chip.mcur[ch] = null; }
+    }
+    function oplFrame(chip) {
+      for (var ch = 0; ch < chip.nch; ch++) {
+        var cur = chip.mcur[ch]; if (!cur || !chip.keyed[ch]) continue;
+        var st = oplState(chip, ch), id = chip.chip + ' · FM ' + (ch + 1);
+        if (Math.abs(st.n - cur.n) > 0.02 && st.n > 0) { REC.push({ c: id, t: col.ft, k: 'pitch', n: st.n }); cur.n = st.n; }
+        if (Math.abs(st.v - cur.v) > 0.01) { REC.push({ c: id, t: col.ft, k: 'vol', v: st.v }); cur.v = st.v; }
+        if (st.pan !== cur.pan) { REC.push({ c: id, t: col.ft, k: 'pan', pan: st.pan }); cur.pan = st.pan; }
+      }
+    }
+    function oplDrums(chip, bits) { // modo ritmo: cada peça que acabou de bater vira uma nota de bateria
+      var rising = bits & ~chip.rhy; chip.rhy = bits;
+      if (!REC || !rising) return;
+      var id = chip.chip + ' · Bateria';
+      if (!chip.drumSeen) { chip.drumSeen = true; mchan(id, chip.chip, 'Bateria', 'noise'); }
+      OPL_DRUM.forEach(function (d) { if (rising & d[0]) { REC.push({ c: id, t: t, k: 'on', n: d[1], v: 0.9, pan: 64, noise: { ck: 'drum', d: d[1] } }); REC.push({ c: id, t: t + 2205, k: 'off' }); } });
+    }
+    function oplWrite(chip, port, a, d) {
+      chip.used = true;
+      var R = chip.regs[port], old = R[a]; R[a] = d;
+      if (chip.kind === 'opll') {
+        if (a === 0x0E) { oplDrums(chip, (d & 0x20) ? d & 31 : 0); return; }
+        if (a >= 0x20 && a <= 0x28) {
+          var ch = a - 0x20, on = (d >> 4) & 1;
+          if ((R[0x0E] & 0x20) && ch >= 6) return; // canais 7-9 viram bateria no modo ritmo
+          if (on && !chip.keyed[ch]) oplKey(chip, ch);
+          if (!on && chip.keyed[ch]) oplOff(chip, ch);
+          chip.keyed[ch] = on;
+        }
+        return;
+      }
+      if (port === 0 && a === 0xBD) { oplDrums(chip, (d & 0x20) ? d & 31 : 0); return; }
+      if (a >= 0xB0 && a <= 0xB8) {
+        var c = a - 0xB0, ch2 = c + port * 9, on2 = (d >> 5) & 1;
+        if (ch2 >= chip.nch) return;
+        if (port === 0 && (chip.regs[0][0xBD] & 0x20) && c >= 6) return;
+        var p4 = opl4of(chip, ch2);
+        if (p4 >= 0 && p4 !== ch2) return;    // 2ª metade de um par de 4 operadores: quem manda é o 1º canal
+        if (on2 && !chip.keyed[ch2]) oplKey(chip, ch2);
+        if (!on2 && chip.keyed[ch2]) oplOff(chip, ch2);
+        chip.keyed[ch2] = on2;
+      }
+    }
+    var opl = {};
+    if (clk.ym3812) opl.ym3812 = new OPLChip('opl2', 'YM3812', clk.ym3812, 9);
+    if (dual.ym3812) opl.ym3812b = new OPLChip('opl2', 'YM3812 #2', clk.ym3812, 9);
+    if (clk.ym3526) opl.ym3526 = new OPLChip('opl', 'YM3526', clk.ym3526, 9);
+    if (clk.y8950) opl.y8950 = new OPLChip('y8950', 'Y8950', clk.y8950, 9);
+    if (clk.ymf262) opl.ymf262 = new OPLChip('opl3', 'YMF262', clk.ymf262, 18);
+
     function opnWrite(chip, port, a, d) {
       chip.used = true;
       chip.regs[port][a] = d;
@@ -549,6 +712,7 @@ var RGVGM = (function () {
         col.ft = nextFrame;
         nextFrame += FRAME;
         if (REC) for (var fk in fm) if (fm[fk].mcur.length) fmFrame(fm[fk]);
+        if (REC) for (var ok in opl) if (opl[ok].mcur.length) oplFrame(opl[ok]);
         if (nes) nesFrame();
         if (gb) gbFrame();
         if (huc) hucFrame();
@@ -561,7 +725,17 @@ var RGVGM = (function () {
       while (p < end) {
         var c = b[p];
         if (c === 0x66) break;
-        if (c === 0x51) { seenOPLL = true; p += 3; continue; }
+        if (c === 0x51) {
+          seenOPLL = true;
+          if (!opl.ym2413 && clk.ym2413) opl.ym2413 = new OPLChip('opll', 'YM2413', clk.ym2413, 9);
+          if (opl.ym2413) oplWrite(opl.ym2413, 0, b[p + 1], b[p + 2]);
+          p += 3; continue;
+        }
+        if (c === 0x5A) { if (opl.ym3812) oplWrite(opl.ym3812, 0, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0xAA) { if (opl.ym3812b) oplWrite(opl.ym3812b, 0, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0x5B) { if (opl.ym3526) oplWrite(opl.ym3526, 0, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0x5C) { if (opl.y8950) oplWrite(opl.y8950, 0, b[p + 1], b[p + 2]); p += 3; continue; }
+        if (c === 0x5E || c === 0x5F) { if (opl.ymf262) oplWrite(opl.ymf262, c - 0x5E, b[p + 1], b[p + 2]); p += 3; continue; }
         if (c === 0x50) { if (sn) snWrite(b[p + 1], sn); p += 2; continue; }
         if (c === 0x30) { if (sn2) snWrite(b[p + 1], sn2); p += 2; continue; }
         if (c === 0xA2 || c === 0xA3) { if (fm.ym2612b) opnWrite(fm.ym2612b, c - 0xA2, b[p + 1], b[p + 2]); p += 3; continue; }
@@ -644,6 +818,7 @@ var RGVGM = (function () {
     dacEnd();
     if (REC) {
       for (var fk2 in fm) for (var ch2 = 0; ch2 < fm[fk2].nch; ch2++) fmOff(fm[fk2], ch2);
+      for (var ok2 in opl) for (var ch3 = 0; ch3 < opl[ok2].nch; ch3++) oplOff(opl[ok2], ch3);
       chans.forEach(function (c) { if (c.mOn) { REC.push({ c: c.id, t: t, k: 'off' }); c.mOn = false; } });
     }
     // papel (Melodia/Baixo/...) de todos os timbres, inclusive os que não vão para a lista
@@ -659,7 +834,7 @@ var RGVGM = (function () {
     });
     list.sort(function (a, b2) { return b2.count - a.count; });
     var perChip = {};
-    list = list.filter(function (x) { perChip[x.chip] = (perChip[x.chip] || 0) + 1; return perChip[x.chip] <= (x.type === 'fm' ? 40 : 16); });
+    list = list.filter(function (x) { perChip[x.chip] = (perChip[x.chip] || 0) + 1; return perChip[x.chip] <= (x.type === 'fm' || x.type === 'opl' ? 40 : 16); });
     var num = {};
     list.forEach(function (x) {
       num[x.chip] = (num[x.chip] || 0) + 1;
@@ -669,7 +844,7 @@ var RGVGM = (function () {
     });
     var chips = [];
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
-    if (seenOPLL || (clk.ym2413 && ver >= 0x110)) unsupported.unshift('YM2413');
+    Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (gb) chips.push('Game Boy');
     if (huc) chips.push('HuC6280'); if (ay) chips.push('AY-3-8910'); if (ay2) chips.push('AY-3-8910 #2');
     var res = { info: info, chips: chips, unsupported: unsupported, timbres: list, seconds: t / 44100 };
@@ -837,6 +1012,7 @@ var RGMIDI = (function () {
 
   // bateria (canal 10 do General MIDI)
   function noiseDrum(nz, dur) {
+    if (nz.ck === 'drum') return nz.d; // bateria do modo ritmo do OPL/OPLL: a peça já vem certa
     var br; // brilho 0..1 (1 = chiado agudo)
     if (nz.ck === 'sn') {
       // ritmo do ruído: fixo (r 0-2) ou o do PSG 3 (r 3); quanto mais rápido, mais chiado
@@ -944,7 +1120,7 @@ var RGMIDI = (function () {
   function program(tb) {
     if (!tb) return 80;
     if (tb.role === 'Baixo') return 38;              // Synth Bass 1
-    if (tb.type === 'fm') return tb.role === 'Melodia' ? 81 : 62; // Lead 2 (saw) / Synth Brass 1
+    if (tb.type === 'fm' || tb.type === 'opl') return tb.role === 'Melodia' ? 81 : 62; // Lead 2 (saw) / Synth Brass 1
     return 80;                                        // Lead 1 (square)
   }
 
@@ -1018,7 +1194,7 @@ var RGMIDI = (function () {
       var o = open[e.c];
       if (e.k === 'on') {
         if (o) { o.end = e.t; }
-        var tune = e.tb && e.tb.type === 'fm' ? -(e.tb.tune || 0) : 0; // altura real que o chip toca
+        var tune = e.tb && (e.tb.type === 'fm' || e.tb.type === 'opl') ? -(e.tb.tune || 0) : 0; // altura real que o chip toca
         o = { t: e.t, end: null, n: e.n + tune, tune: tune, v: e.v, pan: e.pan, tb: e.tb, noise: e.noise, ev: [] };
         L.push(o); open[e.c] = o;
       } else if (!o) return;
@@ -1706,7 +1882,31 @@ var RGMIDI = (function () {
   function fui(t, name) {
     var w = new Wr();
     w.tag('FINS'); w.s(228);
-    if (t.type === 'fm') {
+    if (t.type === 'opl') {
+      // Furnace: OPL = 14, OPLL = 13; no 4-op a ordem dos operadores é 1, 3, 2, 4
+      var opll = t.oplKind === 'opll', n4 = t.four && !opll;
+      w.c(opll ? 13 : 14); w.c(0);
+      w.tag('NA'); var an = w.n; w.s(0); w.str(name); patchS(w, an);
+      w.tag('FM'); an = w.n; w.s(0);
+      var ord = n4 ? [0, 2, 1, 3] : [0, 1], en2 = 0;
+      ord.forEach(function (m, i) { if (!t.ops[m].off) en2 |= 16 << i; });
+      w.c(en2 | (n4 ? 4 : 2));
+      w.c(((t.alg & (n4 ? 3 : 1)) << 4) | (t.fb & 7));
+      w.c(0);
+      w.c(n4 ? 32 : 0); w.c(0);
+      ord.forEach(function (m) {
+        var o = t.ops[m];
+        w.c((o.ksr ? 128 : 0) | (o.mul & 15));
+        w.c((!opll && o.egt ? 128 : 0) | (o.tl & 63));
+        w.c((o.vib ? 32 : 0) | (o.ar & 15));
+        w.c((o.am ? 128 : 0) | ((o.ksl & 3) << 5) | (o.dr & 15));
+        w.c(2 << 5);
+        w.c(((o.sl & 15) << 4) | (o.rr & 15));
+        w.c(opll && o.egt ? 8 : 0);
+        w.c(o.ws & 7);
+      });
+      patchS(w, an);
+    } else if (t.type === 'fm') {
       w.c(t.fmKind === 'opm' ? 33 : 1); w.c(0);
       w.tag('NA'); var a = w.n; w.s(0); w.str(name); patchS(w, a);
       w.tag('FM'); a = w.n; w.s(0);
@@ -1763,6 +1963,18 @@ var RGMIDI = (function () {
       var tg = tag(); p += 2; if (tg === 'EN') break;
       var len = dv.getUint16(p, true); p += 2; var end = p + len;
       if (tg === 'NA') { var q = p; while (q < end && u8[q]) q++; name = new TextDecoder().decode(u8.subarray(p, q)); }
+      else if (tg === 'FM' && (type === 13 || type === 14)) {
+        // OPL / OPLL do Furnace → timbre OPL do Chiptune Studio
+        var oen = u8[p], ocnt = (oen & 15) === 4 && type === 14 ? 4 : 2, ox = u8[p + 1], oo = p + 4 + (ver >= 224 ? 1 : 0), OP = [];
+        for (var oi = 0; oi < ocnt; oi++) {
+          var ob = u8.subarray(oo + oi * 8, oo + oi * 8 + 8);
+          OP.push({ ksr: ob[0] >> 7, mul: ob[0] & 15, egt: type === 13 ? ((ob[6] & 8) ? 1 : 0) : ob[1] >> 7, tl: ob[1] & 63, vib: (ob[2] >> 5) & 1, ar: ob[2] & 15,
+                    am: ob[3] >> 7, ksl: (ob[3] >> 5) & 3, dr: ob[3] & 15, sl: ob[5] >> 4, rr: ob[5] & 15, ws: ob[7] & 7, off: !(oen & (16 << oi)) });
+        }
+        var okind = type === 13 ? 'opll' : (OP.some(function (q) { return q.ws > 3; }) || ocnt === 4 ? 'opl3' : 'opl2'), oc = okind === 'opl3' ? 14318180 : 3579545;
+        t = { type: 'opl', oplKind: okind, clock: oc, rate: okind === 'opl3' ? oc / 288 : oc / 72, alg: (ox >> 4) & (ocnt === 4 ? 3 : 1), fb: ox & 7,
+              four: ocnt === 4, dam: 0, dvb: 0, tune: 0, ops: ocnt === 4 ? [OP[0], OP[2], OP[1], OP[3]] : OP, chip: { opll: 'YM2413', opl2: 'YM3812', opl3: 'YMF262' }[okind] };
+      }
       else if (tg === 'FM') {
         var en = u8[p], cnt = en & 15, x = u8[p + 1];
         t = { type: 'fm', fmKind: type === 33 ? 'opm' : 'opn', alg: (x >> 4) & 7, fb: x & 7, ams: (u8[p + 2] >> 3) & 3, fms: u8[p + 2] & 7, lfo: -1, opmLfo: null, tune: 0, ops: [] };
