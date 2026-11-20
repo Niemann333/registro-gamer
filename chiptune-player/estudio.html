@@ -5823,6 +5823,9 @@ var RGMIDI = (function () {
       case 'MMC5': return { id: 0x8b, name: 'MMC5', ch: chans([['Pulse 1', 'S1', 'nes'], ['Pulse 2', 'S2', 'nes'], ['PCM', 'PCM', pcmFam(4, 255)]]), at: function (l) { return /Pulso/.test(l) ? numOf(l) - 1 : null; } };
       case 'SID': { var m85 = /8580/.test((res.info && res.info.system) || ''); return { id: m85 ? 0x07 : 0x47, name: 'C64 (' + (m85 ? '8580' : '6581') + ')', ch: chans(seq(3, 'Channel', 'C', 'c64')), at: function (l) { return numOf(l) - 1; } }; }
       case 'S-DSP': return { id: 0x87, name: 'SNES', ch: chans(seq(8, 'Channel', 'C', pcmFam(29, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      // Nintendo DS e GBA têm sistemas próprios no Furnace: o arquivo fica no console de origem (não no ES5506 de reserva)
+      case 'NDS': return { id: 0xd6, name: 'Nintendo DS', ch: chans(seq(16, 'Channel', 'C', pcmFam(59, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'GBA': { var gn = 1; labels.forEach(function (l) { gn = Math.max(gn, numOf(l)); }); return { id: 0xd8, name: 'GBA MinMod', flags: 'channels=' + gn, ch: chans(seq(16, 'Channel', 'C', pcmFam(61, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } }; }
       case 'NES FDS': return { id: 0x8a, name: 'FDS', ch: chans([['FDS', 'FDS', 'fds']]), at: function () { return 0; } };
       case 'HuC6280': return { id: 0x05, name: 'PC Engine', ch: chans(seq(6, 'Channel', 'C', 'pce')), at: function (l) { return numOf(l) - 1; } };
       case 'K051649': case 'K052539': return { id: base === 'K052539' ? 0xb4 : 0xa1, name: base === 'K052539' ? 'SCC+' : 'SCC', ch: chans(seq(5, 'Channel', 'C', 'scc')), at: function (l) { return numOf(l) - 1; } };
@@ -5862,7 +5865,7 @@ var RGMIDI = (function () {
   var CHIP_P = { YM2612: 0.68, SN76489: 0.37, YM2151: 1.02, OKIM6295: 1.32, HuC6280: 1.09, 'Game Boy': 1.45, K053260: 1.67, YM3812: 3.7, YM3526: 3.7, Y8950: 3.7,
     YMF262: 1.09, YM2413: 0.44, 'NES APU': 1.49, 'NES FDS': 1.49, QSound: 0.27, 'AY-3-8910': 4.8, AY8930: 4.8, SegaPCM: 2.27, YM2203: 0.97, YM2608: 1.1, YM2610: 1.22,
     '32X PWM': 0.89, YMZ280B: 1.66, K051649: 1.14, K052539: 1.14, GA20: 1.78, 'X1-010': 0.89, Pokey: 1.72, C140: 0.45, C219: 0.45, OKIM6258: 1.36,
-    WonderSwan: 2.08, VSU: 3.57, RF5C68: 0.66, RF5C164: 0.66, YMF278B: 0.65, reserva: 0.56 };
+    WonderSwan: 2.08, VSU: 3.57, RF5C68: 0.66, RF5C164: 0.66, YMF278B: 0.65, NDS: 2.25, GBA: 3.5, reserva: 0.56 };
   var HDR_IDX = { SN76489: 0, YM2413: 1, YM2612: 2, YM2151: 3, SegaPCM: 4, RF5C68: 5, YM2203: 6, YM2608: 7, YM2610: 8, YM3812: 9, YM3526: 10, Y8950: 11, YMF262: 12,
     YMF278B: 13, YMF271: 14, YMZ280B: 15, RF5C164: 16, '32X PWM': 17, 'AY-3-8910': 18, AY8930: 18, 'Game Boy': 19, 'NES APU': 20, 'NES FDS': 20, MultiPCM: 21,
     uPD7759: 22, OKIM6258: 23, OKIM6295: 24, K051649: 25, K052539: 25, K054539: 26, HuC6280: 27, C140: 28, C219: 28, K053260: 29, Pokey: 30, QSound: 31,
