@@ -1087,7 +1087,35 @@ var RGFMT_MAKE = function (api) {
     if (tag(b, 0, 8) === 'ZXAYEMUL') return 'ay';
     if (tag(b, 0, 27) === 'SNES-SPC700 Sound File Data') return 'spc';
     if (t4 === 'PSID' || t4 === 'RSID') return 'sid';
+    if (tag(b, 0, 3) === 'PSF' && b[3] === 0x01) return 'psf';
     return null;
+  }
+  // ── PSF: cabeçalho, tags ([TAG]chave=valor) e o programa comprimido (zlib) ──
+  function psfInfo(b) {
+    if (tag(b, 0, 3) !== 'PSF') return null;
+    var res = u32(b, 4), cs = u32(b, 8), o = 16 + res + cs, tags = {};
+    if (o + 5 <= b.length && tag(b, o, 5) === '[TAG]') {
+      var txt = ''; for (var i = o + 5; i < b.length; i++) txt += String.fromCharCode(b[i]);
+      try { txt = decodeURIComponent(escape(txt)); } catch (e) {}
+      txt.split(/\n/).forEach(function (l) { var m = /^\s*([^=]+?)\s*=\s*(.*?)\s*$/.exec(l); if (m) { var k = m[1].toLowerCase(); tags[k] = tags[k] ? tags[k] + '\n' + m[2] : m[2]; } });
+    }
+    return { ver: b[3], exe: b.subarray(16 + res, 16 + res + cs), tags: tags };
+  }
+  function psfSecs(tags) {   // "length" (m:ss.ms) + "fade"
+    function p(x) { if (!x) return 0; var a = String(x).split(':'), s = 0; a.forEach(function (y) { s = s * 60 + parseFloat(String(y).replace(',', '.')) || s * 60; }); return s; }
+    var l = p(tags.length), f = p(tags.fade); return l ? l + f : 0;
+  }
+  // ordem do PSF: _lib (e as libs dela), o próprio programa, depois _lib2, _lib3...
+  // getFile(nome) → Promise<Uint8Array>; inflate(Uint8Array) → Promise<Uint8Array>
+  function psfLoad(b, getFile, inflate, depth) {
+    depth = depth || 0; if (depth > 8) return Promise.reject(new Error('_lib demais'));
+    var I = psfInfo(b); if (!I) return Promise.reject(new Error('PSF inválido'));
+    var out = [], chain = Promise.resolve();
+    function addLib(name) { chain = chain.then(function () { return getFile(name); }).then(function (lb) { return psfLoad(lb, getFile, inflate, depth + 1); }).then(function (r) { out = out.concat(r.sections); }); }
+    if (I.tags._lib) addLib(I.tags._lib);
+    chain = chain.then(function () { return I.exe.length ? inflate(I.exe) : null; }).then(function (x) { if (x) out.push(x); });
+    for (var k = 2; k < 10 && I.tags['_lib' + k]; k++) addLib(I.tags['_lib' + k]);
+    return chain.then(function () { return { sections: out, tags: I.tags, ver: I.ver }; });
   }
   function VgmW() { this.h = new Uint8Array(0x100); this.b = []; this.t = 0; }
   VgmW.prototype.clock = function (off, hz, flags) {
@@ -1217,6 +1245,17 @@ var RGFMT_MAKE = function (api) {
         info.title = info.title || str(b, 0x2E, 32); info.game = info.game || str(b, 0x4E, 32);
       }
       info.system = info.system || 'Super Nintendo';
+    } else if (kind === 'psf') {
+      var psmp = [];
+      for (i = 0; i < n; i++) {
+        var c7 = L[i * 4 + 1];
+        if (c7 === 32) { psmp[L[i * 4 + 2]] = { off: L[i * 4 + 3], len: L[i * 4 + 4 + 2], loop: L[i * 4 + 4 + 3] }; i++; continue; }
+        V.at(L[i * 4]);
+        if (c7 === 30) { var ra = L[i * 4 + 2], rd = L[i * 4 + 3]; V.put(0xE2, ra & 255, ra >> 8, rd & 255, rd >> 8); }
+        else if (c7 === 31) { var vi = L[i * 4 + 3]; V.put(0xE3, L[i * 4 + 2], vi & 255, vi >> 8, 0); }
+      }
+      var psx = { blob: R.blob, smp: psmp };
+      info.system = info.system || 'PlayStation';
     } else if (kind === 'sid') {
       for (i = 0; i < n; i++) { if (L[i * 4 + 1] !== 20) continue; V.at(L[i * 4]); V.put(0xDA, 0, L[i * 4 + 2], L[i * 4 + 3]); }
       info.system = 'Commodore 64 (SID ' + (R.info.model || '6581') + ')';
@@ -1226,7 +1265,7 @@ var RGFMT_MAKE = function (api) {
       info.system = info.system || 'ZX Spectrum';
     }
     V.at(R.seconds || (n ? L[(n - 1) * 4] : 0));
-    return { vgm: V.out(), info: info, rename: typeof rename !== 'undefined' ? rename : null, spc: typeof spc !== 'undefined' ? spc : null };
+    return { vgm: V.out(), info: info, rename: typeof rename !== 'undefined' ? rename : null, spc: typeof spc !== 'undefined' ? spc : null, psx: typeof psx !== 'undefined' ? psx : null };
   }
 
   function parse(b, opts) {
@@ -1239,7 +1278,7 @@ var RGFMT_MAKE = function (api) {
     if (f === 'mid') return parseMID(b, opts);
     return null;
   }
-  return { detect: detect, parse: parse, s98toVGM: s98toVGM, parseSF2: parseSF2, ripKind: ripKind, ripToVGM: ripToVGM };
+  return { detect: detect, parse: parse, s98toVGM: s98toVGM, parseSF2: parseSF2, ripKind: ripKind, ripToVGM: ripToVGM, psfInfo: psfInfo, psfLoad: psfLoad, psfSecs: psfSecs };
 };
 
 // ===== Extrator de timbres de arquivos VGM =====
@@ -2349,6 +2388,60 @@ var RGVGM = (function () {
       var f0 = s.rate / (pick + fr); if (f0 < 20 || f0 > 4000) return;
       s.base = midiOf(f0); s.drum = null;
     }
+    // ── SPU do PlayStation (vem de PSF): 24 vozes de sample ADPCM ──
+    // comandos próprios: 0xE2 aL aH dL dH (registrador do SPU, 16 bits) e 0xE3 vv il ih 00 (voz vv liga com o sample n)
+    var psxs = null, PSXB = opts && opts.psx;
+    var PSX_F0 = [0, 60, 115, 98, 122], PSX_F1 = [0, 0, -52, -55, -60];
+    function psxAdpcm(buf, off, len, loopOff) {
+      var nb = len >> 4, out = new Float32Array(nb * 28), o1 = 0, o2 = 0, o = 0;
+      for (var k = 0; k < nb; k++) {
+        var q = off + k * 16, sh = buf[q] & 15, f = Math.min(4, (buf[q] >> 4) & 7); if (sh > 12) sh = 9;
+        for (var j = 2; j < 16; j++) for (var hn = 0; hn < 2; hn++) {
+          var nyb = hn ? buf[q + j] >> 4 : buf[q + j] & 15, sv = ((nyb << 28) >> 16) >> sh;
+          sv += (o1 * PSX_F0[f] + o2 * PSX_F1[f] + 32) >> 6;
+          if (sv > 32767) sv = 32767; else if (sv < -32768) sv = -32768;
+          out[o++] = sv / 32768; o2 = o1; o1 = sv;
+        }
+      }
+      return { data: out, loop: loopOff >= 0 ? (loopOff >> 4) * 28 : -1 };
+    }
+    function psxInit() { psxs = { r: new Uint16Array(256), ch: pcmChanSet('SPU', 24, 'Voz'), on: new Uint8Array(24), until: new Float64Array(24), kt: new Float64Array(24).fill(-1e9) }; }
+    function psxRate(v) { return 44100 * Math.min(0x3FFF, psxs.r[v * 8 + 2]) / 4096; }
+    function psxVol(v) {
+      var f = function (x) { return x & 0x8000 ? 0x3FFF : Math.abs((x << 17) >> 17); };
+      var l = f(psxs.r[v * 8]), r = f(psxs.r[v * 8 + 1]);
+      return { v: Math.min(1, (l + r) / 0x7FFE * 1.4), pan: l + r ? Math.round(64 + 63 * (r - l) / (l + r)) : 64 };
+    }
+    function psxWrite(a, d) {
+      if (!psxs) psxInit();
+      a &= 0x1FE; psxs.r[a >> 1] = d;
+      if (a < 0x180) {
+        var v = a >> 4, k = a & 15;
+        if (v < 24 && psxs.on[v]) {
+          if (k === 4) psxs.ch[v].setRate(psxRate(v));
+          else if (k < 4) {
+            // muitos drivers ligam a voz e só depois escrevem o volume: logo depois do KEY ON, vale para a própria nota
+            var pv = psxVol(v), le = psxs.ch[v].lastEv;
+            if (t - psxs.kt[v] < 441 && le && le.t === psxs.kt[v]) { le.v = pv.v; le.pan = pv.pan; if (psxs.ch[v].on) psxs.ch[v].on.v = pv.v; }
+            else psxs.ch[v].setVol(pv.v);
+          }
+        }
+      } else if (a === 0x18C || a === 0x18E) {
+        for (var i = 0; i < 16; i++) if (d & (1 << i)) { var vv = i + (a === 0x18E ? 16 : 0); if (vv < 24 && psxs.on[vv]) { psxs.ch[vv].keyOff(); psxs.on[vv] = 0; } }
+      }
+    }
+    function psxKon(v, idx) {
+      if (!psxs) psxInit();
+      if (!PSXB || !PSXB.smp[idx] || v >= 24) return;
+      var S = PSXB.smp[idx];
+      var s = pcmSample('SPU', 'adpcm' + idx, function () { return psxAdpcm(PSXB.blob, S.off, S.len, S.loop); }, 44100);
+      if (!s) return;
+      var rate = psxRate(v), vv = psxVol(v); if (rate <= 0) return;
+      if (s.base == null && s.loop >= 0 && !s.loopTried) loopPitch(s);
+      psxs.ch[v].keyOn(s, rate, vv.v, vv.pan); psxs.on[v] = 1; psxs.kt[v] = t;
+      psxs.until[v] = s.loop >= 0 ? 1e15 : t + s.len * (s.r0 || s.rate) / s.rate / rate * 44100;
+    }
+    function psxFrame() { for (var v = 0; v < 24; v++) if (psxs.on[v] && t >= psxs.until[v]) { psxs.ch[v].keyOff(psxs.until[v]); psxs.on[v] = 0; } }
     function sdspInit() { sdsp = { r: new Uint8Array(128), ch: pcmChanSet('S-DSP', 8, 'Voz'), until: [0, 0, 0, 0, 0, 0, 0, 0], on: [0, 0, 0, 0, 0, 0, 0, 0] }; }
     function sdspRate(v) { return 32000 * (((sdsp.r[v * 16 + 3] & 0x3F) << 8) | sdsp.r[v * 16 + 2]) / 4096; }
     function sdspVol(v) { var l = (sdsp.r[v * 16] << 24) >> 24, r = (sdsp.r[v * 16 + 1] << 24) >> 24; return { v: Math.min(1, (Math.abs(l) + Math.abs(r)) / 254 * 1.4), pan: Math.abs(l) + Math.abs(r) ? Math.round(64 + 63 * (Math.abs(r) - Math.abs(l)) / (Math.abs(l) + Math.abs(r))) : 64 }; }
@@ -3512,6 +3605,7 @@ var RGVGM = (function () {
         if (vrc6) vrc6Frame();
         if (sdsp) sdspFrame();
         if (sid) sidFrame();
+        if (psxs) psxFrame();
         if (n163) n163Frame();
         for (var a = 0; a < ays.length; a++) ayFrame(ays[a]);
         for (var c = 0; c < chans.length; c++) chans[c].frame();
@@ -3569,6 +3663,8 @@ var RGVGM = (function () {
         if (c === 0xF0) { sdspKon(b[p + 1] & 7, b[p + 2] | (b[p + 3] << 8)); p += 5; continue; }              // S-DSP: voz liga com o sample n
         if (c === 0xD7) { if (!vrc6) vrc6Init(); vrc6Write(b[p + 2], b[p + 3]); p += 4; continue; }      // VRC6 (comando próprio, vindo de NSF)
         if (c === 0xD8) { if (!n163) n163Init(); n163.ram[b[p + 2] & 127] = b[p + 3]; p += 4; continue; }
+        if (c === 0xE2) { psxWrite(b[p + 1] | (b[p + 2] << 8), b[p + 3] | (b[p + 4] << 8)); p += 5; continue; }     // SPU do PlayStation (vindo de PSF)
+        if (c === 0xE3) { psxKon(b[p + 1], b[p + 2] | (b[p + 3] << 8)); p += 5; continue; }
         if (c === 0xDA) { sidWrite(b[p + 2], b[p + 3]); p += 4; continue; }                                    // SID do C64 (comando próprio, vindo de .sid) // N163 (comando próprio, vindo de NSF)
         if (c === 0xC7) { if (vsu && !(b[p + 1] & 0x80)) vsuWrite((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0x5D) { if (ymz) ymzWrite(b[p + 1], b[p + 2]); p += 3; continue; }
@@ -3727,7 +3823,7 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (fds && col.list.some(function (tt) { return tt.chip === 'NES FDS'; })) chips.push('NES FDS'); if (gb) chips.push('Game Boy');
-    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vrc6) chips.push('VRC6'); if (n163) chips.push('N163'); if (sdsp) chips.push('S-DSP'); if (sid) chips.push('SID'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
+    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vrc6) chips.push('VRC6'); if (n163) chips.push('N163'); if (sdsp) chips.push('S-DSP'); if (sid) chips.push('SID'); if (psxs) chips.push('SPU'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
     [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506'], [es5, 'ES5505'], [es3, 'ES5503'], [upd, 'uPD7759'], [scsp, 'SCSP']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
     }); if (ay) chips.push(ayName); if (ay2) chips.push(ayName + ' #2');
@@ -3889,7 +3985,7 @@ var RGVGM = (function () {
         // NSF/GBS/KSS/SAP/HES/AY/SPC: o registro das escritas (feito pelo rg-rip.wasm) vira VGM
         if (!opts || !opts.rip) throw new Error('rip');
         var cr = FMT.ripToVGM(rk, b, opts.rip), o2 = {}; for (var ok in opts) if (ok !== 'rip') o2[ok] = opts[ok];
-        o2.spc = cr.spc || null; if (opts.rip.clock) o2.sidClock = opts.rip.clock;
+        o2.spc = cr.spc || null; o2.psx = cr.psx || null; if (opts.rip.clock) o2.sidClock = opts.rip.clock;
         var rr = parse(cr.vgm, o2);
         rr.format = rk.toUpperCase();
         ['title', 'game', 'author', 'system'].forEach(function (k) { if (cr.info[k]) rr.info[k] = cr.info[k]; });
@@ -4045,7 +4141,7 @@ var RGVGM = (function () {
     return new Response(stream).arrayBuffer().then(function (ab) { return new Uint8Array(ab); });
   }
 
-  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS, ripKind: function (b) { return FMT ? FMT.ripKind(b) : null; }, pcmData: function (id) { return PCMSTORE.map[id] || null; },
+  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS, ripKind: function (b) { return FMT ? FMT.ripKind(b) : null; }, fmt: FMT, pcmData: function (id) { return PCMSTORE.map[id] || null; },
     detect: function (b, name) { b = b instanceof Uint8Array ? b : new Uint8Array(b); if (String.fromCharCode(b[0], b[1], b[2], b[3]) === 'Vgm ') return 'vgm'; return FMT ? FMT.detect(b, name) : null; } };
 })();
 
@@ -4562,7 +4658,7 @@ var RGMIDI = (function () {
     }
     return null;   // sem sistema equivalente no Furnace: vai para os canais de sample de reserva (ES5506)
   }
-  var FALLBACK_FAM = pcmFam(27, 255, { pan: 1 });
+  var FALLBACK_FAM = pcmFam(27, 255, { pan: 1, db: 0.376 });   // ES5506: volume em escala logarítmica (~0,38 dB por passo)
   // ---------- volume de cada chip, como no libvgm (o player de referência do VGM) ----------
   // CHIP_P: quanto o Furnace precisa de ganho para um chip soar como no libvgm (medido tocando cada chip sozinho nos dois);
   // o libvgm ainda pesa cada chip (tabela de volumes) e normaliza o conjunto em potências de 2 — o conversor refaz essa conta

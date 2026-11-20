@@ -389,7 +389,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
     <aside class="panel">
       <a class="trkBan" id="trkBan" href="tracker.html"><span class="ti">🎛</span><span class="tx"><b data-en="Open Tracker">Acessar Tracker</b></span><span class="go">›</span></a>
       <div class="tabs"><button class="tab on" id="tabAc" data-en="Library">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir uma música do seu aparelho (computador, celular, tablet…)" data-en-title="Open a song from your device (computer, phone, tablet…)">📂 Local</button></div>
-      <input type="file" id="pcIn" accept=".vgm,.vgz,.nsf,.nsfe,.gbs,.spc,.sid,.kss,.sap,.hes,.ay,.s98,.mod,.s3m,.xm,.it,.mptm,.mid,.midi,.rmi" multiple hidden>
+      <input type="file" id="pcIn" accept=".vgm,.vgz,.nsf,.nsfe,.gbs,.spc,.sid,.psf,.minipsf,.psflib,.kss,.sap,.hes,.ay,.s98,.mod,.s3m,.xm,.it,.mptm,.mid,.midi,.rmi" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo…" autocomplete="off"></div>
       <div class="crumbs" id="crumbs"></div>
       <div class="list" id="list"><div class="msg" data-en="Loading the library…">Carregando o acervo…</div></div>
@@ -2076,7 +2076,35 @@ var RGFMT_MAKE = function (api) {
     if (tag(b, 0, 8) === 'ZXAYEMUL') return 'ay';
     if (tag(b, 0, 27) === 'SNES-SPC700 Sound File Data') return 'spc';
     if (t4 === 'PSID' || t4 === 'RSID') return 'sid';
+    if (tag(b, 0, 3) === 'PSF' && b[3] === 0x01) return 'psf';
     return null;
+  }
+  // ── PSF: cabeçalho, tags ([TAG]chave=valor) e o programa comprimido (zlib) ──
+  function psfInfo(b) {
+    if (tag(b, 0, 3) !== 'PSF') return null;
+    var res = u32(b, 4), cs = u32(b, 8), o = 16 + res + cs, tags = {};
+    if (o + 5 <= b.length && tag(b, o, 5) === '[TAG]') {
+      var txt = ''; for (var i = o + 5; i < b.length; i++) txt += String.fromCharCode(b[i]);
+      try { txt = decodeURIComponent(escape(txt)); } catch (e) {}
+      txt.split(/\n/).forEach(function (l) { var m = /^\s*([^=]+?)\s*=\s*(.*?)\s*$/.exec(l); if (m) { var k = m[1].toLowerCase(); tags[k] = tags[k] ? tags[k] + '\n' + m[2] : m[2]; } });
+    }
+    return { ver: b[3], exe: b.subarray(16 + res, 16 + res + cs), tags: tags };
+  }
+  function psfSecs(tags) {   // "length" (m:ss.ms) + "fade"
+    function p(x) { if (!x) return 0; var a = String(x).split(':'), s = 0; a.forEach(function (y) { s = s * 60 + parseFloat(String(y).replace(',', '.')) || s * 60; }); return s; }
+    var l = p(tags.length), f = p(tags.fade); return l ? l + f : 0;
+  }
+  // ordem do PSF: _lib (e as libs dela), o próprio programa, depois _lib2, _lib3...
+  // getFile(nome) → Promise<Uint8Array>; inflate(Uint8Array) → Promise<Uint8Array>
+  function psfLoad(b, getFile, inflate, depth) {
+    depth = depth || 0; if (depth > 8) return Promise.reject(new Error('_lib demais'));
+    var I = psfInfo(b); if (!I) return Promise.reject(new Error('PSF inválido'));
+    var out = [], chain = Promise.resolve();
+    function addLib(name) { chain = chain.then(function () { return getFile(name); }).then(function (lb) { return psfLoad(lb, getFile, inflate, depth + 1); }).then(function (r) { out = out.concat(r.sections); }); }
+    if (I.tags._lib) addLib(I.tags._lib);
+    chain = chain.then(function () { return I.exe.length ? inflate(I.exe) : null; }).then(function (x) { if (x) out.push(x); });
+    for (var k = 2; k < 10 && I.tags['_lib' + k]; k++) addLib(I.tags['_lib' + k]);
+    return chain.then(function () { return { sections: out, tags: I.tags, ver: I.ver }; });
   }
   function VgmW() { this.h = new Uint8Array(0x100); this.b = []; this.t = 0; }
   VgmW.prototype.clock = function (off, hz, flags) {
@@ -2206,6 +2234,17 @@ var RGFMT_MAKE = function (api) {
         info.title = info.title || str(b, 0x2E, 32); info.game = info.game || str(b, 0x4E, 32);
       }
       info.system = info.system || 'Super Nintendo';
+    } else if (kind === 'psf') {
+      var psmp = [];
+      for (i = 0; i < n; i++) {
+        var c7 = L[i * 4 + 1];
+        if (c7 === 32) { psmp[L[i * 4 + 2]] = { off: L[i * 4 + 3], len: L[i * 4 + 4 + 2], loop: L[i * 4 + 4 + 3] }; i++; continue; }
+        V.at(L[i * 4]);
+        if (c7 === 30) { var ra = L[i * 4 + 2], rd = L[i * 4 + 3]; V.put(0xE2, ra & 255, ra >> 8, rd & 255, rd >> 8); }
+        else if (c7 === 31) { var vi = L[i * 4 + 3]; V.put(0xE3, L[i * 4 + 2], vi & 255, vi >> 8, 0); }
+      }
+      var psx = { blob: R.blob, smp: psmp };
+      info.system = info.system || 'PlayStation';
     } else if (kind === 'sid') {
       for (i = 0; i < n; i++) { if (L[i * 4 + 1] !== 20) continue; V.at(L[i * 4]); V.put(0xDA, 0, L[i * 4 + 2], L[i * 4 + 3]); }
       info.system = 'Commodore 64 (SID ' + (R.info.model || '6581') + ')';
@@ -2215,7 +2254,7 @@ var RGFMT_MAKE = function (api) {
       info.system = info.system || 'ZX Spectrum';
     }
     V.at(R.seconds || (n ? L[(n - 1) * 4] : 0));
-    return { vgm: V.out(), info: info, rename: typeof rename !== 'undefined' ? rename : null, spc: typeof spc !== 'undefined' ? spc : null };
+    return { vgm: V.out(), info: info, rename: typeof rename !== 'undefined' ? rename : null, spc: typeof spc !== 'undefined' ? spc : null, psx: typeof psx !== 'undefined' ? psx : null };
   }
 
   function parse(b, opts) {
@@ -2228,7 +2267,7 @@ var RGFMT_MAKE = function (api) {
     if (f === 'mid') return parseMID(b, opts);
     return null;
   }
-  return { detect: detect, parse: parse, s98toVGM: s98toVGM, parseSF2: parseSF2, ripKind: ripKind, ripToVGM: ripToVGM };
+  return { detect: detect, parse: parse, s98toVGM: s98toVGM, parseSF2: parseSF2, ripKind: ripKind, ripToVGM: ripToVGM, psfInfo: psfInfo, psfLoad: psfLoad, psfSecs: psfSecs };
 };
 
 // ===== Extrator de timbres de arquivos VGM =====
@@ -3338,6 +3377,60 @@ var RGVGM = (function () {
       var f0 = s.rate / (pick + fr); if (f0 < 20 || f0 > 4000) return;
       s.base = midiOf(f0); s.drum = null;
     }
+    // ── SPU do PlayStation (vem de PSF): 24 vozes de sample ADPCM ──
+    // comandos próprios: 0xE2 aL aH dL dH (registrador do SPU, 16 bits) e 0xE3 vv il ih 00 (voz vv liga com o sample n)
+    var psxs = null, PSXB = opts && opts.psx;
+    var PSX_F0 = [0, 60, 115, 98, 122], PSX_F1 = [0, 0, -52, -55, -60];
+    function psxAdpcm(buf, off, len, loopOff) {
+      var nb = len >> 4, out = new Float32Array(nb * 28), o1 = 0, o2 = 0, o = 0;
+      for (var k = 0; k < nb; k++) {
+        var q = off + k * 16, sh = buf[q] & 15, f = Math.min(4, (buf[q] >> 4) & 7); if (sh > 12) sh = 9;
+        for (var j = 2; j < 16; j++) for (var hn = 0; hn < 2; hn++) {
+          var nyb = hn ? buf[q + j] >> 4 : buf[q + j] & 15, sv = ((nyb << 28) >> 16) >> sh;
+          sv += (o1 * PSX_F0[f] + o2 * PSX_F1[f] + 32) >> 6;
+          if (sv > 32767) sv = 32767; else if (sv < -32768) sv = -32768;
+          out[o++] = sv / 32768; o2 = o1; o1 = sv;
+        }
+      }
+      return { data: out, loop: loopOff >= 0 ? (loopOff >> 4) * 28 : -1 };
+    }
+    function psxInit() { psxs = { r: new Uint16Array(256), ch: pcmChanSet('SPU', 24, 'Voz'), on: new Uint8Array(24), until: new Float64Array(24), kt: new Float64Array(24).fill(-1e9) }; }
+    function psxRate(v) { return 44100 * Math.min(0x3FFF, psxs.r[v * 8 + 2]) / 4096; }
+    function psxVol(v) {
+      var f = function (x) { return x & 0x8000 ? 0x3FFF : Math.abs((x << 17) >> 17); };
+      var l = f(psxs.r[v * 8]), r = f(psxs.r[v * 8 + 1]);
+      return { v: Math.min(1, (l + r) / 0x7FFE * 1.4), pan: l + r ? Math.round(64 + 63 * (r - l) / (l + r)) : 64 };
+    }
+    function psxWrite(a, d) {
+      if (!psxs) psxInit();
+      a &= 0x1FE; psxs.r[a >> 1] = d;
+      if (a < 0x180) {
+        var v = a >> 4, k = a & 15;
+        if (v < 24 && psxs.on[v]) {
+          if (k === 4) psxs.ch[v].setRate(psxRate(v));
+          else if (k < 4) {
+            // muitos drivers ligam a voz e só depois escrevem o volume: logo depois do KEY ON, vale para a própria nota
+            var pv = psxVol(v), le = psxs.ch[v].lastEv;
+            if (t - psxs.kt[v] < 441 && le && le.t === psxs.kt[v]) { le.v = pv.v; le.pan = pv.pan; if (psxs.ch[v].on) psxs.ch[v].on.v = pv.v; }
+            else psxs.ch[v].setVol(pv.v);
+          }
+        }
+      } else if (a === 0x18C || a === 0x18E) {
+        for (var i = 0; i < 16; i++) if (d & (1 << i)) { var vv = i + (a === 0x18E ? 16 : 0); if (vv < 24 && psxs.on[vv]) { psxs.ch[vv].keyOff(); psxs.on[vv] = 0; } }
+      }
+    }
+    function psxKon(v, idx) {
+      if (!psxs) psxInit();
+      if (!PSXB || !PSXB.smp[idx] || v >= 24) return;
+      var S = PSXB.smp[idx];
+      var s = pcmSample('SPU', 'adpcm' + idx, function () { return psxAdpcm(PSXB.blob, S.off, S.len, S.loop); }, 44100);
+      if (!s) return;
+      var rate = psxRate(v), vv = psxVol(v); if (rate <= 0) return;
+      if (s.base == null && s.loop >= 0 && !s.loopTried) loopPitch(s);
+      psxs.ch[v].keyOn(s, rate, vv.v, vv.pan); psxs.on[v] = 1; psxs.kt[v] = t;
+      psxs.until[v] = s.loop >= 0 ? 1e15 : t + s.len * (s.r0 || s.rate) / s.rate / rate * 44100;
+    }
+    function psxFrame() { for (var v = 0; v < 24; v++) if (psxs.on[v] && t >= psxs.until[v]) { psxs.ch[v].keyOff(psxs.until[v]); psxs.on[v] = 0; } }
     function sdspInit() { sdsp = { r: new Uint8Array(128), ch: pcmChanSet('S-DSP', 8, 'Voz'), until: [0, 0, 0, 0, 0, 0, 0, 0], on: [0, 0, 0, 0, 0, 0, 0, 0] }; }
     function sdspRate(v) { return 32000 * (((sdsp.r[v * 16 + 3] & 0x3F) << 8) | sdsp.r[v * 16 + 2]) / 4096; }
     function sdspVol(v) { var l = (sdsp.r[v * 16] << 24) >> 24, r = (sdsp.r[v * 16 + 1] << 24) >> 24; return { v: Math.min(1, (Math.abs(l) + Math.abs(r)) / 254 * 1.4), pan: Math.abs(l) + Math.abs(r) ? Math.round(64 + 63 * (Math.abs(r) - Math.abs(l)) / (Math.abs(l) + Math.abs(r))) : 64 }; }
@@ -4501,6 +4594,7 @@ var RGVGM = (function () {
         if (vrc6) vrc6Frame();
         if (sdsp) sdspFrame();
         if (sid) sidFrame();
+        if (psxs) psxFrame();
         if (n163) n163Frame();
         for (var a = 0; a < ays.length; a++) ayFrame(ays[a]);
         for (var c = 0; c < chans.length; c++) chans[c].frame();
@@ -4558,6 +4652,8 @@ var RGVGM = (function () {
         if (c === 0xF0) { sdspKon(b[p + 1] & 7, b[p + 2] | (b[p + 3] << 8)); p += 5; continue; }              // S-DSP: voz liga com o sample n
         if (c === 0xD7) { if (!vrc6) vrc6Init(); vrc6Write(b[p + 2], b[p + 3]); p += 4; continue; }      // VRC6 (comando próprio, vindo de NSF)
         if (c === 0xD8) { if (!n163) n163Init(); n163.ram[b[p + 2] & 127] = b[p + 3]; p += 4; continue; }
+        if (c === 0xE2) { psxWrite(b[p + 1] | (b[p + 2] << 8), b[p + 3] | (b[p + 4] << 8)); p += 5; continue; }     // SPU do PlayStation (vindo de PSF)
+        if (c === 0xE3) { psxKon(b[p + 1], b[p + 2] | (b[p + 3] << 8)); p += 5; continue; }
         if (c === 0xDA) { sidWrite(b[p + 2], b[p + 3]); p += 4; continue; }                                    // SID do C64 (comando próprio, vindo de .sid) // N163 (comando próprio, vindo de NSF)
         if (c === 0xC7) { if (vsu && !(b[p + 1] & 0x80)) vsuWrite((b[p + 1] << 8) | b[p + 2], b[p + 3]); p += 4; continue; }
         if (c === 0x5D) { if (ymz) ymzWrite(b[p + 1], b[p + 2]); p += 3; continue; }
@@ -4716,7 +4812,7 @@ var RGVGM = (function () {
     Object.keys(fm).forEach(function (k) { if (fm[k].used) chips.push(fm[k].chip); });
     Object.keys(opl).forEach(function (k) { if (opl[k].used) chips.push(opl[k].chip); });
     if (sn) chips.push('SN76489'); if (sn2) chips.push('SN76489 #2'); if (nes) chips.push('NES APU'); if (fds && col.list.some(function (tt) { return tt.chip === 'NES FDS'; })) chips.push('NES FDS'); if (gb) chips.push('Game Boy');
-    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vrc6) chips.push('VRC6'); if (n163) chips.push('N163'); if (sdsp) chips.push('S-DSP'); if (sid) chips.push('SID'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
+    if (huc) chips.push('HuC6280'); if (scc) chips.push(scc.plus ? 'K052539' : 'K051649'); if (vrc6) chips.push('VRC6'); if (n163) chips.push('N163'); if (sdsp) chips.push('S-DSP'); if (sid) chips.push('SID'); if (psxs) chips.push('SPU'); if (vsu) chips.push('VSU'); if (ws) chips.push('WonderSwan'); if (mikey) chips.push('Mikey'); if (opx && Object.keys(opx.rec).length) chips.push('YMF271'); if (opx && Object.keys(opx.pcm).length) chips.push('YMF271'); if (saa) chips.push('SAA1099'); if (pokey) chips.push('Pokey'); if (x1) chips.push('X1-010');
     [[oki, 'OKIM6295'], [oki58, 'OKIM6258'], [spcm, 'SegaPCM'], [k53, 'K053260'], [rf, 'RF5C68'], [rf2, 'RF5C164'], [c352, 'C352'], [qs, 'QSound'], [ymz, 'YMZ280B'], [opl4, 'YMF278B'], [ga20, 'GA20'], [x1, 'X1-010'], [c140, c140 && c140.type === 2 ? 'C219' : 'C140'], [k539, 'K054539'], [mpcm, 'MultiPCM'], [es6, 'ES5506'], [es5, 'ES5505'], [es3, 'ES5503'], [upd, 'uPD7759'], [scsp, 'SCSP']].forEach(function (x) {
       if (x[0] && x[0].ch.some(function (c) { return c.seen || c.nDrum || c.nTone; })) chips.push(x[1]);
     }); if (ay) chips.push(ayName); if (ay2) chips.push(ayName + ' #2');
@@ -4878,7 +4974,7 @@ var RGVGM = (function () {
         // NSF/GBS/KSS/SAP/HES/AY/SPC: o registro das escritas (feito pelo rg-rip.wasm) vira VGM
         if (!opts || !opts.rip) throw new Error('rip');
         var cr = FMT.ripToVGM(rk, b, opts.rip), o2 = {}; for (var ok in opts) if (ok !== 'rip') o2[ok] = opts[ok];
-        o2.spc = cr.spc || null; if (opts.rip.clock) o2.sidClock = opts.rip.clock;
+        o2.spc = cr.spc || null; o2.psx = cr.psx || null; if (opts.rip.clock) o2.sidClock = opts.rip.clock;
         var rr = parse(cr.vgm, o2);
         rr.format = rk.toUpperCase();
         ['title', 'game', 'author', 'system'].forEach(function (k) { if (cr.info[k]) rr.info[k] = cr.info[k]; });
@@ -5034,7 +5130,7 @@ var RGVGM = (function () {
     return new Response(stream).arrayBuffer().then(function (ab) { return new Uint8Array(ab); });
   }
 
-  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS, ripKind: function (b) { return FMT ? FMT.ripKind(b) : null; }, pcmData: function (id) { return PCMSTORE.map[id] || null; },
+  return { parse: parse, inflate: inflate, CARRIERS: CARRIERS, ripKind: function (b) { return FMT ? FMT.ripKind(b) : null; }, fmt: FMT, pcmData: function (id) { return PCMSTORE.map[id] || null; },
     detect: function (b, name) { b = b instanceof Uint8Array ? b : new Uint8Array(b); if (String.fromCharCode(b[0], b[1], b[2], b[3]) === 'Vgm ') return 'vgm'; return FMT ? FMT.detect(b, name) : null; } };
 })();
 
@@ -5551,7 +5647,7 @@ var RGMIDI = (function () {
     }
     return null;   // sem sistema equivalente no Furnace: vai para os canais de sample de reserva (ES5506)
   }
-  var FALLBACK_FAM = pcmFam(27, 255, { pan: 1 });
+  var FALLBACK_FAM = pcmFam(27, 255, { pan: 1, db: 0.376 });   // ES5506: volume em escala logarítmica (~0,38 dB por passo)
   // ---------- volume de cada chip, como no libvgm (o player de referência do VGM) ----------
   // CHIP_P: quanto o Furnace precisa de ganho para um chip soar como no libvgm (medido tocando cada chip sozinho nos dois);
   // o libvgm ainda pesa cada chip (tabela de volumes) e normaliza o conjunto em potências de 2 — o conversor refaz essa conta
@@ -6376,7 +6472,7 @@ var RGMIDI = (function () {
   var RAW = 'https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
   var BLOG = 'https://lucniemanngames.blogspot.com/';
   // formatos que o Studio importa: VGM, S98 (log de chips), módulos de tracker e MIDI
-  var VGM_RE = /\.(vgm|vgz|s98|mod|s3m|xm|it|mptm|mid|midi|rmi|nsf|nsfe|gbs|kss|sap|hes|ay|spc|sid)$/i;
+  var VGM_RE = /\.(vgm|vgz|s98|mod|s3m|xm|it|mptm|mid|midi|rmi|nsf|nsfe|gbs|kss|sap|hes|ay|spc|sid|psf|minipsf)$/i;
   // lê a música; MIDI usa os sons do SoundFont do player (baixado só quando abre um MIDI)
   var sf2P = null;
   function isMidiBytes(u8) { var t = String.fromCharCode(u8[0], u8[1], u8[2], u8[3]); return t === 'MThd' || (t === 'RIFF' && String.fromCharCode(u8[8], u8[9], u8[10], u8[11]) === 'RMID'); }
@@ -6385,7 +6481,7 @@ var RGMIDI = (function () {
   var ripP = null, subsP = null;
   function loadRip() {
     if (!ripP) ripP = new Promise(function (ok, no) {
-      var sc = document.createElement('script'); sc.src = 'rg-rip.js?v=1';
+      var sc = document.createElement('script'); sc.src = 'rg-rip.js?v=2';
       sc.onload = function () { RGRIP().then(ok, no); }; sc.onerror = function () { ripP = null; no(new Error(T('não consegui carregar o leitor','could not load the reader'))); };
       document.head.appendChild(sc);
     });
@@ -6397,7 +6493,27 @@ var RGMIDI = (function () {
     if (!subsP) subsP = fetch('subfaixas.json?v=' + Math.floor(Date.now() / 3.6e6)).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
     return subsP.then(function (j) { var dir = path.split('/').slice(0, -1).join('/'), f = path.split('/').pop(); return j && j[dir] && j[dir][f] ? j[dir][f] : null; });
   }
+  function zInflate(u8) { var st = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate')); return new Response(st).arrayBuffer().then(function (ab) { return new Uint8Array(ab); }); }
+  // arquivo vizinho (as _lib do PSF ficam na mesma pasta)
+  function sibling(path, name) {
+    if (isLocal(path)) {
+      var low = name.toLowerCase(), hit = null;
+      Object.keys(local).forEach(function (k) { if (local[k].name.toLowerCase() === low) hit = local[k]; });
+      return hit ? Promise.resolve(new Uint8Array(hit.file.slice(0))) : Promise.reject(new Error(T('abra junto o arquivo ','also open the file ') + name));
+    }
+    var dir = path.split('/').slice(0, -1).join('/');
+    return fetch(RAW + (dir + '/' + name).split('/').map(encodeURIComponent).join('/')).then(function (r) { if (!r.ok) throw new Error(name + ': HTTP ' + r.status); return r.arrayBuffer(); }).then(function (ab) { return new Uint8Array(ab); });
+  }
   function ripParse(path, u8, nm) {
+    if (RGVGM.ripKind(u8) === 'psf') return Promise.all([loadRip(), RGVGM.fmt.psfLoad(u8, function (n) { return sibling(path, n); }, zInflate)]).then(function (a) {
+      var M = a[0], ld = a[1];
+      if (!M._psf_begin()) throw new Error('PSF');
+      ld.sections.forEach(function (sx, i) { var p = M._malloc(sx.length); M.HEAPU8.set(sx, p); M._psf_section(p, sx.length, i === 0 ? 1 : 0); M._free(p); });
+      var secs = Math.min(300, RGVGM.fmt.psfSecs(ld.tags) || 180), cnt = M._psf_run(secs);
+      if (cnt < 0) throw new Error(T('o PSF não iniciou','the PSF did not start'));
+      var R = { log: new Float64Array(M.HEAPF64.buffer, M._rip_log(), cnt * 4).slice(), blob: M.HEAPU8.slice(M._rip_blob(), M._rip_blob() + M._rip_blob_size()), info: { song: ld.tags.title || '', game: ld.tags.game || '', author: ld.tags.artist || '' }, seconds: secs };
+      return RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: R });
+    });
     if (RGVGM.ripKind(u8) === 'sid') return subList(path).then(function (subs) {   // SID: o 6502 roda aqui mesmo, em JavaScript
       var n = RGSID.tracks(u8), list = subs && subs.length ? subs.map(function (x) { return { i: x[0], name: x[1] || '', ms: x[2] || 0 }; }) : [];
       if (!list.length) for (var k = 0; k < n; k++) list.push({ i: k, name: '', ms: 0 });
@@ -6774,7 +6890,7 @@ var RGMIDI = (function () {
   function isLocal(path) { return String(path).indexOf('local:') === 0; }
   function renderLocal(q) {
     $('crumbs').innerHTML = '<span>' + T('Arquivos locais (só nesta visita)','Local files (this visit only)') + '</span>';
-    var html = '<button class="pcopen" data-pcopen="1">' + T('📂 Abrir arquivo…','📂 Open file…') + '<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">' + T('VGM, NSF, GBS, SPC, SID, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT ou MIDI do seu aparelho · também dá para arrastar o arquivo para cá','VGM, NSF, GBS, SPC, SID, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT or MIDI from your device · you can also drag the file here') + '</span></button>';
+    var html = '<button class="pcopen" data-pcopen="1">' + T('📂 Abrir arquivo…','📂 Open file…') + '<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">' + T('VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT ou MIDI do seu aparelho (PSF: abra junto a .psflib) · também dá para arrastar o arquivo para cá','VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT or MIDI from your device (PSF: also open the .psflib) · you can also drag the file here') + '</span></button>';
     localOrder.filter(function (p) { return !q || local[p].name.toLowerCase().indexOf(q) >= 0; }).forEach(function (p) { html += fileItem(p, local[p].name, false); });
     if (!localOrder.length) html += '<div class="msg">' + T('Nenhum arquivo aberto ainda.','No files opened yet.') + '</div>';
     $('list').innerHTML = html;
@@ -6782,12 +6898,15 @@ var RGMIDI = (function () {
   function openLocalFiles(files) {
     var fuis = Array.prototype.filter.call(files, function (f) { return /\.fui$/i.test(f.name); });
     if (fuis.length) { openFui(fuis); if (fuis.length === files.length) return; }
-    var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name); });
-    if (!list.length) { toast(T('O Chiptune Studio abre arquivos VGM, NSF, GBS, SPC, SID, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT e MIDI.','Chiptune Studio opens VGM, NSF, GBS, SPC, SID, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT and MIDI files.')); return; }
+    var LIB_RE = /\.(psflib|gsflib|2sflib|usflib|snsflib)$/i;   // bibliotecas dos PSF: ficam guardadas, mas não viram música da lista
+    var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name) || LIB_RE.test(f.name); });
+    if (!list.some(function (f) { return VGM_RE.test(f.name); }) && list.length) { list.forEach(function (f) { f.arrayBuffer().then(function (ab) { local['local:lib:' + f.name] = { name: f.name, file: ab, u8: new Uint8Array(ab), lib: true }; }); }); toast(T('Biblioteca guardada: abra agora a música','Library kept: now open the song')); return; }
+    if (!list.length) { toast(T('O Chiptune Studio abre arquivos VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT e MIDI.','Chiptune Studio opens VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT and MIDI files.')); return; }
     var first = null;
     Promise.all(list.map(function (f) {
       return f.arrayBuffer().then(function (ab) {
         return RGVGM.inflate(new Uint8Array(ab.slice(0))).then(function (u8) {
+          if (LIB_RE.test(f.name)) { local['local:lib:' + f.name] = { name: f.name, file: ab, u8: u8, lib: true }; return; }
           var path = 'local:' + (++localN) + ':' + f.name;
           local[path] = { name: f.name, file: ab, u8: u8 };
           localOrder.unshift(path); if (!first) first = path;
@@ -7928,7 +8047,9 @@ var AY8930_DUTY = ['3,1%', '6,3%', '12,5%', '25%', '50%', '75%', '87,5%', '93,8%
       $('bPlay').textContent = T('⏳ Carregando…','⏳ Loading…');
       if (isLocal(cur.path)) {
         var lf = local[cur.path];
-        pSend({ type: 'load', url: LOCAL_URL + encodeURIComponent(lf.name), files: [{ name: lf.name, buf: lf.file.slice(0) }], loops: 2, sub: cur.trackSub || 0 });
+        var fl = [{ name: lf.name, buf: lf.file.slice(0) }];
+        Object.keys(local).forEach(function (k) { if (local[k].lib) fl.push({ name: local[k].name, buf: local[k].file.slice(0) }); });   // _lib dos PSF
+        pSend({ type: 'load', url: LOCAL_URL + encodeURIComponent(lf.name), files: fl, loops: 2, sub: cur.trackSub || 0 });
       } else pSend({ type: 'load', url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), loops: 2, sub: cur.trackSub || 0 });
       var dir = isLocal(cur.path) ? T('Arquivo local','Local file') : cur.path.split('/').slice(-2, -1)[0] || '';
       pSend({ type: 'mediainfo', title: $('sTitle').textContent, artist: dir, album: 'Chiptune Studio · Registro Gamer' });
