@@ -1,0 +1,41 @@
+From f250566ce3ccff58af93c97cc8f291f26aa1d2a8 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 04:16:37 -0300
+Subject: [PATCH 11/29] =?UTF-8?q?Web:=20rg=5Fweb=5Fdrop=20para=20abrir=20a?=
+ =?UTF-8?q?rquivos=20vindos=20da=20p=C3=A1gina?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/main.cpp | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/main.cpp b/src/main.cpp
+index 2d3a151..d7be112 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -716,6 +716,18 @@ EM_ASYNC_JS(void, rgWebMountHome, (), {
+ });
+ #endif
+ 
++#ifdef __EMSCRIPTEN__
++#include <SDL.h>
++// Registro Gamer: a página manda um arquivo (vindo do computador) como se fosse "arrastar e soltar"
++extern "C" EMSCRIPTEN_KEEPALIVE void rg_web_drop(const char* path) {
++  SDL_Event ev;
++  memset(&ev,0,sizeof(ev));
++  ev.type=SDL_DROPFILE;
++  ev.drop.file=SDL_strdup(path);
++  SDL_PushEvent(&ev);
++}
++#endif
++
+ #if defined(__EMSCRIPTEN__) && defined(main)
+ #undef main // o SDL troca main por SDL_main; no navegador o main é este
+ #endif
+-- 
+2.43.0
+

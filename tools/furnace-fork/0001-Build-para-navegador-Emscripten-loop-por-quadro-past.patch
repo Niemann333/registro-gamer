@@ -1,0 +1,153 @@
+From 6ce84d3505a9d80358805fee81a5383bc174b49d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:18:40 -0300
+Subject: [PATCH 01/29] Build para navegador (Emscripten): loop por quadro,
+ pasta no IndexedDB, seletor de arquivos sem threads
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ CMakeLists.txt                                   |  8 ++++++++
+ .../imgui_patched/backends/imgui_impl_sdl2.cpp   |  2 +-
+ src/gui/gui.cpp                                  | 12 ++++++++++++
+ src/gui/newFilePicker.cpp                        | 10 ++++++++++
+ src/main.cpp                                     | 16 ++++++++++++++++
+ 5 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9c7619f..9f5b894 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1456,6 +1456,14 @@ endif()
+ target_include_directories(${FURNACE} SYSTEM PRIVATE ${DEPENDENCIES_INCLUDE_DIRS})
+ target_compile_options(${FURNACE} PRIVATE ${DEPENDENCIES_COMPILE_OPTIONS})
+ target_link_libraries(${FURNACE} PRIVATE ${DEPENDENCIES_LIBRARIES})
++if (EMSCRIPTEN)
++  # Registro Gamer: build para navegador
++  target_link_options(${FURNACE} PRIVATE
++    "SHELL:-sASYNCIFY" "SHELL:-sASYNCIFY_STACK_SIZE=131072" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=134217728"
++    "SHELL:-sTOTAL_STACK=5242880" "-lidbfs.js" "SHELL:-sFORCE_FILESYSTEM=1" "SHELL:-sMIN_WEBGL_VERSION=1" "SHELL:-sMAX_WEBGL_VERSION=2"
++    "SHELL:-sEXPORTED_RUNTIME_METHODS=FS,ccall" "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$UTF8ToString,$stringToUTF8,$autoResumeAudioContext,$dynCall"
++    "-fexceptions" "SHELL:-sEXIT_RUNTIME=0" "SHELL:-sENVIRONMENT=web")
++endif()
+ if (PKG_CONFIG_FOUND AND (SYSTEM_FMT OR SYSTEM_LIBSNDFILE OR SYSTEM_ZLIB OR SYSTEM_SDL2 OR SYSTEM_RTMIDI OR WITH_JACK))
+   if ("${CMAKE_VERSION}" VERSION_LESS "3.13")
+     message(WARNING
+diff --git a/extern/imgui_patched/backends/imgui_impl_sdl2.cpp b/extern/imgui_patched/backends/imgui_impl_sdl2.cpp
+index d0664c8..22c2e93 100644
+--- a/extern/imgui_patched/backends/imgui_impl_sdl2.cpp
++++ b/extern/imgui_patched/backends/imgui_impl_sdl2.cpp
+@@ -140,7 +140,7 @@ extern "C" {
+ }
+ #endif
+ #ifdef __EMSCRIPTEN__
+-#include <emscripten/em_js.h>
++#include <emscripten.h>
+ #endif
+ #undef Status // X11 headers are leaking this.
+ 
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index b7005cd..f1d8d50 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -24,6 +24,11 @@
+ // define!!!!!!
+ 
+ #include "gui.h"
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++// Registro Gamer: devolve o controle ao navegador uma vez por quadro
++EM_ASYNC_JS(void, rgWebWaitFrame, (), { await new Promise(function (r) { requestAnimationFrame(function () { r(); }); }); });
++#endif
+ #include "util.h"
+ #include "../ta-log.h"
+ #include "../fileutils.h"
+@@ -4661,6 +4666,9 @@ bool FurnaceGUI::loop() {
+   }
+ 
+   while (!quit) {
++#ifdef __EMSCRIPTEN__
++    rgWebWaitFrame();
++#endif
+     SDL_Event ev;
+     SelectionPoint prevCursor=cursor;
+     if (e->isPlaying()) {
+@@ -4668,7 +4676,9 @@ bool FurnaceGUI::loop() {
+     }
+     if (--drawHalt<=0) {
+       drawHalt=0;
++#ifndef __EMSCRIPTEN__
+       if (settings.powerSave) SDL_WaitEventTimeout(NULL,500);
++#endif
+     }
+ 
+     memcpy(perfMetricsLast,perfMetrics,64*sizeof(FurnaceGUIPerfMetric));
+@@ -8431,7 +8441,9 @@ bool FurnaceGUI::loop() {
+           Sleep((unsigned int)(nextPresentTime-swapTimeBegin)/mDivider);
+ #else
+           unsigned int mDivider=SDL_GetPerformanceFrequency()/1000000;
++#ifndef __EMSCRIPTEN__
+           usleep((unsigned int)(nextPresentTime-swapTimeBegin)/mDivider);
++#endif
+ #endif
+           nextPresentTime+=presentDelay;
+         } else {
+diff --git a/src/gui/newFilePicker.cpp b/src/gui/newFilePicker.cpp
+index 604af78..fae982a 100644
+--- a/src/gui/newFilePicker.cpp
++++ b/src/gui/newFilePicker.cpp
+@@ -589,11 +589,21 @@ bool FurnaceFilePicker::readDirectory(String path) {
+   haveStat=false;
+   stopReading=false;
+   scheduledSort=1;
++#ifdef __EMSCRIPTEN__
++  // navegador sem threads: lê a pasta (que fica na memória) na hora
++  fileThread=NULL;
++  if (isSearch) {
++    _searchThread(this);
++  } else {
++    _fileThread(this);
++  }
++#else
+   if (isSearch) {
+     fileThread=new std::thread(_searchThread,this);
+   } else {
+     fileThread=new std::thread(_fileThread,this);
+   }
++#endif
+ 
+   // check whether this path is bookmarked
+   isPathBookmarked=false;
+diff --git a/src/main.cpp b/src/main.cpp
+index e3da604..1abeb29 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -700,9 +700,25 @@ static void handleTermGUI(int) {
+ #endif
+ #endif
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++// Registro Gamer: pasta do usuário guardada no navegador (IndexedDB)
++EM_ASYNC_JS(void, rgWebMountHome, (), {
++  try { FS.mkdir('/home/web_user'); } catch (e) {}
++  FS.mount(IDBFS, {}, '/home/web_user');
++  await new Promise(function (ok) { FS.syncfs(true, function () { ok(); }); });
++  ['Projetos', 'Exportados', 'Instrumentos'].forEach(function (d) { try { FS.mkdir('/home/web_user/' + d); } catch (e) {} });
++  if (!Module.rgSyncTimer) Module.rgSyncTimer = setInterval(function () { FS.syncfs(false, function () {}); }, 4000);
++  if (Module.onRgReady) Module.onRgReady();
++});
++#endif
++
+ // TODO: CoInitializeEx on Windows?
+ // TODO: add crash log
+ int main(int argc, char** argv) {
++#ifdef __EMSCRIPTEN__
++  rgWebMountHome();
++#endif
+   // Windows console thing - thanks dj.tuBIG/MaliceX
+ #ifdef _WIN32
+ #ifndef TA_SUBSYSTEM_CONSOLE
+-- 
+2.43.0
+

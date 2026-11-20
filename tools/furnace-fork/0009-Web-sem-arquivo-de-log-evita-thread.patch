@@ -1,0 +1,28 @@
+From 25dcd099e632da841dd3f9f7b359d787a9f7075c Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:45:56 -0300
+Subject: [PATCH 09/29] Web: sem arquivo de log (evita thread)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/log.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/log.cpp b/src/log.cpp
+index 8b91813..5f010ab 100644
+--- a/src/log.cpp
++++ b/src/log.cpp
+@@ -206,6 +206,9 @@ void _logFileThread() {
+ }
+ 
+ bool startLogFile(const char* path) {
++#ifdef __EMSCRIPTEN__
++  return false; // navegador: sem arquivo de log (precisaria de thread)
++#endif
+   if (logFileAvail) return true;
+ 
+   // rotate log file if possible
+-- 
+2.43.0
+

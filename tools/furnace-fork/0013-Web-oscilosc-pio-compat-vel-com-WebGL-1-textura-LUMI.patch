@@ -1,0 +1,98 @@
+From 20580ec099578dcab2a6f72526e9483dbe3216ce Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 04:43:10 -0300
+Subject: [PATCH 13/29] =?UTF-8?q?Web:=20oscilosc=C3=B3pio=20compat=C3=ADve?=
+ =?UTF-8?q?l=20com=20WebGL=201=20(textura=20LUMINANCE,=20precis=C3=A3o=20e?=
+ =?UTF-8?q?=20la=C3=A7os=20constantes)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/render/renderGL.cpp | 26 +++++++++++++++++++++-----
+ 1 file changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/src/gui/render/renderGL.cpp b/src/gui/render/renderGL.cpp
+index 459d82d..67b8439 100644
+--- a/src/gui/render/renderGL.cpp
++++ b/src/gui/render/renderGL.cpp
+@@ -75,6 +75,12 @@ class FurnaceGLTexture: public FurnaceGUITexture {
+     lockedData(NULL) {}
+ };
+ 
++#ifdef __EMSCRIPTEN__
++#define FUR_OSC_TEXFMT GL_LUMINANCE // navegador (WebGL 1): GL_RED não existe
++#else
++#define FUR_OSC_TEXFMT GL_RED_EXT
++#endif
++
+ #ifdef USE_GLES
+ const char* sh_wipe_srcV_ES2=
+   "attribute vec4 fur_position;\n"
+@@ -83,6 +89,7 @@ const char* sh_wipe_srcV_ES2=
+   "}\n";
+ 
+ const char* sh_wipe_srcF_ES2=
++  "precision mediump float;\n"
+   "uniform float uAlpha;\n"
+   "void main() {\n"
+   "  gl_FragColor=vec4(0.0,0.0,0.0,uAlpha);\n"
+@@ -111,7 +118,10 @@ const char* sh_oscRender_srcF=
+   "  float xMax=ceil(fur_fragCoord.x+uLineWidth);\n"
+   "  float valmax=-1024.0;\n"
+   "  float valmin=1024.0;\n"
+-  "  for (float x=floor(fur_fragCoord.x-uLineWidth); x<=xMax; x+=1.0) {\n"
++  "  float x0=floor(fur_fragCoord.x-uLineWidth);\n"
++  "  for (int i=0; i<64; i++) {\n"
++  "    float x=x0+float(i);\n"
++  "    if (x>xMax) break;\n"
+   "    float val=texture2D(oscVal,vec2(x*oneStep,1.0)).x;\n"
+   "    if (val>valmax) valmax=val;\n"
+   "    if (val<valmin) valmin=val;\n"
+@@ -122,7 +132,10 @@ const char* sh_oscRender_srcF=
+   "  float slopeMul=pow(2.0,ceil(log2(ceil(slope))));\n"
+   "  float slopeDiv=min(1.0,1.0/slopeMul);\n"
+   "  float xRight=ceil(fur_fragCoord.x+uLineWidth);\n"
+-  "  for (float x=max(0.0,floor(fur_fragCoord.x-uLineWidth)); x<=xRight; x+=slopeDiv) {\n"
++  "  float xs=max(0.0,floor(fur_fragCoord.x-uLineWidth));\n"
++  "  for (int i=0; i<1024; i++) {\n"
++  "    float x=xs+float(i)*slopeDiv;\n"
++  "    if (x>xRight) break;\n"
+   "    float val0=texture2D(oscVal,vec2(floor(x)*oneStep,1.0)).x;\n"
+   "    float val1=texture2D(oscVal,vec2(floor(x+1.0)*oneStep,1.0)).x;\n"
+   "    float val=mix(val0,val1,fract(x))*uResolution.y;\n"
+@@ -199,7 +212,10 @@ const char* sh_oscRender_srcF=
+   "  float slopeMul=pow(2.0,ceil(log2(ceil(slope))));\n"
+   "  float slopeDiv=min(1.0,1.0/slopeMul);\n"
+   "  float xRight=ceil(fur_fragCoord.x+uLineWidth);\n"
+-  "  for (float x=max(0.0,floor(fur_fragCoord.x-uLineWidth)); x<=xRight; x+=slopeDiv) {\n"
++  "  float xs=max(0.0,floor(fur_fragCoord.x-uLineWidth));\n"
++  "  for (int i=0; i<1024; i++) {\n"
++  "    float x=xs+float(i)*slopeDiv;\n"
++  "    if (x>xRight) break;\n"
+   "    float val0=texelFetch(oscVal,int(x),0).x;\n"
+   "    float val1=texelFetch(oscVal,int(x)+1,0).x;\n"
+   "    float val=mix(val0,val1,fract(x))*uResolution.y;\n"
+@@ -458,7 +474,7 @@ void FurnaceGUIRenderGL::drawOsc(float* data, size_t len, ImVec2 pos0, ImVec2 po
+ 
+ #ifdef USE_GLES
+   C(glBindTexture(GL_TEXTURE_2D,oscDataTex));
+-  C(glTexImage2D(GL_TEXTURE_2D,0,GL_RED_EXT,2048,1,0,GL_RED_EXT,GL_FLOAT,oscData));
++  C(glTexImage2D(GL_TEXTURE_2D,0,FUR_OSC_TEXFMT,2048,1,0,FUR_OSC_TEXFMT,GL_FLOAT,oscData));
+ #else
+   C(glBindTexture(GL_TEXTURE_1D,oscDataTex));
+   C(glTexImage1D(GL_TEXTURE_1D,0,GL_R32F,2048,0,GL_RED,GL_FLOAT,oscData));
+@@ -717,7 +733,7 @@ bool FurnaceGUIRenderGL::init(SDL_Window* win, int swapInterval) {
+     C(glBindTexture(GL_TEXTURE_2D,oscDataTex));
+     C(glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST));
+     C(glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST));
+-    C(glTexImage2D(GL_TEXTURE_2D,0,GL_RED_EXT,2048,1,0,GL_RED_EXT,GL_FLOAT,NULL));
++    C(glTexImage2D(GL_TEXTURE_2D,0,FUR_OSC_TEXFMT,2048,1,0,FUR_OSC_TEXFMT,GL_FLOAT,NULL));
+ #else
+     C(glBindTexture(GL_TEXTURE_1D,oscDataTex));
+     C(glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_MIN_FILTER,GL_NEAREST));
+-- 
+2.43.0
+

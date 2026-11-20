@@ -1,0 +1,36 @@
+From 1f9387bd2ae3a7ff559346982f5fba9c3f845161 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 17 Nov 2026 02:25:25 -0300
+Subject: [PATCH 17/29] =?UTF-8?q?Web:=20arquivo=20aberto=20pela=20p=C3=A1g?=
+ =?UTF-8?q?ina=20pula=20a=20anima=C3=A7=C3=A3o=20de=20abertura?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/gui.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index f1d8d50..dbc6703 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -4843,8 +4843,13 @@ bool FurnaceGUI::loop() {
+         case SDL_DROPFILE:
+           if (ev.drop.file!=NULL) {
+             if (introPos<11.0) {
++#ifdef __EMSCRIPTEN__
++              // Web: arquivo vindo da página (Abrir do computador / Chiptune Studio) pula a abertura
++              introPos=12.0;
++#else
+               SDL_free(ev.drop.file);
+               break;
++#endif
+             }
+             int sampleCountBefore=e->song.sampleLen;
+             std::vector<DivInstrument*> instruments=e->instrumentFromFile(ev.drop.file,true,settings.readInsNames);
+-- 
+2.43.0
+

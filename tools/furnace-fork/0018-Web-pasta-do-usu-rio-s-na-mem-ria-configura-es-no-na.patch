@@ -1,0 +1,84 @@
+From 43ace21d55d48a30826db41c50d3a255c416cf4d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 17 Nov 2026 02:25:26 -0300
+Subject: [PATCH 18/29] =?UTF-8?q?Web:=20pasta=20do=20usu=C3=A1rio=20s?=
+ =?UTF-8?q?=C3=B3=20na=20mem=C3=B3ria=20(configura=C3=A7=C3=B5es=20no=20na?=
+ =?UTF-8?q?vegador),=20sem=20c=C3=B3pias=20de=20seguran=C3=A7a,=20rg=5Fweb?=
+ =?UTF-8?q?=5Fmodified?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/gui.h                     |  2 ++
+ src/gui/settings/loadSettings.cpp |  5 +++++
+ src/main.cpp                      | 12 ++++++++++--
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/src/gui/gui.h b/src/gui/gui.h
+index ec24530..fdbebc2 100644
+--- a/src/gui/gui.h
++++ b/src/gui/gui.h
+@@ -3533,6 +3533,8 @@ class FurnaceGUI {
+   friend class SettingEntry;
+ 
+   public:
++    // Registro Gamer (web): há alterações não salvas?
++    bool rgIsModified() { return modified; }
+     void editStr(String* which);
+     void showError(String what);
+     void showWarning(String what, FurnaceGUIWarnings type);
+diff --git a/src/gui/settings/loadSettings.cpp b/src/gui/settings/loadSettings.cpp
+index 06f3065..e15374a 100644
+--- a/src/gui/settings/loadSettings.cpp
++++ b/src/gui/settings/loadSettings.cpp
+@@ -233,7 +233,12 @@ void FurnaceGUI::readConfig(DivConfig& conf, FurnaceGUISettingGroups groups) {
+     settings.s3mOPL3=conf.getBool("s3mOPL3",1);
+     settings.sampleImportInstDetune=conf.getBool("sampleImportInstDetune",0);
+ 
++#ifdef __EMSCRIPTEN__
++    // Web: sem cópias de segurança guardadas no navegador (o projeto só existe enquanto a página está aberta)
++    settings.backupEnable=false;
++#else
+     settings.backupEnable=conf.getBool("backupEnable",1);
++#endif
+     settings.backupInterval=conf.getInt("backupInterval",30);
+     settings.backupMaxCopies=conf.getInt("backupMaxCopies",5);
+ 
+diff --git a/src/main.cpp b/src/main.cpp
+index e530f18..c98d605 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -705,10 +705,14 @@ static void handleTermGUI(int) {
+ 
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
+-// Registro Gamer: pasta do usuário guardada no navegador (IndexedDB)
++// Registro Gamer: a pasta do usuário fica só na memória (como um programa: fechou sem salvar, perdeu).
++// Só as configurações do Furnace (~/.config) ficam guardadas no navegador.
+ EM_ASYNC_JS(void, rgWebMountHome, (), {
+   try { FS.mkdir('/home/web_user'); } catch (e) {}
+-  FS.mount(IDBFS, {}, '/home/web_user');
++  try { FS.mkdir('/home/web_user/.config'); } catch (e) {}
++  // versões antigas guardavam a pasta inteira (projetos) no IndexedDB: apaga
++  try { indexedDB.deleteDatabase('/home/web_user'); } catch (e) {}
++  FS.mount(IDBFS, {}, '/home/web_user/.config');
+   await new Promise(function (ok) { FS.syncfs(true, function () { ok(); }); });
+   ['Projetos', 'Exportados', 'Instrumentos'].forEach(function (d) { try { FS.mkdir('/home/web_user/' + d); } catch (e) {} });
+   if (!Module.rgSyncTimer) Module.rgSyncTimer = setInterval(function () { FS.syncfs(false, function () {}); }, 4000);
+@@ -718,6 +722,10 @@ EM_ASYNC_JS(void, rgWebMountHome, (), {
+ 
+ #ifdef __EMSCRIPTEN__
+ #include <SDL.h>
++// Registro Gamer: a página pergunta se há alterações não salvas (para avisar ao fechar)
++extern "C" EMSCRIPTEN_KEEPALIVE int rg_web_modified() {
++  return g.rgIsModified()?1:0;
++}
+ // Registro Gamer: a página manda um arquivo (vindo do computador) como se fosse "arrastar e soltar"
+ extern "C" EMSCRIPTEN_KEEPALIVE void rg_web_drop(const char* path) {
+   SDL_Event ev;
+-- 
+2.43.0
+

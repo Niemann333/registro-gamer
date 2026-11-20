@@ -1,0 +1,836 @@
+From eb9869a52e7b8d5a1008ae60ad71e57e339f87f0 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Fri, 20 Nov 2026 13:34:54 -0300
+Subject: [PATCH 28/29] =?UTF-8?q?Exporta=C3=A7=C3=A3o=20SPC=20(SNES)=20com?=
+ =?UTF-8?q?=20player=20SPC700=20e=20log=20comprimido=20por=20refer=C3=AAnc?=
+ =?UTF-8?q?ias=20aninhadas?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ CMakeLists.txt                 |   1 +
+ scripts/rg-asmspc.py           |  85 +++++++++++
+ src/engine/export.cpp          |   4 +
+ src/engine/export.h            |   1 +
+ src/engine/export/rgexport.cpp |  97 +++++++++++++
+ src/engine/export/rgexport.h   |   7 +
+ src/engine/export/spc.cpp      | 251 +++++++++++++++++++++++++++++++++
+ src/engine/export/spc.h        |  26 ++++
+ src/engine/export/spcdrv.asm   | 141 ++++++++++++++++++
+ src/engine/export/spcdrv.inc   |  36 +++++
+ src/engine/exportDef.cpp       |  13 ++
+ src/engine/platform/snes.cpp   |   7 +
+ 12 files changed, 669 insertions(+)
+ create mode 100644 scripts/rg-asmspc.py
+ create mode 100644 src/engine/export/spc.cpp
+ create mode 100644 src/engine/export/spc.h
+ create mode 100644 src/engine/export/spcdrv.asm
+ create mode 100644 src/engine/export/spcdrv.inc
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e4e8899..cedda62 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -927,6 +927,7 @@ src/engine/export/amigaValidation.cpp
+ src/engine/export/sapr.cpp
+ src/engine/export/rgexport.cpp
+ src/engine/export/nsf.cpp
++src/engine/export/spc.cpp
+ src/engine/export/tiuna.cpp
+ src/engine/export/zsm.cpp
+ src/engine/export/ipod.cpp
+diff --git a/scripts/rg-asmspc.py b/scripts/rg-asmspc.py
+new file mode 100644
+index 0000000..3e04183
+--- /dev/null
++++ b/scripts/rg-asmspc.py
+@@ -0,0 +1,85 @@
++# mini montador SPC700 (só as instruções do driver SPC), duas passadas com rótulos
++import re
++# padrão -> (opcode, ordem dos operandos)   d=byte de página direta, i=imediato, a=endereço absoluto 16 bits, r=desvio relativo
++PAT=[
++ (r'mov x,a$',         0x5D, ''),
++ (r'mov ([\w$]+)\+x,a$', 0xD4, 'd'),
++ (r'mov a,([\w$]+)\+x$', 0xF4, 'd'),
++ (r'inc ([\w$]+)$',     0xAB, 'd'),
++ (r'mov a,#(.+)$',     0xE8, 'i'),
++ (r'mov y,#(.+)$',     0x8D, 'i'),
++ (r'mov x,#(.+)$',     0xCD, 'i'),
++  (r'mov ([\w$]+),#(.+)$', 0x8F, 'id'),
++ (r'mov a,\[([\w$]+)\]\+y$', 0xF7, 'd'),
++ (r'mov \[([\w$]+)\]\+y,a$', 0xD7, 'd'),
++ (r'mov a,!(.+)$',     0xE5, 'a'),
++ (r'mov !(.+)\+x,a$',  0xD5, 'a'),
++ (r'mov !(.+),a$',     0xC5, 'a'),
++ (r'mov a,([\w$]+)$',     0xE4, 'd'),
++ (r'mov ([\w$]+),a$',     0xC4, 'd'),
++ (r'movw ya,([\w$]+)$',   0xBA, 'd'),
++ (r'movw ([\w$]+),ya$',   0xDA, 'd'),
++ (r'incw ([\w$]+)$',      0x3A, 'd'),
++ (r'decw ([\w$]+)$',      0x1A, 'd'),
++ (r'dec ([\w$]+)$',       0x8B, 'd'),
++ (r'push a$',          0x2D, ''),
++ (r'pop a$',           0xAE, ''),
++ (r'cmp a,#(.+)$',     0x68, 'i'),
++ (r'beq ([\w$]+)$',       0xF0, 'r'),
++ (r'bne ([\w$]+)$',       0xD0, 'r'),
++ (r'bcs ([\w$]+)$',       0xB0, 'r'),
++ (r'bcc ([\w$]+)$',       0x90, 'r'),
++ (r'bra ([\w$]+)$',       0x2F, 'r'),
++ (r'dbnz ([\w$]+),([\w$]+)$',0x6E, 'dr'),
++ (r'call !(.+)$',      0x3F, 'a'),
++ (r'ret$',             0x6F, ''),
++ (r'asl a$',           0x1C, ''),
++ (r'setc$',            0x80, ''),
++ (r'sbc a,#(.+)$',     0xA8, 'i'),
++ (r'jmp !(.+)$',       0x5F, 'a'),
++]
++def assemble(src,org,consts):
++  lines=[]
++  for l in src.split('\n'):
++    l=l.split(';')[0].strip()
++    if not l: continue
++    m=re.match(r'^([\w$]+):\s*(.*)$',l)
++    if m:
++      lines.append(m.group(1)+':')
++      if m.group(2): lines.append(m.group(2))
++    else: lines.append(l)
++  labs={}
++  for p in range(2):
++    pc=org; out=[]; labels={}
++    def val(s):
++      s=s.strip()
++      env=dict(consts); env.update(labs if p else {}); env.update(labels)
++      for k in sorted(env,key=len,reverse=True): s=re.sub(r'\b'+re.escape(k)+r'\b',str(env[k]),s)
++      s=s.replace('$','0x')
++      try: return eval(s,{'__builtins__':{}})
++      except Exception:
++        if p: raise
++        return 0
++    for l in lines:
++      if l.endswith(':'): labels[l[:-1]]=pc; continue
++      if l.startswith('.org'): t=val(l[4:]); out+=[0]*(t-pc); pc=t; continue
++      if l.startswith('.byte'): bs=[val(x)&255 for x in l[5:].split(',')]; out+=bs; pc+=len(bs); continue
++      for pat,op,kind in PAT:
++        m=re.match(pat,l.lower() if False else l)
++        if m: break
++      else: raise Exception('não sei: '+l)
++      g=m.groups(); b=[op]
++      if kind=='id': b+=[val(g[1])&255, val(g[0])&255]
++      elif kind=='i' or kind=='d': b+=[val(g[0])&255]
++      elif kind=='a': v=val(g[0]); b+=[v&255,(v>>8)&255]
++      elif kind=='r':
++        t=val(g[0]); r=t-(pc+2)
++        if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
++        b+=[r&255]
++      elif kind=='dr':
++        t=val(g[1]); r=t-(pc+3)
++        if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
++        b+=[val(g[0])&255, r&255]
++      out+=b; pc+=len(b)
++    labs=labels
++  return bytes(out),labs
+diff --git a/src/engine/export.cpp b/src/engine/export.cpp
+index d3e4a22..8ccea50 100644
+--- a/src/engine/export.cpp
++++ b/src/engine/export.cpp
+@@ -26,6 +26,7 @@
+ #include "export/ipod.h"
+ #include "export/grub.h"
+ #include "export/nsf.h"
++#include "export/spc.h"
+ 
+ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+   DivROMExport* exporter=NULL;
+@@ -51,6 +52,9 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+     case DIV_ROM_NSF:
+       exporter=new DivExportNSF;
+       break;
++    case DIV_ROM_SPC:
++      exporter=new DivExportSPC;
++      break;
+     default:
+       exporter=new DivROMExport;
+       break;
+diff --git a/src/engine/export.h b/src/engine/export.h
+index a3437d7..c74fa3a 100644
+--- a/src/engine/export.h
++++ b/src/engine/export.h
+@@ -36,6 +36,7 @@ enum DivROMExportOptions {
+   DIV_ROM_GRUB,
+   // Registro Gamer
+   DIV_ROM_NSF,
++  DIV_ROM_SPC,
+ 
+   DIV_ROM_MAX
+ };
+diff --git a/src/engine/export/rgexport.cpp b/src/engine/export/rgexport.cpp
+index 6518f4d..8860cbc 100644
+--- a/src/engine/export/rgexport.cpp
++++ b/src/engine/export/rgexport.cpp
+@@ -20,6 +20,8 @@
+ #include "rgexport.h"
+ #include "../engine.h"
+ #include "../ta-log.h"
++#include <map>
++#include <unordered_map>
+ 
+ // a song that never ends is cut after this many ticks (1 hour at 60Hz)
+ #define RG_MAX_TICKS (60*60*60)
+@@ -111,12 +113,107 @@ bool DivExportRG::capture(const std::vector<int>& sys) {
+   return ok;
+ }
+ 
++DivDispatch* DivExportRG::dispatchOf(int sys) {
++  return e->disCont[sys].dispatch;
++}
++
+ const unsigned char* DivExportRG::sampleMem(int sys, int index, size_t& len) {
+   DivDispatch* d=e->disCont[sys].dispatch;
+   len=d->getSampleMemUsage(index);
+   return (const unsigned char*)d->getSampleMem(index);
+ }
+ 
++std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut) {
++  size_t n=tok.size();
++  // give each distinct command a number
++  std::vector<int> id(n), sz(n);
++  {
++    std::map<std::vector<unsigned char>,int> ids;
++    for (size_t i=0; i<n; i++) {
++      std::map<std::vector<unsigned char>,int>::iterator it=ids.find(tok[i]);
++      if (it==ids.end()) {
++        int nid=(int)ids.size();
++        ids[tok[i]]=nid;
++        id[i]=nid;
++      } else {
++        id[i]=it->second;
++      }
++      sz[i]=tok[i].size();
++    }
++  }
++  // boundary[r]: offset in the output where command r starts an item (-1: inside an item)
++  // depthAt[r]: nesting depth of the item starting at r
++  std::vector<int> boundary(n+1,-1), depthAt(n+1,0), itemEnd(n+1,0);
++  std::unordered_map<uint64_t,std::vector<int>> seen;
++  auto keyOf=[&](size_t i) -> uint64_t {
++    uint64_t a=(uint64_t)id[i];
++    uint64_t b=(i+1<n)?(uint64_t)id[i+1]:0xffffffffULL;
++    return (a<<32)^b;
++  };
++  std::vector<unsigned char> out;
++  loopOut=-1;
++  size_t i=0;
++  long long budget=400000000LL;
++  while (i<n) {
++    boundary[i]=(int)out.size();
++    if ((int)i==loopTok) loopOut=(int)out.size();
++    int bestBytes=0, bestK=0, bestJ=-1, bestDepth=0;
++    bool isEnd=(tok[i].size()==1 && tok[i][0]==0xff);
++    if (!isEnd && budget>0) {
++      std::unordered_map<uint64_t,std::vector<int>>::iterator it=seen.find(keyOf(i));
++      if (it!=seen.end()) {
++        std::vector<int>& cand=it->second;
++        int tries=0;
++        for (int ci=(int)cand.size()-1; ci>=0 && tries<32; ci--, tries++) {
++          int j=cand[ci];
++          int k=0, raw=0, depth=0;
++          while (i+k<n && j+k<(int)i) {
++            if (k>0 && (int)(i+k)==loopTok) break;
++            if (id[j+k]!=id[i+k]) break;
++            if (tok[i+k].size()==1 && tok[i+k][0]==0xff) break;
++            // whole items only: j+k must start an item, and the item must end inside the match
++            if (boundary[j+k]>=0) {
++              if (depthAt[j+k]>depth) depth=depthAt[j+k];
++            }
++            raw+=sz[i+k];
++            k++;
++            budget--;
++            if (boundary[j+k]>=0 || j+k==(int)i) {
++              int span=((j+k==(int)i)?(int)out.size():boundary[j+k])-boundary[j];
++              if (span>65535) break;
++              if (raw>bestBytes && depth+1<=maxDepth) {
++                bestBytes=raw;
++                bestK=k;
++                bestJ=j;
++                bestDepth=depth+1;
++              }
++            }
++          }
++        }
++      }
++    }
++    if (bestBytes>=8) {
++      unsigned int addr=base+boundary[bestJ];
++      int span=((bestJ+bestK==(int)i)?(int)out.size():boundary[bestJ+bestK])-boundary[bestJ];
++      out.push_back(0xe0);
++      out.push_back(addr&0xff);
++      out.push_back((addr>>8)&0xff);
++      out.push_back(span&0xff);
++      out.push_back(span>>8);
++      depthAt[i]=bestDepth;
++      seen[keyOf(i)].push_back(i);
++      i+=bestK;
++    } else {
++      out.insert(out.end(),tok[i].begin(),tok[i].end());
++      depthAt[i]=0;
++      seen[keyOf(i)].push_back(i);
++      i++;
++    }
++  }
++  boundary[n]=(int)out.size();
++  return out;
++}
++
+ void DivExportRG::start() {
+ #ifdef __EMSCRIPTEN__
+   // no threads in the browser build: export right away
+diff --git a/src/engine/export/rgexport.h b/src/engine/export/rgexport.h
+index d4c70ee..5c6df8c 100644
+--- a/src/engine/export/rgexport.h
++++ b/src/engine/export/rgexport.h
+@@ -55,8 +55,15 @@ class DivExportRG: public DivROMExport {
+     void fail(const String& why);
+     // plays the song and records the register writes of the given systems
+     bool capture(const std::vector<int>& sys);
++    // dispatch of a system
++    DivDispatch* dispatchOf(int sys);
+     // sample memory of a system (after capture)
+     const unsigned char* sampleMem(int sys, int index, size_t& len);
++    // compresses a list of player commands: repeated runs become $E0 lo hi len_lo len_hi,
++    // "play len bytes found at address hi:lo, then come back" (nested up to maxDepth levels).
++    // base: address where the result will be loaded. loopTok: command where the loop starts;
++    // its offset in the result goes to loopOut.
++    std::vector<unsigned char> pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut);
+     // runs run() in a thread (or directly in the browser, which has no threads here)
+     void start();
+   public:
+diff --git a/src/engine/export/spc.cpp b/src/engine/export/spc.cpp
+new file mode 100644
+index 0000000..2d0921e
+--- /dev/null
++++ b/src/engine/export/spc.cpp
+@@ -0,0 +1,251 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: SPC export (SNES S-DSP).
++// the SPC is a snapshot of the 64KB sound RAM: the player (spcdrv.asm) sits at $0200,
++// Furnace's sample directory, wavetables and BRR samples start at $0400, and the
++// register log fills the free RAM after the samples (up to the echo buffer).
++// the log is compressed by pointing repeated parts back at earlier ones, so that a
++// song that repeats its patterns fits in the little memory there is.
++//
++// log format:
++// - $00-$7F vv: write vv to DSP register cmd
++// - $82 lo hi nn data...: copy nn bytes to RAM at hi:lo (sample directory, wavetables)
++// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested up to 8 levels)
++// - $F0-$FD: end of tick, then wait cmd-$F0 more ticks
++// - $FE nn: end of tick, then wait nn more ticks
++// - $FF: jump to the loop point (or stop if the song ends)
++
++#include "spc.h"
++#include "../engine.h"
++#include "../ta-log.h"
++#include <fmt/printf.h>
++#include <map>
++
++#include "spcdrv.inc"
++
++#define SPC_DRV 0x200
++#define SPC_TAB 0x400
++
++typedef std::vector<unsigned char> Tok;
++
++static void putWait(std::vector<Tok>& s, int frames) {
++  while (frames>0) {
++    int k=frames-1;
++    if (k>255) k=255;
++    if (k<=13) {
++      s.push_back(Tok(1,(unsigned char)(0xf0+k)));
++    } else {
++      Tok t;
++      t.push_back(0xfe);
++      t.push_back(k);
++      s.push_back(t);
++    }
++    frames-=k+1;
++  }
++}
++
++static void putText(unsigned char* where, const String& str, size_t len) {
++  memset(where,0,len);
++  memcpy(where,str.c_str(),MIN(str.size(),len));
++}
++
++void DivExportSPC::run() {
++  int sysSNES=-1;
++  for (int i=0; i<e->song.systemLen; i++) {
++    if (e->song.system[i]==DIV_SYSTEM_SNES && sysSNES<0) {
++      sysSNES=i;
++    } else {
++      logAppendf("WARNING: chip %d (%s) is not part of the SNES sound; ignored",i,e->getSystemName(e->song.system[i]));
++    }
++  }
++  if (sysSNES<0) {
++    fail("no SNES chip in this song");
++    return;
++  }
++  std::vector<int> sys;
++  sys.push_back(sysSNES);
++  if (!capture(sys)) {
++    fail("aborted");
++    return;
++  }
++  progress[0].amount=0.5f;
++  logAppend("packing the register log...");
++
++  // RAM image
++  std::vector<unsigned char> ram(65536,0);
++  size_t smpLen=0;
++  const unsigned char* smp=(const unsigned char*)dispatchOf(sysSNES)->compileSampleMem(0,smpLen);
++  if (smp!=NULL) {
++    memcpy(&ram[SPC_TAB],smp,MIN(smpLen,65536-SPC_TAB));
++    delete[] smp;
++  }
++  size_t dataStart=SPC_TAB+smpLen;
++  std::vector<bool> ramKnown(65536,true);
++
++  // tokens (one command each)
++  std::vector<Tok> tok;
++  int loopTok=-1, pending=0, maxEDL=0;
++  std::map<unsigned int,unsigned int> lastDSP;
++  for (size_t t=0; t<ticks.size(); t++) {
++    if ((int)t==loopTick) {
++      putWait(tok,pending);
++      pending=0;
++      loopTok=(int)tok.size();
++      lastDSP.clear();
++      for (size_t k=0; k<ramKnown.size(); k++) ramKnown[k]=false;
++    }
++    std::vector<Tok> f;
++    Tok run;
++    unsigned int runStart=0, runNext=0;
++    auto flushRun=[&]() {
++      if (run.empty()) return;
++      Tok c;
++      c.push_back(0x82);
++      c.push_back(runStart&0xff);
++      c.push_back(runStart>>8);
++      c.push_back(run.size());
++      c.insert(c.end(),run.begin(),run.end());
++      f.push_back(c);
++      run.clear();
++    };
++    for (RGWrite& w: ticks[t]) {
++      if (w.addr<0x80) {
++        flushRun();
++        if (w.addr==0x7d && (int)(w.val&15)>maxEDL) maxEDL=w.val&15;
++        bool always=(w.addr==0x4c || w.addr==0x5c || w.addr==0x7c);
++        std::map<unsigned int,unsigned int>::iterator it=lastDSP.find(w.addr);
++        if (!always && it!=lastDSP.end() && it->second==w.val) continue;
++        lastDSP[w.addr]=w.val;
++        Tok c;
++        c.push_back(w.addr);
++        c.push_back(w.val&0xff);
++        f.push_back(c);
++      } else if (w.addr>=0x10000 && w.addr<0x20000) {
++        unsigned int a=w.addr&0xffff;
++        if (ramKnown[a] && ram[a]==(w.val&0xff)) continue;
++        ram[a]=w.val&0xff;
++        ramKnown[a]=true;
++        if (run.empty() || a!=runNext || run.size()>=255) {
++          flushRun();
++          runStart=a;
++        }
++        run.push_back(w.val&0xff);
++        runNext=a+1;
++      }
++    }
++    flushRun();
++    if (!f.empty()) {
++      putWait(tok,pending);
++      pending=0;
++      tok.insert(tok.end(),f.begin(),f.end());
++    }
++    pending++;
++  }
++  putWait(tok,pending);
++  tok.push_back(Tok(1,0xff));
++
++  // the runtime writes went into the image above; start from the initial one again
++  {
++    size_t l2=0;
++    const unsigned char* s2=(const unsigned char*)dispatchOf(sysSNES)->compileSampleMem(0,l2);
++    memset(&ram[0],0,65536);
++    if (s2!=NULL) {
++      memcpy(&ram[SPC_TAB],s2,MIN(l2,65536-SPC_TAB));
++      delete[] s2;
++    }
++  }
++
++  // compress: repeated runs of commands become references to their first copy
++  progress[0].amount=0.7f;
++  int loopOut=-1;
++  std::vector<unsigned char> out=pack(tok,loopTok,dataStart,8,loopOut);
++
++  size_t freeEnd=0xf800-maxEDL*2048;
++  size_t cap=(freeEnd>dataStart)?(freeEnd-dataStart):0;
++  logAppendf("samples: %d bytes; log: %d commands -> %d bytes (%d bytes free)",(int)smpLen,(int)tok.size(),(int)out.size(),(int)cap);
++  if (out.size()>cap) {
++    fail(fmt::sprintf("the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples%s. try shorter samples or a shorter song",(int)out.size(),(int)cap,maxEDL?" and the echo buffer":""));
++    return;
++  }
++  memcpy(&ram[dataStart],out.data(),out.size());
++
++  // player
++  memcpy(&ram[SPC_DRV],spcDriver,sizeof(spcDriver));
++  int timer=(int)(8000.0/tickRate+0.5);
++  if (timer<1) timer=1;
++  if (timer>256) {
++    timer=256;
++    logAppend("WARNING: tick rate below 31.25Hz; the song will play faster");
++  }
++  ram[SPC_DRV+4]=timer&0xff;
++  ram[0x3f0]=dataStart&0xff;
++  ram[0x3f1]=dataStart>>8;
++  if (loopOut>=0) {
++    unsigned int la=dataStart+loopOut;
++    ram[0x3f2]=la&0xff;
++    ram[0x3f3]=la>>8;
++    ram[0x3f4]=1;
++  }
++
++  // DSP: everything off until the log starts; echo buffer pointed away from the player
++  unsigned char dsp[128];
++  memset(dsp,0,128);
++  dsp[0x6c]=0xe0;
++  dsp[0x6d]=0xff;
++  dsp[0x5d]=SPC_TAB>>8;
++
++  // header
++  double secs=(double)ticks.size()/tickRate;
++  if (loopOut>=0 && loopTick>=0) secs=(double)ticks.size()/tickRate+(double)(ticks.size()-loopTick)/tickRate;
++  int isecs=(int)(secs+1);
++  if (isecs>999) isecs=999;
++  unsigned char hdr[256];
++  memset(hdr,0,256);
++  memcpy(hdr,"SNES-SPC700 Sound File Data v0.30",33);
++  hdr[0x21]=26;
++  hdr[0x22]=26;
++  hdr[0x23]=26;
++  hdr[0x24]=30;
++  hdr[0x25]=SPC_DRV&0xff;
++  hdr[0x26]=SPC_DRV>>8;
++  hdr[0x2b]=0xef;
++  putText(&hdr[0x2e],e->song.name,32);
++  putText(&hdr[0x4e],e->song.category.empty()?e->song.name:e->song.category,32);
++  putText(&hdr[0x6e],"Registro Gamer",16);
++  putText(&hdr[0x7e],"Furnace (Registro Gamer Tracker)",32);
++  putText(&hdr[0xa9],fmt::sprintf("%d",isecs),3);
++  putText(&hdr[0xac],(loopOut>=0)?"10000":"0",5);
++  putText(&hdr[0xb1],e->song.author,32);
++
++  SafeWriter* w=new SafeWriter;
++  w->init();
++  w->write(hdr,256);
++  w->write(ram.data(),65536);
++  w->write(dsp,128);
++  unsigned char tail[128];
++  memset(tail,0,128);
++  memcpy(&tail[64],&ram[0xffc0],64);
++  w->write(tail,128);
++
++  output.push_back(DivROMExportOutput("export.spc",w));
++  progress[0].amount=1.0f;
++  logAppend("finished!");
++  running=false;
++}
+diff --git a/src/engine/export/spc.h b/src/engine/export/spc.h
+new file mode 100644
+index 0000000..3cbb435
+--- /dev/null
++++ b/src/engine/export/spc.h
+@@ -0,0 +1,26 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++#include "rgexport.h"
++
++class DivExportSPC: public DivExportRG {
++  void run();
++  public:
++    ~DivExportSPC() {}
++};
+diff --git a/src/engine/export/spcdrv.asm b/src/engine/export/spcdrv.asm
+new file mode 100644
+index 0000000..dfbefce
+--- /dev/null
++++ b/src/engine/export/spcdrv.asm
+@@ -0,0 +1,141 @@
++; driver SPC do Tracker do Registro Gamer: a cada tique do timer 0 repete as escritas gravadas no S-DSP
++; o log fica na RAM livre depois dos samples; comandos iguais aos de rgexport (ver spc.cpp)
++.org $0200
++INIT:
++  mov $F1,#$00
++  mov $FA,#TIMER
++  mov $F1,#$01
++  mov a,!STREAMLO
++  mov PTR,a
++  mov a,!STREAMHI
++  mov PTRH,a
++  mov WAIT,#0
++  mov DEPTH,#0
++main:
++  mov a,$FD
++  beq main
++  mov CNT,a
++fl:
++  call !FRAME
++  dbnz CNT,fl
++  bra main
++GB:
++  mov y,#0
++  mov a,[PTR]+y
++  incw PTR
++  push a
++  mov a,DEPTH
++  beq gbe
++  decw RCNT
++  bne gbe
++  dec DEPTH
++  mov a,DEPTH
++  asl a
++  asl a
++  mov x,a
++  mov a,STK+x
++  mov PTR,a
++  mov a,STK1+x
++  mov PTRH,a
++  mov a,STK2+x
++  mov RCNT,a
++  mov a,STK3+x
++  mov RCNTH,a
++gbe:
++  pop a
++  ret
++FRAME:
++  mov a,WAIT
++  beq next
++  dec WAIT
++  ret
++next:
++  call !GB
++  cmp a,#$80
++  bcs notdsp
++  mov $F2,a
++  call !GB
++  mov $F3,a
++  bra next
++notdsp:
++  cmp a,#$F0
++  bcs waitop
++  cmp a,#$82
++  beq blk
++  cmp a,#$E0
++  beq ref
++  jmp !next
++blk:
++  call !GB
++  mov BLO,a
++  call !GB
++  mov BHI,a
++  call !GB
++  mov BCNT,a
++blkl:
++  call !GB
++  mov y,#0
++  mov [BLO]+y,a
++  incw BLO
++  dbnz BCNT,blkl
++  bra next
++ref:
++  call !GB
++  mov TLO,a
++  call !GB
++  mov THI,a
++  call !GB
++  mov LLO,a
++  call !GB
++  mov LHI,a
++  mov a,DEPTH
++  asl a
++  asl a
++  mov x,a
++  mov a,PTR
++  mov STK+x,a
++  mov a,PTRH
++  mov STK1+x,a
++  mov a,RCNT
++  mov STK2+x,a
++  mov a,RCNTH
++  mov STK3+x,a
++  inc DEPTH
++  movw ya,TLO
++  movw PTR,ya
++  movw ya,LLO
++  movw RCNT,ya
++  jmp !next
++waitop:
++  cmp a,#$FF
++  beq loopop
++  cmp a,#$FE
++  beq waitn
++  setc
++  sbc a,#$F0
++  mov WAIT,a
++  ret
++waitn:
++  call !GB
++  mov WAIT,a
++  ret
++loopop:
++  mov a,!HASLOOP
++  beq endsong
++  mov a,!LOOPLO
++  mov PTR,a
++  mov a,!LOOPHI
++  mov PTRH,a
++  jmp !next
++endsong:
++  mov $F2,#$5C
++  mov $F3,#$FF
++  mov WAIT,#$FF
++  decw PTR
++  ret
++.org $03F0
++STREAMLO: .byte 0
++STREAMHI: .byte 0
++LOOPLO: .byte 0
++LOOPHI: .byte 0
++HASLOOP: .byte 0
+diff --git a/src/engine/export/spcdrv.inc b/src/engine/export/spcdrv.inc
+new file mode 100644
+index 0000000..f37956f
+--- /dev/null
++++ b/src/engine/export/spcdrv.inc
+@@ -0,0 +1,36 @@
++// gerado por spcdrv.asm (montador SPC700 em scripts/rg-asmspc.py); não editar à mão
++// carregado em $0200; byte 4 = alvo do timer 0; $03F0..$03F4 = início do log, ponto de repetição, tem repetição
++static const unsigned char spcDriver[501]={
++  0x8f, 0x00, 0xf1, 0x8f, 0x85, 0xfa, 0x8f, 0x01, 0xf1, 0xe5, 0xf0, 0x03, 0xc4, 0x00, 0xe5, 0xf1,
++  0x03, 0xc4, 0x01, 0x8f, 0x00, 0x02, 0x8f, 0x00, 0x03, 0xe4, 0xfd, 0xf0, 0xfc, 0xc4, 0x07, 0x3f,
++  0x4f, 0x02, 0x6e, 0x07, 0xfa, 0x2f, 0xf2, 0x8d, 0x00, 0xf7, 0x00, 0x3a, 0x00, 0x2d, 0xe4, 0x03,
++  0xf0, 0x1b, 0x1a, 0x04, 0xd0, 0x17, 0x8b, 0x03, 0xe4, 0x03, 0x1c, 0x1c, 0x5d, 0xf4, 0x20, 0xc4,
++  0x00, 0xf4, 0x21, 0xc4, 0x01, 0xf4, 0x22, 0xc4, 0x04, 0xf4, 0x23, 0xc4, 0x05, 0xae, 0x6f, 0xe4,
++  0x02, 0xf0, 0x03, 0x8b, 0x02, 0x6f, 0x3f, 0x27, 0x02, 0x68, 0x80, 0xb0, 0x09, 0xc4, 0xf2, 0x3f,
++  0x27, 0x02, 0xc4, 0xf3, 0x2f, 0xf0, 0x68, 0xf0, 0xb0, 0x5e, 0x68, 0x82, 0xf0, 0x07, 0x68, 0xe0,
++  0xf0, 0x20, 0x5f, 0x56, 0x02, 0x3f, 0x27, 0x02, 0xc4, 0x08, 0x3f, 0x27, 0x02, 0xc4, 0x09, 0x3f,
++  0x27, 0x02, 0xc4, 0x0a, 0x3f, 0x27, 0x02, 0x8d, 0x00, 0xd7, 0x08, 0x3a, 0x08, 0x6e, 0x0a, 0xf4,
++  0x2f, 0xc4, 0x3f, 0x27, 0x02, 0xc4, 0x0b, 0x3f, 0x27, 0x02, 0xc4, 0x0c, 0x3f, 0x27, 0x02, 0xc4,
++  0x0d, 0x3f, 0x27, 0x02, 0xc4, 0x0e, 0xe4, 0x03, 0x1c, 0x1c, 0x5d, 0xe4, 0x00, 0xd4, 0x20, 0xe4,
++  0x01, 0xd4, 0x21, 0xe4, 0x04, 0xd4, 0x22, 0xe4, 0x05, 0xd4, 0x23, 0xab, 0x03, 0xba, 0x0b, 0xda,
++  0x00, 0xba, 0x0d, 0xda, 0x04, 0x5f, 0x56, 0x02, 0x68, 0xff, 0xf0, 0x10, 0x68, 0xfe, 0xf0, 0x06,
++  0x80, 0xa8, 0xf0, 0xc4, 0x02, 0x6f, 0x3f, 0x27, 0x02, 0xc4, 0x02, 0x6f, 0xe5, 0xf4, 0x03, 0xf0,
++  0x0d, 0xe5, 0xf2, 0x03, 0xc4, 0x00, 0xe5, 0xf3, 0x03, 0xc4, 0x01, 0x5f, 0x56, 0x02, 0x8f, 0x5c,
++  0xf2, 0x8f, 0xff, 0xf3, 0x8f, 0xff, 0x02, 0x1a, 0x00, 0x6f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00,
++};
+diff --git a/src/engine/exportDef.cpp b/src/engine/exportDef.cpp
+index c17c540..851faff 100644
+--- a/src/engine/exportDef.cpp
++++ b/src/engine/exportDef.cpp
+@@ -157,4 +157,17 @@ void DivEngine::registerROMExports() {
+     },
+     false, DIV_REQPOL_LAX
+   );
++
++  romExportDefs[DIV_ROM_SPC]=new DivROMExportDef(
++    "SNES SPC", "Registro Gamer",
++    "SPC (SNES sound RAM snapshot) export.\n"
++    "plays on any SPC player and on real hardware.\n"
++    "the samples and the song must fit in the 64KB of sound RAM.\n"
++    "register dump-based (the song is recorded tick by tick and compressed).",
++    "SPC files", ".spc",
++    {
++      DIV_SYSTEM_SNES
++    },
++    false, DIV_REQPOL_LAX
++  );
+ }
+diff --git a/src/engine/platform/snes.cpp b/src/engine/platform/snes.cpp
+index 4644d38..1be3eff 100644
+--- a/src/engine/platform/snes.cpp
++++ b/src/engine/platform/snes.cpp
+@@ -243,6 +243,8 @@ void DivPlatformSNES::tick(bool sysTick) {
+         sampleMem[tabAddr+1]=start>>8;
+         sampleMem[tabAddr+2]=loop&0xff;
+         sampleMem[tabAddr+3]=loop>>8;
++        // Registro Gamer: the sample directory lives in the SPC700 RAM; log it for the SPC export
++        if (dumpWrites) for (int k=0; k<4; k++) addWrite(0x10000+tabAddr+k,(unsigned char)sampleMem[tabAddr+k]);
+         kon|=(1<<i);
+         koff|=(1<<i);
+         chan[i].keyOn=false;
+@@ -637,6 +639,11 @@ void DivPlatformSNES::updateWave(int ch) {
+     }
+   }
+   sampleMem[pos-9]=0xb3; // mark loop
++  // Registro Gamer: wavetables are written to the SPC700 RAM; log them for the SPC export
++  if (dumpWrites) {
++    unsigned short start=waveTableAddr(ch);
++    for (unsigned short k=start; k<pos; k++) addWrite(0x10000+k,(unsigned char)sampleMem[k]);
++  }
+ }
+ 
+ void DivPlatformSNES::writeOutVol(int ch) {
+-- 
+2.43.0
+

@@ -1,0 +1,25 @@
+From 3e090cd14effc1dc8313d9f1a60d8d81ead1f327 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:57:56 -0300
+Subject: [PATCH 10/29] =?UTF-8?q?Web:=20atualiza=20SDL=20com=20ajuste=20do?=
+ =?UTF-8?q?=20=C3=A1udio?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ extern/SDL | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/extern/SDL b/extern/SDL
+index 6371fd4..3a66367 160000
+--- a/extern/SDL
++++ b/extern/SDL
+@@ -1 +1 @@
+-Subproject commit 6371fd44c8a3cdfb3166b36d4798f5daeca2eeee
++Subproject commit 3a663671e0589075851e2745fe12cf21d4021cfb
+-- 
+2.43.0
+

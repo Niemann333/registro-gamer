@@ -1,0 +1,254 @@
+From 7e96b5794d343ae234f98aa29f3c1562b169f3e4 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 17 Nov 2026 02:25:26 -0300
+Subject: [PATCH 20/29] Web: seletor de arquivos com Acervo Chiptunes e pastas
+ do computador
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/fileDialog.cpp            | 20 +++++++++
+ src/gui/gui.cpp                   | 23 ++++++++++
+ src/gui/newFilePicker.cpp         | 70 +++++++++++++++++++++++++++++++
+ src/gui/settings/loadSettings.cpp |  4 ++
+ 4 files changed, 117 insertions(+)
+
+diff --git a/src/gui/fileDialog.cpp b/src/gui/fileDialog.cpp
+index 0d11744..b15380f 100644
+--- a/src/gui/fileDialog.cpp
++++ b/src/gui/fileDialog.cpp
+@@ -1,6 +1,20 @@
+ #include "fileDialog.h"
+ #include "util.h"
+ #include "../ta-log.h"
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++// Web: a pasta inicial é a pasta do computador conectada (ou o acervo, para abrir), nunca a pasta interna do motor
++EM_JS(void, rgWebDefaultDir, (int save, char* buf, int len), { var s = Module.rgDefaultDir ? Module.rgDefaultDir(!!save) : ''; stringToUTF8(s || '', buf, len); });
++static String rgWebStartDir(const String& path, bool save) {
++  if (path.find("/Acervo")==0 || path.find("/Computador/")==0) {
++    if (!(save && path.find("/Acervo")==0)) return path;
++  }
++  char buf[2048];
++  buf[0]=0;
++  rgWebDefaultDir(save?1:0,buf,sizeof(buf));
++  return buf[0]?String(buf):path;
++}
++#endif
+ 
+ #ifdef USE_NFD
+ #include <nfd.h>
+@@ -116,6 +130,9 @@ void FurnaceGUIFileDialog::convertFilterList(std::vector<String>& filter) {
+ 
+ bool FurnaceGUIFileDialog::openLoad(String header, std::vector<String> filter, String path, double dpiScale, FileDialogSelectCallback clickCallback, bool allowMultiple, String hint) {
+   if (opened) return false;
++#ifdef __EMSCRIPTEN__
++  path=rgWebStartDir(path,false);
++#endif
+   dialogType=0;
+   curPath=path;
+ 
+@@ -200,6 +217,9 @@ bool FurnaceGUIFileDialog::openLoad(String header, std::vector<String> filter, S
+ 
+ bool FurnaceGUIFileDialog::openSave(String header, std::vector<String> filter, String path, double dpiScale, String hint) {
+   if (opened) return false;
++#ifdef __EMSCRIPTEN__
++  path=rgWebStartDir(path,true);
++#endif
+ 
+ #ifdef ANDROID
+     if (!SDL_AndroidRequestPermission("android.permission.WRITE_EXTERNAL_STORAGE")) {
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index dbc6703..f94307a 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -2190,6 +2190,9 @@ bool dirExists(String s) {
+   return dirExists(s.c_str());
+ }
+ 
++#ifdef __EMSCRIPTEN__
++EM_ASYNC_JS(int, rgWebEnsure, (const char* p, int open), { if (!Module.rgEnsure) return 0; try { return (await Module.rgEnsure(UTF8ToString(p), !!open)) ? 1 : 0; } catch (e) { console.warn(e); return 0; } });
++#endif
+ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
+   bool hasOpened=false;
+ 
+@@ -2209,7 +2212,12 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
+       if (!dirExists(workingDirSong)) workingDirSong=getHomeDir();
+       hasOpened=fileDialog->openLoad(
+         _("Open File"),
++#ifdef __EMSCRIPTEN__
++        // Web: VGM do acervo/computador abre como projeto (convertido pela página, com os timbres do chip)
++        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.mid *.midi *.kar *.smf *.vgm *.vgz",
++#else
+         {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.mid *.midi *.kar *.smf",
++#endif
+          _("all files"), "*"},
+         workingDirSong,
+         dpiScale
+@@ -6056,7 +6064,12 @@ bool FurnaceGUI::loop() {
+ #endif
+ #endif
+ 
++#ifdef __EMSCRIPTEN__
++    // Web: janela de arquivos maior (navega no acervo e nas pastas do computador)
++    if (fileDialog->render(mobileUI?ImVec2(canvasW-(portrait?0:(60.0*dpiScale)),canvasH-60.0*dpiScale):ImVec2(MIN(canvasW-40.0f*dpiScale,1000.0f*dpiScale),MIN(canvasH-60.0f*dpiScale,640.0f*dpiScale)),ImVec2(canvasW-((mobileUI && !portrait)?(60.0*dpiScale):0),canvasH-(mobileUI?(60.0*dpiScale):0)))) {
++#else
+     if (fileDialog->render(mobileUI?ImVec2(canvasW-(portrait?0:(60.0*dpiScale)),canvasH-60.0*dpiScale):ImVec2(600.0f*dpiScale,400.0f*dpiScale),ImVec2(canvasW-((mobileUI && !portrait)?(60.0*dpiScale):0),canvasH-(mobileUI?(60.0*dpiScale):0)))) {
++#endif
+       bool openOpen=false;
+       //ImGui::GetIO().ConfigFlags&=~ImGuiConfigFlags_NavEnableKeyboard;
+       if ((curFileDialog==GUI_FILE_INS_OPEN || curFileDialog==GUI_FILE_INS_OPEN_REPLACE) && prevIns!=-3) {
+@@ -6187,6 +6200,16 @@ bool FurnaceGUI::loop() {
+         } else {
+           fileName=fileDialog->getFileName()[0];
+         }
++#ifdef __EMSCRIPTEN__
++        // Web: arquivo do acervo ou de uma pasta do computador só é lido agora; VGM vira projeto pela página
++        {
++          bool rgHandled=false;
++          for (String& rgF: fileDialog->getFileName()) {
++            if (rgWebEnsure(rgF.c_str(),curFileDialog==GUI_FILE_OPEN?1:0)) rgHandled=true;
++          }
++          if (rgHandled) fileName="";
++        }
++#endif
+         if (fileName!="") {
+           if (curFileDialog==GUI_FILE_SAVE) {
+             checkExtension(".fur");
+diff --git a/src/gui/newFilePicker.cpp b/src/gui/newFilePicker.cpp
+index fae982a..f4b4aa5 100644
+--- a/src/gui/newFilePicker.cpp
++++ b/src/gui/newFilePicker.cpp
+@@ -24,6 +24,14 @@
+ #include "IconsFontAwesome4.h"
+ #include "misc/cpp/imgui_stdlib.h"
+ #include "../ta-log.h"
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++// Web (Chiptune Studio): o seletor navega no acervo do blog (/Acervo) e nas pastas do computador que a pessoa
++// conectou (/Computador/...). A página (tracker.html) preenche essas pastas quando são abertas.
++EM_ASYNC_JS(void, rgWebPrepareDir, (const char* p), { if (Module.rgPrepareDir) { try { await Module.rgPrepareDir(UTF8ToString(p)); } catch (e) { console.warn(e); } } });
++EM_JS(void, rgWebPlaces, (char* buf, int len), { var s = Module.rgPlaces ? Module.rgPlaces() : ''; stringToUTF8(s, buf, len); });
++EM_ASYNC_JS(void, rgWebConnect, (char* buf, int len), { var s = ''; if (Module.rgConnect) { try { s = await Module.rgConnect(); } catch (e) { s = ''; } } stringToUTF8(s || '', buf, len); });
++#endif
+ #include <algorithm>
+ #include <chrono>
+ #include <imgui.h>
+@@ -333,6 +341,10 @@ void FurnaceFilePicker::readDirectorySub() {
+     if (entry==NULL) break;
+     if (strcmp(entry->d_name,".")==0) continue;
+     if (strcmp(entry->d_name,"..")==0) continue;
++#ifdef __EMSCRIPTEN__
++    // na raiz só aparecem o acervo e as pastas do computador (o resto é coisa interna do motor)
++    if (path=="/" && strcmp(entry->d_name,"Acervo")!=0 && strcmp(entry->d_name,"Computador")!=0) continue;
++#endif
+ 
+     FileEntry* newEntry=makeEntry(entry,NULL);
+ 
+@@ -592,6 +604,7 @@ bool FurnaceFilePicker::readDirectory(String path) {
+ #ifdef __EMSCRIPTEN__
+   // navegador sem threads: lê a pasta (que fica na memória) na hora
+   fileThread=NULL;
++  rgWebPrepareDir(this->path.c_str());
+   if (isSearch) {
+     _searchThread(this);
+   } else {
+@@ -1198,6 +1211,56 @@ void FurnaceFilePicker::drawFileList(ImVec2& tableSize, bool& acknowledged) {
+   }
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// Web: no lugar dos favoritos, os "lugares": acervo do blog, pastas do computador conectadas e o botão de conectar
++void FurnaceFilePicker::drawBookmarks(ImVec2& tableSize, String& newDir) {
++  static char buf[8192];
++  rgWebPlaces(buf,sizeof(buf));
++  // formato: título\n e depois linhas "tipo\tnome\tcaminho" (tipo: a = acervo, c = computador, + = conectar)
++  String all=buf, title;
++  std::vector<String> lines;
++  size_t pos=0;
++  while (pos<=all.size()) {
++    size_t nl=all.find('\n',pos);
++    if (nl==String::npos) nl=all.size();
++    lines.push_back(all.substr(pos,nl-pos));
++    pos=nl+1;
++  }
++  if (!lines.empty()) { title=lines[0]; lines.erase(lines.begin()); }
++  if (ImGui::BeginTable("BookmarksList",1,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_ScrollY,tableSize)) {
++    ImGui::TableSetupScrollFreeze(0,1);
++    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
++    ImGui::TableNextColumn();
++    ImGui::TextUnformatted(title.c_str());
++    int index=0;
++    for (String& l: lines) {
++      size_t t1=l.find('\t');
++      if (t1==String::npos) continue;
++      size_t t2=l.find('\t',t1+1);
++      if (t2==String::npos) continue;
++      String kind=l.substr(0,t1), name=l.substr(t1+1,t2-t1-1), where=l.substr(t2+1);
++      const char* icon=(kind=="a")?ICON_FA_MUSIC:((kind=="+")?ICON_FA_PLUS:ICON_FA_FOLDER);
++      String label=String(icon)+" "+name;
++      bool here=(!where.empty() && (path==where || path.find(where+"/")==0));
++      ImGui::TableNextRow();
++      ImGui::TableNextColumn();
++      ImGui::PushID(300000+(index++));
++      if (ImGui::Selectable(label.c_str(),here)) {
++        if (kind=="+") {
++          char got[2048];
++          got[0]=0;
++          rgWebConnect(got,sizeof(got));
++          if (got[0]) newDir=got;
++        } else {
++          newDir=where;
++        }
++      }
++      ImGui::PopID();
++    }
++    ImGui::EndTable();
++  }
++}
++#else
+ void FurnaceFilePicker::drawBookmarks(ImVec2& tableSize, String& newDir) {
+   if (ImGui::BeginTable("BookmarksList",1,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_ScrollY,tableSize)) {
+     ImGui::TableSetupScrollFreeze(0,1);
+@@ -1299,6 +1362,7 @@ void FurnaceFilePicker::drawBookmarks(ImVec2& tableSize, String& newDir) {
+     editingBookmark=-1;
+   }
+ }
++#endif
+ 
+ bool FurnaceFilePicker::draw(ImGuiWindowFlags winFlags) {
+   if (!isOpen) {
+@@ -1642,8 +1706,14 @@ bool FurnaceFilePicker::draw(ImGuiWindowFlags winFlags) {
+       ImVec2 oldCellPadding=ImGui::GetStyle().CellPadding;
+       ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,ImVec2(oldCellPadding.x,0));
+       if (ImGui::BeginTable("BMPanel",2,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_Resizable)) {
++#ifdef __EMSCRIPTEN__
++        // Web: os "lugares" têm nomes compridos (Acervo Chiptunes, pastas do computador)
++        ImGui::TableSetupColumn("left",ImGuiTableColumnFlags_WidthStretch,0.3f);
++        ImGui::TableSetupColumn("right",ImGuiTableColumnFlags_WidthStretch,0.7f);
++#else
+         ImGui::TableSetupColumn("left",ImGuiTableColumnFlags_WidthStretch,0.2f);
+         ImGui::TableSetupColumn("right",ImGuiTableColumnFlags_WidthStretch,0.8f);
++#endif
+ 
+         ImGui::TableNextRow();
+         ImGui::TableNextColumn();
+diff --git a/src/gui/settings/loadSettings.cpp b/src/gui/settings/loadSettings.cpp
+index d814ee7..ff8ed37 100644
+--- a/src/gui/settings/loadSettings.cpp
++++ b/src/gui/settings/loadSettings.cpp
+@@ -246,7 +246,11 @@ void FurnaceGUI::readConfig(DivConfig& conf, FurnaceGUISettingGroups groups) {
+     settings.backupInterval=conf.getInt("backupInterval",30);
+     settings.backupMaxCopies=conf.getInt("backupMaxCopies",5);
+ 
++#ifdef __EMSCRIPTEN__
++    settings.autoFillSave=true; // Web: o nome do instrumento/sample/música vira o nome sugerido do arquivo
++#else
+     settings.autoFillSave=conf.getBool("autoFillSave",0);
++#endif
+ 
+ #ifdef __EMSCRIPTEN__
+     settings.locale=rgWebLangEN_set()?"en_US":"pt_BR"; // Chiptune Studio: idioma do blog (PT | EN)
+-- 
+2.43.0
+

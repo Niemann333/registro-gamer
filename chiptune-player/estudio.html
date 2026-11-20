@@ -5822,10 +5822,12 @@ var RGMIDI = (function () {
       case 'VRC7': return { id: 0x9d, name: 'VRC7', ch: chans(seq(6, 'FM', 'F', 'opll')), at: function (l) { return numOf(l) - 1; } };
       case 'MMC5': return { id: 0x8b, name: 'MMC5', ch: chans([['Pulse 1', 'S1', 'nes'], ['Pulse 2', 'S2', 'nes'], ['PCM', 'PCM', pcmFam(4, 255)]]), at: function (l) { return /Pulso/.test(l) ? numOf(l) - 1 : null; } };
       case 'SID': { var m85 = /8580/.test((res.info && res.info.system) || ''); return { id: m85 ? 0x07 : 0x47, name: 'C64 (' + (m85 ? '8580' : '6581') + ')', ch: chans(seq(3, 'Channel', 'C', 'c64')), at: function (l) { return numOf(l) - 1; } }; }
-      case 'S-DSP': return { id: 0x87, name: 'SNES', ch: chans(seq(8, 'Channel', 'C', pcmFam(29, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
+      case 'S-DSP': return { id: 0x87, name: 'SNES', ch: chans(seq(8, 'Channel', 'C', pcmFam(29, 74, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
       // Nintendo DS e GBA têm sistemas próprios no Furnace: o arquivo fica no console de origem (não no ES5506 de reserva)
       case 'NDS': return { id: 0xd6, name: 'Nintendo DS', ch: chans(seq(16, 'Channel', 'C', pcmFam(59, 127, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
       case 'GBA': { var gn = 1; labels.forEach(function (l) { gn = Math.max(gn, numOf(l)); }); return { id: 0xd8, name: 'GBA MinMod', flags: 'channels=' + gn, ch: chans(seq(16, 'Channel', 'C', pcmFam(61, 255, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } }; }
+      // PlayStation: sistema próprio do Tracker do blog (ID 0x52, não existe no Furnace oficial)
+      case 'SPU': return { id: 0x52, name: 'Sony PlayStation SPU', ch: chans(seq(24, 'Voice', 'V', pcmFam(4, 100, { pan: 1 }))), at: function (l) { return numOf(l) - 1; } };
       case 'NES FDS': return { id: 0x8a, name: 'FDS', ch: chans([['FDS', 'FDS', 'fds']]), at: function () { return 0; } };
       case 'HuC6280': return { id: 0x05, name: 'PC Engine', ch: chans(seq(6, 'Channel', 'C', 'pce')), at: function (l) { return numOf(l) - 1; } };
       case 'K051649': case 'K052539': return { id: base === 'K052539' ? 0xb4 : 0xa1, name: base === 'K052539' ? 'SCC+' : 'SCC', ch: chans(seq(5, 'Channel', 'C', 'scc')), at: function (l) { return numOf(l) - 1; } };
@@ -5865,7 +5867,7 @@ var RGMIDI = (function () {
   var CHIP_P = { YM2612: 0.68, SN76489: 0.37, YM2151: 1.02, OKIM6295: 1.32, HuC6280: 1.09, 'Game Boy': 1.45, K053260: 1.67, YM3812: 3.7, YM3526: 3.7, Y8950: 3.7,
     YMF262: 1.09, YM2413: 0.44, 'NES APU': 1.49, 'NES FDS': 1.49, QSound: 0.27, 'AY-3-8910': 4.8, AY8930: 4.8, SegaPCM: 2.27, YM2203: 0.97, YM2608: 1.1, YM2610: 1.22,
     '32X PWM': 0.89, YMZ280B: 1.66, K051649: 1.14, K052539: 1.14, GA20: 1.78, 'X1-010': 0.89, Pokey: 1.72, C140: 0.45, C219: 0.45, OKIM6258: 1.36,
-    WonderSwan: 2.08, VSU: 3.57, RF5C68: 0.66, RF5C164: 0.66, YMF278B: 0.65, NDS: 2.25, GBA: 3.5, reserva: 0.56 };
+    WonderSwan: 2.08, VSU: 3.57, RF5C68: 0.66, RF5C164: 0.66, YMF278B: 0.65, NDS: 2.25, GBA: 3.5, SPU: 1.0, 'S-DSP': 1.77, reserva: 0.56 };
   var HDR_IDX = { SN76489: 0, YM2413: 1, YM2612: 2, YM2151: 3, SegaPCM: 4, RF5C68: 5, YM2203: 6, YM2608: 7, YM2610: 8, YM3812: 9, YM3526: 10, Y8950: 11, YMF262: 12,
     YMF278B: 13, YMF271: 14, YMZ280B: 15, RF5C164: 16, '32X PWM': 17, 'AY-3-8910': 18, AY8930: 18, 'Game Boy': 19, 'NES APU': 20, 'NES FDS': 20, MultiPCM: 21,
     uPD7759: 22, OKIM6258: 23, OKIM6295: 24, K051649: 25, K052539: 25, K054539: 26, HuC6280: 27, C140: 28, C219: 28, K053260: 29, Pokey: 30, QSound: 31,
@@ -7280,12 +7282,20 @@ var RGMIDI = (function () {
     $('fdBody').innerHTML = '<div class="msg">' + T('Convertendo…','Converting…') + '</div>';
     (memFur[path] ? Promise.resolve(memFur[path]) : getRaw(path).then(function (u8) { return parseSong(path, u8); }).then(function (r) {
       var o = RGFUR.build(r, { lang: rgI18n.lang });
-      o.fmt = r.format || '';   // módulos e MIDI: os samples vão para o ES5506 do Furnace
+      o.fmt = r.format || '';   // formato de origem (módulos e MIDI: os samples vão para o ES5506 do Furnace)
       o.name = RGFUR.fileName(r, stripExt(cur.name));
       memFur = {}; memFur[path] = o; return o;
     })).then(function (o) {
       if (cur.path !== path) return;
       var dur = function (n) { return n === 1 ? T('1 quadro','1 frame') : n + T(' quadros',' frames'); };
+      var modFmt = /^(MOD|S3M|XM|IT|MPTM|MIDI|MID)$/i.test(o.fmt || '');
+      // formatos de console que o Tracker do blog exporta de volta
+      var outs = [];
+      if (/NES|FDS|VRC6|VRC7|Namco 163|MMC5/.test(o.system)) outs.push('NSF');
+      if (/SNES/.test(o.system)) outs.push('SPC');
+      if (/PlayStation/.test(o.system)) outs.push('PSF');
+      if (/Pokey/i.test(o.system)) outs.push('SAP');
+      var consoleOut = outs.join(' / ');
       $('fdBody').innerHTML = '<div class="msg" style="text-align:left;line-height:1.7">' +
         '<b>' + esc(o.name) + '</b><br>' +
         '🎛 ' + esc(o.system) + '<br>' +
@@ -7293,8 +7303,9 @@ var RGMIDI = (function () {
         '📏 ' + o.rows + T(' linhas · cada linha = ',' rows · each row = ') + dur(o.rowFrames) + ' (' + o.hz + ' Hz) · ' + o.orders + T(' ordens de ',' orders of ') + o.patLen + T(' linhas<br>',' rows<br>') +
         (o.loopRow >= 0 ? T('🔁 Repete a partir da linha ','🔁 Loops from row ') + o.loopRow : T('⏹ Sem repetição','⏹ No loop')) +
         (o.missing && o.missing.length ? T('<br>⚠ Ficou de fora: ','<br>⚠ Left out: ') + esc(o.missing.join(', ')) + T(' (chip ainda não suportado no conversor)',' (chip not supported by the converter yet)') : '') +
-        (o.fmt && o.fmt !== 'S98' ? T('<br>🎚 Os samples tocam num ES5506 (chip de samples de 32 canais do Furnace)','<br>🎚 Samples play on an ES5506 (Furnace\'s 32-channel sample chip)') : '') +
-        (!(o.fmt && o.fmt !== 'S98') && o.sampled && o.sampled.length ? T('<br>🎚 Virou sample (o Furnace não tem esse chip): ','<br>🎚 Turned into samples (Furnace lacks this chip): ') + esc(o.sampled.join(', ')) + T(' — tocam num ES5506',' — played on an ES5506') : '') +
+        (modFmt ? T('<br>🎚 Os samples tocam num ES5506 (chip de samples de 32 canais do Furnace)','<br>🎚 Samples play on an ES5506 (Furnace\'s 32-channel sample chip)') : '') +
+        (consoleOut ? T('<br>💾 No Tracker: Arquivo → exportar… → ROM → ','<br>💾 In the Tracker: File → export… → ROM → ') + consoleOut + T(' (o formato original do console)',' (the console\'s own format)') : '') +
+        (!modFmt && o.sampled && o.sampled.length ? T('<br>🎚 Virou sample (o Furnace não tem esse chip): ','<br>🎚 Turned into samples (Furnace lacks this chip): ') + esc(o.sampled.join(', ')) + T(' — tocam num ES5506',' — played on an ES5506') : '') +
         (o.merged ? '<br>⚠ ' + o.merged + T(' timbre' + (o.merged === 1 ? '' : 's') + ' raro' + (o.merged === 1 ? '' : 's') + ' juntado' + (o.merged === 1 ? '' : 's') + ' ao mais parecido (limite de 255 instrumentos)', ' rare sound' + (o.merged === 1 ? '' : 's') + ' merged into the closest one (255-instrument limit)') : '') +
         '</div>';
       $('fdInfo').textContent = Math.max(1, Math.round(o.bytes.length / 1024)) + ' KB';

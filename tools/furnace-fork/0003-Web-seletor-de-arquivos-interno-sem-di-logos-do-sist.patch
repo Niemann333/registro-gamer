@@ -1,0 +1,106 @@
+From 783e04fe3e7c2fc2e5dac068f19d560b67edc0a5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:25:11 -0300
+Subject: [PATCH 03/29] =?UTF-8?q?Web:=20seletor=20de=20arquivos=20interno,?=
+ =?UTF-8?q?=20sem=20di=C3=A1logos=20do=20sistema;=20fallback=20de=20ngette?=
+ =?UTF-8?q?xt=20sem=20locale?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/fileDialog.cpp | 10 +++++-----
+ src/gui/fileDialog.h   |  4 ++--
+ src/ta-utils.h         |  3 +++
+ 3 files changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/src/gui/fileDialog.cpp b/src/gui/fileDialog.cpp
+index 6238e62..0d11744 100644
+--- a/src/gui/fileDialog.cpp
++++ b/src/gui/fileDialog.cpp
+@@ -6,7 +6,7 @@
+ #include <nfd.h>
+ #elif defined(ANDROID)
+ #include <SDL.h>
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+ #include "../../extern/pfd-fixed/portable-file-dialogs.h"
+ #endif
+ 
+@@ -175,7 +175,7 @@ bool FurnaceGUIFileDialog::openLoad(String header, std::vector<String> filter, S
+     jniEnv->DeleteLocalRef(class_);
+     jniEnv->DeleteLocalRef(activity);
+     return true;
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+     dialogO=new pfd::open_file(header,path,filter,allowMultiple?(pfd::opt::multiselect):(pfd::opt::none));
+     hasError=!pfd::settings::available();
+ #else
+@@ -265,7 +265,7 @@ bool FurnaceGUIFileDialog::openSave(String header, std::vector<String> filter, S
+     jniEnv->DeleteLocalRef(class_);
+     jniEnv->DeleteLocalRef(activity);
+     return true;
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+     dialogS=new pfd::save_file(header,path,filter);
+     hasError=!pfd::settings::available();
+ #else
+@@ -307,7 +307,7 @@ bool FurnaceGUIFileDialog::openSelectDir(String header, String path, double dpiS
+ #elif defined(ANDROID)
+     hasError=true;
+     return false;
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+     dialogF=new pfd::select_folder(header,path);
+     hasError=!pfd::settings::available();
+ #else
+@@ -402,7 +402,7 @@ bool FurnaceGUIFileDialog::render(const ImVec2& min, const ImVec2& max) {
+ #elif defined(ANDROID)
+     // TODO: detect when file picker is closed
+     return false;
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+     if (dialogType==2) {
+       if (dialogF!=NULL) {
+         if (dialogF->ready(0)) {
+diff --git a/src/gui/fileDialog.h b/src/gui/fileDialog.h
+index 8b6f374..5cc7528 100644
+--- a/src/gui/fileDialog.h
++++ b/src/gui/fileDialog.h
+@@ -19,7 +19,7 @@
+ 
+ #elif defined(ANDROID)
+ #include <jni.h>
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+ namespace pfd {
+   class open_file;
+   class save_file;
+@@ -51,7 +51,7 @@ class FurnaceGUIFileDialog {
+   void* dialogO;
+   void* dialogS;
+   void* dialogF;
+-#elif (!defined(SUPPORT_XP) || !defined(_WIN32))
++#elif ((!defined(SUPPORT_XP) || !defined(_WIN32)) && !defined(__EMSCRIPTEN__))
+   pfd::open_file* dialogO;
+   pfd::save_file* dialogS;
+   pfd::select_folder* dialogF;
+diff --git a/src/ta-utils.h b/src/ta-utils.h
+index 8e86fd4..187562a 100644
+--- a/src/ta-utils.h
++++ b/src/ta-utils.h
+@@ -53,6 +53,9 @@ typedef std::string String;
+ #endif
+ #else
+ #define _(_str) _str
++#ifndef ngettext
++#define ngettext(_s,_p,_n) (((_n)==1)?(_s):(_p))
++#endif
+ #endif
+ 
+ #define _GN(_strS,_strP,_cond) (((_cond)==1)?(_strS):(_strP))
+-- 
+2.43.0
+

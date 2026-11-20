@@ -1,0 +1,37 @@
+From 53560afda54a0007418bb6b815970e8cd74161fb Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Thu, 19 Nov 2026 14:54:40 -0300
+Subject: [PATCH 26/29] =?UTF-8?q?Web:=20abre=20com=20edi=C3=A7=C3=A3o=20li?=
+ =?UTF-8?q?gada=20e=20passo=200=20(primeira=20vez)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/gui/gui.cpp | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index 56b9de7..d7b453c 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -9385,6 +9385,16 @@ void FurnaceGUI::syncState() {
+   followPattern=e->getConfBool("followPattern",true);
+   editStep=e->getConfInt("editStep",1);
+   editStepCoarse=e->getConfInt("editStepCoarse",16);
++#ifdef __EMSCRIPTEN__
++  // Web (Chiptune Studio): na primeira vez, o Tracker já abre com a edição ligada (clicar na casa e digitar)
++  // e com passo 0 (a nota fica onde foi escrita). Depois vale o que a pessoa escolher.
++  if (!e->getConfBool("rgWebDefaults1",false)) {
++    edit=true;
++    editStep=0;
++    e->setConf("rgWebDefaults1",true);
++    e->setConf("rgPassoZero",true);
++  }
++#endif
+   noteInputMode=e->getConfInt("noteInputMode",GUI_NOTE_INPUT_POLY);
+   if (noteInputMode!=GUI_NOTE_INPUT_MONO && noteInputMode!=GUI_NOTE_INPUT_POLY && noteInputMode!=GUI_NOTE_INPUT_CHORD) {
+     noteInputMode=GUI_NOTE_INPUT_POLY;
+-- 
+2.43.0
+

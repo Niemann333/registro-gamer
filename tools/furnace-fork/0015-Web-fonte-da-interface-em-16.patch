@@ -1,0 +1,30 @@
+From b9162dea503b49acca0c41c5b0583c3664eaaea7 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 05:12:15 -0300
+Subject: [PATCH 15/29] Web: fonte da interface em 16
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/settings/loadSettings.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/gui/settings/loadSettings.cpp b/src/gui/settings/loadSettings.cpp
+index 03aa168..06f3065 100644
+--- a/src/gui/settings/loadSettings.cpp
++++ b/src/gui/settings/loadSettings.cpp
+@@ -357,7 +357,11 @@ void FurnaceGUI::readConfig(DivConfig& conf, FurnaceGUISettingGroups groups) {
+   }
+ 
+   if (groups&GUI_SETTINGS_FONT) {
++#ifdef __EMSCRIPTEN__
++    settings.mainFontSize=conf.getInt("mainFontSize",16); // Oxanium é mais larga: um pouco menor
++#else
+     settings.mainFontSize=conf.getInt("mainFontSize",GUI_FONT_SIZE_DEFAULT);
++#endif
+     settings.headFontSize=conf.getInt("headFontSize",27);
+     settings.headFontSize2=conf.getInt("headFontSize2",20);
+     settings.headFontSize3=conf.getInt("headFontSize3",16);
+-- 
+2.43.0
+

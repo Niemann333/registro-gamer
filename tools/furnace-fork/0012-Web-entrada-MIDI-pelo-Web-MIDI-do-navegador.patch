@@ -1,0 +1,178 @@
+From 40b5134655daebc371f83e710a8654cfedc74e73 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 04:28:59 -0300
+Subject: [PATCH 12/29] Web: entrada MIDI pelo Web MIDI do navegador
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ CMakeLists.txt        |  1 +
+ src/audio/midi.cpp    | 10 +++++++
+ src/audio/webmidi.cpp | 66 +++++++++++++++++++++++++++++++++++++++++++
+ src/audio/webmidi.h   | 31 ++++++++++++++++++++
+ src/engine/engine.cpp |  3 ++
+ 5 files changed, 111 insertions(+)
+ create mode 100644 src/audio/webmidi.cpp
+ create mode 100644 src/audio/webmidi.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 93f5168..c60ba94 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -504,6 +504,7 @@ endif()
+ set(AUDIO_SOURCES
+ src/audio/abstract.cpp
+ src/audio/midi.cpp
++src/audio/webmidi.cpp
+ src/audio/pipe.cpp
+ )
+ 
+diff --git a/src/audio/midi.cpp b/src/audio/midi.cpp
+index 18ae16b..b8561ed 100644
+--- a/src/audio/midi.cpp
++++ b/src/audio/midi.cpp
+@@ -21,8 +21,18 @@
+ #ifdef HAVE_RTMIDI
+ #include "rtmidi.h"
+ #endif
++#ifdef __EMSCRIPTEN__
++#include "webmidi.h"
++#endif
+ 
+ bool TAAudio::initMidi(bool jack) {
++#ifdef __EMSCRIPTEN__
++  midiIn=new TAMidiInWeb;
++  midiOut=new TAMidiOutWeb;
++  midiIn->init();
++  midiOut->init();
++  return true;
++#endif
+ #ifndef HAVE_RTMIDI
+   return false;
+ #else
+diff --git a/src/audio/webmidi.cpp b/src/audio/webmidi.cpp
+new file mode 100644
+index 0000000..69956ef
+--- /dev/null
++++ b/src/audio/webmidi.cpp
+@@ -0,0 +1,66 @@
++// Registro Gamer: entrada MIDI pelo Web MIDI do navegador (build Emscripten)
++// A página (tracker.html) escuta os teclados MIDI e coloca as mensagens em Module.rgMidiQ.
++#ifdef __EMSCRIPTEN__
++#include "webmidi.h"
++#include "../ta-log.h"
++#include <emscripten.h>
++
++EM_JS(int, rgMidiPop, (unsigned char* buf), {
++  var q = Module.rgMidiQ;
++  if (!q || !q.length) return 0;
++  var m = q.shift(), n = Math.min(m.length, 64);
++  for (var i = 0; i < n; i++) HEAPU8[buf + i] = m[i];
++  return n;
++});
++EM_JS(void, rgMidiSetOpen, (int on), {
++  Module.rgMidiOpen = !!on;
++  if (!on) Module.rgMidiQ = [];
++  if (Module.onRgMidiOpen) Module.onRgMidiOpen(!!on);
++});
++
++bool TAMidiInWeb::gather() {
++  if (!isOpen) return false;
++  unsigned char buf[64];
++  int n;
++  while ((n=rgMidiPop(buf))>0) {
++    TAMidiMessage m;
++    m.type=buf[0];
++    if (m.type==TA_MIDI_SYSEX) continue;
++    if (n>1) memcpy(m.data,buf+1,MIN(n-1,7));
++    queue.push(m);
++  }
++  return true;
++}
++
++bool TAMidiInWeb::isDeviceOpen() { return isOpen; }
++
++bool TAMidiInWeb::openDevice(String name) {
++  isOpen=true;
++  rgMidiSetOpen(1);
++  logI("web MIDI input open (%s)",name);
++  return true;
++}
++
++bool TAMidiInWeb::closeDevice() {
++  isOpen=false;
++  rgMidiSetOpen(0);
++  return true;
++}
++
++std::vector<String> TAMidiInWeb::listDevices() {
++  std::vector<String> ret;
++  ret.push_back(WEB_MIDI_ALL);
++  return ret;
++}
++
++bool TAMidiInWeb::init() { return true; }
++bool TAMidiInWeb::quit() { closeDevice(); return true; }
++
++bool TAMidiOutWeb::send(const TAMidiMessage& what) { return false; }
++bool TAMidiOutWeb::isDeviceOpen() { return false; }
++bool TAMidiOutWeb::openDevice(String name) { return false; }
++bool TAMidiOutWeb::closeDevice() { return true; }
++std::vector<String> TAMidiOutWeb::listDevices() { return std::vector<String>(); }
++bool TAMidiOutWeb::init() { return true; }
++bool TAMidiOutWeb::quit() { return true; }
++#endif
+diff --git a/src/audio/webmidi.h b/src/audio/webmidi.h
+new file mode 100644
+index 0000000..470ee94
+--- /dev/null
++++ b/src/audio/webmidi.h
+@@ -0,0 +1,31 @@
++// Registro Gamer: entrada MIDI pelo Web MIDI do navegador (build Emscripten)
++#ifndef _WEBMIDI_H
++#define _WEBMIDI_H
++#include "taAudio.h"
++
++#define WEB_MIDI_ALL "Teclado MIDI do navegador"
++
++class TAMidiInWeb: public TAMidiIn {
++  bool isOpen;
++  public:
++    bool gather();
++    bool isDeviceOpen();
++    bool openDevice(String name);
++    bool closeDevice();
++    std::vector<String> listDevices();
++    bool init();
++    bool quit();
++    TAMidiInWeb(): isOpen(false) {}
++};
++
++class TAMidiOutWeb: public TAMidiOut {
++  public:
++    bool send(const TAMidiMessage& what);
++    bool isDeviceOpen();
++    bool openDevice(String name);
++    bool closeDevice();
++    std::vector<String> listDevices();
++    bool init();
++    bool quit();
++};
++#endif
+diff --git a/src/engine/engine.cpp b/src/engine/engine.cpp
+index ab0b6fb..81c0977 100644
+--- a/src/engine/engine.cpp
++++ b/src/engine/engine.cpp
+@@ -4245,6 +4245,9 @@ bool DivEngine::initAudioBackend() {
+   }
+   if (output->midiIn) {
+     String inName=getConfString("midiInDevice","");
++#ifdef __EMSCRIPTEN__
++    if (inName.empty()) inName="Teclado MIDI do navegador"; // navegador: liga o MIDI sempre
++#endif
+     if (!inName.empty()) {
+       // try opening device
+       logI("opening MIDI input.");
+-- 
+2.43.0
+

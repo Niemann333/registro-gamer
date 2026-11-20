@@ -1,0 +1,908 @@
+From 5e71f20ad136a90c25651bef4d88b590fb1a6abd Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Fri, 20 Nov 2026 13:25:24 -0300
+Subject: [PATCH 27/29] =?UTF-8?q?Exporta=C3=A7=C3=A3o=20NSF=20(NES=20+=20F?=
+ =?UTF-8?q?DS/VRC6/VRC7/N163/MMC5)=20por=20log=20de=20registradores=20com?=
+ =?UTF-8?q?=20player=206502?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ CMakeLists.txt                 |   2 +
+ scripts/rg-asm6502.py          |  50 +++++++
+ src/engine/engine.h            |   1 +
+ src/engine/export.cpp          |   4 +
+ src/engine/export.h            |   2 +
+ src/engine/export/nsf.cpp      | 257 +++++++++++++++++++++++++++++++++
+ src/engine/export/nsf.h        |  26 ++++
+ src/engine/export/nsfdrv.asm   | 154 ++++++++++++++++++++
+ src/engine/export/nsfdrv.inc   |  22 +++
+ src/engine/export/rgexport.cpp | 166 +++++++++++++++++++++
+ src/engine/export/rgexport.h   |  72 +++++++++
+ src/engine/exportDef.cpp       |  15 ++
+ 12 files changed, 771 insertions(+)
+ create mode 100644 scripts/rg-asm6502.py
+ create mode 100644 src/engine/export/nsf.cpp
+ create mode 100644 src/engine/export/nsf.h
+ create mode 100644 src/engine/export/nsfdrv.asm
+ create mode 100644 src/engine/export/nsfdrv.inc
+ create mode 100644 src/engine/export/rgexport.cpp
+ create mode 100644 src/engine/export/rgexport.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7d3cfbe..e4e8899 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -925,6 +925,8 @@ src/engine/platform/dummy.cpp
+ src/engine/export/abstract.cpp
+ src/engine/export/amigaValidation.cpp
+ src/engine/export/sapr.cpp
++src/engine/export/rgexport.cpp
++src/engine/export/nsf.cpp
+ src/engine/export/tiuna.cpp
+ src/engine/export/zsm.cpp
+ src/engine/export/ipod.cpp
+diff --git a/scripts/rg-asm6502.py b/scripts/rg-asm6502.py
+new file mode 100644
+index 0000000..2e02fbb
+--- /dev/null
++++ b/scripts/rg-asm6502.py
+@@ -0,0 +1,50 @@
++# mini montador 6502 (só o necessário para o driver NSF), duas passadas com rótulos
++import re,sys
++OPS={ # (modo) -> opcode
++ 'lda':{'imm':0xA9,'zp':0xA5,'abs':0xAD,'izy':0xB1,'abx':0xBD},'sta':{'zp':0x85,'abs':0x8D,'izy':0x91,'abx':0x9D},
++ 'ldx':{'imm':0xA2,'zp':0xA6,'abs':0xAE},'ldy':{'imm':0xA0,'zp':0xA4},'stx':{'zp':0x86,'abs':0x8E},
++ 'cmp':{'imm':0xC9,'zp':0xC5},'adc':{'imm':0x69,'abs':0x6D,'zp':0x65},'sbc':{'imm':0xE9},
++ 'inc':{'zp':0xE6},'dec':{'zp':0xC6},'jmp':{'abs':0x4C},'jsr':{'abs':0x20},
++ 'bne':{'rel':0xD0},'beq':{'rel':0xF0},'bcc':{'rel':0x90},'bcs':{'rel':0xB0},'bpl':{'rel':0x10},
++ 'rts':{'imp':0x60},'tax':{'imp':0xAA},'dex':{'imp':0xCA},'pha':{'imp':0x48},'pla':{'imp':0x68},'clc':{'imp':0x18},'sec':{'imp':0x38},'asl':{'imp':0x0A},'nop':{'imp':0xEA},'tay':{'imp':0xA8},'iny':{'imp':0xC8},
++}
++SIZE={'imp':1,'imm':2,'zp':2,'izy':2,'rel':2,'abs':3,'abx':3}
++def assemble(src,org,consts):
++  lines=[]
++  for l in src.split('\n'):
++    l=l.split(';')[0].strip()
++    if not l: continue
++    m=re.match(r'^(\w+):\s*(.+)$',l)
++    if m: lines.append(m.group(1)+':'); lines.append(m.group(2))
++    else: lines.append(l)
++  def val(s,labels):
++    s=s.strip()
++    for k,v in list(consts.items())+list(labels.items()): s=re.sub(r'\b'+re.escape(k)+r'\b',str(v),s)
++    s=s.replace('$','0x'); return eval(s)
++  for p in range(2):
++    pc=org; out=[]; labels={} if p==0 else labs
++    for l in lines:
++      if l.endswith(':'):
++        labels[l[:-1]]=pc; continue
++      if l.startswith('.org'):
++        t=val(l[4:],labels); out+= [0]*(t-pc); pc=t; continue
++      if l.startswith('.byte'):
++        bs=[val(x,labels) if p else 0 for x in l[5:].split(',')]; out+=bs; pc+=len(bs); continue
++      m=l.split(None,1); op=m[0].lower(); arg=m[1].strip() if len(m)>1 else ''
++      modes=OPS[op]
++      if 'imp' in modes and not arg: mode='imp'
++      elif arg.startswith('#'): mode='imm'; arg=arg[1:]
++      elif arg.endswith(',y') and arg.startswith('('): mode='izy'; arg=arg[1:-3]
++      elif arg.endswith(',x'): mode='abx'; arg=arg[:-2]
++      elif 'rel' in modes: mode='rel'
++      else:
++        try: v=val(arg,labels)
++        except Exception: v=0x1000
++        mode='zp' if v<256 and 'zp' in modes else 'abs'
++      v=val(arg,labels) if (arg and p) else 0
++      if mode=='rel': v=(v-(pc+2))&0xff if p else 0
++      if mode not in modes: raise Exception('modo %s em %s'%(mode,l))
++      b=[modes[mode]]+([v&0xff] if SIZE[mode]==2 else [v&0xff,(v>>8)&0xff] if SIZE[mode]==3 else [])
++      out+=b; pc+=len(b)
++    labs=labels
++  return bytes(out),labs
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 8d4c8f7..1568322 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -1257,6 +1257,7 @@ class DivEngine {
+   friend class DivExportZSM;
+   friend class DivExportiPod;
+   friend class DivExportGRUB;
++  friend class DivExportRG;
+ 
+   public:
+     // the loaded song. this is public for convenience.
+diff --git a/src/engine/export.cpp b/src/engine/export.cpp
+index cbfbb47..d3e4a22 100644
+--- a/src/engine/export.cpp
++++ b/src/engine/export.cpp
+@@ -25,6 +25,7 @@
+ #include "export/zsm.h"
+ #include "export/ipod.h"
+ #include "export/grub.h"
++#include "export/nsf.h"
+ 
+ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+   DivROMExport* exporter=NULL;
+@@ -47,6 +48,9 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+     case DIV_ROM_GRUB:
+       exporter=new DivExportGRUB;
+       break;
++    case DIV_ROM_NSF:
++      exporter=new DivExportNSF;
++      break;
+     default:
+       exporter=new DivROMExport;
+       break;
+diff --git a/src/engine/export.h b/src/engine/export.h
+index 497e56b..a3437d7 100644
+--- a/src/engine/export.h
++++ b/src/engine/export.h
+@@ -34,6 +34,8 @@ enum DivROMExportOptions {
+   DIV_ROM_SAP_R,
+   DIV_ROM_IPOD,
+   DIV_ROM_GRUB,
++  // Registro Gamer
++  DIV_ROM_NSF,
+ 
+   DIV_ROM_MAX
+ };
+diff --git a/src/engine/export/nsf.cpp b/src/engine/export/nsf.cpp
+new file mode 100644
+index 0000000..a079615
+--- /dev/null
++++ b/src/engine/export/nsf.cpp
+@@ -0,0 +1,257 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: NSF export (NES + FDS/VRC6/VRC7/N163/MMC5).
++// the file is a bankswitched NSF: bank 0 holds the player (nsfdrv.asm), the register
++// log follows from bank 1 (read through $9000-$9FFF) and the DPCM sample memory comes
++// last, mapped at $C000-$FFFF in 16KB pages as the song switches them.
++//
++// log format (one byte command + operands):
++// - $00-$17 vv: write vv to $4000+cmd
++// - $80 lo hi vv: write vv to address hi:lo (FDS, VRC6, MMC5)
++// - $81 rr vv: VRC7 register rr
++// - $82 aa vv: N163 internal RAM aa
++// - $83 bb: DPCM page bb (16KB) at $C000
++// - $F0-$FD: end of frame, then wait cmd-$F0 more frames
++// - $FE nn: end of frame, then wait nn more frames
++// - $FF: jump to the loop point (or stop if the song ends)
++
++#include "nsf.h"
++#include "../engine.h"
++#include "../ta-log.h"
++#include <fmt/printf.h>
++#include <map>
++
++#include "nsfdrv.inc"
++
++#define NSF_INIT 0x8010
++#define NSF_PLAY 0x8077
++
++static void putWait(std::vector<unsigned char>& s, int frames) {
++  while (frames>0) {
++    int k=frames-1;
++    if (k>255) k=255;
++    if (k<=13) {
++      s.push_back(0xf0+k);
++    } else {
++      s.push_back(0xfe);
++      s.push_back(k);
++    }
++    frames-=k+1;
++  }
++}
++
++static void putStr(SafeWriter* w, const String& str) {
++  char buf[32];
++  memset(buf,0,32);
++  strncpy(buf,str.c_str(),31);
++  w->write(buf,32);
++}
++
++void DivExportNSF::run() {
++  int sysNES=-1, sysFDS=-1, sysVRC6=-1, sysVRC7=-1, sysN163=-1, sysMMC5=-1;
++  std::vector<int> sys;
++  for (int i=0; i<e->song.systemLen; i++) {
++    int* slot=NULL;
++    switch (e->song.system[i]) {
++      case DIV_SYSTEM_NES: case DIV_SYSTEM_5E01: slot=&sysNES; break;
++      case DIV_SYSTEM_FDS: slot=&sysFDS; break;
++      case DIV_SYSTEM_VRC6: slot=&sysVRC6; break;
++      case DIV_SYSTEM_VRC7: slot=&sysVRC7; break;
++      case DIV_SYSTEM_N163: slot=&sysN163; break;
++      case DIV_SYSTEM_MMC5: slot=&sysMMC5; break;
++      default: break;
++    }
++    if (slot==NULL) {
++      logAppendf("WARNING: chip %d (%s) does not exist on the NES; ignored",i,e->getSystemName(e->song.system[i]));
++      continue;
++    }
++    if (*slot>=0) {
++      logAppendf("WARNING: second %s ignored (an NSF has only one of each)",e->getSystemName(e->song.system[i]));
++      continue;
++    }
++    *slot=i;
++    sys.push_back(i);
++  }
++  if (sys.empty()) {
++    fail("no NES chips in this song");
++    return;
++  }
++
++  if (!capture(sys)) {
++    fail("aborted");
++    return;
++  }
++  progress[0].amount=0.6f;
++  logAppend("packing the register log...");
++
++  // build the log
++  std::vector<unsigned char> s;
++  int loopOfs=-1, pending=0, maxPage=-1;
++  bool streamPCM=false;
++  // last value of each register, to drop writes that change nothing
++  std::map<unsigned int,unsigned int> last;
++  auto sideEffect=[&](const RGWrite& w) -> bool {
++    if (w.sys==sysNES) return (w.addr==0x4003 || w.addr==0x4007 || w.addr==0x400b || w.addr==0x400f || w.addr==0x4011 || w.addr>=0x4015);
++    if (w.sys==sysFDS) return w.addr>=0x4080;
++    if (w.sys==sysMMC5) return (w.addr==0x5003 || w.addr==0x5007 || w.addr>=0x5010);
++    return false;
++  };
++  for (size_t t=0; t<ticks.size(); t++) {
++    if ((int)t==loopTick) {
++      putWait(s,pending);
++      pending=0;
++      loopOfs=(int)s.size();
++      // the player jumps here from the end of the song: don't trust what came before
++      last.clear();
++    }
++    std::vector<unsigned char> f;
++    for (RGWrite& w: ticks[t]) {
++      if (w.addr<0x10000) {
++        unsigned int key=(w.sys<<16)|w.addr;
++        std::map<unsigned int,unsigned int>::iterator it=last.find(key);
++        if (it!=last.end() && it->second==w.val && !sideEffect(w)) continue;
++        last[key]=w.val;
++      }
++      if (w.sys==sysNES) {
++        if (w.addr==0xffff0004) {
++          f.push_back(0x83);
++          f.push_back(w.val&0xff);
++          if ((int)w.val>maxPage) maxPage=w.val;
++        } else if (w.addr>=0x4000 && w.addr<=0x4017 && w.addr!=0x4014 && w.addr!=0x4016) {
++          f.push_back(w.addr-0x4000);
++          f.push_back(w.val&0xff);
++        }
++      } else if (w.sys==sysVRC7) {
++        if (w.addr<0x40) {
++          f.push_back(0x81);
++          f.push_back(w.addr);
++          f.push_back(w.val&0xff);
++        }
++      } else if (w.sys==sysN163) {
++        if (w.addr<0x80) {
++          f.push_back(0x82);
++          f.push_back(w.addr);
++          f.push_back(w.val&0xff);
++        }
++      } else if (w.addr<0x10000) {
++        bool okAddr=false;
++        if (w.sys==sysFDS) okAddr=(w.addr>=0x4040 && w.addr<=0x4097);
++        if (w.sys==sysVRC6) okAddr=(w.addr>=0x9000 && w.addr<=0xb002);
++        if (w.sys==sysMMC5) okAddr=(w.addr>=0x5000 && w.addr<=0x5015);
++        if (okAddr) {
++          f.push_back(0x80);
++          f.push_back(w.addr&0xff);
++          f.push_back(w.addr>>8);
++          f.push_back(w.val&0xff);
++        }
++      } else if (w.sys==sysVRC6 && w.addr>=0xffff0000 && w.addr<0xfffffffe && (w.addr&0xff)==0) {
++        streamPCM=true;
++      }
++    }
++    if (!f.empty()) {
++      putWait(s,pending);
++      pending=0;
++      s.insert(s.end(),f.begin(),f.end());
++    }
++    pending++;
++  }
++  putWait(s,pending);
++  s.push_back(0xff);
++  if (streamPCM) logAppend("WARNING: VRC6 PCM mode is streamed sample by sample and is not exported");
++
++  // sample memory (DPCM)
++  size_t dpcmLen=0;
++  const unsigned char* dpcm=NULL;
++  if (sysNES>=0) {
++    dpcm=sampleMem(sysNES,0,dpcmLen);
++    if (dpcm==NULL) dpcmLen=0;
++  }
++  if (maxPage<0 && dpcmLen>0) maxPage=0;
++  if (dpcmLen>0 && (size_t)(maxPage+1)*16384<dpcmLen) maxPage=(dpcmLen-1)/16384;
++
++  int logBanks=(s.size()+4095)/4096;
++  int dpcmBase=1+logBanks;
++  int dpcmBanks=(maxPage>=0)?(maxPage+1)*4:0;
++  int totalBanks=dpcmBase+dpcmBanks;
++  if (totalBanks>256) {
++    fail(fmt::sprintf("the song is too big for an NSF (%d KB of the 1024 KB limit)",totalBanks*4));
++    return;
++  }
++  logAppendf("log: %d bytes (%d banks), DPCM: %d bytes",(int)s.size(),logBanks,(int)dpcmLen);
++
++  // player bank
++  unsigned char drv[4096];
++  memset(drv,0,4096);
++  memcpy(drv,nsfDriver,sizeof(nsfDriver));
++  if (loopOfs>=0) {
++    drv[0]=1+loopOfs/4096;
++    drv[1]=(0x9000+(loopOfs&4095))&0xff;
++    drv[2]=(0x9000+(loopOfs&4095))>>8;
++    drv[3]=1;
++  }
++  drv[4]=(dpcmBanks>0)?dpcmBase:0;
++
++  // header
++  bool pal=false;
++  if (sysNES>=0) pal=(e->song.systemFlags[sysNES].getInt("clockSel",0)==1);
++  unsigned short speed=(unsigned short)MIN(65535,(int)(1000000.0/tickRate+0.5));
++  unsigned char exp=0;
++  if (sysVRC6>=0) exp|=1;
++  if (sysVRC7>=0) exp|=2;
++  if (sysFDS>=0) exp|=4;
++  if (sysMMC5>=0) exp|=8;
++  if (sysN163>=0) exp|=16;
++
++  SafeWriter* w=new SafeWriter;
++  w->init();
++  w->write("NESM\x1a",5);
++  w->writeC(1); // version
++  w->writeC(1); // songs
++  w->writeC(1); // first song
++  w->writeS(0x8000); // load
++  w->writeS(NSF_INIT);
++  w->writeS(NSF_PLAY);
++  putStr(w,e->song.name.empty()?"Furnace":e->song.name);
++  putStr(w,e->song.author);
++  putStr(w,e->song.systemName.empty()?"Registro Gamer Tracker":e->song.systemName);
++  w->writeS(speed); // NTSC speed
++  unsigned char banks[8]={0,1,0,0,0,0,0,0};
++  if (dpcmBanks>0) for (int i=0; i<4; i++) banks[4+i]=dpcmBase+i;
++  w->write(banks,8);
++  w->writeS(speed); // PAL speed
++  w->writeC(pal?1:0);
++  w->writeC(exp);
++  w->writeI(0);
++
++  // data
++  w->write(drv,4096);
++  w->write(s.data(),s.size());
++  for (size_t i=s.size(); i<(size_t)logBanks*4096; i++) w->writeC(0);
++  if (dpcmBanks>0) {
++    std::vector<unsigned char> d(dpcmBanks*4096,0);
++    if (dpcm!=NULL) memcpy(d.data(),dpcm,MIN(dpcmLen,d.size()));
++    w->write(d.data(),d.size());
++  }
++
++  output.push_back(DivROMExportOutput("export.nsf",w));
++  progress[0].amount=1.0f;
++  logAppend("finished!");
++  running=false;
++}
+diff --git a/src/engine/export/nsf.h b/src/engine/export/nsf.h
+new file mode 100644
+index 0000000..e74786c
+--- /dev/null
++++ b/src/engine/export/nsf.h
+@@ -0,0 +1,26 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++#include "rgexport.h"
++
++class DivExportNSF: public DivExportRG {
++  void run();
++  public:
++    ~DivExportNSF() {}
++};
+diff --git a/src/engine/export/nsfdrv.asm b/src/engine/export/nsfdrv.asm
+new file mode 100644
+index 0000000..4e7c1b7
+--- /dev/null
++++ b/src/engine/export/nsfdrv.asm
+@@ -0,0 +1,154 @@
++; driver NSF do Tracker do Registro Gamer: repete as escritas de registrador gravadas a cada quadro
++; dados: janela $9000-$9FFF (banco trocado em $5FF9); samples DPCM em $C000-$FFFF (bancos em $5FFC-$5FFF)
++.org $8000
++LOOPBANK: .byte 0
++LOOPLO: .byte 0
++LOOPHI: .byte 0
++HASLOOP: .byte 0
++DPCMBASE: .byte 0
++.org $8010
++INIT:
++  lda #0
++  ldx #$13
++clr:
++  sta $4000,x
++  dex
++  bpl clr
++  lda #$0F
++  sta $4015
++  lda #$40
++  sta $4017
++  lda #1
++  sta BANK
++  sta $5FF9
++  lda #0
++  sta PTR
++  sta WAIT
++  sta ENDF
++  lda #$90
++  sta PTRH
++  lda #0
++  jsr DPCMB
++  rts
++GB:
++  ldy #0
++  lda (PTR),y
++  inc PTR
++  bne gb1
++  inc PTRH
++  pha
++  lda PTRH
++  cmp #$A0
++  bne gb2
++  lda #$90
++  sta PTRH
++  inc BANK
++  lda BANK
++  sta $5FF9
++gb2:
++  pla
++gb1:
++  rts
++DPCMB:
++  asl
++  asl
++  clc
++  adc DPCMBASE
++  sta $5FFC
++  clc
++  adc #1
++  sta $5FFD
++  clc
++  adc #1
++  sta $5FFE
++  clc
++  adc #1
++  sta $5FFF
++  rts
++PLAY:
++  lda ENDF
++  bne pret
++  lda WAIT
++  beq next
++  dec WAIT
++pret:
++  rts
++next:
++  jsr GB
++  cmp #$80
++  bcc apu
++  cmp #$F0
++  bcs waitop
++  cmp #$80
++  beq gen
++  cmp #$81
++  beq vrc7
++  cmp #$82
++  beq n163
++  cmp #$83
++  beq dpcm
++  jmp next
++apu:
++  tax
++  jsr GB
++  sta $4000,x
++  jmp next
++gen:
++  jsr GB
++  sta T0
++  jsr GB
++  sta T1
++  jsr GB
++  ldy #0
++  sta (T0),y
++  jmp next
++vrc7:
++  jsr GB
++  sta $9010
++  jsr GB
++  sta $9030
++  ldx #8
++v7d:
++  dex
++  bne v7d
++  jmp next
++n163:
++  jsr GB
++  sta $F800
++  jsr GB
++  sta $4800
++  jmp next
++dpcm:
++  jsr GB
++  jsr DPCMB
++  jmp next
++waitop:
++  cmp #$FF
++  beq loopop
++  cmp #$FE
++  beq waitn
++  sec
++  sbc #$F0
++  sta WAIT
++  rts
++waitn:
++  jsr GB
++  sta WAIT
++  rts
++loopop:
++  lda HASLOOP
++  beq endsong
++  lda LOOPBANK
++  sta BANK
++  sta $5FF9
++  lda LOOPLO
++  sta PTR
++  lda LOOPHI
++  sta PTRH
++  jmp next
++endsong:
++  lda #1
++  sta ENDF
++  lda #0
++  sta $4015
++  rts
+diff --git a/src/engine/export/nsfdrv.inc b/src/engine/export/nsfdrv.inc
+new file mode 100644
+index 0000000..6b57505
+--- /dev/null
++++ b/src/engine/export/nsfdrv.inc
+@@ -0,0 +1,22 @@
++// gerado por nsfdrv.asm (montador 6502 em scripts/rg-asm6502.py); não editar à mão
++static const unsigned char nsfDriver[290]={
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0xa9, 0x00, 0xa2, 0x13, 0x9d, 0x00, 0x40, 0xca, 0x10, 0xfa, 0xa9, 0x0f, 0x8d, 0x15, 0x40, 0xa9,
++  0x40, 0x8d, 0x17, 0x40, 0xa9, 0x01, 0x85, 0x02, 0x8d, 0xf9, 0x5f, 0xa9, 0x00, 0x85, 0x00, 0x85,
++  0x03, 0x85, 0x04, 0xa9, 0x90, 0x85, 0x01, 0xa9, 0x00, 0x20, 0x5b, 0x80, 0x60, 0xa0, 0x00, 0xb1,
++  0x00, 0xe6, 0x00, 0xd0, 0x15, 0xe6, 0x01, 0x48, 0xa5, 0x01, 0xc9, 0xa0, 0xd0, 0x0b, 0xa9, 0x90,
++  0x85, 0x01, 0xe6, 0x02, 0xa5, 0x02, 0x8d, 0xf9, 0x5f, 0x68, 0x60, 0x0a, 0x0a, 0x18, 0x6d, 0x04,
++  0x80, 0x8d, 0xfc, 0x5f, 0x18, 0x69, 0x01, 0x8d, 0xfd, 0x5f, 0x18, 0x69, 0x01, 0x8d, 0xfe, 0x5f,
++  0x18, 0x69, 0x01, 0x8d, 0xff, 0x5f, 0x60, 0xa5, 0x04, 0xd0, 0x06, 0xa5, 0x03, 0xf0, 0x03, 0xc6,
++  0x03, 0x60, 0x20, 0x3d, 0x80, 0xc9, 0x80, 0x90, 0x17, 0xc9, 0xf0, 0xb0, 0x5d, 0xc9, 0x80, 0xf0,
++  0x19, 0xc9, 0x81, 0xf0, 0x29, 0xc9, 0x82, 0xf0, 0x39, 0xc9, 0x83, 0xf0, 0x44, 0x4c, 0x82, 0x80,
++  0xaa, 0x20, 0x3d, 0x80, 0x9d, 0x00, 0x40, 0x4c, 0x82, 0x80, 0x20, 0x3d, 0x80, 0x85, 0x05, 0x20,
++  0x3d, 0x80, 0x85, 0x06, 0x20, 0x3d, 0x80, 0xa0, 0x00, 0x91, 0x05, 0x4c, 0x82, 0x80, 0x20, 0x3d,
++  0x80, 0x8d, 0x10, 0x90, 0x20, 0x3d, 0x80, 0x8d, 0x30, 0x90, 0xa2, 0x08, 0xca, 0xd0, 0xfd, 0x4c,
++  0x82, 0x80, 0x20, 0x3d, 0x80, 0x8d, 0x00, 0xf8, 0x20, 0x3d, 0x80, 0x8d, 0x00, 0x48, 0x4c, 0x82,
++  0x80, 0x20, 0x3d, 0x80, 0x20, 0x5b, 0x80, 0x4c, 0x82, 0x80, 0xc9, 0xff, 0xf0, 0x10, 0xc9, 0xfe,
++  0xf0, 0x06, 0x38, 0xe9, 0xf0, 0x85, 0x03, 0x60, 0x20, 0x3d, 0x80, 0x85, 0x03, 0x60, 0xad, 0x03,
++  0x80, 0xf0, 0x15, 0xad, 0x00, 0x80, 0x85, 0x02, 0x8d, 0xf9, 0x5f, 0xad, 0x01, 0x80, 0x85, 0x00,
++  0xad, 0x02, 0x80, 0x85, 0x01, 0x4c, 0x82, 0x80, 0xa9, 0x01, 0x85, 0x04, 0xa9, 0x00, 0x8d, 0x15,
++  0x40, 0x60,
++};
+diff --git a/src/engine/export/rgexport.cpp b/src/engine/export/rgexport.cpp
+new file mode 100644
+index 0000000..6518f4d
+--- /dev/null
++++ b/src/engine/export/rgexport.cpp
+@@ -0,0 +1,166 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++#include "rgexport.h"
++#include "../engine.h"
++#include "../ta-log.h"
++
++// a song that never ends is cut after this many ticks (1 hour at 60Hz)
++#define RG_MAX_TICKS (60*60*60)
++
++void DivExportRG::fail(const String& why) {
++  logAppend("ERROR: "+why);
++  failed=true;
++  running=false;
++}
++
++bool DivExportRG::capture(const std::vector<int>& sys) {
++  ticks.clear();
++  loopTick=-1;
++  tickRate=e->curSubSong->hz;
++  if (tickRate<=0) tickRate=60;
++
++  e->stop();
++  e->repeatPattern=false;
++  e->setOrder(0);
++  logAppend("playing and logging register writes...");
++
++  bool ok=true;
++  e->synchronizedSoft([&]() {
++    double origRate=e->got.rate;
++    e->got.rate=44100;
++
++    e->calcSongTimestamps();
++    int loopOrder=e->curSubSong->ts.loopStart.order;
++    int loopRow=e->curSubSong->ts.loopStart.row;
++    bool loopable=e->curSubSong->ts.isLoopable;
++    logAppendf("loop point: %d %d%s",loopOrder,loopRow,loopable?"":" (song ends)");
++    e->warnings="";
++
++    e->curOrder=0;
++    e->freelance=false;
++    e->playing=false;
++    e->extValuePresent=false;
++    e->remainingLoops=-1;
++
++    for (int i: sys) {
++      e->disCont[i].dispatch->toggleRegisterDump(true);
++      e->disCont[i].dispatch->getRegisterWrites().clear();
++    }
++    e->playSub(false);
++
++    std::vector<RGWrite> pre;
++    auto collect=[&](std::vector<RGWrite>& out) {
++      for (int i: sys) {
++        std::vector<DivRegWrite>& writes=e->disCont[i].dispatch->getRegisterWrites();
++        for (DivRegWrite& w: writes) out.push_back(RGWrite(i,w.addr,w.val));
++        writes.clear();
++      }
++    };
++    collect(pre);
++
++    while (true) {
++      if (loopTick<0 && loopable && loopOrder==e->curOrder && loopRow==e->curRow) {
++        if ((e->ticks-((e->tempoAccum+e->virtualTempoN)/e->virtualTempoD))<=0) {
++          loopTick=(int)ticks.size();
++        }
++      }
++      if (e->nextTick(false,true) || !e->playing) break;
++      ticks.push_back(pre);
++      pre.clear();
++      collect(ticks.back());
++      if (ticks.size()>=RG_MAX_TICKS) {
++        logAppend("song too long; cutting at one hour");
++        break;
++      }
++      if (mustAbort) {
++        ok=false;
++        break;
++      }
++    }
++    if (ticks.empty()) ticks.push_back(pre);
++    if (!loopable) loopTick=-1;
++
++    for (int i=0; i<e->song.systemLen; i++) {
++      e->disCont[i].dispatch->getRegisterWrites().clear();
++    }
++    for (int i: sys) e->disCont[i].dispatch->toggleRegisterDump(false);
++    e->got.rate=origRate;
++    e->remainingLoops=-1;
++    e->playing=false;
++    e->freelance=false;
++    e->extValuePresent=false;
++  });
++  logAppendf("%d ticks at %.2fHz, loop at tick %d",(int)ticks.size(),tickRate,loopTick);
++  return ok;
++}
++
++const unsigned char* DivExportRG::sampleMem(int sys, int index, size_t& len) {
++  DivDispatch* d=e->disCont[sys].dispatch;
++  len=d->getSampleMemUsage(index);
++  return (const unsigned char*)d->getSampleMem(index);
++}
++
++void DivExportRG::start() {
++#ifdef __EMSCRIPTEN__
++  // no threads in the browser build: export right away
++  exportThread=NULL;
++  run();
++#else
++  exportThread=new std::thread(&DivExportRG::run,this);
++#endif
++}
++
++bool DivExportRG::go(DivEngine* eng) {
++  progress[0].name="Progress";
++  progress[0].amount=0.0f;
++  e=eng;
++  running=true;
++  failed=false;
++  mustAbort=false;
++  exportThread=NULL;
++  start();
++  return true;
++}
++
++void DivExportRG::wait() {
++  if (exportThread!=NULL) {
++    exportThread->join();
++    delete exportThread;
++    exportThread=NULL;
++  }
++}
++
++void DivExportRG::abort() {
++  mustAbort=true;
++  wait();
++}
++
++bool DivExportRG::isRunning() {
++  return running;
++}
++
++bool DivExportRG::hasFailed() {
++  return failed;
++}
++
++DivROMExportProgress DivExportRG::getProgress(int index) {
++  if (index<0 || index>1) return progress[1];
++  return progress[index];
++}
+diff --git a/src/engine/export/rgexport.h b/src/engine/export/rgexport.h
+new file mode 100644
+index 0000000..d4c70ee
+--- /dev/null
++++ b/src/engine/export/rgexport.h
+@@ -0,0 +1,72 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: base for the console-format exporters (NSF, SPC, PSF).
++// they all work the same way: play the song once, record every register write of
++// the chips per tick, and pack that log together with a small native player program
++// (6502 for NSF, SPC700 for SPC, MIPS for PSF) that replays it on the real hardware.
++
++#ifndef _RG_EXPORT_H
++#define _RG_EXPORT_H
++
++#include "../export.h"
++#include "../dispatch.h"
++#include <thread>
++#include <vector>
++
++struct RGWrite {
++  int sys;
++  unsigned int addr;
++  unsigned int val;
++  RGWrite(int s, unsigned int a, unsigned int v): sys(s), addr(a), val(v) {}
++};
++
++class DivExportRG: public DivROMExport {
++  protected:
++    DivEngine* e;
++    std::thread* exportThread;
++    DivROMExportProgress progress[2];
++    bool running, failed, mustAbort;
++
++    // capture result: writes of each tick (tick 0 also holds the chip reset writes)
++    std::vector<std::vector<RGWrite>> ticks;
++    // tick where the song loops back to (-1: song ends)
++    int loopTick;
++    // tick rate of the song
++    double tickRate;
++
++    virtual void run()=0;
++    void fail(const String& why);
++    // plays the song and records the register writes of the given systems
++    bool capture(const std::vector<int>& sys);
++    // sample memory of a system (after capture)
++    const unsigned char* sampleMem(int sys, int index, size_t& len);
++    // runs run() in a thread (or directly in the browser, which has no threads here)
++    void start();
++  public:
++    bool go(DivEngine* e);
++    bool isRunning();
++    bool hasFailed();
++    void abort();
++    void wait();
++    DivROMExportProgress getProgress(int index=0);
++    virtual ~DivExportRG() {}
++};
++
++#endif
+diff --git a/src/engine/exportDef.cpp b/src/engine/exportDef.cpp
+index 7906a77..c17c540 100644
+--- a/src/engine/exportDef.cpp
++++ b/src/engine/exportDef.cpp
+@@ -142,4 +142,19 @@ void DivEngine::registerROMExports() {
+     },
+     false, DIV_REQPOL_ANY
+   );
++
++  // Registro Gamer: formatos originais dos consoles
++  romExportDefs[DIV_ROM_NSF]=new DivROMExportDef(
++    "NES NSF", "Registro Gamer",
++    "NSF (NES Sound Format) export.\n"
++    "plays on any NSF player and on real hardware.\n"
++    "supports the NES APU with DPCM and the expansion chips\n"
++    "FDS, VRC6, VRC7, Namco 163 and MMC5.\n"
++    "register dump-based (the song is recorded tick by tick).",
++    "NSF files", ".nsf",
++    {
++      DIV_SYSTEM_NES, DIV_SYSTEM_5E01, DIV_SYSTEM_FDS, DIV_SYSTEM_VRC6, DIV_SYSTEM_VRC7, DIV_SYSTEM_N163, DIV_SYSTEM_MMC5
++    },
++    false, DIV_REQPOL_LAX
++  );
+ }
+-- 
+2.43.0
+

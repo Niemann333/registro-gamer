@@ -1,0 +1,31 @@
+From 0e591e6b9645d85acde6cd2df21126d8b8de24a1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:29:40 -0300
+Subject: [PATCH 05/29] =?UTF-8?q?Web:=20ajuste=20de=20s=C3=ADmbolos=20JS?=
+ =?UTF-8?q?=20na=20liga=C3=A7=C3=A3o?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9f5b894..93f5168 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1461,7 +1461,7 @@ if (EMSCRIPTEN)
+   target_link_options(${FURNACE} PRIVATE
+     "SHELL:-sASYNCIFY" "SHELL:-sASYNCIFY_STACK_SIZE=131072" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=134217728"
+     "SHELL:-sTOTAL_STACK=5242880" "-lidbfs.js" "SHELL:-sFORCE_FILESYSTEM=1" "SHELL:-sMIN_WEBGL_VERSION=1" "SHELL:-sMAX_WEBGL_VERSION=2"
+-    "SHELL:-sEXPORTED_RUNTIME_METHODS=FS,ccall" "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$UTF8ToString,$stringToUTF8,$autoResumeAudioContext,$dynCall"
++    "SHELL:-sEXPORTED_RUNTIME_METHODS=FS,ccall" "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$autoResumeAudioContext,$dynCall"
+     "-fexceptions" "SHELL:-sEXIT_RUNTIME=0" "SHELL:-sENVIRONMENT=web")
+ endif()
+ if (PKG_CONFIG_FOUND AND (SYSTEM_FMT OR SYSTEM_LIBSNDFILE OR SYSTEM_ZLIB OR SYSTEM_SDL2 OR SYSTEM_RTMIDI OR WITH_JACK))
+-- 
+2.43.0
+

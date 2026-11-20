@@ -1,0 +1,32 @@
+From 33b266eaf5ad11e796b29db5aa42c6cecfe53110 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 03:25:21 -0300
+Subject: [PATCH 04/29] =?UTF-8?q?Web:=20for=C3=A7a=20o=20seletor=20de=20ar?=
+ =?UTF-8?q?quivos=20interno?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u
+---
+ src/gui/settings/loadSettings.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/gui/settings/loadSettings.cpp b/src/gui/settings/loadSettings.cpp
+index d03ec81..cec91f5 100644
+--- a/src/gui/settings/loadSettings.cpp
++++ b/src/gui/settings/loadSettings.cpp
+@@ -153,6 +153,9 @@ void FurnaceGUI::readConfig(DivConfig& conf, FurnaceGUISettingGroups groups) {
+     settings.allowEditDocking=conf.getBool("allowEditDocking",1);
+ #ifndef FLATPAK_WORKAROUNDS
+     settings.sysFileDialog=conf.getBool("sysFileDialog",SYS_FILE_DIALOG_DEFAULT);
++#ifdef __EMSCRIPTEN__
++    settings.sysFileDialog=false; // navegador: sempre o seletor interno
++#endif
+ #endif
+     settings.displayAllInsTypes=conf.getBool("displayAllInsTypes",0);
+ 
+-- 
+2.43.0
+

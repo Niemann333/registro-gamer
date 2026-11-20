@@ -1,0 +1,402 @@
+From 1aef2052bb6d3cd6e011c0159887e650e75b647d Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Wed, 18 Nov 2026 21:45:58 -0300
+Subject: [PATCH 22/29] =?UTF-8?q?Web=20(celular):=20padr=C3=B5es=20no=20fu?=
+ =?UTF-8?q?ndo=20e=20as=20janelas=20uma=20de=20cada=20vez=20pelo=20nome?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ extern/imgui_patched/imgui.cpp |  16 +++
+ extern/imgui_patched/imgui.h   |   3 +
+ src/gui/editControls.cpp       | 250 +++++++++++++++++++++++++++++++++
+ src/gui/gui.cpp                |  23 ++-
+ src/gui/gui.h                  |   5 +
+ src/gui/tutorial.cpp           |   4 +
+ 6 files changed, 300 insertions(+), 1 deletion(-)
+
+diff --git a/extern/imgui_patched/imgui.cpp b/extern/imgui_patched/imgui.cpp
+index a370cf9..4aeb299 100644
+--- a/extern/imgui_patched/imgui.cpp
++++ b/extern/imgui_patched/imgui.cpp
+@@ -8051,9 +8051,25 @@ static void SetWindowActiveForSkipRefresh(ImGuiWindow* window)
+ //   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
+ // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
+ // - Passing 'bool* p_open' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
++static bool RgForceOn=false;
++static ImVec2 RgForcePos, RgForceSize;
++void ImGui::RgForceNextWindow(const ImVec2& pos, const ImVec2& size) { RgForceOn=true; RgForcePos=pos; RgForceSize=size; }
++void ImGui::RgForceClear() { RgForceOn=false; }
++
+ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags, const char* displayedName)
+ {
+     ImGuiContext& g = *GImGui;
++    if (RgForceOn && !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Modal)))
++    {
++        RgForceOn = false;
++        g.NextWindowData.HasFlags &= ~(ImGuiNextWindowDataFlags_HasSizeConstraint | ImGuiNextWindowDataFlags_HasDock | ImGuiNextWindowDataFlags_HasCollapsed);
++        g.NextWindowData.HasFlags |= ImGuiNextWindowDataFlags_HasPos | ImGuiNextWindowDataFlags_HasSize;
++        g.NextWindowData.PosVal = RgForcePos; g.NextWindowData.PosPivotVal = ImVec2(0.0f, 0.0f); g.NextWindowData.PosCond = ImGuiCond_Always; g.NextWindowData.PosUndock = true;
++        g.NextWindowData.SizeVal = RgForceSize; g.NextWindowData.SizeCond = ImGuiCond_Always;
++        flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings;
++        flags &= ~ImGuiWindowFlags_AlwaysAutoResize;
++        if (ImGuiWindow* fw = FindWindowByName(name)) fw->Collapsed = false;
++    }
+     const ImGuiStyle& style = g.Style;
+     IM_ASSERT(name != NULL && name[0] != '\0');     // Window name required
+     IM_ASSERT(g.WithinFrameScope);                  // Forgot to call ImGui::NewFrame()
+diff --git a/extern/imgui_patched/imgui.h b/extern/imgui_patched/imgui.h
+index 4794136..1127a73 100644
+--- a/extern/imgui_patched/imgui.h
++++ b/extern/imgui_patched/imgui.h
+@@ -438,6 +438,9 @@ namespace ImGui
+     //    BeginXXX function returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
+     // - Note that the bottom of window stack always contains a window called "Debug".
+     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0, const char* displayedName = NULL);
++    // Registro Gamer (web, celular): a proxima janela de topo (nao popup/filha) ocupa exatamente este retangulo, sem barra de titulo
++    IMGUI_API void          RgForceNextWindow(const ImVec2& pos, const ImVec2& size);
++    IMGUI_API void          RgForceClear();
+     IMGUI_API void          End();
+ 
+     // Child Windows
+diff --git a/src/gui/editControls.cpp b/src/gui/editControls.cpp
+index 14ffe3e..1176d9d 100644
+--- a/src/gui/editControls.cpp
++++ b/src/gui/editControls.cpp
+@@ -1215,3 +1215,253 @@ void FurnaceGUI::drawEditControls() {
+       break;
+   }
+ }
++
++// ── Registro Gamer (web, celular): janelas uma de cada vez ──
++// Os padrões ficam sempre no fundo. As outras janelas aparecem só com o nome numa faixa em cima:
++// tocou, a janela abre grande por cima dos padrões; tocou de novo, ela diminui e os padrões voltam.
++#define RG_PIANO -2
++struct RgPanelDef { const char* name; int win; };
++static const RgPanelDef rgPanelDefs[]={
++  {"Piano",GUI_WINDOW_PIANO},
++  {"Orders",GUI_WINDOW_ORDERS},
++  {"Instruments",GUI_WINDOW_INS_LIST},
++  {"Instrument Editor",GUI_WINDOW_INS_EDIT},
++  {"Song Info",GUI_WINDOW_SONG_INFO},
++  {"Speed",GUI_WINDOW_SPEED},
++  {"Effect List",GUI_WINDOW_EFFECT_LIST},
++  {"Play/Edit Controls",GUI_WINDOW_EDIT_CONTROLS},
++  {"Channels",GUI_WINDOW_CHANNELS},
++  {"Chip Manager",GUI_WINDOW_SYS_MANAGER},
++  {"Mixer",GUI_WINDOW_MIXER},
++  {"Wavetables",GUI_WINDOW_WAVE_LIST},
++  {"Wavetable Editor",GUI_WINDOW_WAVE_EDIT},
++  {"Samples",GUI_WINDOW_SAMPLE_LIST},
++  {"Sample Editor",GUI_WINDOW_SAMPLE_EDIT},
++  {"Subsongs",GUI_WINDOW_SUBSONGS},
++  {"Song Comments",GUI_WINDOW_NOTES},
++  {"Oscilloscope",GUI_WINDOW_OSCILLOSCOPE},
++  {"Oscilloscope (per-channel)",GUI_WINDOW_CHAN_OSC},
++  {"Volume Meter",GUI_WINDOW_VOL_METER},
++  {"Grooves",GUI_WINDOW_GROOVES},
++  {"Register View",GUI_WINDOW_REGISTER_VIEW},
++  {"Pattern Manager",GUI_WINDOW_PAT_MANAGER},
++  {"Find/Replace",GUI_WINDOW_FIND},
++  {"Compatibility Flags",GUI_WINDOW_COMPAT_FLAGS},
++  {"Spectrum",GUI_WINDOW_SPECTRUM},
++  {"Tuner",GUI_WINDOW_TUNER},
++  {"Settings",GUI_WINDOW_SETTINGS},
++  {"File",GUI_WINDOW_NOTHING}
++};
++static const int rgPanelCount=sizeof(rgPanelDefs)/sizeof(rgPanelDefs[0]);
++static int rgActive=-1;       // janela aberta grande (-1 = padrões)
++static bool rgPianoOn=false;  // piano/teclado de notas embaixo dos padrões
++static bool rgInited=false;
++static bool rgSavedOpen[64];
++
++bool* FurnaceGUI::rgPanelFlag(int i) {
++  switch (rgPanelDefs[i].win) {
++    case GUI_WINDOW_PIANO: return &pianoOpen;
++    case GUI_WINDOW_ORDERS: return &ordersOpen;
++    case GUI_WINDOW_INS_LIST: return &insListOpen;
++    case GUI_WINDOW_INS_EDIT: return &insEditOpen;
++    case GUI_WINDOW_SONG_INFO: return &songInfoOpen;
++    case GUI_WINDOW_SPEED: return &speedOpen;
++    case GUI_WINDOW_EFFECT_LIST: return &effectListOpen;
++    case GUI_WINDOW_EDIT_CONTROLS: return &editControlsOpen;
++    case GUI_WINDOW_CHANNELS: return &channelsOpen;
++    case GUI_WINDOW_SYS_MANAGER: return &sysManagerOpen;
++    case GUI_WINDOW_MIXER: return &mixerOpen;
++    case GUI_WINDOW_WAVE_LIST: return &waveListOpen;
++    case GUI_WINDOW_WAVE_EDIT: return &waveEditOpen;
++    case GUI_WINDOW_SAMPLE_LIST: return &sampleListOpen;
++    case GUI_WINDOW_SAMPLE_EDIT: return &sampleEditOpen;
++    case GUI_WINDOW_SUBSONGS: return &subSongsOpen;
++    case GUI_WINDOW_NOTES: return &notesOpen;
++    case GUI_WINDOW_OSCILLOSCOPE: return &oscOpen;
++    case GUI_WINDOW_CHAN_OSC: return &chanOscOpen;
++    case GUI_WINDOW_VOL_METER: return &volMeterOpen;
++    case GUI_WINDOW_GROOVES: return &groovesOpen;
++    case GUI_WINDOW_REGISTER_VIEW: return &regViewOpen;
++    case GUI_WINDOW_PAT_MANAGER: return &patManagerOpen;
++    case GUI_WINDOW_FIND: return &findOpen;
++    case GUI_WINDOW_COMPAT_FLAGS: return &compatFlagsOpen;
++    case GUI_WINDOW_SPECTRUM: return &spectrumOpen;
++    case GUI_WINDOW_TUNER: return &tunerOpen;
++    case GUI_WINDOW_SETTINGS: return &settingsOpen;
++  }
++  return NULL;
++}
++
++void FurnaceGUI::rgPanelDraw(int i) {
++  switch (rgPanelDefs[i].win) {
++    case GUI_WINDOW_PIANO: drawPiano(); break;
++    case GUI_WINDOW_ORDERS: drawOrders(); break;
++    case GUI_WINDOW_INS_LIST: drawInsList(); break;
++    case GUI_WINDOW_INS_EDIT: drawInsEdit(); break;
++    case GUI_WINDOW_SONG_INFO: drawSongInfo(); break;
++    case GUI_WINDOW_SPEED: drawSpeed(); break;
++    case GUI_WINDOW_EFFECT_LIST: drawEffectList(); break;
++    case GUI_WINDOW_EDIT_CONTROLS: drawEditControls(); break;
++    case GUI_WINDOW_CHANNELS: drawChannels(); break;
++    case GUI_WINDOW_SYS_MANAGER: drawSysManager(); break;
++    case GUI_WINDOW_MIXER: drawMixer(); break;
++    case GUI_WINDOW_WAVE_LIST: drawWaveList(); break;
++    case GUI_WINDOW_WAVE_EDIT: drawWaveEdit(); break;
++    case GUI_WINDOW_SAMPLE_LIST: drawSampleList(); break;
++    case GUI_WINDOW_SAMPLE_EDIT: drawSampleEdit(); break;
++    case GUI_WINDOW_SUBSONGS: drawSubSongs(); break;
++    case GUI_WINDOW_NOTES: drawNotes(); break;
++    case GUI_WINDOW_OSCILLOSCOPE: drawOsc(); break;
++    case GUI_WINDOW_CHAN_OSC: drawChanOsc(); break;
++    case GUI_WINDOW_VOL_METER: drawVolMeter(); break;
++    case GUI_WINDOW_GROOVES: drawGrooves(); break;
++    case GUI_WINDOW_REGISTER_VIEW: drawRegView(); break;
++    case GUI_WINDOW_PAT_MANAGER: drawPatManager(); break;
++    case GUI_WINDOW_FIND: drawFindReplace(); break;
++    case GUI_WINDOW_COMPAT_FLAGS: drawCompatFlags(); break;
++    case GUI_WINDOW_SPECTRUM: drawSpectrum(); break;
++    case GUI_WINDOW_TUNER: drawTuner(); break;
++    case GUI_WINDOW_SETTINGS: drawSettings(); break;
++  }
++}
++
++// sai do modo de janelas (modo computador): as janelas voltam a ficar como estavam
++void FurnaceGUI::rgPanelsLeave() {
++  if (!rgInited) return;
++  for (int i=0; i<rgPanelCount; i++) { bool* f=rgPanelFlag(i); if (f) *f=rgSavedOpen[i]; }
++  rgInited=false;
++}
++
++// deixa as janelas do Furnace abertas/fechadas conforme o que está aberto aqui
++void FurnaceGUI::rgPanelsSync() {
++  for (int i=0; i<rgPanelCount; i++) {
++    bool* f=rgPanelFlag(i); if (!f) continue;
++    if (rgPanelDefs[i].win==GUI_WINDOW_PIANO) *f=rgPianoOn;
++    else *f=(i==rgActive);
++  }
++}
++
++void FurnaceGUI::drawRgPanels() {
++  if (!rgInited) {
++    // guarda quais janelas estavam abertas (no modo computador) e fecha todas: aqui só uma abre por vez
++    for (int i=0; i<rgPanelCount; i++) { bool* f=rgPanelFlag(i); rgSavedOpen[i]=f?*f:false; if (f) *f=false; }
++    rgInited=true;
++    rgActive=-1;
++  }
++  // alguma parte do Furnace pediu uma janela (ex.: tocar duas vezes num instrumento abre o editor)
++  if (nextWindow==GUI_WINDOW_PATTERN) rgActive=-1;
++  for (int i=0; i<rgPanelCount; i++) {
++    bool* f=rgPanelFlag(i);
++    bool wants=(nextWindow!=GUI_WINDOW_NOTHING && rgPanelDefs[i].win==nextWindow) || (f && *f && i!=rgActive && rgPanelDefs[i].win!=GUI_WINDOW_PIANO);
++    if (wants) {
++      if (rgPanelDefs[i].win==GUI_WINDOW_PIANO) { rgPianoOn=true; if (nextWindow==GUI_WINDOW_PIANO) nextWindow=GUI_WINDOW_NOTHING; }
++      else rgActive=i;
++    }
++  }
++  rgPanelsSync();
++
++  ImGuiStyle& sty=ImGui::GetStyle();
++  float barH=ImGui::GetFrameHeight()*(portrait?1.9f:1.55f);
++  float btnS=barH-sty.WindowPadding.y*2.0f;
++  ImVec2 areaPos=ImVec2(0.0f,barH);
++  ImVec2 areaSize=ImVec2(canvasW,canvasH-barH);
++  ImGuiWindowFlags fixed=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoDocking|ImGuiWindowFlags_NoCollapse;
++
++  // ── faixa de cima: tocar / parar / gravar + o nome de cada janela ──
++  ImGui::SetNextWindowPos(ImVec2(0.0f,0.0f));
++  ImGui::SetNextWindowSize(ImVec2(canvasW,barH));
++  if (ImGui::Begin("##rgBar",NULL,fixed|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoBringToFrontOnFocus)) {
++    ImVec2 bs=ImVec2(btnS*1.15f,btnS);
++    pushToggleColors(e->isPlaying());
++    if (ImGui::Button(ICON_FA_PLAY "##rgPlay",bs)) play();
++    popToggleColors();
++    ImGui::SameLine();
++    if (ImGui::Button(ICON_FA_STOP "##rgStop",bs)) stop();
++    ImGui::SameLine();
++    pushToggleColors(edit);
++    if (ImGui::Button(ICON_FA_CIRCLE "##rgEdit",bs)) edit=!edit;
++    popToggleColors();
++    ImGui::SameLine();
++    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,3.0f*dpiScale);
++    if (ImGui::BeginChild("##rgChips",ImVec2(0.0f,btnS+3.0f*dpiScale),false,ImGuiWindowFlags_HorizontalScrollbar)) {
++      for (int i=0; i<rgPanelCount; i++) {
++        bool on=(rgPanelDefs[i].win==GUI_WINDOW_PIANO)?rgPianoOn:(i==rgActive);
++        if (i>0) ImGui::SameLine();
++        pushToggleColors(on);
++        String lab=String(_(rgPanelDefs[i].name));
++        size_t hh=lab.find("##"); if (hh!=String::npos) lab=lab.substr(0,hh);
++        if (on && rgPanelDefs[i].win!=GUI_WINDOW_PIANO) lab=String(ICON_FA_WINDOW_MINIMIZE " ")+lab;
++        lab+=fmt::sprintf("##rgP%d",i);
++        if (ImGui::Button(lab.c_str(),ImVec2(0.0f,btnS))) {
++          if (ImGui::GetIO().MouseDragMaxDistanceSqr[ImGuiMouseButton_Left]<=ImGui::GetIO().ConfigInertialScrollToleranceSqr) {
++            if (rgPanelDefs[i].win==GUI_WINDOW_PIANO) {
++              rgPianoOn=!rgPianoOn;
++              rgActive=-1;        // o piano fica junto dos padrões
++            } else {
++              rgActive=(i==rgActive)?-1:i;
++            }
++          }
++        }
++        popToggleColors();
++        if (on && ImGui::IsWindowAppearing()) ImGui::SetScrollHereX(0.5f);
++      }
++    }
++    ImGui::EndChild();
++    ImGui::PopStyleVar();
++  }
++  ImGui::End();
++  rgPanelsSync(); // um toque na faixa pode ter aberto ou diminuído uma janela
++
++  // ── a janela aberta grande ──
++  if (rgActive>=0 && rgPanelDefs[rgActive].win==GUI_WINDOW_NOTHING) {
++    // "Arquivo": novo, abrir, salvar, exportar
++    ImGui::SetNextWindowPos(areaPos);
++    ImGui::SetNextWindowSize(areaSize);
++    if (ImGui::Begin("##rgFile",NULL,fixed)) {
++      ImVec2 big=ImVec2(ImGui::GetContentRegionAvail().x,ImGui::GetFrameHeight()*1.8f);
++      if (ImGui::Button(ICON_FA_FILE_O "  " "##rgNewL",ImVec2(0,0))) {}
++      ImGui::SameLine(); ImGui::TextUnformatted(_("File"));
++      ImGui::Separator();
++      if (ImGui::Button(fmt::sprintf(ICON_FA_FILE_O "  %s##rgNew",_("New")).c_str(),big)) {
++        rgActive=-1;
++        if (modified) showWarning(_("Unsaved changes! Save changes before creating a new song?"),GUI_WARN_NEW); else displayNew=true;
++      }
++      if (ImGui::Button(fmt::sprintf(ICON_FA_FOLDER_OPEN "  %s##rgOpen",_("Open")).c_str(),big)) { rgActive=-1; doAction(GUI_ACTION_OPEN); }
++      if (ImGui::Button(fmt::sprintf(ICON_FA_FLOPPY_O "  %s##rgSave",_("Save")).c_str(),big)) { rgActive=-1; doAction(GUI_ACTION_SAVE); }
++      if (ImGui::Button(fmt::sprintf(ICON_FA_FLOPPY_O "  %s##rgSaveAs",_("Save as...")).c_str(),big)) { rgActive=-1; doAction(GUI_ACTION_SAVE_AS); }
++      if (ImGui::Button(fmt::sprintf(ICON_FA_DOWNLOAD "  %s##rgExport",_("Export")).c_str(),big)) { doAction(GUI_ACTION_EXPORT); }
++      if (ImGui::Button(fmt::sprintf(ICON_FA_DESKTOP "  %s##rgDesk",_("Switch to Desktop Mode")).c_str(),big)) { rgActive=-1; toggleMobileUI(false); }
++    }
++    ImGui::End();
++  } else if (rgActive>=0) {
++    ImGui::RgForceNextWindow(areaPos,areaSize);
++    curWindow=(FurnaceGUIWindows)rgPanelDefs[rgActive].win;
++    rgPanelDraw(rgActive);
++    ImGui::RgForceClear();
++  } else {
++    // ── padrões (fundo), com a faixa das ordens em cima (em pé) e o piano embaixo (se ligado) ──
++    float y=barH, h=canvasH-barH;
++    if (portrait) {
++      float oh=0.12f*canvasW;
++      ImGui::RgForceNextWindow(ImVec2(0.0f,y),ImVec2(canvasW,oh));
++      drawMobileOrderSel();
++      ImGui::RgForceClear();
++      y+=oh; h-=oh;
++    }
++    float ph=rgPianoOn?(portrait?0.42f*canvasW:0.36f*canvasH):0.0f;
++    patWindowPos=ImVec2(0.0f,y);
++    patWindowSize=ImVec2(canvasW,h-ph);
++    patternOpen=true;
++    if (curWindow!=GUI_WINDOW_PIANO) curWindow=GUI_WINDOW_PATTERN;
++    ImGui::RgForceNextWindow(patWindowPos,patWindowSize);
++    drawPattern();
++    ImGui::RgForceClear();
++    patWindowPos=ImVec2(0.0f,y);
++    patWindowSize=ImVec2(canvasW,h-ph);
++    if (rgPianoOn) {
++      ImGui::RgForceNextWindow(ImVec2(0.0f,y+h-ph),ImVec2(canvasW,ph));
++      drawPiano();
++      ImGui::RgForceClear();
++    }
++  }
++}
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index ed8ceb8..19aebaa 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -4617,6 +4617,7 @@ bool FurnaceGUI::detectOutOfBoundsWindow(SDL_Rect& failing) {
+ bool FurnaceGUI::loop() {
+   DECLARE_METRIC(calcChanOsc)
+   DECLARE_METRIC(mobileControls)
++  DECLARE_METRIC(rgPanels)
+   DECLARE_METRIC(mobileOrderSel)
+   DECLARE_METRIC(subSongs)
+   DECLARE_METRIC(findReplace)
+@@ -5868,6 +5869,26 @@ bool FurnaceGUI::loop() {
+     MEASURE(calcChanOsc,calcChanOsc());
+     updateKeyHitPre();
+ 
++#ifdef __EMSCRIPTEN__
++    if (!mobileUI) rgPanelsLeave();
++    if (mobileUI) {
++      // Web (celular): padrões no fundo e as outras janelas uma de cada vez (abre grande / diminui)
++      globalWinFlags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoBringToFrontOnFocus;
++      MEASURE(rgPanels,drawRgPanels());
++      globalWinFlags=0;
++      MEASURE(debug,drawDebug());
++      MEASURE(csPlayer,drawCSPlayer());
++      MEASURE(log,drawLog());
++      MEASURE(stats,drawStats());
++      MEASURE(readOsc,readOsc());
++      MEASURE(xyOsc,drawXYOsc());
++      MEASURE(memory,drawMemory());
++      MEASURE(userPresets,drawUserPresets());
++      MEASURE(refPlayer,drawRefPlayer());
++      MEASURE(multiInsSetup,drawMultiInsSetup());
++      MEASURE(backupsManager,drawBackupsManager());
++    } else
++#endif
+     if (mobileUI) {
+       globalWinFlags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoBringToFrontOnFocus;
+       //globalWinFlags=ImGuiWindowFlags_NoTitleBar;
+@@ -8253,7 +8274,7 @@ bool FurnaceGUI::loop() {
+ #endif
+ 
+ #ifdef DIV_UNSTABLE
+-    {
++    if (!mobileUI) {
+       ImDrawList* dl=ImGui::GetForegroundDrawList();
+       ImVec2 markPos=ImVec2(canvasW-ImGui::CalcTextSize(DIV_VERSION).x-6.0*dpiScale,4.0*dpiScale);
+       ImVec4 markColor=uiColors[GUI_COLOR_TEXT];
+diff --git a/src/gui/gui.h b/src/gui/gui.h
+index fdbebc2..5702d7a 100644
+--- a/src/gui/gui.h
++++ b/src/gui/gui.h
+@@ -3316,6 +3316,11 @@ class FurnaceGUI {
+ 
+   void drawMobileControls();
+   void drawMobileOrderSel();
++  void drawRgPanels();
++  void rgPanelDraw(int i);
++  bool* rgPanelFlag(int i);
++  void rgPanelsLeave();
++  void rgPanelsSync();
+   void drawEditControls();
+   void drawSongInfo(bool asChild=false);
+   void drawSpeed(bool asChild=false);
+diff --git a/src/gui/tutorial.cpp b/src/gui/tutorial.cpp
+index 0b86fd2..13a1fca 100644
+--- a/src/gui/tutorial.cpp
++++ b/src/gui/tutorial.cpp
+@@ -843,6 +843,10 @@ bool FurnaceGUI::loadRandomDemoSong() {
+ 
+ void FurnaceGUI::drawTutorial() {
+   // welcome
++#ifdef __EMSCRIPTEN__
++  // Web (celular): o texto de boas-vindas não cabe na tela e esconde o botão OK
++  if (mobileUI) tutorial.protoWelcome=true;
++#endif
+   if (!tutorial.protoWelcome) {
+     ImGui::OpenPopup("Welcome");
+   }
+-- 
+2.43.0
+

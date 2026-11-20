@@ -1,0 +1,348 @@
+From 97b82eebd3317120cc8473c0b8d0586890a23cbf Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Thu, 19 Nov 2026 13:38:27 -0300
+Subject: [PATCH 24/29] =?UTF-8?q?Web:=20arquivos=20do=20aparelho=20no=20se?=
+ =?UTF-8?q?letor,=20cores=20das=20colunas=20vazias,=20faixa=20com=20a=20de?=
+ =?UTF-8?q?scri=C3=A7=C3=A3o=20da=20casa=20do=20cursor=20no=20celular?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/gui/editControls.cpp  |  24 ++++++++
+ src/gui/gui.cpp           | 118 ++++++++++++++++++++------------------
+ src/gui/gui.h             |   1 +
+ src/gui/newFilePicker.cpp |  30 ++++++++--
+ src/gui/pattern.cpp       |  21 +++++--
+ 5 files changed, 130 insertions(+), 64 deletions(-)
+
+diff --git a/src/gui/editControls.cpp b/src/gui/editControls.cpp
+index ffdd30a..faf9b4c 100644
+--- a/src/gui/editControls.cpp
++++ b/src/gui/editControls.cpp
+@@ -1496,6 +1496,29 @@ void FurnaceGUI::drawRgPanels() {
+       y+=oh; h-=oh;
+     }
+     float ph=rgPianoOn?(portrait?0.42f*canvasW:0.30f*canvasH):0.0f;
++    // faixa que diz o que é a casa do cursor (no PC isso aparece na barra de menu; o toque não tem "passar o mouse")
++    float ih=ImGui::GetFrameHeight()*1.1f;
++    h-=ih;
++    ImGui::SetNextWindowPos(ImVec2(0.0f,y+h-ph));
++    ImGui::SetNextWindowSize(ImVec2(canvasW,ih));
++    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(ImGui::GetStyle().WindowPadding.x,(ih-ImGui::GetTextLineHeight())*0.5f));
++    if (ImGui::Begin("##rgInfo",NULL,fixed|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoInputs)) {
++      const char* col=_("Note");
++      if (cursor.xFine==DIV_PAT_INS) col=_("Instrument");
++      else if (cursor.xFine==DIV_PAT_VOL) col=_("Volume");
++      else if (cursor.xFine>=DIV_PAT_FX(0)) col=((cursor.xFine-DIV_PAT_FX(0))&1)?_("Effect value"):_("Effect");
++      String info;
++      bool has=cursorInfo(info);
++      ImGui::PushStyleColor(ImGuiCol_Text,ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
++      ImGui::TextUnformatted(col);
++      ImGui::PopStyleColor();
++      if (has) {
++        ImGui::SameLine();
++        ImGui::TextUnformatted(info.c_str());
++      }
++    }
++    ImGui::End();
++    ImGui::PopStyleVar();
+     patWindowPos=ImVec2(0.0f,y);
+     patWindowSize=ImVec2(canvasW,h-ph);
+     patternOpen=true;
+@@ -1505,6 +1528,7 @@ void FurnaceGUI::drawRgPanels() {
+     ImGui::RgForceClear();
+     patWindowPos=ImVec2(0.0f,y);
+     patWindowSize=ImVec2(canvasW,h-ph);
++    h+=ih;
+     if (rgPianoOn) {
+       // na coluna de instrumento, volume ou efeito o piano vira teclado de números (0 a F)
+       int padMode=pianoInputPadMode;
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index 2d6faeb..56b9de7 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -4614,6 +4614,67 @@ bool FurnaceGUI::detectOutOfBoundsWindow(SDL_Rect& failing) {
+   if (x) pendingLayoutImportReopen.push(&x); \
+   x=false;
+ 
++// texto que descreve a casa onde está o cursor (nota, instrumento, volume ou efeito); usado na barra de status e no celular
++bool FurnaceGUI::cursorInfo(String& info) {
++  bool hasInfo=false;
++  if (cursor.xCoarse>=0 && cursor.xCoarse<e->getTotalChannelCount()) {
++    DivPattern* p=e->curPat[cursor.xCoarse].getPattern(e->curOrders->ord[cursor.xCoarse][curOrder],false);
++    if (cursor.xFine>=0) switch (cursor.xFine) {
++      case 0: // note
++        if (p->newData[cursor.y][DIV_PAT_NOTE]>=0) {
++          if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_OFF) {
++            info=fmt::sprintf(_("Note off (cut)"));
++          } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_REL) {
++            info=fmt::sprintf(_("Note off (release)"));
++          } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_MACRO_REL) {
++            info=fmt::sprintf(_("Macro release only"));
++          } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_RAW) {
++            info=fmt::sprintf(_("Raw frequency/period"));
++          } else {
++            info=fmt::sprintf(_("Note on: %s"),noteName(p->newData[cursor.y][DIV_PAT_NOTE]));
++          }
++          hasInfo=true;
++        }
++        break;
++      case 1: // instrument
++        if (p->newData[cursor.y][DIV_PAT_INS]>-1) {
++          if (p->newData[cursor.y][DIV_PAT_INS]>=(int)e->song.ins.size()) {
++            info=fmt::sprintf(_("Ins %d: <invalid>"),p->newData[cursor.y][DIV_PAT_INS]);
++          } else {
++            DivInstrument* ins=e->getIns(p->newData[cursor.y][DIV_PAT_INS]);
++            info=fmt::sprintf(_("Ins %d: %s"),p->newData[cursor.y][DIV_PAT_INS],ins->name);
++          }
++          hasInfo=true;
++        }
++        break;
++      case 2: // volume
++        if (p->newData[cursor.y][DIV_PAT_VOL]>-1) {
++          int maxVol=e->getMaxVolumeChan(cursor.xCoarse);
++          if (maxVol<1 || p->newData[cursor.y][DIV_PAT_VOL]>maxVol) {
++            info=fmt::sprintf(_("Set volume: %d (%.2X, INVALID!)"),p->newData[cursor.y][DIV_PAT_VOL],p->newData[cursor.y][DIV_PAT_VOL]);
++          } else {
++            float realVol=e->getGain(cursor.xCoarse,p->newData[cursor.y][DIV_PAT_VOL]);
++            info=fmt::sprintf(_("Set volume: %d (%.2X, %d%%)"),p->newData[cursor.y][DIV_PAT_VOL],p->newData[cursor.y][DIV_PAT_VOL],(int)(realVol*100.0f));
++          }
++          hasInfo=true;
++        }
++        break;
++      default: // effect
++        if (cursor.xFine<DIV_MAX_COLS) {
++          if (p->newData[cursor.y][(cursor.xFine-1)|1]>-1) {
++            info=e->getEffectDesc(p->newData[cursor.y][(cursor.xFine-1)|1],cursor.xCoarse,true);
++            hasInfo=true;
++          }
++        } else {
++          info=_("Error!");
++          hasInfo=true;
++        }
++        break;
++    }
++  }
++  return hasInfo;
++}
++
+ bool FurnaceGUI::loop() {
+   DECLARE_METRIC(calcChanOsc)
+   DECLARE_METRIC(mobileControls)
+@@ -5796,63 +5857,8 @@ bool FurnaceGUI::loop() {
+ 
+         ImGui::TextUnformatted(info.c_str());
+       } else {
+-        bool hasInfo=false;
+         String info;
+-        if (cursor.xCoarse>=0 && cursor.xCoarse<e->getTotalChannelCount()) {
+-          DivPattern* p=e->curPat[cursor.xCoarse].getPattern(e->curOrders->ord[cursor.xCoarse][curOrder],false);
+-          if (cursor.xFine>=0) switch (cursor.xFine) {
+-            case 0: // note
+-              if (p->newData[cursor.y][DIV_PAT_NOTE]>=0) {
+-                if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_OFF) {
+-                  info=fmt::sprintf(_("Note off (cut)"));
+-                } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_REL) {
+-                  info=fmt::sprintf(_("Note off (release)"));
+-                } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_MACRO_REL) {
+-                  info=fmt::sprintf(_("Macro release only"));
+-                } else if (p->newData[cursor.y][DIV_PAT_NOTE]==DIV_NOTE_RAW) {
+-                  info=fmt::sprintf(_("Raw frequency/period"));
+-                } else {
+-                  info=fmt::sprintf(_("Note on: %s"),noteName(p->newData[cursor.y][DIV_PAT_NOTE]));
+-                }
+-                hasInfo=true;
+-              }
+-              break;
+-            case 1: // instrument
+-              if (p->newData[cursor.y][DIV_PAT_INS]>-1) {
+-                if (p->newData[cursor.y][DIV_PAT_INS]>=(int)e->song.ins.size()) {
+-                  info=fmt::sprintf(_("Ins %d: <invalid>"),p->newData[cursor.y][DIV_PAT_INS]);
+-                } else {
+-                  DivInstrument* ins=e->getIns(p->newData[cursor.y][DIV_PAT_INS]);
+-                  info=fmt::sprintf(_("Ins %d: %s"),p->newData[cursor.y][DIV_PAT_INS],ins->name);
+-                }
+-                hasInfo=true;
+-              }
+-              break;
+-            case 2: // volume
+-              if (p->newData[cursor.y][DIV_PAT_VOL]>-1) {
+-                int maxVol=e->getMaxVolumeChan(cursor.xCoarse);
+-                if (maxVol<1 || p->newData[cursor.y][DIV_PAT_VOL]>maxVol) {
+-                  info=fmt::sprintf(_("Set volume: %d (%.2X, INVALID!)"),p->newData[cursor.y][DIV_PAT_VOL],p->newData[cursor.y][DIV_PAT_VOL]);
+-                } else {
+-                  float realVol=e->getGain(cursor.xCoarse,p->newData[cursor.y][DIV_PAT_VOL]);
+-                  info=fmt::sprintf(_("Set volume: %d (%.2X, %d%%)"),p->newData[cursor.y][DIV_PAT_VOL],p->newData[cursor.y][DIV_PAT_VOL],(int)(realVol*100.0f));
+-                }
+-                hasInfo=true;
+-              }
+-              break;
+-            default: // effect
+-              if (cursor.xFine<DIV_MAX_COLS) {
+-                if (p->newData[cursor.y][(cursor.xFine-1)|1]>-1) {
+-                  info=e->getEffectDesc(p->newData[cursor.y][(cursor.xFine-1)|1],cursor.xCoarse,true);
+-                  hasInfo=true;
+-                }
+-              } else {
+-                info=_("Error!");
+-                hasInfo=true;
+-              }
+-              break;
+-          }
+-        }
++        bool hasInfo=cursorInfo(info);
+         if (hasInfo && (settings.statusDisplay==0 || settings.statusDisplay==2)) {
+           ImGui::Text("| %s",info.c_str());
+         } else if (settings.statusDisplay==1 || settings.statusDisplay==2) {
+diff --git a/src/gui/gui.h b/src/gui/gui.h
+index 0957669..04309f5 100644
+--- a/src/gui/gui.h
++++ b/src/gui/gui.h
+@@ -3322,6 +3322,7 @@ class FurnaceGUI {
+   void rgPanelsLeave();
+   void rgPanelsSync();
+   bool rgPanelsOn();
++  bool cursorInfo(String& info);
+   void rgPickEffect(int fx);
+   void drawEditControls();
+   void drawSongInfo(bool asChild=false);
+diff --git a/src/gui/newFilePicker.cpp b/src/gui/newFilePicker.cpp
+index f4b4aa5..5dac49b 100644
+--- a/src/gui/newFilePicker.cpp
++++ b/src/gui/newFilePicker.cpp
+@@ -29,6 +29,8 @@
+ // Web (Chiptune Studio): o seletor navega no acervo do blog (/Acervo) e nas pastas do computador que a pessoa
+ // conectou (/Computador/...). A página (tracker.html) preenche essas pastas quando são abertas.
+ EM_ASYNC_JS(void, rgWebPrepareDir, (const char* p), { if (Module.rgPrepareDir) { try { await Module.rgPrepareDir(UTF8ToString(p)); } catch (e) { console.warn(e); } } });
++EM_JS(void, rgWebPickDevice, (), { if (Module.rgPickDevice) Module.rgPickDevice(); });
++EM_JS(void, rgWebDevicePending, (char* buf, int len), { var s = Module.rgDevicePending ? Module.rgDevicePending() : ''; stringToUTF8(s || '', buf, len); });
+ EM_JS(void, rgWebPlaces, (char* buf, int len), { var s = Module.rgPlaces ? Module.rgPlaces() : ''; stringToUTF8(s, buf, len); });
+ EM_ASYNC_JS(void, rgWebConnect, (char* buf, int len), { var s = ''; if (Module.rgConnect) { try { s = await Module.rgConnect(); } catch (e) { s = ''; } } stringToUTF8(s || '', buf, len); });
+ #endif
+@@ -925,6 +927,10 @@ void FurnaceFilePicker::drawFileList(ImVec2& tableSize, bool& acknowledged) {
+     }
+   } else {
+     // this is the list view. I might add other view modes in the future...
++    // celular em pé: a tela é estreita, então só o nome (senão a coluna do nome some)
++    bool keepType=displayType, keepSize=displaySize, keepDate=displayDate;
++    if (isMobile && ImGui::GetIO().DisplaySize.y>ImGui::GetIO().DisplaySize.x) { displayType=false; displaySize=false; displayDate=false; }
++    else if (isMobile) { displayType=false; }
+     int columns=1;
+     if (displayType) columns++;
+     if (displaySize) columns++;
+@@ -1208,6 +1214,7 @@ void FurnaceFilePicker::drawFileList(ImVec2& tableSize, bool& acknowledged) {
+       ImGui::EndTable();
+       entryLock.unlock();
+     }
++    displayType=keepType; displaySize=keepSize; displayDate=keepDate;
+   }
+ }
+ 
+@@ -1239,14 +1246,18 @@ void FurnaceFilePicker::drawBookmarks(ImVec2& tableSize, String& newDir) {
+       size_t t2=l.find('\t',t1+1);
+       if (t2==String::npos) continue;
+       String kind=l.substr(0,t1), name=l.substr(t1+1,t2-t1-1), where=l.substr(t2+1);
+-      const char* icon=(kind=="a")?ICON_FA_MUSIC:((kind=="+")?ICON_FA_PLUS:ICON_FA_FOLDER);
++      const char* icon=(kind=="a")?ICON_FA_MUSIC:((kind=="+")?ICON_FA_PLUS:((kind=="u")?ICON_FA_MOBILE:ICON_FA_FOLDER));
+       String label=String(icon)+" "+name;
+       bool here=(!where.empty() && (path==where || path.find(where+"/")==0));
+       ImGui::TableNextRow();
+       ImGui::TableNextColumn();
+       ImGui::PushID(300000+(index++));
+       if (ImGui::Selectable(label.c_str(),here)) {
+-        if (kind=="+") {
++        if (kind=="u") {
++          // abre o seletor do sistema; os arquivos escolhidos aparecem em /Aparelho
++          rgWebPickDevice();
++          newDir=where;
++        } else if (kind=="+") {
+           char got[2048];
+           got[0]=0;
+           rgWebConnect(got,sizeof(got));
+@@ -1701,6 +1712,15 @@ bool FurnaceFilePicker::draw(ImGuiWindowFlags winFlags) {
+     ImVec2 tableSize=ImGui::GetContentRegionAvail();
+     tableSize.y-=ImGui::GetFrameHeightWithSpacing()*2.0f;
+ 
++#ifdef __EMSCRIPTEN__
++    // chegaram arquivos do aparelho: vai para a pasta deles
++    {
++      char pend[2048];
++      pend[0]=0;
++      rgWebDevicePending(pend,sizeof(pend));
++      if (pend[0]) newDir="/Aparelho";
++    }
++#endif
+     // bookmarks view, if open
+     if (showBookmarks) {
+       ImVec2 oldCellPadding=ImGui::GetStyle().CellPadding;
+@@ -1708,8 +1728,10 @@ bool FurnaceFilePicker::draw(ImGuiWindowFlags winFlags) {
+       if (ImGui::BeginTable("BMPanel",2,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_Resizable)) {
+ #ifdef __EMSCRIPTEN__
+         // Web: os "lugares" têm nomes compridos (Acervo Chiptunes, pastas do computador)
+-        ImGui::TableSetupColumn("left",ImGuiTableColumnFlags_WidthStretch,0.3f);
+-        ImGui::TableSetupColumn("right",ImGuiTableColumnFlags_WidthStretch,0.7f);
++        // celular em pé: os lugares precisam de mais espaço para o nome aparecer
++        float leftW=(isMobile && ImGui::GetIO().DisplaySize.y>ImGui::GetIO().DisplaySize.x)?0.45f:0.3f;
++        ImGui::TableSetupColumn("left",ImGuiTableColumnFlags_WidthStretch,leftW);
++        ImGui::TableSetupColumn("right",ImGuiTableColumnFlags_WidthStretch,1.0f-leftW);
+ #else
+         ImGui::TableSetupColumn("left",ImGuiTableColumnFlags_WidthStretch,0.2f);
+         ImGui::TableSetupColumn("right",ImGuiTableColumnFlags_WidthStretch,0.8f);
+diff --git a/src/gui/pattern.cpp b/src/gui/pattern.cpp
+index 4b9a78e..450605f 100644
+--- a/src/gui/pattern.cpp
++++ b/src/gui/pattern.cpp
+@@ -1446,11 +1446,24 @@ void FurnaceGUI::drawPattern() {
+             }
+           }
+ 
++          // casas vazias com um pouco da cor de cada coluna (instrumento, volume, efeito, valor):
++          // assim dá para ver onde começa e termina cada uma, mesmo só com pontinhos
++          ImVec4 inactiveV=ImGui::ColorConvertU32ToFloat4(inactiveColor);
++          auto emptyTint=[&](const ImVec4& c, float amt) {
++            ImVec4 r=ImLerp(inactiveV,c,amt);
++            r.w=inactiveV.w;
++            return ImGui::GetColorU32(r);
++          };
++          ImU32 emptyIns=emptyTint(uiColors[GUI_COLOR_PATTERN_INS],0.45f);
++          ImU32 emptyVol=emptyTint(uiColors[GUI_COLOR_PATTERN_VOLUME_MAX],0.45f);
++          ImU32 emptyFx=emptyTint(uiColors[GUI_COLOR_PATTERN_EFFECT_PITCH],0.45f);
++          ImU32 emptyFxVal=emptyTint(uiColors[GUI_COLOR_PATTERN_EFFECT_PANNING],0.30f);
++
+           // instrument
+           if (e->curSubSong->chanCollapse[i]<3) {
+             pos.x+=noteCellSize.x;
+             if (pat->newData[row][DIV_PAT_INS]==-1) {
+-              dl->AddText(pos,inactiveColor,emptyLabel2,emptyLabel2+2);
++              dl->AddText(pos,emptyIns,emptyLabel2,emptyLabel2+2);
+             } else {
+               snprintf(id,63,"%.2X",pat->newData[row][DIV_PAT_INS]);
+               if (pat->newData[row][DIV_PAT_INS]<0 || pat->newData[row][DIV_PAT_INS]>=e->song.insLen) {
+@@ -1470,7 +1483,7 @@ void FurnaceGUI::drawPattern() {
+           if (e->curSubSong->chanCollapse[i]<2 && hasVolumeColumn) {
+             pos.x+=insCellSize.x;
+             if (pat->newData[row][DIV_PAT_VOL]==-1) {
+-              dl->AddText(pos,inactiveColor,emptyLabel2,emptyLabel2+2);
++              dl->AddText(pos,emptyVol,emptyLabel2,emptyLabel2+2);
+             } else {
+               int volColor=(pat->newData[row][DIV_PAT_VOL]*127)/chanVolMax;
+               if (volColor>127) volColor=127;
+@@ -1485,12 +1498,12 @@ void FurnaceGUI::drawPattern() {
+             for (int k=0; k<e->curPat[i].effectCols; k++) {
+               int index=DIV_PAT_FX(k);
+               int indexVal=DIV_PAT_FXVAL(k);
+-              ImU32 effectColor=inactiveColor;
++              ImU32 effectColor=emptyFxVal;
+ 
+               // effect
+               pos.x+=(k==0)?volCellSize.x:effectValCellSize.x;
+               if (pat->newData[row][index]==-1) {
+-                dl->AddText(pos,inactiveColor,emptyLabel2,emptyLabel2+2);
++                dl->AddText(pos,emptyFx,emptyLabel2,emptyLabel2+2);
+               } else {
+                 if (pat->newData[row][index]>0xff) {
+                   snprintf(id,63,"??");
+-- 
+2.43.0
+
