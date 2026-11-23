@@ -40,6 +40,7 @@ enum DivROMExportOptions {
   DIV_ROM_PSF,
   DIV_ROM_GBS,
   DIV_ROM_SID,
+  DIV_ROM_SNSF,
 
   DIV_ROM_MAX
 };

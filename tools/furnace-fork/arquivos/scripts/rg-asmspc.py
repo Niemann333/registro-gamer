@@ -1,7 +1,16 @@
-# mini montador SPC700 (só as instruções do driver SPC), duas passadas com rótulos
+# mini montador SPC700 (só as instruções dos drivers SPC e SNSF), duas passadas com rótulos
+# uso: python3 rg-asmspc.py entrada.asm nome_da_tabela "comentário" > saida.inc (constantes: NOME = valor)
 import re
 # padrão -> (opcode, ordem dos operandos)   d=byte de página direta, i=imediato, a=endereço absoluto 16 bits, r=desvio relativo
 PAT=[
+ (r'mov a,y$',         0xDD, ''),
+ (r'mov y,a$',         0xFD, ''),
+ (r'mov a,x$',         0x7D, ''),
+ (r'dec y$',           0xDC, ''),
+ (r'dec a$',           0x9C, ''),
+ (r'inc a$',           0xBC, ''),
+ (r'lsr a$',           0x5C, ''),
+ (r'mov sp,x$',        0xBD, ''),
  (r'inc x$', 0x3D, ''),
  (r'dec x$', 0x1D, ''),
  (r'inc y$', 0xFC, ''),
@@ -47,6 +56,24 @@ PAT=[
  (r'jmp !(.+)$',       0x5F, 'a'),
  (r'asl ([\w$]+)$', 0x0B, 'd'),
  (r'mov y,([\w$]+)$', 0xEB, 'd'),
+ (r'cmpw ya,([\w$]+)$', 0x5A, 'd'),
+ (r'subw ya,([\w$]+)$', 0x9A, 'd'),
+ (r'addw ya,([\w$]+)$', 0x7A, 'd'),
+ (r'clrc$',            0x60, ''),
+ (r'nop$',             0x00, ''),
+ (r'adc a,#(.+)$',     0x88, 'i'),
+ (r'adc a,!(.+)$',     0x85, 'a'),
+ (r'adc a,([\w$]+)$',  0x84, 'd'),
+ (r'sbc a,([\w$]+)$',  0xA4, 'd'),
+ (r'and a,#(.+)$',     0x28, 'i'),
+ (r'or a,#(.+)$',      0x08, 'i'),
+ (r'cmp a,([\w$]+)$',  0x64, 'd'),
+ (r'cmp y,#(.+)$',     0xAD, 'i'),
+ (r'cmp y,([\w$]+)$',  0x7E, 'd'),
+ (r'bmi ([\w$]+)$',    0x30, 'r'),
+ (r'bpl ([\w$]+)$',    0x10, 'r'),
+ (r'or ([\w$]+),([\w$]+)$', 0x09, 'ss'),
+ (r'mov ([\w$]+),([\w$]+)$', 0xFA, 'ss'),
 ]
 def assemble(src,org,consts):
   lines=[]
@@ -58,6 +85,16 @@ def assemble(src,org,consts):
       lines.append(m.group(1)+':')
       if m.group(2): lines.append(m.group(2))
     else: lines.append(l)
+  consts=dict(consts)
+  rest=[]
+  for l in lines:
+    m=re.match(r'^(\w+)\s*=\s*(.+)$',l)
+    if m:
+      v=m.group(2).strip()
+      for k in sorted(consts,key=len,reverse=True): v=re.sub(r'\b'+re.escape(k)+r'\b',str(consts[k]),v)
+      consts[m.group(1)]=eval(v.replace('$','0x'),{'__builtins__':{}})
+    else: rest.append(l)
+  lines=rest
   labs={}
   for p in range(2):
     pc=org; out=[]; labels={}
@@ -86,6 +123,7 @@ def assemble(src,org,consts):
         t=val(g[0]); r=t-(pc+2)
         if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
         b+=[r&255]
+      elif kind=='ss': b+=[val(g[1])&255, val(g[0])&255]
       elif kind=='dr':
         t=val(g[1]); r=t-(pc+3)
         if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
@@ -93,3 +131,18 @@ def assemble(src,org,consts):
       out+=b; pc+=len(b)
     labs=labels
   return bytes(out),labs
+
+if __name__=='__main__':
+  import sys
+  src=open(sys.argv[1]).read()
+  m=re.search(r'^\s*\.org\s+(\S+)',src,re.M)
+  org=int(m.group(1).replace('$','0x'),0)
+  code,labs=assemble(src,org,{})
+  name=sys.argv[2]
+  print('// gerado por %s (montador SPC700 em scripts/rg-asmspc.py); não editar à mão'%sys.argv[1].split('/')[-1])
+  if len(sys.argv)>3: print('// '+sys.argv[3])
+  for k in sorted(labs):
+    if k.isupper(): print('#define %s_%s 0x%04x'%(name.upper(),k,labs[k]))
+  print('static const unsigned char %s[%d]={'%(name,len(code)))
+  for i in range(0,len(code),16): print('  '+', '.join('0x%02x'%b for b in code[i:i+16])+',')
+  print('};')

@@ -30,6 +30,7 @@
 #include "export/psf.h"
 #include "export/gbs.h"
 #include "export/sid.h"
+#include "export/snsf.h"
 
 DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
   DivROMExport* exporter=NULL;
@@ -66,6 +67,9 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
       break;
     case DIV_ROM_SID:
       exporter=new DivExportSID;
+      break;
+    case DIV_ROM_SNSF:
+      exporter=new DivExportSNSF;
       break;
     default:
       exporter=new DivROMExport;

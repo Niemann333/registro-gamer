@@ -932,6 +932,7 @@ src/engine/export/spc.cpp
 src/engine/export/psf.cpp
 src/engine/export/gbs.cpp
 src/engine/export/sid.cpp
+src/engine/export/snsf.cpp
 src/engine/export/tiuna.cpp
 src/engine/export/zsm.cpp
 src/engine/export/ipod.cpp

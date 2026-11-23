@@ -208,4 +208,17 @@ void DivEngine::registerROMExports() {
     },
     false, DIV_REQPOL_LAX
   );
+
+  romExportDefs[DIV_ROM_SNSF]=new DivROMExportDef(
+    "SNES SNSF", "Registro Gamer",
+    "SNSF (SNES Sound Format) export: a SNES ROM that plays the song.\n"
+    "plays on any SNSF player (foobar2000, Winamp in_xsf, the blog's Chiptune Player, etc.).\n"
+    "the song is kept in the ROM (up to 4MB), so only the samples must fit in the 64KB of sound RAM.\n"
+    "register dump-based (the song is recorded tick by tick).",
+    "SNSF files", ".snsf",
+    {
+      DIV_SYSTEM_SNES
+    },
+    false, DIV_REQPOL_LAX
+  );
 }

@@ -1,0 +1,1203 @@
+From d45624dd3ad56864af8fa98fa5f128728c3afc92 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Mon, 23 Nov 2026 14:44:22 -0300
+Subject: [PATCH 35/35] Exportar SNSF (SNES): ROM HiROM com programa 65816 que
+ manda as samples pelo IPL e o registro pela porta do APU; driver SPC700 com
+ fila e timer de 2 kHz (acumulador de 24 bits)
+
+---
+ CMakeLists.txt                |   1 +
+ scripts/rg-asmspc.py          |  55 ++++-
+ scripts/rg-snsfinc.py         |  20 ++
+ src/engine/export.cpp         |   4 +
+ src/engine/export.h           |   1 +
+ src/engine/export/snsf.cpp    | 368 ++++++++++++++++++++++++++++++++++
+ src/engine/export/snsf.h      |  26 +++
+ src/engine/export/snsfdrv.cfg |   2 +
+ src/engine/export/snsfdrv.inc |  34 ++++
+ src/engine/export/snsfdrv.s   | 177 ++++++++++++++++
+ src/engine/export/snsfspc.asm | 294 +++++++++++++++++++++++++++
+ src/engine/export/snsfspc.inc |  41 ++++
+ src/engine/exportDef.cpp      |  13 ++
+ 13 files changed, 1035 insertions(+), 1 deletion(-)
+ create mode 100644 scripts/rg-snsfinc.py
+ create mode 100644 src/engine/export/snsf.cpp
+ create mode 100644 src/engine/export/snsf.h
+ create mode 100644 src/engine/export/snsfdrv.cfg
+ create mode 100644 src/engine/export/snsfdrv.inc
+ create mode 100644 src/engine/export/snsfdrv.s
+ create mode 100644 src/engine/export/snsfspc.asm
+ create mode 100644 src/engine/export/snsfspc.inc
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 730efe4..f21e1d4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -932,6 +932,7 @@ src/engine/export/spc.cpp
+ src/engine/export/psf.cpp
+ src/engine/export/gbs.cpp
+ src/engine/export/sid.cpp
++src/engine/export/snsf.cpp
+ src/engine/export/tiuna.cpp
+ src/engine/export/zsm.cpp
+ src/engine/export/ipod.cpp
+diff --git a/scripts/rg-asmspc.py b/scripts/rg-asmspc.py
+index f3586de..1644191 100644
+--- a/scripts/rg-asmspc.py
++++ b/scripts/rg-asmspc.py
+@@ -1,7 +1,16 @@
+-# mini montador SPC700 (só as instruções do driver SPC), duas passadas com rótulos
++# mini montador SPC700 (só as instruções dos drivers SPC e SNSF), duas passadas com rótulos
++# uso: python3 rg-asmspc.py entrada.asm nome_da_tabela "comentário" > saida.inc (constantes: NOME = valor)
+ import re
+ # padrão -> (opcode, ordem dos operandos)   d=byte de página direta, i=imediato, a=endereço absoluto 16 bits, r=desvio relativo
+ PAT=[
++ (r'mov a,y$',         0xDD, ''),
++ (r'mov y,a$',         0xFD, ''),
++ (r'mov a,x$',         0x7D, ''),
++ (r'dec y$',           0xDC, ''),
++ (r'dec a$',           0x9C, ''),
++ (r'inc a$',           0xBC, ''),
++ (r'lsr a$',           0x5C, ''),
++ (r'mov sp,x$',        0xBD, ''),
+  (r'inc x$', 0x3D, ''),
+  (r'dec x$', 0x1D, ''),
+  (r'inc y$', 0xFC, ''),
+@@ -47,6 +56,24 @@ PAT=[
+  (r'jmp !(.+)$',       0x5F, 'a'),
+  (r'asl ([\w$]+)$', 0x0B, 'd'),
+  (r'mov y,([\w$]+)$', 0xEB, 'd'),
++ (r'cmpw ya,([\w$]+)$', 0x5A, 'd'),
++ (r'subw ya,([\w$]+)$', 0x9A, 'd'),
++ (r'addw ya,([\w$]+)$', 0x7A, 'd'),
++ (r'clrc$',            0x60, ''),
++ (r'nop$',             0x00, ''),
++ (r'adc a,#(.+)$',     0x88, 'i'),
++ (r'adc a,!(.+)$',     0x85, 'a'),
++ (r'adc a,([\w$]+)$',  0x84, 'd'),
++ (r'sbc a,([\w$]+)$',  0xA4, 'd'),
++ (r'and a,#(.+)$',     0x28, 'i'),
++ (r'or a,#(.+)$',      0x08, 'i'),
++ (r'cmp a,([\w$]+)$',  0x64, 'd'),
++ (r'cmp y,#(.+)$',     0xAD, 'i'),
++ (r'cmp y,([\w$]+)$',  0x7E, 'd'),
++ (r'bmi ([\w$]+)$',    0x30, 'r'),
++ (r'bpl ([\w$]+)$',    0x10, 'r'),
++ (r'or ([\w$]+),([\w$]+)$', 0x09, 'ss'),
++ (r'mov ([\w$]+),([\w$]+)$', 0xFA, 'ss'),
+ ]
+ def assemble(src,org,consts):
+   lines=[]
+@@ -58,6 +85,16 @@ def assemble(src,org,consts):
+       lines.append(m.group(1)+':')
+       if m.group(2): lines.append(m.group(2))
+     else: lines.append(l)
++  consts=dict(consts)
++  rest=[]
++  for l in lines:
++    m=re.match(r'^(\w+)\s*=\s*(.+)$',l)
++    if m:
++      v=m.group(2).strip()
++      for k in sorted(consts,key=len,reverse=True): v=re.sub(r'\b'+re.escape(k)+r'\b',str(consts[k]),v)
++      consts[m.group(1)]=eval(v.replace('$','0x'),{'__builtins__':{}})
++    else: rest.append(l)
++  lines=rest
+   labs={}
+   for p in range(2):
+     pc=org; out=[]; labels={}
+@@ -86,6 +123,7 @@ def assemble(src,org,consts):
+         t=val(g[0]); r=t-(pc+2)
+         if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
+         b+=[r&255]
++      elif kind=='ss': b+=[val(g[1])&255, val(g[0])&255]
+       elif kind=='dr':
+         t=val(g[1]); r=t-(pc+3)
+         if p and not -128<=r<=127: raise Exception('desvio longe: '+l)
+@@ -93,3 +131,18 @@ def assemble(src,org,consts):
+       out+=b; pc+=len(b)
+     labs=labels
+   return bytes(out),labs
++
++if __name__=='__main__':
++  import sys
++  src=open(sys.argv[1]).read()
++  m=re.search(r'^\s*\.org\s+(\S+)',src,re.M)
++  org=int(m.group(1).replace('$','0x'),0)
++  code,labs=assemble(src,org,{})
++  name=sys.argv[2]
++  print('// gerado por %s (montador SPC700 em scripts/rg-asmspc.py); não editar à mão'%sys.argv[1].split('/')[-1])
++  if len(sys.argv)>3: print('// '+sys.argv[3])
++  for k in sorted(labs):
++    if k.isupper(): print('#define %s_%s 0x%04x'%(name.upper(),k,labs[k]))
++  print('static const unsigned char %s[%d]={'%(name,len(code)))
++  for i in range(0,len(code),16): print('  '+', '.join('0x%02x'%b for b in code[i:i+16])+',')
++  print('};')
+diff --git a/scripts/rg-snsfinc.py b/scripts/rg-snsfinc.py
+new file mode 100644
+index 0000000..e05e6e0
+--- /dev/null
++++ b/scripts/rg-snsfinc.py
+@@ -0,0 +1,20 @@
++# monta o programa 65816 do SNSF (src/engine/export/snsfdrv.s) com o ca65/ld65 (pacote cc65) e gera snsfdrv.inc
++# uso: python3 scripts/rg-snsfinc.py
++import subprocess,tempfile,os,re
++d=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','src','engine','export')
++t=tempfile.mkdtemp()
++subprocess.check_call(['ca65','-g','--cpu','65816','-o',t+'/a.o',d+'/snsfdrv.s'])
++subprocess.check_call(['ld65','-C',d+'/snsfdrv.cfg',t+'/a.o','-o',t+'/a.bin','-Ln',t+'/a.lbl'])
++code=open(t+'/a.bin','rb').read()
++labs={}
++for l in open(t+'/a.lbl'):
++  m=re.match(r'al ([0-9A-F]+) \.(\w+)',l)
++  if m and (m.group(2).isupper()): labs[m.group(2)]=int(m.group(1),16)
++with open(d+'/snsfdrv.inc','w') as f:
++  f.write('// gerado por snsfdrv.s (ca65/ld65, scripts/rg-snsfinc.py); não editar à mão\n')
++  f.write('// banco $00 em $8000 (HiROM: arquivo $8000)\n')
++  for k in sorted(labs): f.write('#define SNSFDRV_%s 0x%04x\n'%(k,labs[k]&0xffff))
++  f.write('static const unsigned char snsfDriver[%d]={\n'%len(code))
++  for i in range(0,len(code),16): f.write('  '+', '.join('0x%02x'%b for b in code[i:i+16])+',\n')
++  f.write('};\n')
++print('snsfdrv.inc: %d bytes'%len(code))
+diff --git a/src/engine/export.cpp b/src/engine/export.cpp
+index 8f9bbfa..c1dbf02 100644
+--- a/src/engine/export.cpp
++++ b/src/engine/export.cpp
+@@ -30,6 +30,7 @@
+ #include "export/psf.h"
+ #include "export/gbs.h"
+ #include "export/sid.h"
++#include "export/snsf.h"
+ 
+ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+   DivROMExport* exporter=NULL;
+@@ -67,6 +68,9 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+     case DIV_ROM_SID:
+       exporter=new DivExportSID;
+       break;
++    case DIV_ROM_SNSF:
++      exporter=new DivExportSNSF;
++      break;
+     default:
+       exporter=new DivROMExport;
+       break;
+diff --git a/src/engine/export.h b/src/engine/export.h
+index 64bf111..38ae295 100644
+--- a/src/engine/export.h
++++ b/src/engine/export.h
+@@ -40,6 +40,7 @@ enum DivROMExportOptions {
+   DIV_ROM_PSF,
+   DIV_ROM_GBS,
+   DIV_ROM_SID,
++  DIV_ROM_SNSF,
+ 
+   DIV_ROM_MAX
+ };
+diff --git a/src/engine/export/snsf.cpp b/src/engine/export/snsf.cpp
+new file mode 100644
+index 0000000..98919cf
+--- /dev/null
++++ b/src/engine/export/snsf.cpp
+@@ -0,0 +1,368 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: SNSF export (SNES Sound Format: a SNES ROM inside a PSF, version 0x23).
++// unlike the SPC (a snapshot of the 64KB sound RAM), the music here lives in the ROM, so it can be
++// as long as wanted and the samples get almost all of the sound RAM:
++// - snsfdrv.s (65816) uploads the SPC700 player (snsfspc.asm) to $0200 and the samples to $0400
++//   through the boot loader of the sound chip, then streams the register log to it, 3 bytes at a time;
++// - snsfspc.asm keeps a queue at $FC00-$FFFF and plays one tick of it at the song's rate (timer 0).
++// the log uses the commands of the SPC export, in a single stream (see snsfspc.asm).
++// the ROM is HiROM: the 65816 program at $00:8000 (file $8000), the data from $C1:0000 (file $10000).
++
++#include "snsf.h"
++#include "../engine.h"
++#include "../ta-log.h"
++#include <fmt/printf.h>
++#include <zlib.h>
++#include <map>
++#include <math.h>
++
++#include "snsfdrv.inc"
++#include "snsfspc.inc"
++
++#define SNSF_TAB 0x400
++#define SNSF_DATA 0x10000
++#define SNSF_MAXROM 0x400000
++
++typedef std::vector<unsigned char> Tok;
++
++static void putWait(std::vector<unsigned char>& s, int frames) {
++  while (frames>0) {
++    int k=frames-1;
++    if (k>255) k=255;
++    if (k<=13) {
++      s.push_back(0xf0+k);
++    } else {
++      s.push_back(0xfe);
++      s.push_back(k);
++    }
++    frames-=k+1;
++  }
++}
++
++static String timeStr(double secs) {
++  int s=(int)(secs+0.999);
++  return fmt::sprintf("%d:%02d",s/60,s%60);
++}
++
++static void put24(std::vector<unsigned char>& rom, unsigned int at, unsigned int fileOfs) {
++  // HiROM: file offset -> $C0:0000 + offset
++  unsigned int a=0xc00000+fileOfs;
++  rom[at]=a&0xff;
++  rom[at+1]=(a>>8)&0xff;
++  rom[at+2]=(a>>16)&0xff;
++}
++
++void DivExportSNSF::run() {
++  int sysSNES=-1;
++  for (int i=0; i<e->song.systemLen; i++) {
++    if (e->song.system[i]==DIV_SYSTEM_SNES && sysSNES<0) {
++      sysSNES=i;
++    } else {
++      logAppendf("WARNING: chip %d (%s) is not part of the SNES sound; ignored",i,e->getSystemName(e->song.system[i]));
++    }
++  }
++  if (sysSNES<0) {
++    fail(_("no SNES chip in this song"));
++    return;
++  }
++  std::vector<int> sys;
++  sys.push_back(sysSNES);
++  if (!capture(sys)) {
++    fail("aborted");
++    return;
++  }
++  progress[0].amount=0.5f;
++  logAppend("building the register log...");
++
++  // sound RAM: samples (and Furnace's sample directory and wave RAM) from $0400
++  std::vector<unsigned char> ram(65536,0);
++  size_t smpLen=0;
++  const unsigned char* smp=(const unsigned char*)dispatchOf(sysSNES)->compileSampleMem(0,smpLen);
++  if (smp!=NULL) {
++    memcpy(&ram[SNSF_TAB],smp,MIN(smpLen,(size_t)(65536-SNSF_TAB)));
++    delete[] smp;
++  }
++  std::vector<unsigned char> ramInit(ram);
++  int maxEDL=0;
++  for (std::vector<RGWrite>& tw: ticks) {
++    for (RGWrite& w: tw) {
++      if (w.addr==0x7d && (int)(w.val&15)>maxEDL) maxEDL=w.val&15;
++    }
++  }
++  // wavetables written while the song plays are kept once each after the samples (if there is room)
++  size_t poolBase=SNSF_TAB+smpLen;
++  size_t ramEnd=0xf800-maxEDL*2048;
++  std::vector<unsigned char> pool;
++  std::map<Tok,unsigned int> poolIdx;
++  std::vector<bool> ramKnown(65536,true);
++
++  std::vector<unsigned char> log;
++  int pending=0, loopOfs=-1;
++  std::map<unsigned int,unsigned int> lastDSP;
++  for (size_t t=0; t<ticks.size(); t++) {
++    if ((int)t==loopTick) {
++      putWait(log,pending);
++      pending=0;
++      loopOfs=log.size();
++      lastDSP.clear();
++      for (size_t k=0; k<ramKnown.size(); k++) ramKnown[k]=false;
++    }
++    std::vector<unsigned char> f;
++    Tok run;
++    unsigned int runStart=0, runNext=0;
++    auto flushRun=[&]() {
++      if (run.empty()) return;
++      bool same=true;
++      for (size_t k=0; k<run.size(); k++) {
++        if (!ramKnown[runStart+k] || ram[runStart+k]!=run[k]) {
++          same=false;
++          break;
++        }
++      }
++      if (same) {
++        run.clear();
++        return;
++      }
++      if (run.size()>=16) {
++        std::map<Tok,unsigned int>::iterator it=poolIdx.find(run);
++        unsigned int at=0;
++        bool inPool=false;
++        if (it!=poolIdx.end()) {
++          at=it->second;
++          inPool=true;
++        } else if (poolBase+pool.size()+run.size()<=ramEnd) {
++          at=pool.size();
++          poolIdx[run]=at;
++          pool.insert(pool.end(),run.begin(),run.end());
++          inPool=true;
++        }
++        if (inPool) {
++          for (size_t k=0; k<run.size(); k+=255) {
++            size_t n=MIN((size_t)255,run.size()-k);
++            unsigned int dst=runStart+k, src=poolBase+at+k;
++            f.push_back(0x83);
++            f.push_back(dst&0xff);
++            f.push_back(dst>>8);
++            f.push_back(src&0xff);
++            f.push_back(src>>8);
++            f.push_back(n);
++          }
++          for (size_t k=0; k<run.size(); k++) {
++            ram[runStart+k]=run[k];
++            ramKnown[runStart+k]=true;
++          }
++          run.clear();
++          return;
++        }
++      }
++      // written byte by byte, skipping what is already there
++      size_t k=0;
++      while (k<run.size()) {
++        if (ramKnown[runStart+k] && ram[runStart+k]==run[k]) {
++          k++;
++          continue;
++        }
++        size_t at=f.size();
++        f.push_back(0x82);
++        f.push_back((runStart+k)&0xff);
++        f.push_back((runStart+k)>>8);
++        f.push_back(0);
++        while (k<run.size() && f[at+3]<255 && !(ramKnown[runStart+k] && ram[runStart+k]==run[k])) {
++          f.push_back(run[k]);
++          f[at+3]++;
++          ram[runStart+k]=run[k];
++          ramKnown[runStart+k]=true;
++          k++;
++        }
++      }
++      run.clear();
++    };
++    for (RGWrite& w: ticks[t]) {
++      if (w.addr<0x80) {
++        flushRun();
++        if (w.addr==0x4c || w.addr==0x5c) {
++          // key on/off: the player writes them at the end of the tick (key off as a pulse, before key on)
++          if (w.val&0xff) {
++            f.push_back(w.addr==0x4c?0x84:0x85);
++            f.push_back(w.val&0xff);
++          }
++          continue;
++        }
++        bool always=(w.addr==0x7c);
++        std::map<unsigned int,unsigned int>::iterator it=lastDSP.find(w.addr);
++        if (!always && it!=lastDSP.end() && it->second==w.val) continue;
++        lastDSP[w.addr]=w.val;
++        f.push_back(w.addr);
++        f.push_back(w.val&0xff);
++      } else if (w.addr>=0x10000 && w.addr<0x20000) {
++        unsigned int a=w.addr&0xffff;
++        if (run.empty() || a!=runNext) {
++          flushRun();
++          runStart=a;
++        }
++        run.push_back(w.val&0xff);
++        runNext=a+1;
++      }
++    }
++    flushRun();
++    if (!f.empty()) {
++      putWait(log,pending);
++      pending=0;
++      log.insert(log.end(),f.begin(),f.end());
++    }
++    pending++;
++  }
++  putWait(log,pending);
++  bool looping=(loopTick>=0 && loopOfs>=0);
++  if (!looping) log.push_back(0xff);
++
++  // ARAM image to upload: samples, then the wave pool
++  std::vector<unsigned char> aram(ramInit.begin()+SNSF_TAB,ramInit.begin()+SNSF_TAB+smpLen);
++  aram.insert(aram.end(),pool.begin(),pool.end());
++  if (SNSF_TAB+aram.size()>ramEnd) {
++    fail(fmt::sprintf(_("the samples do not fit in the SNES sound RAM: they need %d bytes but only %d are free with this echo size"),(int)aram.size(),(int)(ramEnd-SNSF_TAB)));
++    return;
++  }
++
++  // SPC700 player, with the tick rate
++  std::vector<unsigned char> spc(snsfSpcDriver,snsfSpcDriver+sizeof(snsfSpcDriver));
++  double rateD=tickRate/2000.0*16777216.0;
++  if (rateD>16777215.0) {
++    rateD=16777215.0;
++    logAppend("WARNING: tick rate above 2000Hz; the song will play slower");
++  }
++  unsigned int rate=(unsigned int)(rateD+0.5);
++  spc[SNSFSPCDRIVER_RATE-0x200]=rate&0xff;
++  spc[SNSFSPCDRIVER_RATE1-0x200]=(rate>>8)&0xff;
++  spc[SNSFSPCDRIVER_RATE2-0x200]=(rate>>16)&0xff;
++
++  // ROM
++  progress[0].amount=0.7f;
++  size_t dataSize=spc.size()+aram.size()+log.size();
++  size_t romSize=0x20000;
++  while (romSize<SNSF_DATA+dataSize) romSize<<=1;
++  if (romSize>SNSF_MAXROM) {
++    fail(fmt::sprintf(_("the song is too long for a SNES ROM: %d bytes of data (at most %d)"),(int)dataSize,SNSF_MAXROM-SNSF_DATA));
++    return;
++  }
++  std::vector<unsigned char> rom(romSize,0);
++  memcpy(&rom[0x8000],snsfDriver,sizeof(snsfDriver));
++  size_t at=SNSF_DATA;
++  unsigned int spcAt=at;
++  memcpy(&rom[at],spc.data(),spc.size());
++  at+=spc.size();
++  unsigned int aramAt=at;
++  if (!aram.empty()) memcpy(&rom[at],aram.data(),aram.size());
++  at+=aram.size();
++  unsigned int logAt=at;
++  memcpy(&rom[at],log.data(),log.size());
++  at+=log.size();
++  put24(rom,SNSFDRV_TAB_LOG,logAt);
++  put24(rom,SNSFDRV_TAB_END,at);
++  put24(rom,SNSFDRV_TAB_LOOP,looping?(logAt+loopOfs):(at-1));
++  put24(rom,SNSFDRV_TAB_ARAM,aramAt);
++  rom[SNSFDRV_TAB_ARAMLEN]=aram.size()&0xff;
++  rom[SNSFDRV_TAB_ARAMLEN+1]=(aram.size()>>8)&0xff;
++  put24(rom,SNSFDRV_TAB_DRV,spcAt);
++  rom[SNSFDRV_TAB_DRVLEN]=spc.size()&0xff;
++  rom[SNSFDRV_TAB_DRVLEN+1]=(spc.size()>>8)&0xff;
++  // header (HiROM, at $FFC0)
++  {
++    String title=e->song.name.empty()?String("REGISTRO GAMER"):e->song.name;
++    for (int i=0; i<21; i++) {
++      char c=(i<(int)title.size())?title[i]:' ';
++      if (c<32 || c>126) c=' ';
++      rom[0xffc0+i]=c;
++    }
++    rom[0xffd5]=0x21; // HiROM, slow
++    rom[0xffd6]=0x00; // ROM only
++    int sz=0;
++    while ((1024U<<sz)<romSize) sz++;
++    rom[0xffd7]=sz;
++    rom[0xffd8]=0;
++    rom[0xffd9]=0x01; // North America
++    rom[0xffda]=0x00;
++    rom[0xffdb]=0x00;
++    // vectors: native NMI/IRQ/BRK/COP/ABORT and emulation ones do nothing; reset starts the program
++    for (int v=0xffe4; v<0x10000; v+=2) {
++      rom[v]=SNSFDRV_NOINT&0xff;
++      rom[v+1]=SNSFDRV_NOINT>>8;
++    }
++    rom[0xfffc]=SNSFDRV_RESET&0xff;
++    rom[0xfffd]=SNSFDRV_RESET>>8;
++    rom[0xffdc]=0xff;
++    rom[0xffdd]=0xff;
++    rom[0xffde]=0;
++    rom[0xffdf]=0;
++    unsigned int sum=0;
++    for (size_t i=0; i<romSize; i++) sum+=rom[i];
++    sum&=0xffff;
++    rom[0xffdc]=(sum^0xffff)&0xff;
++    rom[0xffdd]=(sum^0xffff)>>8;
++    rom[0xffde]=sum&0xff;
++    rom[0xffdf]=sum>>8;
++  }
++  logAppendf("samples: %d bytes; waves: %d bytes; log: %d bytes; ROM: %d KB",(int)smpLen,(int)pool.size(),(int)log.size(),(int)(romSize>>10));
++
++  // SNSF: program section = load offset, size, ROM
++  progress[0].amount=0.8f;
++  std::vector<unsigned char> prg(8,0);
++  prg[4]=romSize&0xff;
++  prg[5]=(romSize>>8)&0xff;
++  prg[6]=(romSize>>16)&0xff;
++  prg[7]=(romSize>>24)&0xff;
++  prg.insert(prg.end(),rom.begin(),rom.end());
++  uLongf zLen=compressBound(prg.size());
++  std::vector<unsigned char> z(zLen);
++  if (compress2(z.data(),&zLen,prg.data(),prg.size(),9)!=Z_OK) {
++    fail("could not compress the ROM");
++    return;
++  }
++  z.resize(zLen);
++  unsigned int crc=crc32(0L,z.data(),z.size());
++
++  // the boot loader of the sound chip takes about 25 microseconds per byte before the music starts
++  double secs=(double)(aram.size()+spc.size())*25e-6+0.1;
++  secs+=(double)ticks.size()/tickRate;
++  if (looping) secs+=(double)(ticks.size()-loopTick)/tickRate;
++
++  SafeWriter* w=new SafeWriter;
++  w->init();
++  w->write("PSF\x23",4);
++  w->writeI(0);
++  w->writeI(z.size());
++  w->writeI(crc);
++  w->write(z.data(),z.size());
++  String tags="[TAG]";
++  if (!e->song.name.empty()) tags+="title="+e->song.name+"\n";
++  if (!e->song.author.empty()) tags+="artist="+e->song.author+"\n";
++  if (!e->song.category.empty()) tags+="game="+e->song.category+"\n";
++  tags+="length="+timeStr(secs)+"\n";
++  tags+=looping?"fade=10\n":"fade=0\n";
++  tags+="utf8=1\n";
++  tags+="snsfby=Registro Gamer Tracker (Furnace)\n";
++  w->writeText(tags);
++
++  output.push_back(DivROMExportOutput("export.snsf",w));
++  progress[0].amount=1.0f;
++  logAppend("finished!");
++  running=false;
++}
+diff --git a/src/engine/export/snsf.h b/src/engine/export/snsf.h
+new file mode 100644
+index 0000000..f407520
+--- /dev/null
++++ b/src/engine/export/snsf.h
+@@ -0,0 +1,26 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++#include "rgexport.h"
++
++class DivExportSNSF: public DivExportRG {
++  void run();
++  public:
++    ~DivExportSNSF() {}
++};
+diff --git a/src/engine/export/snsfdrv.cfg b/src/engine/export/snsfdrv.cfg
+new file mode 100644
+index 0000000..e59edc2
+--- /dev/null
++++ b/src/engine/export/snsfdrv.cfg
+@@ -0,0 +1,2 @@
++MEMORY { ROM: start=$8000, size=$7FB0, fill=no; }
++SEGMENTS { CODE: load=ROM, type=ro; }
+diff --git a/src/engine/export/snsfdrv.inc b/src/engine/export/snsfdrv.inc
+new file mode 100644
+index 0000000..7b59a55
+--- /dev/null
++++ b/src/engine/export/snsfdrv.inc
+@@ -0,0 +1,34 @@
++// gerado por snsfdrv.s (ca65/ld65, scripts/rg-snsfinc.py); não editar à mão
++// banco $00 em $8000 (HiROM: arquivo $8000)
++#define SNSFDRV_BLOCK 0x80f0
++#define SNSFDRV_GETB 0x80cd
++#define SNSFDRV_NOINT 0x8128
++#define SNSFDRV_RESET 0x8022
++#define SNSFDRV_TAB_ARAM 0x8009
++#define SNSFDRV_TAB_ARAMLEN 0x800c
++#define SNSFDRV_TAB_DRV 0x800e
++#define SNSFDRV_TAB_DRVLEN 0x8011
++#define SNSFDRV_TAB_END 0x8003
++#define SNSFDRV_TAB_LOG 0x8000
++#define SNSFDRV_TAB_LOOP 0x8006
++static const unsigned char snsfDriver[297]={
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x78, 0x18, 0xfb, 0xc2, 0x18, 0xe2, 0x20, 0xa2, 0xff, 0x1f, 0x9a, 0xa9, 0x80, 0x8d,
++  0x00, 0x21, 0x9c, 0x00, 0x42, 0xad, 0x40, 0x21, 0xc9, 0xaa, 0xd0, 0xf9, 0xad, 0x41, 0x21, 0xc9,
++  0xbb, 0xd0, 0xf2, 0xa9, 0xcc, 0x85, 0x10, 0xae, 0x0e, 0x80, 0x86, 0x09, 0xad, 0x10, 0x80, 0x85,
++  0x0b, 0xae, 0x11, 0x80, 0x86, 0x0c, 0xa2, 0x00, 0x02, 0x86, 0x0e, 0x20, 0xf0, 0x80, 0xae, 0x09,
++  0x80, 0x86, 0x09, 0xad, 0x0b, 0x80, 0x85, 0x0b, 0xae, 0x0c, 0x80, 0x86, 0x0c, 0xa2, 0x00, 0x04,
++  0x86, 0x0e, 0x20, 0xf0, 0x80, 0xa2, 0x00, 0x02, 0x8e, 0x42, 0x21, 0x9c, 0x41, 0x21, 0xa5, 0x10,
++  0x8d, 0x40, 0x21, 0xcd, 0x40, 0x21, 0xd0, 0xfb, 0xad, 0x40, 0x21, 0xd0, 0xfb, 0xae, 0x00, 0x80,
++  0x86, 0x00, 0xad, 0x02, 0x80, 0x85, 0x02, 0xae, 0x03, 0x80, 0x86, 0x03, 0xad, 0x05, 0x80, 0x85,
++  0x05, 0xae, 0x06, 0x80, 0x86, 0x06, 0xad, 0x08, 0x80, 0x85, 0x08, 0x64, 0x11, 0x20, 0xcd, 0x80,
++  0x8d, 0x41, 0x21, 0x20, 0xcd, 0x80, 0x8d, 0x42, 0x21, 0x20, 0xcd, 0x80, 0x8d, 0x43, 0x21, 0xe6,
++  0x11, 0xa5, 0x11, 0x8d, 0x40, 0x21, 0xcd, 0x40, 0x21, 0xd0, 0xfb, 0x80, 0xe0, 0xa7, 0x00, 0x48,
++  0xc2, 0x20, 0xe6, 0x00, 0xe2, 0x20, 0xd0, 0x02, 0xe6, 0x02, 0xa6, 0x00, 0xe4, 0x03, 0xd0, 0x0e,
++  0xa5, 0x02, 0xc5, 0x05, 0xd0, 0x08, 0xa6, 0x06, 0x86, 0x00, 0xa5, 0x08, 0x85, 0x02, 0x68, 0x60,
++  0xa6, 0x0c, 0xf0, 0x33, 0xa6, 0x0e, 0x8e, 0x42, 0x21, 0xa9, 0x01, 0x8d, 0x41, 0x21, 0xa5, 0x10,
++  0x8d, 0x40, 0x21, 0xcd, 0x40, 0x21, 0xd0, 0xfb, 0xa0, 0x00, 0x00, 0xb7, 0x09, 0x8d, 0x41, 0x21,
++  0x98, 0x8d, 0x40, 0x21, 0xcd, 0x40, 0x21, 0xd0, 0xfb, 0xc8, 0xc4, 0x0c, 0xd0, 0xed, 0x98, 0x18,
++  0x69, 0x02, 0xd0, 0x01, 0x1a, 0x85, 0x10, 0x60, 0x40,
++};
+diff --git a/src/engine/export/snsfdrv.s b/src/engine/export/snsfdrv.s
+new file mode 100644
+index 0000000..16404eb
+--- /dev/null
++++ b/src/engine/export/snsfdrv.s
+@@ -0,0 +1,177 @@
++; programa do SNES (65816) do SNSF do Tracker do Registro Gamer. ROM HiROM: este código fica no banco $00 em $8000
++; (arquivo $8000); os dados (programa do SPC700, samples e o registro da música) ficam de $C1:0000 em diante.
++; 1) manda o driver do SPC700 (snsfspc.asm) para $0200 e as samples para $0400 pelo carregador da ROM do APU (IPL);
++; 2) depois manda o registro da música, 3 bytes por vez ($2141-$2143) com um contador em $2140, que o SPC devolve
++;    quando guardou. o ritmo quem dita é o SPC (timer 0); aqui é só manter a fila dele cheia.
++; montar: ca65 --cpu 65816 snsfdrv.s && ld65 -C snsfdrv.cfg snsfdrv.o -o snsfdrv.bin -Ln snsfdrv.lbl
++.p816
++.smart -
++
++PTR = $00
++END = $03
++LOOPP = $06
++SRC = $09
++LEN = $0C
++DEST = $0E
++KICK = $10
++CNT = $11
++
++.segment "CODE"
++; tabela preenchida pelo exportador (endereços de 24 bits)
++TAB_LOG:     .res 3     ; começo do registro
++TAB_END:     .res 3     ; fim do registro
++TAB_LOOP:    .res 3     ; ponto de repetição (sem repetição: o último byte)
++TAB_ARAM:    .res 3     ; samples e ondas para a RAM do SPC ($0400)
++TAB_ARAMLEN: .res 2
++TAB_DRV:     .res 3     ; driver do SPC700 ($0200)
++TAB_DRVLEN:  .res 2
++             .res 15
++
++RESET:
++  sei
++  clc
++  xce
++  rep #$18
++  .i16
++  sep #$20
++  .a8
++  ldx #$1FFF
++  txs
++  lda #$80
++  sta $2100
++  stz $4200
++  ; espera o carregador do APU
++wr:
++  lda $2140
++  cmp #$AA
++  bne wr
++  lda $2141
++  cmp #$BB
++  bne wr
++  lda #$CC
++  sta KICK
++  ; driver do SPC700 em $0200
++  ldx TAB_DRV
++  stx SRC
++  lda TAB_DRV+2
++  sta SRC+2
++  ldx TAB_DRVLEN
++  stx LEN
++  ldx #$0200
++  stx DEST
++  jsr BLOCK
++  ; samples em $0400
++  ldx TAB_ARAM
++  stx SRC
++  lda TAB_ARAM+2
++  sta SRC+2
++  ldx TAB_ARAMLEN
++  stx LEN
++  ldx #$0400
++  stx DEST
++  jsr BLOCK
++  ; começa o driver em $0200
++  ldx #$0200
++  stx $2142
++  stz $2141
++  lda KICK
++  sta $2140
++  ; espera o carregador aceitar (devolve KICK) e o driver dizer que está pronto ($2140 = 0)
++acc:
++  cmp $2140
++  bne acc
++rdy:
++  lda $2140
++  bne rdy
++  ; registro da música
++  ldx TAB_LOG
++  stx PTR
++  lda TAB_LOG+2
++  sta PTR+2
++  ldx TAB_END
++  stx END
++  lda TAB_END+2
++  sta END+2
++  ldx TAB_LOOP
++  stx LOOPP
++  lda TAB_LOOP+2
++  sta LOOPP+2
++  stz CNT
++sl:
++  jsr GETB
++  sta $2141
++  jsr GETB
++  sta $2142
++  jsr GETB
++  sta $2143
++  inc CNT
++  lda CNT
++  sta $2140
++sw:
++  cmp $2140
++  bne sw
++  bra sl
++
++; um byte do registro; no fim volta ao ponto de repetição
++GETB:
++  lda [PTR]
++  pha
++  rep #$20
++  .a16
++  inc PTR
++  sep #$20
++  .a8
++  bne g1
++  inc PTR+2
++g1:
++  ldx PTR
++  cpx END
++  bne g3
++  lda PTR+2
++  cmp END+2
++  bne g3
++  ldx LOOPP
++  stx PTR
++  lda LOOPP+2
++  sta PTR+2
++g3:
++  pla
++  rts
++
++; manda LEN bytes de SRC para DEST na RAM do SPC (protocolo do IPL)
++BLOCK:
++  ldx LEN
++  beq bx
++  ldx DEST
++  stx $2142
++  lda #1
++  sta $2141
++  lda KICK
++  sta $2140
++bk:
++  cmp $2140
++  bne bk
++  ldy #0
++bb:
++  lda [SRC],y
++  sta $2141
++  tya
++  sta $2140
++bw:
++  cmp $2140
++  bne bw
++  iny
++  cpy LEN
++  bne bb
++  tya
++  clc
++  adc #2
++  bne bk2
++  inc a
++bk2:
++  sta KICK
++bx:
++  rts
++
++NOINT:
++  rti
+diff --git a/src/engine/export/snsfspc.asm b/src/engine/export/snsfspc.asm
+new file mode 100644
+index 0000000..206578a
+--- /dev/null
++++ b/src/engine/export/snsfspc.asm
+@@ -0,0 +1,294 @@
++; driver SPC700 do SNSF do Tracker do Registro Gamer (o lado do chip de som do SNES).
++; o programa do SNES (snsfdrv.s) manda o registro da música, que fica na ROM, pelas portas do APU, 3 bytes por vez:
++; dados em $F5-$F7 e um contador em $F4 (o SPC devolve o contador em $F4 quando guardou os 3 bytes). os bytes vão
++; para uma fila em $FC00-$FFFF e os tiques saem dessa fila no ritmo do timer 0 (2 kHz, com acumulador de 24 bits:
++; a cada 1/2000 s soma RATE e, quando passa de 2^24, toca um tique). assim a música pode ser do tamanho da ROM.
++; montar: python3 scripts/rg-asmspc.py snsfspc.asm snsfSpcDriver "comentário" > snsfspc.inc
++;
++; comandos (os mesmos do SPC, num fluxo só):
++;   00-7F vv        escreve vv no registrador do DSP
++;   82 lo hi nn ... escreve nn bytes na RAM em hi:lo (diretório de samples, ondas)
++;   83 dl dh sl sh nn  copia nn bytes de sh:sl para dh:dl (ondas guardadas uma vez na RAM)
++;   84 mm / 85 mm   liga (KON) / desliga (KOFF) as vozes de mm no fim do tique (KOFF é um pulso, antes do KON)
++;   F0-FD           fim do tique; espera cmd-F0 tiques a mais
++;   FE nn           fim do tique; espera nn tiques a mais
++;   FF              fim da música (silêncio)
++
++RD = $10
++RDH = $11
++WR = $12
++WRH = $13
++ACC = $14
++ACC1 = $15
++ACC2 = $16
++WAITC = $17
++LASTC = $18
++KONM = $19
++KOFFM = $1A
++CNT = $1B
++DST = $1C
++DSTH = $1D
++SRC = $1E
++SRCH = $1F
++NB = $20
++STOP = $21
++T0 = $22
++
++.org $0200
++INIT:
++  mov x,#$EF
++  mov sp,x
++  mov $F1,#$30
++  mov a,#0
++  mov RD,a
++  mov WR,a
++  mov a,#$FC
++  mov RDH,a
++  mov WRH,a
++  mov a,#0
++  mov ACC,a
++  mov ACC1,a
++  mov ACC2,a
++  mov WAITC,a
++  mov LASTC,a
++  mov STOP,a
++  ; DSP: primeiro o eco para de escrever (o eco que estava ligado poderia apagar este programa), depois tudo
++  ; zerado, mudo, diretório em $0400
++  mov $F2,#$6C
++  mov $F3,#$E0
++  mov $F2,#$7D
++  mov $F3,#$00
++  mov y,#0
++dz:
++  mov $F2,y
++  mov a,y
++  cmp a,#$6C
++  beq dz2
++  mov $F3,#0
++dz2:
++  inc y
++  cmp y,#$80
++  bne dz
++  mov $F2,#$6C
++  mov $F3,#$E0
++  mov $F2,#$6D
++  mov $F3,#$F8
++  mov $F2,#$5D
++  mov $F3,#$04
++  mov $F2,#$5C
++  mov $F3,#$FF
++  mov $F2,#$5C
++  mov $F3,#$00
++  mov $FA,#4
++  mov $F1,#$01
++  mov $F4,#0
++  ; o tamanho novo do eco (0) só vale quando o buffer antigo dá a volta (até 240 ms): espera 256 ms
++  ; recebendo o começo do registro
++  mov ACC,#0
++  mov ACC1,#0
++ew:
++  call !SVC
++  mov a,$FD
++  clrc
++  adc a,ACC
++  mov ACC,a
++  bcc ew
++  inc ACC1
++  mov a,ACC1
++  cmp a,#2
++  bne ew
++  mov ACC,#0
++  mov ACC1,#0
++main:
++  call !SVC
++  mov a,$FD
++  beq main
++  mov CNT,a
++ml:
++  clrc
++  mov a,ACC
++  adc a,!RATE
++  mov ACC,a
++  mov a,ACC1
++  adc a,!RATE1
++  mov ACC1,a
++  mov a,ACC2
++  adc a,!RATE2
++  mov ACC2,a
++  bcc ml2
++  call !TICK
++ml2:
++  dbnz CNT,ml
++  bra main
++
++; porta: o SNES deixou 3 bytes novos? guarda na fila (se couber) e avisa
++SVC:
++  mov a,$F4
++  cmp a,LASTC
++  beq sx
++  mov a,WR
++  setc
++  sbc a,RD
++  mov T0,a
++  mov a,WRH
++  sbc a,RDH
++  and a,#3
++  cmp a,#3
++  bne sv1
++  mov a,T0
++  cmp a,#$FC
++  bcs sx          ; fila cheia
++sv1:
++  mov y,#0
++  mov a,$F5
++  mov [WR]+y,a
++  call !WINC
++  mov a,$F6
++  mov [WR]+y,a
++  call !WINC
++  mov a,$F7
++  mov [WR]+y,a
++  call !WINC
++  mov a,$F4
++  mov LASTC,a
++  mov $F4,a
++sx:
++  ret
++WINC:
++  incw WR
++  mov a,WRH
++  bne wi1
++  mov WRH,#$FC
++wi1:
++  ret
++
++; um byte da fila (se estiver vazia, atende a porta até chegar)
++GB:
++  movw ya,RD
++  cmpw ya,WR
++  bne gb1
++  call !SVC
++  bra GB
++gb1:
++  mov y,#0
++  mov a,[RD]+y
++  push a
++  incw RD
++  mov a,RDH
++  bne gb2
++  mov RDH,#$FC
++gb2:
++  pop a
++  ret
++
++TICK:
++  mov a,STOP
++  bne tkx
++  mov a,WAITC
++  beq tk0
++  dec WAITC
++tkx:
++  ret
++tk0:
++  mov KONM,#0
++  mov KOFFM,#0
++tk:
++  call !GB
++  cmp a,#$80
++  bcs tk1
++  mov $F2,a
++  call !GB
++  mov $F3,a
++  bra tk
++tk1:
++  cmp a,#$F0
++  bcs twt
++  cmp a,#$84
++  beq tkon
++  cmp a,#$85
++  beq tkof
++  cmp a,#$82
++  beq tram
++  cmp a,#$83
++  beq tcpy
++  bra tk
++tkon:
++  call !GB
++  or a,KONM
++  mov KONM,a
++  bra tk
++tkof:
++  call !GB
++  or a,KOFFM
++  mov KOFFM,a
++  bra tk
++tram:
++  call !GB
++  mov DST,a
++  call !GB
++  mov DSTH,a
++  call !GB
++  mov NB,a
++tr1:
++  call !GB
++  mov y,#0
++  mov [DST]+y,a
++  incw DST
++  dbnz NB,tr1
++  bra tk
++tcpy:
++  call !GB
++  mov DST,a
++  call !GB
++  mov DSTH,a
++  call !GB
++  mov SRC,a
++  call !GB
++  mov SRCH,a
++  call !GB
++  mov NB,a
++  mov y,#0
++tc1:
++  mov a,[SRC]+y
++  mov [DST]+y,a
++  inc y
++  dbnz NB,tc1
++  bra tk
++twt:
++  cmp a,#$FE
++  bcc twk
++  beq twn
++  ; FF: fim da música
++  mov STOP,#1
++  mov $F2,#$6C
++  mov $F3,#$E0
++  ret
++twk:
++  setc
++  sbc a,#$F0
++  mov WAITC,a
++  bra tke
++twn:
++  call !GB
++  mov WAITC,a
++tke:
++  ; KOFF em pulso (o DSP só vê a cada 2 amostras), depois KON
++  mov $F2,#$5C
++  mov a,KOFFM
++  mov $F3,a
++  mov x,#20
++kd:
++  dec x
++  bne kd
++  mov $F3,#$00
++  mov $F2,#$4C
++  mov a,KONM
++  mov $F3,a
++  ret
++
++RATE:
++  .byte 0
++RATE1:
++  .byte 0
++RATE2:
++  .byte 0
+diff --git a/src/engine/export/snsfspc.inc b/src/engine/export/snsfspc.inc
+new file mode 100644
+index 0000000..52f0fe6
+--- /dev/null
++++ b/src/engine/export/snsfspc.inc
+@@ -0,0 +1,41 @@
++// gerado por snsfspc.asm (montador SPC700 em scripts/rg-asmspc.py); não editar à mão
++// carregado em $0200 pelo SNES; RATE = 3 bytes do acumulador do tique (taxa/2000 * 2^24)
++#define SNSFSPCDRIVER_GB 0x02f2
++#define SNSFSPCDRIVER_INIT 0x0200
++#define SNSFSPCDRIVER_RATE 0x03cb
++#define SNSFSPCDRIVER_RATE1 0x03cc
++#define SNSFSPCDRIVER_RATE2 0x03cd
++#define SNSFSPCDRIVER_SVC 0x02ad
++#define SNSFSPCDRIVER_TICK 0x030d
++#define SNSFSPCDRIVER_WINC 0x02e8
++static const unsigned char snsfSpcDriver[462]={
++  0xcd, 0xef, 0xbd, 0x8f, 0x30, 0xf1, 0xe8, 0x00, 0xc4, 0x10, 0xc4, 0x12, 0xe8, 0xfc, 0xc4, 0x11,
++  0xc4, 0x13, 0xe8, 0x00, 0xc4, 0x14, 0xc4, 0x15, 0xc4, 0x16, 0xc4, 0x17, 0xc4, 0x18, 0xc4, 0x21,
++  0x8f, 0x6c, 0xf2, 0x8f, 0xe0, 0xf3, 0x8f, 0x7d, 0xf2, 0x8f, 0x00, 0xf3, 0x8d, 0x00, 0xcb, 0xf2,
++  0xdd, 0x68, 0x6c, 0xf0, 0x03, 0x8f, 0x00, 0xf3, 0xfc, 0xad, 0x80, 0xd0, 0xf1, 0x8f, 0x6c, 0xf2,
++  0x8f, 0xe0, 0xf3, 0x8f, 0x6d, 0xf2, 0x8f, 0xf8, 0xf3, 0x8f, 0x5d, 0xf2, 0x8f, 0x04, 0xf3, 0x8f,
++  0x5c, 0xf2, 0x8f, 0xff, 0xf3, 0x8f, 0x5c, 0xf2, 0x8f, 0x00, 0xf3, 0x8f, 0x04, 0xfa, 0x8f, 0x01,
++  0xf1, 0x8f, 0x00, 0xf4, 0x8f, 0x00, 0x14, 0x8f, 0x00, 0x15, 0x3f, 0xad, 0x02, 0xe4, 0xfd, 0x60,
++  0x84, 0x14, 0xc4, 0x14, 0x90, 0xf4, 0xab, 0x15, 0xe4, 0x15, 0x68, 0x02, 0xd0, 0xec, 0x8f, 0x00,
++  0x14, 0x8f, 0x00, 0x15, 0x3f, 0xad, 0x02, 0xe4, 0xfd, 0xf0, 0xf9, 0xc4, 0x1b, 0x60, 0xe4, 0x14,
++  0x85, 0xcb, 0x03, 0xc4, 0x14, 0xe4, 0x15, 0x85, 0xcc, 0x03, 0xc4, 0x15, 0xe4, 0x16, 0x85, 0xcd,
++  0x03, 0xc4, 0x16, 0x90, 0x03, 0x3f, 0x0d, 0x03, 0x6e, 0x1b, 0xe2, 0x2f, 0xd7, 0xe4, 0xf4, 0x64,
++  0x18, 0xf0, 0x34, 0xe4, 0x12, 0x80, 0xa4, 0x10, 0xc4, 0x22, 0xe4, 0x13, 0xa4, 0x11, 0x28, 0x03,
++  0x68, 0x03, 0xd0, 0x06, 0xe4, 0x22, 0x68, 0xfc, 0xb0, 0x1d, 0x8d, 0x00, 0xe4, 0xf5, 0xd7, 0x12,
++  0x3f, 0xe8, 0x02, 0xe4, 0xf6, 0xd7, 0x12, 0x3f, 0xe8, 0x02, 0xe4, 0xf7, 0xd7, 0x12, 0x3f, 0xe8,
++  0x02, 0xe4, 0xf4, 0xc4, 0x18, 0xc4, 0xf4, 0x6f, 0x3a, 0x12, 0xe4, 0x13, 0xd0, 0x03, 0x8f, 0xfc,
++  0x13, 0x6f, 0xba, 0x10, 0x5a, 0x12, 0xd0, 0x05, 0x3f, 0xad, 0x02, 0x2f, 0xf5, 0x8d, 0x00, 0xf7,
++  0x10, 0x2d, 0x3a, 0x10, 0xe4, 0x11, 0xd0, 0x03, 0x8f, 0xfc, 0x11, 0xae, 0x6f, 0xe4, 0x21, 0xd0,
++  0x06, 0xe4, 0x17, 0xf0, 0x03, 0x8b, 0x17, 0x6f, 0x8f, 0x00, 0x19, 0x8f, 0x00, 0x1a, 0x3f, 0xf2,
++  0x02, 0x68, 0x80, 0xb0, 0x09, 0xc4, 0xf2, 0x3f, 0xf2, 0x02, 0xc4, 0xf3, 0x2f, 0xf0, 0x68, 0xf0,
++  0xb0, 0x66, 0x68, 0x84, 0xf0, 0x0e, 0x68, 0x85, 0xf0, 0x13, 0x68, 0x82, 0xf0, 0x18, 0x68, 0x83,
++  0xf0, 0x31, 0x2f, 0xda, 0x3f, 0xf2, 0x02, 0x04, 0x19, 0xc4, 0x19, 0x2f, 0xd1, 0x3f, 0xf2, 0x02,
++  0x04, 0x1a, 0xc4, 0x1a, 0x2f, 0xc8, 0x3f, 0xf2, 0x02, 0xc4, 0x1c, 0x3f, 0xf2, 0x02, 0xc4, 0x1d,
++  0x3f, 0xf2, 0x02, 0xc4, 0x20, 0x3f, 0xf2, 0x02, 0x8d, 0x00, 0xd7, 0x1c, 0x3a, 0x1c, 0x6e, 0x20,
++  0xf4, 0x2f, 0xab, 0x3f, 0xf2, 0x02, 0xc4, 0x1c, 0x3f, 0xf2, 0x02, 0xc4, 0x1d, 0x3f, 0xf2, 0x02,
++  0xc4, 0x1e, 0x3f, 0xf2, 0x02, 0xc4, 0x1f, 0x3f, 0xf2, 0x02, 0xc4, 0x20, 0x8d, 0x00, 0xf7, 0x1e,
++  0xd7, 0x1c, 0xfc, 0x6e, 0x20, 0xf8, 0x2f, 0x86, 0x68, 0xfe, 0x90, 0x0c, 0xf0, 0x11, 0x8f, 0x01,
++  0x21, 0x8f, 0x6c, 0xf2, 0x8f, 0xe0, 0xf3, 0x6f, 0x80, 0xa8, 0xf0, 0xc4, 0x17, 0x2f, 0x05, 0x3f,
++  0xf2, 0x02, 0xc4, 0x17, 0x8f, 0x5c, 0xf2, 0xe4, 0x1a, 0xc4, 0xf3, 0xcd, 0x14, 0x1d, 0xd0, 0xfd,
++  0x8f, 0x00, 0xf3, 0x8f, 0x4c, 0xf2, 0xe4, 0x19, 0xc4, 0xf3, 0x6f, 0x00, 0x00, 0x00,
++};
+diff --git a/src/engine/exportDef.cpp b/src/engine/exportDef.cpp
+index 46f3763..6907529 100644
+--- a/src/engine/exportDef.cpp
++++ b/src/engine/exportDef.cpp
+@@ -208,4 +208,17 @@ void DivEngine::registerROMExports() {
+     },
+     false, DIV_REQPOL_LAX
+   );
++
++  romExportDefs[DIV_ROM_SNSF]=new DivROMExportDef(
++    "SNES SNSF", "Registro Gamer",
++    "SNSF (SNES Sound Format) export: a SNES ROM that plays the song.\n"
++    "plays on any SNSF player (foobar2000, Winamp in_xsf, the blog's Chiptune Player, etc.).\n"
++    "the song is kept in the ROM (up to 4MB), so only the samples must fit in the 64KB of sound RAM.\n"
++    "register dump-based (the song is recorded tick by tick).",
++    "SNSF files", ".snsf",
++    {
++      DIV_SYSTEM_SNES
++    },
++    false, DIV_REQPOL_LAX
++  );
+ }
+-- 
+2.43.0
+

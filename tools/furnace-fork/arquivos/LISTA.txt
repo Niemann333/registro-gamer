@@ -11,6 +11,7 @@ A	res/web/fonts/Oxanium-Medium.ttf
 A	scripts/rg-asm6502.py
 A	scripts/rg-asmgb.py
 A	scripts/rg-asmspc.py
+A	scripts/rg-snsfinc.py
 M	src/audio/midi.cpp
 A	src/audio/webmidi.cpp
 A	src/audio/webmidi.h
@@ -38,6 +39,13 @@ A	src/engine/export/sid.cpp
 A	src/engine/export/sid.h
 A	src/engine/export/siddrv.asm
 A	src/engine/export/siddrv.inc
+A	src/engine/export/snsf.cpp
+A	src/engine/export/snsf.h
+A	src/engine/export/snsfdrv.cfg
+A	src/engine/export/snsfdrv.inc
+A	src/engine/export/snsfdrv.s
+A	src/engine/export/snsfspc.asm
+A	src/engine/export/snsfspc.inc
 A	src/engine/export/spc.cpp
 A	src/engine/export/spc.h
 A	src/engine/export/spcdrv.asm
