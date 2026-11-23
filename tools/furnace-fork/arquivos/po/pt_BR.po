@@ -23819,8 +23819,8 @@ msgstr "esta música não tem chips do NES"
 msgid "no PlayStation SPU in this song"
 msgstr "esta música não tem o chip do PlayStation"
 
-msgid "the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer. try shorter samples or a shorter song"
-msgstr "a música não cabe na RAM de som do SNES: o registro precisa de %d bytes, mas só sobram %d depois dos samples e do eco. use samples menores ou uma música mais curta"
+msgid "the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer.\nexport it as SNSF instead (ROM export, \"SNES SNSF\"): there the song stays in the ROM and only the samples need to fit."
+msgstr "a música não cabe na RAM de som do SNES: o registro precisa de %d bytes, mas só há %d livres depois das samples e do eco.\nexporte em SNSF (exportar ROM, \"SNES SNSF\"): nele a música fica na ROM e só as samples precisam caber."
 
 msgid "the song is too big for an NSF (%d KB of the 1024 KB limit)"
 msgstr "a música é grande demais para um NSF (%d KB do limite de 1024 KB)"
@@ -23845,3 +23845,15 @@ msgstr "esta música não tem chip SID"
 
 msgid "the song does not fit in the C64's memory: the log needs %d bytes but only %d are free"
 msgstr "a música não cabe na memória do C64: o registro precisa de %d bytes, mas só há %d livres"
+
+msgid "SNSF (SNES Sound Format) export: a SNES ROM that plays the song.\nplays on any SNSF player (foobar2000, Winamp in_xsf, the blog's Chiptune Player, etc.).\nthe song is kept in the ROM (up to 4MB), so only the samples must fit in the 64KB of sound RAM.\nregister dump-based (the song is recorded tick by tick)."
+msgstr "exportação SNSF (SNES Sound Format): uma ROM de Super Nintendo que toca a música.\ntoca em qualquer player de SNSF (foobar2000, Winamp com in_xsf, o Chiptune Player do blog etc.).\na música fica na ROM (até 4 MB), então só as samples precisam caber nos 64 KB de RAM de som.\nfeita a partir das escritas nos registradores (a música é gravada tique a tique)."
+
+msgid "SNSF files"
+msgstr "arquivos SNSF"
+
+msgid "the samples do not fit in the SNES sound RAM: they need %d bytes but only %d are free with this echo size"
+msgstr "as samples não cabem na RAM de som do SNES: precisam de %d bytes, mas só há %d livres com este tamanho de eco"
+
+msgid "the song is too long for a SNES ROM: %d bytes of data (at most %d)"
+msgstr "a música é longa demais para uma ROM de SNES: %d bytes de dados (no máximo %d)"

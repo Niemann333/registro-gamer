@@ -58,6 +58,7 @@
     nez: /\.kss$/i
   };
   var EXT_SAP = /\.sap$/i;
+  var EXT_SNSF = /\.(snsf|minisnsf)$/i;
   var EXT_AHX = /\.(ahx|thx)$/i;
   var EXT_OMPT = /\.mptm$/i;                 // OpenMPT: só o libopenmpt toca certo (tempo moderno, swing...)
   var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
@@ -617,6 +618,111 @@
     };
   }
 
+
+  // ───────────────────────── motor: SNSF (Super Nintendo, sobre o snsf9x/Snes9x) ─────────────────────────
+  // rg-snsf.js/.wasm: fonte em tools/snsf-player. Os arquivos .snsf/.minisnsf podem pedir bibliotecas
+  // (_lib, _lib2...): carregadas na ordem do psflib (_lib, depois o próprio arquivo, depois _lib2...).
+  var snsfPromise = null;
+  function loadSnsf() {
+    if (!snsfPromise) snsfPromise = loadScript(BASE + 'rg-snsf.js?v=1').then(function () { return RGSNSF({ print: function () {}, printErr: function () {} }); });
+    return snsfPromise;
+  }
+  function psfTags(b) {
+    var t = {};
+    if (b.length < 16) return t;
+    var dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    var at = 16 + dv.getUint32(4, true) + dv.getUint32(8, true);
+    if (at + 5 > b.length) return t;
+    var head = String.fromCharCode.apply(null, b.subarray(at, at + 5));
+    if (head !== '[TAG]') return t;
+    var txt;
+    try { txt = new TextDecoder('utf-8').decode(b.subarray(at + 5)); } catch (e) { txt = ''; }
+    txt.split(/\r?\n/).forEach(function (l) {
+      var i = l.indexOf('='); if (i < 1) return;
+      var k = l.slice(0, i).trim().toLowerCase(), v = l.slice(i + 1).trim();
+      t[k] = (t[k] !== undefined && k !== 'length' && k !== 'fade') ? t[k] + '\n' + v : v;
+    });
+    return t;
+  }
+  function makeSnsfEngine(M) {
+    var tags = {}, durMs = 0, fadeMs = FADE_MS, frames = 0, buf = 0, files = [];
+    function fetchBytes(u) {
+      return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status + ' (' + fileName(u) + ')'); return r.arrayBuffer(); })
+        .then(function (a) { return new Uint8Array(a); });
+    }
+    // monta a lista de arquivos na ordem de carga
+    function chain(bytes, url, depth) {
+      if (depth > 10) return Promise.resolve([]);
+      var t = psfTags(bytes), list = [];
+      var p = Promise.resolve();
+      if (t._lib) p = p.then(function () {
+        var u = new URL(t._lib, url).href;
+        return fetchBytes(u).then(function (b) { return chain(b, u, depth + 1); }).then(function (l) { list = list.concat(l); });
+      });
+      p = p.then(function () { list.push(bytes); });
+      for (var i = 2; i < 10; i++) (function (k) {
+        p = p.then(function () {
+          if (!t[k]) return;
+          var u = new URL(t[k], url).href;
+          return fetchBytes(u).then(function (b) { return chain(b, u, depth + 1); }).then(function (l) { list = list.concat(l); });
+        });
+      })('_lib' + i);
+      return p.then(function () { return list; });
+    }
+    function start() {
+      M._snsf_begin();
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i], ptr = M._malloc(f.length);
+        M.HEAPU8.set(f, ptr);
+        var r = M._snsf_add_psf(ptr, f.length);
+        M._free(ptr);
+        if (r) throw new Error('SNSF inválido (' + r + ')');
+      }
+      if (M._snsf_start(SR)) throw new Error('SNSF: a ROM não carregou');
+      frames = 0;
+    }
+    return {
+      kind: 'ring',
+      load: function (data, path, url) {
+        tags = psfTags(data);
+        return chain(data, url, 0).then(function (l) {
+          files = l;
+          start();
+          if (!buf) buf = M._malloc(CHUNK * 4);
+          durMs = parseTime(tags.length || '') || DEFAULT_LEN_MS;
+          fadeMs = tags.fade !== undefined ? parseTime(tags.fade) : FADE_MS;
+        });
+      },
+      render: function (l, r, n) {
+        var done = 0;
+        while (done < n) {
+          var k = Math.min(CHUNK, n - done);
+          M._snsf_render(buf, k);
+          var h = M.HEAP16, o = buf >> 1;
+          for (var i = 0; i < k; i++) { l[done + i] = h[o + 2 * i] / 32768; r[done + i] = h[o + 2 * i + 1] / 32768; }
+          done += k;
+        }
+        frames += n;
+        return { ended: false };
+      },
+      posMs: function () { return frames * 1000 / SR; },
+      durInfo: function () { return { durMs: durMs, own: true, report: durMs + fadeMs, fadeMs: fadeMs }; },
+      seek: function (ms) {          // recomeça e emula sem tocar até o ponto (o Snes9x roda bem mais rápido que o tempo real)
+        start();
+        var alvo = Math.floor(Math.max(0, ms) * SR / 1000);
+        while (frames < alvo) { var k = Math.min(CHUNK, alvo - frames); M._snsf_render(buf, k); frames += k; }
+      },
+      voices: function () { return { names: [], mask: [], groups: [] }; },
+      setVoiceMask: function () {},
+      numSubtunes: function () { return 1; },
+      subtune: function () { return 0; },
+      durations: function () { return [durMs]; },
+      playSubtune: function () {},
+      title: function () { return tags.title || ''; },
+      stop: function () {}
+    };
+  }
+
   // ───────────────────────── motor: AHX (Amiga, Abyss' Highest eXperience) ─────────────────────────
   // O replayer (ahx.js) só calcula o estado dos 4 canais a cada quadro do Amiga (50 Hz);
   // a mistura é feita aqui, em estéreo como no Amiga (canais 1 e 4 à esquerda, 2 e 3 à direita,
@@ -1029,6 +1135,8 @@
       enginePromise = ensureRing().then(function () { return makeWothkeEngine(wtype); });
     } else if (EXT_SAP.test(name)) {
       enginePromise = ensureRing().then(function () { return makeSapEngine(); });
+    } else if (EXT_SNSF.test(name)) {
+      enginePromise = Promise.all([ensureRing(), loadSnsf()]).then(function (a) { return makeSnsfEngine(a[1]); });
     } else if (EXT_AHX.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadAhx()]).then(function () { return makeAhxEngine(); });
     } else if (EXT_OMPT.test(name)) {

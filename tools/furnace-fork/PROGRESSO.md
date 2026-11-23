@@ -45,27 +45,17 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
 - NSF exportado no navegador = idêntico ao da linha de comando (conferido byte a byte).
 - Descrições e erros dos exportadores em português (po/pt_BR.po).
 
-## SNSF — EM ANDAMENTO (parou 23/11 14:45, pausa até 17:00)
-- FEITO no fork (commit "Exportar SNSF"): `src/engine/export/snsf.cpp/.h`, `snsfdrv.s` (65816, ca65/ld65 do pacote cc65;
-  gerar .inc com `python3 scripts/rg-snsfinc.py`), `snsfspc.asm` (SPC700, `python3 scripts/rg-asmspc.py snsfspc.asm
-  snsfSpcDriver "..." > snsfspc.inc`), registrado como DIV_ROM_SNSF em export.h/.cpp, exportDef.cpp, CMakeLists.
-  - Correções já feitas: CMPW é 0x5A (estava 0x5E no rg-asmspc.py); esperar o IPL devolver o KICK antes de esperar o
-    "pronto"; no INIT do SPC desligar a escrita do eco ANTES de zerar o DSP e esperar 256 ms (eco antigo apagava o driver).
-  - Teste: `/home/claude/work/snsf/build/snsfwav saida.wav segundos arquivo.snsf` (snsf9x nativo; fonte em
-    tools/snsf-player/rgsnsf.cpp + snsfwav.cpp; snsf9x clonado em /home/claude/work/snsf/snsf9x, compilar com
-    -DNDEBUG -DHAVE_STDINT_H). Resultado em /home/claude/work/snsfx: as 30 demos SNES exportam (inclusive Breezy);
-    semelhança com o Furnace 0,98-1,00 nas que testei depois das correções (falta rodar as 30 de novo).
-- FALTA:
-  1. Rodar as 30 demos de novo (loop em /home/claude/work/snsfx, resumo.txt) e conferir volumes.
-  2. Tradução pt_BR das strings novas do snsf.cpp/exportDef (po/pt_BR.po + msgfmt) e mensagem no estudio (lista ROM).
-  3. Build web (build-web: emmake make furnace), copiar furnace.js/wasm, testar no navegador (trx.py; usar
-     ["eval","window.showSaveFilePicker=undefined"] para baixar).
-  4. Player: compilar rgsnsf.cpp + snsf9x com emcc (SINGLE_FILE, -sUSE_ZLIB=1, exportar snsf_begin/add_psf/start/render)
-     como chiptune-player/rg-snsf.js; motor novo em rg-player.js para .snsf/.minisnsf (carregar _lib antes, depois o
-     arquivo, depois _lib2...; base do primeiro arquivo somada aos seguintes); tags length/fade.
-  5. atualizar.sh, README (tabela de exportadores), commit/push.
-- Depois: HES, KSS, AY (pedido do usuário). OpenMPT: usuário perguntou; respondi que dá para exportar MOD/XM/S3M/IT/MPTM
-  de músicas com canais de sample e completar ferramentas de sample — perguntei se entra na fila depois de HES/KSS/AY.
+## SNSF — PRONTO (23/11, noite)
+- Exportador no fork (snsf.cpp, snsfdrv.s, snsfspc.asm; .inc por scripts/rg-snsfinc.py e rg-asmspc.py). 30/30 demos SNES
+  exportam; semelhança com o Furnace 0,99-1,00 em 28 (tetristheme 0,95 e very chill snes 0,94 — iguais ao SPC).
+  Exportação no navegador = idêntica à da linha de comando. SPC que não cabe agora sugere SNSF.
+- Player: chiptune-player/rg-snsf.js/.wasm (fonte e build em tools/snsf-player), motor "SNSF" em rg-player.js
+  (player.html ?v=18); gadgets (i18n/src chiptune.html e mobile.html) aceitam .snsf/.minisnsf/.snsflib.
+- Próximo: HES (PC Engine), KSS (MSX), AY (ZX Spectrum); depois formatos/ferramentas do OpenMPT (MOD/XM/S3M/IT/MPTM
+  para músicas de samples + ferramentas de sample), aprovado pelo usuário. Também: avisos de "adaptar formato" em
+  outros exportadores quando aparecerem (pedido do usuário).
+- Pendência de reprodutibilidade: nsfdrv.asm e spcdrv.asm dependem de constantes passadas por fora ao montador
+  (os .inc estão certos); colocar as constantes dentro dos .asm.
 
 ## Próximos passos
 1. Exportadores ainda não feitos: HES (PC Engine), KSS (MSX), AY (ZX Spectrum), GSF/2SF (mais difíceis). SAP já existe (SAP-R).

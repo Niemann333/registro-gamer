@@ -294,7 +294,7 @@ void DivExportSPC::run() {
       }
     }
     if (!placed) {
-      fail(fmt::sprintf(_("the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer. try shorter samples or a shorter song"),(int)total,(int)cap));
+      fail(fmt::sprintf(_("the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer.\nexport it as SNSF instead (ROM export, \"SNES SNSF\"): there the song stays in the ROM and only the samples need to fit."),(int)total,(int)cap));
       return;
     }
   }

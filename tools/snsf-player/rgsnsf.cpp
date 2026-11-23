@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <zlib.h>
-#include "snsf9x/snsf9x/SNESSystem.h"
+#include "SNESSystem.h"
 
 static std::vector<uint8_t> rom, sram;
 static bool baseSet=false;
@@ -113,12 +113,18 @@ int snsf_render(int16_t* buf, int frames) {
 
 }
 #ifdef RG_DEBUG
-#include "snsf9x/snsf9x/snes9x/apu/SNES_SPC.h"
+#include "snes9x/apu/SNES_SPC.h"
 extern SNES_SPC* spc_core;
 extern "C" void snsf_dump(const char* fn) {
   static unsigned char b[0x10200];
   SNES_SPC::init_header(b);
   spc_core->save_spc(b);
   FILE* f=fopen(fn,"wb"); fwrite(b,1,sizeof(b),f); fclose(f);
+}
+#endif
+#ifdef RG_DEBUG
+extern "C" void snsf_dump_mem(unsigned char* b) {
+  SNES_SPC::init_header(b);
+  spc_core->save_spc(b);
 }
 #endif

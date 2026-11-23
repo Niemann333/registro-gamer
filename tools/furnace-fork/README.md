@@ -25,6 +25,7 @@ pequeno programa do próprio console que repete as escritas de registrador grava
 |---|---|---|---|
 | NSF | NES + FDS/VRC6/VRC7/N163/MMC5 | [nsf.cpp](arquivos/src/engine/export/nsf.cpp) | [nsfdrv.asm](arquivos/src/engine/export/nsfdrv.asm) (6502) |
 | SPC | Super Nintendo | [spc.cpp](arquivos/src/engine/export/spc.cpp) | [spcdrv.asm](arquivos/src/engine/export/spcdrv.asm) (SPC700) |
+| SNSF | Super Nintendo (música na ROM, até 4 MB) | [snsf.cpp](arquivos/src/engine/export/snsf.cpp) | [snsfdrv.s](arquivos/src/engine/export/snsfdrv.s) (65816, ca65) + [snsfspc.asm](arquivos/src/engine/export/snsfspc.asm) (SPC700) |
 | PSF | PlayStation | [psf.cpp](arquivos/src/engine/export/psf.cpp) | [psfdrv.s](arquivos/src/engine/export/psfdrv.s) (MIPS) |
 | GBS | Game Boy | [gbs.cpp](arquivos/src/engine/export/gbs.cpp) | [gbsdrv.asm](arquivos/src/engine/export/gbsdrv.asm) (SM83) |
 | SID | Commodore 64 (até 3 SIDs) | [sid.cpp](arquivos/src/engine/export/sid.cpp) | [siddrv.asm](arquivos/src/engine/export/siddrv.asm) (6502) |
