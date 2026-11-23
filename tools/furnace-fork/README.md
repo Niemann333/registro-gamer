@@ -74,6 +74,7 @@ Depois copie `furnace.js` e `furnace.wasm` para `chiptune-player/`.
 Os programas de cada console já vêm montados nos arquivos `*.inc`. Para remontar:
 [rg-asm6502.py](arquivos/scripts/rg-asm6502.py) (NSF, SID), [rg-asmspc.py](arquivos/scripts/rg-asmspc.py) (SPC),
 [rg-asmgb.py](arquivos/scripts/rg-asmgb.py) (GBS) e `llvm-mc -triple=mipsel -mcpu=mips1` + `ld.lld -Ttext=0x80010000` (PSF).
+Exemplo: `python3 scripts/rg-asm6502.py src/engine/export/siddrv.asm sidDriver > src/engine/export/siddrv.inc`.
 
 Esta pasta é regerada a partir do fork com [atualizar.sh](atualizar.sh).
 

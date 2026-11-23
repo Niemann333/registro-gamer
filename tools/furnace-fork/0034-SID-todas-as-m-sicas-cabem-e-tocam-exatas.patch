@@ -1,0 +1,1838 @@
+From f720cb68508f24b291ed0ddb556b3d688129cdb6 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Mon, 23 Nov 2026 14:14:21 -0300
+Subject: [PATCH 34/34] =?UTF-8?q?SID:=20todas=20as=20m=C3=BAsicas=20cabem?=
+ =?UTF-8?q?=20e=20tocam=20exatas?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 11 fluxos por SID (frequência, pulso, controle/ADSR de cada voz, corte, ressonância/volume);
+  frequência, pulso e corte são fluxos de valor: a cada tique, o valor de N tiques atrás (1-8)
+  mais um delta, então portamentos, vibratos, varreduras de pulso e arpejos não custam nada
+- referências aninhadas até 12 níveis (pilha comum de 256), referências curtas (E1 lo hi n);
+  só as que economizam bastante, a não ser que a música precise de mais
+- o player fica com $01=$35: fluxos depois das tabelas até $CFFF e de $E000 em diante
+- player por eventos: fluxos em espera em listas por tique; fluxos de valor que andam sozinhos
+  numa lista de ativos, com uma rotina para cada caso
+- fila de escritas: as escritas do tique vão para o SID no começo da interrupção e o tempo que
+  sobra até a próxima (contado pelo timer B da CIA 1) adianta os tiques seguintes
+- rg-asm6502.py: conjunto completo do 6502, constantes, .word, roda pela linha de comando
+- RG_DUMP=arquivo salva o registro capturado (para depurar)
+---
+ scripts/rg-asm6502.py          | 122 +++--
+ src/engine/export/rgexport.cpp |  51 +-
+ src/engine/export/rgexport.h   |   4 +-
+ src/engine/export/sid.cpp      | 416 ++++++++++++++---
+ src/engine/export/siddrv.asm   | 832 ++++++++++++++++++++++++++++-----
+ src/engine/export/siddrv.inc   | 144 +++++-
+ 6 files changed, 1329 insertions(+), 240 deletions(-)
+
+diff --git a/scripts/rg-asm6502.py b/scripts/rg-asm6502.py
+index 3c13dea..a5c3103 100644
+--- a/scripts/rg-asm6502.py
++++ b/scripts/rg-asm6502.py
+@@ -1,51 +1,113 @@
+-# mini montador 6502 (só o necessário para o driver NSF), duas passadas com rótulos
++# mini montador 6502 dos drivers do Registro Gamer (NSF, SID), duas passadas com rótulos.
++# uso: python3 rg-asm6502.py entrada.asm nome_da_tabela "comentário" > saida.inc
++# sintaxe: rótulos "nome:", constantes "NOME = valor", .org, .byte, comentários com ";",
++# expressões em Python com $hex, <expr (byte baixo) e >expr (byte alto) no modo imediato.
+ import re,sys
+-OPS={ # (modo) -> opcode
+- 'lda':{'imm':0xA9,'zp':0xA5,'abs':0xAD,'izy':0xB1,'abx':0xBD,'aby':0xB9},'sta':{'zp':0x85,'abs':0x8D,'izy':0x91,'abx':0x9D,'aby':0x99},
+- 'ldx':{'imm':0xA2,'zp':0xA6,'abs':0xAE},'cpy':{'imm':0xC0},'inx':{'imp':0xE8},'ldy':{'imm':0xA0,'zp':0xA4},'stx':{'zp':0x86,'abs':0x8E},
+- 'cmp':{'imm':0xC9,'zp':0xC5,'abs':0xCD},'ora':{'imm':0x09,'zp':0x05},'adc':{'imm':0x69,'abs':0x6D,'zp':0x65},'sbc':{'imm':0xE9},
+- 'inc':{'zp':0xE6},'dec':{'zp':0xC6},'jmp':{'abs':0x4C},'jsr':{'abs':0x20},
+- 'bne':{'rel':0xD0},'beq':{'rel':0xF0},'bcc':{'rel':0x90},'bcs':{'rel':0xB0},'bpl':{'rel':0x10},
+- 'rts':{'imp':0x60},'tax':{'imp':0xAA},'dex':{'imp':0xCA},'pha':{'imp':0x48},'pla':{'imp':0x68},'clc':{'imp':0x18},'sec':{'imp':0x38},'asl':{'imp':0x0A},'nop':{'imp':0xEA},'tay':{'imp':0xA8},'iny':{'imp':0xC8},'sei':{'imp':0x78},
+-}
+-SIZE={'aby':3,'imp':1,'imm':2,'zp':2,'izy':2,'rel':2,'abs':3,'abx':3}
++OPS={}
++def _t(name,**m): OPS[name]=m
++for n,b in (('ora',0x00),('and',0x20),('eor',0x40),('adc',0x60),('lda',0xA0),('cmp',0xC0),('sbc',0xE0)):
++  _t(n,imm=b+0x09,zp=b+0x05,zpx=b+0x15,abs=b+0x0D,abx=b+0x1D,aby=b+0x19,izx=b+0x01,izy=b+0x11)
++_t('sta',zp=0x85,zpx=0x95,abs=0x8D,abx=0x9D,aby=0x99,izx=0x81,izy=0x91)
++for n,b in (('asl',0x00),('rol',0x20),('lsr',0x40),('ror',0x60)):
++  _t(n,imp=b+0x0A,zp=b+0x06,zpx=b+0x16,abs=b+0x0E,abx=b+0x1E)
++_t('inc',zp=0xE6,zpx=0xF6,abs=0xEE,abx=0xFE); _t('dec',zp=0xC6,zpx=0xD6,abs=0xCE,abx=0xDE)
++_t('ldx',imm=0xA2,zp=0xA6,zpy=0xB6,abs=0xAE,aby=0xBE); _t('ldy',imm=0xA0,zp=0xA4,zpx=0xB4,abs=0xAC,abx=0xBC)
++_t('stx',zp=0x86,zpy=0x96,abs=0x8E); _t('sty',zp=0x84,zpx=0x94,abs=0x8C)
++_t('cpx',imm=0xE0,zp=0xE4,abs=0xEC); _t('cpy',imm=0xC0,zp=0xC4,abs=0xCC); _t('bit',zp=0x24,abs=0x2C)
++_t('jmp',abs=0x4C,ind=0x6C); _t('jsr',abs=0x20)
++for n,o in (('bpl',0x10),('bmi',0x30),('bvc',0x50),('bvs',0x70),('bcc',0x90),('bcs',0xB0),('bne',0xD0),('beq',0xF0)): _t(n,rel=o)
++for n,o in (('brk',0x00),('clc',0x18),('cld',0xD8),('cli',0x58),('clv',0xB8),('dex',0xCA),('dey',0x88),('inx',0xE8),('iny',0xC8),
++            ('nop',0xEA),('pha',0x48),('php',0x08),('pla',0x68),('plp',0x28),('rti',0x40),('rts',0x60),('sec',0x38),('sed',0xF8),
++            ('sei',0x78),('tax',0xAA),('tay',0xA8),('tsx',0xBA),('txa',0x8A),('txs',0x9A),('tya',0x98)): _t(n,imp=o)
++SIZE={'imp':1,'imm':2,'zp':2,'zpx':2,'zpy':2,'izx':2,'izy':2,'rel':2,'abs':3,'abx':3,'aby':3,'ind':3}
++
+ def assemble(src,org,consts):
++  consts=dict(consts)
+   lines=[]
+   for l in src.split('\n'):
+     l=l.split(';')[0].strip()
+     if not l: continue
+-    m=re.match(r'^(\w+):\s*(.+)$',l)
+-    if m: lines.append(m.group(1)+':'); lines.append(m.group(2))
+-    else: lines.append(l)
++    m=re.match(r'^(\w+)\s*=\s*(.+)$',l)
++    if m: lines.append(('=',m.group(1),m.group(2))); continue
++    m=re.match(r'^(\w+):\s*(.*)$',l)
++    if m:
++      lines.append((':',m.group(1)))
++      if m.group(2): lines.append(('i',m.group(2)))
++    else: lines.append(('i',l))
+   def val(s,labels):
+     s=s.strip()
+-    for k,v in list(consts.items())+list(labels.items()): s=re.sub(r'\b'+re.escape(k)+r'\b',str(v),s)
+-    s=s.replace('$','0x'); return eval(s)
++    names=dict(consts); names.update(labels)
++    s=re.sub(r'\$([0-9A-Fa-f]+)',r'0x\1',s)
++    s=re.sub(r'\b([A-Za-z_]\w*)\b',lambda m: str(names[m.group(1)]) if m.group(1) in names else m.group(1),s)
++    return eval(s,{'__builtins__':{}})
++  labs={}
+   for p in range(2):
+-    pc=org; out=[]; labels={} if p==0 else labs
++    pc=org; out=[]; labels=dict(labs) if p else {}
+     for l in lines:
+-      if l.endswith(':'):
+-        labels[l[:-1]]=pc; continue
++      if l[0]=='=':
++        try: consts[l[1]]=val(l[2],labels)
++        except Exception:
++          if p: raise
++          consts[l[1]]=0x1000
++        continue
++      if l[0]==':':
++        if p==0 and l[1] in labels: raise Exception('rótulo repetido: '+l[1])
++        labels[l[1]]=pc; continue
++      l=l[1]
+       if l.startswith('.org'):
+-        t=val(l[4:],labels); out+= [0]*(t-pc); pc=t; continue
++        t=val(l[4:],labels); out+=[0]*(t-pc); pc=t; continue
+       if l.startswith('.byte'):
+-        bs=[val(x,labels) if p else 0 for x in l[5:].split(',')]; out+=bs; pc+=len(bs); continue
++        bs=[(val(x,labels)&0xff) if p else 0 for x in l[5:].split(',')]; out+=bs; pc+=len(bs); continue
++      if l.startswith('.word'):
++        for x in l[5:].split(','):
++          v=val(x,labels) if p else 0; out+=[v&0xff,(v>>8)&0xff]; pc+=2
++        continue
+       m=l.split(None,1); op=m[0].lower(); arg=m[1].strip() if len(m)>1 else ''
++      if op not in OPS: raise Exception('instrução desconhecida: '+l)
+       modes=OPS[op]
+-      if 'imp' in modes and not arg: mode='imp'
+-      elif arg.startswith('#'): mode='imm'; arg=arg[1:]
+-      elif arg.endswith(',y') and arg.startswith('('): mode='izy'; arg=arg[1:-3]
+-      elif arg.endswith(',x'): mode='abx'; arg=arg[:-2]
+-      elif arg.endswith(',y'): mode='aby'; arg=arg[:-2]
++      def known(a):
++        try: return val(a,labels)
++        except Exception: return None
++      if not arg or arg.lower()=='a':
++        mode='imp'; arg=''
++      elif arg.startswith('#'):
++        mode='imm'; arg=arg[1:].strip()
++        if arg.startswith('<'): arg='(%s)&255'%arg[1:]
++        elif arg.startswith('>'): arg='((%s)>>8)&255'%arg[1:]
+       elif 'rel' in modes: mode='rel'
++      elif re.match(r'^\(.*\)\s*,\s*y$',arg,re.I): mode='izy'; arg=re.sub(r'\)\s*,\s*y$','',arg,flags=re.I)[1:]
++      elif re.match(r'^\(.*,\s*x\)$',arg,re.I): mode='izx'; arg=re.sub(r',\s*x\)$','',arg,flags=re.I)[1:]
++      elif arg.startswith('(') and arg.endswith(')') and 'ind' in modes: mode='ind'; arg=arg[1:-1]
+       else:
+-        try: v=val(arg,labels)
+-        except Exception: v=0x1000
+-        mode='zp' if v<256 and 'zp' in modes else 'abs'
++        idx=''
++        mm=re.match(r'^(.*),\s*([xy])$',arg,re.I)
++        if mm: arg=mm.group(1).strip(); idx=mm.group(2).lower()
++        v=known(arg)
++        zp=(v is not None and 0<=v<256)
++        if idx=='': mode='zp' if zp and 'zp' in modes else 'abs'
++        elif idx=='x': mode='zpx' if zp and 'zpx' in modes else 'abx'
++        else: mode='zpy' if zp and 'zpy' in modes else 'aby'
++      if mode not in modes: raise Exception('modo %s não existe em: %s'%(mode,l))
+       v=val(arg,labels) if (arg and p) else 0
+-      if mode=='rel': v=(v-(pc+2))&0xff if p else 0
+-      if mode not in modes: raise Exception('modo %s em %s'%(mode,l))
++      if mode=='rel' and p:
++        d=v-(pc+2)
++        if d<-128 or d>127: raise Exception('desvio longe demais (%d): %s'%(d,l))
++        v=d&0xff
+       b=[modes[mode]]+([v&0xff] if SIZE[mode]==2 else [v&0xff,(v>>8)&0xff] if SIZE[mode]==3 else [])
+       out+=b; pc+=len(b)
+     labs=labels
+   return bytes(out),labs
++
++if __name__=='__main__':
++  src=open(sys.argv[1]).read()
++  m=re.search(r'^\s*\.org\s+(\S+)',src,re.M)
++  org=int(m.group(1).replace('$','0x'),0)
++  code,labs=assemble(src,org,{})
++  name=sys.argv[2]
++  print('// gerado por %s (montador 6502 em scripts/rg-asm6502.py); não editar à mão'%sys.argv[1].split('/')[-1])
++  if len(sys.argv)>3: print('// '+sys.argv[3])
++  for k in sorted(labs):
++    if k.isupper() and not k.startswith('L_'): print('#define %s_%s 0x%04x'%(name.upper(),k,labs[k]))
++  print('static const unsigned char %s[%d]={'%(name,len(code)))
++  for i in range(0,len(code),16): print('  '+', '.join('0x%02x'%b for b in code[i:i+16])+',')
++  print('};')
+diff --git a/src/engine/export/rgexport.cpp b/src/engine/export/rgexport.cpp
+index b2a4ab7..f94f2a1 100644
+--- a/src/engine/export/rgexport.cpp
++++ b/src/engine/export/rgexport.cpp
+@@ -21,6 +21,8 @@
+ #include "../engine.h"
+ #include "../ta-log.h"
+ #include <map>
++#include <stdlib.h>
++#include <stdio.h>
+ #include <unordered_map>
+ 
+ // a song that never ends is cut after this many ticks (1 hour at 60Hz)
+@@ -110,6 +112,28 @@ bool DivExportRG::capture(const std::vector<int>& sys) {
+     e->extValuePresent=false;
+   });
+   logAppendf("%d ticks at %.2fHz, loop at tick %d",(int)ticks.size(),tickRate,loopTick);
++#ifndef __EMSCRIPTEN__
++  // debugging aid: RG_DUMP=file saves the captured log (loop tick, rate, then count + sys/addr/val per tick)
++  const char* dumpTo=getenv("RG_DUMP");
++  if (dumpTo!=NULL) {
++    FILE* df=fopen(dumpTo,"wb");
++    if (df!=NULL) {
++      int n=(int)ticks.size();
++      fwrite(&n,4,1,df);
++      fwrite(&loopTick,4,1,df);
++      fwrite(&tickRate,8,1,df);
++      for (std::vector<RGWrite>& t: ticks) {
++        int c=(int)t.size();
++        fwrite(&c,4,1,df);
++        for (RGWrite& w: t) {
++          unsigned int rec[3]={(unsigned int)w.sys,w.addr,w.val};
++          fwrite(rec,4,3,df);
++        }
++      }
++      fclose(df);
++    }
++  }
++#endif
+   return ok;
+ }
+ 
+@@ -123,7 +147,7 @@ const unsigned char* DivExportRG::sampleMem(int sys, int index, size_t& len) {
+   return (const unsigned char*)d->getSampleMem(index);
+ }
+ 
+-std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes) {
++std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes, bool shortRef, int* depthOut, int tries, int minGain) {
+   size_t n=tok.size();
+   // give each distinct command a number
+   std::vector<int> id(n), sz(n);
+@@ -157,14 +181,14 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
+   while (i<n) {
+     boundary[i]=(int)out.size();
+     if ((int)i==loopTok) loopOut=(int)out.size();
+-    int bestBytes=0, bestK=0, bestJ=-1, bestDepth=0;
++    int bestBytes=0, bestK=0, bestJ=-1, bestDepth=0, bestGain=0;
+     bool isEnd=(tok[i].size()==1 && tok[i][0]==0xff);
+     if (!isEnd && budget>0) {
+       std::unordered_map<uint64_t,std::vector<int>>::iterator it=seen.find(keyOf(i));
+       if (it!=seen.end()) {
+         std::vector<int>& cand=it->second;
+-        int tries=0;
+-        for (int ci=(int)cand.size()-1; ci>=0 && tries<32; ci--, tries++) {
++        int tried=0;
++        for (int ci=(int)cand.size()-1; ci>=0 && tried<tries; ci--, tried++) {
+           int j=cand[ci];
+           int k=0, raw=0, depth=0;
+           while (i+k<n && j+k<(int)i) {
+@@ -181,7 +205,16 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
+             if (boundary[j+k]>=0 || j+k==(int)i) {
+               int span=((j+k==(int)i)?(int)out.size():boundary[j+k])-boundary[j];
+               if (span>65535) break;
+-              if (raw>bestBytes && depth+1<=maxDepth) {
++              if (shortRef) {
++                int gain=raw-((span<256)?4:(3+addrBytes));
++                if (gain>bestGain && depth+1<=maxDepth) {
++                  bestGain=gain;
++                  bestBytes=raw;
++                  bestK=k;
++                  bestJ=j;
++                  bestDepth=depth+1;
++                }
++              } else if (raw>bestBytes && depth+1<=maxDepth) {
+                 bestBytes=raw;
+                 bestK=k;
+                 bestJ=j;
+@@ -192,16 +225,18 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
+         }
+       }
+     }
+-    if (bestBytes>=8) {
++    if (shortRef?(bestGain>=minGain):(bestBytes>=8)) {
+       unsigned int addr=base+boundary[bestJ];
+       int span=((bestJ+bestK==(int)i)?(int)out.size():boundary[bestJ+bestK])-boundary[bestJ];
+-      out.push_back(0xe0);
++      bool isShort=(shortRef && span<256);
++      out.push_back(isShort?0xe1:0xe0);
+       out.push_back(addr&0xff);
+       out.push_back((addr>>8)&0xff);
+       if (addrBytes>2) out.push_back((addr>>16)&0xff);
+       out.push_back(span&0xff);
+-      out.push_back(span>>8);
++      if (!isShort) out.push_back(span>>8);
+       depthAt[i]=bestDepth;
++      if (depthOut!=NULL && bestDepth>*depthOut) *depthOut=bestDepth;
+       seen[keyOf(i)].push_back(i);
+       i+=bestK;
+     } else {
+diff --git a/src/engine/export/rgexport.h b/src/engine/export/rgexport.h
+index 51debb7..e9e4f18 100644
+--- a/src/engine/export/rgexport.h
++++ b/src/engine/export/rgexport.h
+@@ -63,7 +63,9 @@ class DivExportRG: public DivROMExport {
+     // "play len bytes found at address hi:lo, then come back" (nested up to maxDepth levels).
+     // base: address where the result will be loaded. loopTok: command where the loop starts;
+     // its offset in the result goes to loopOut.
+-    std::vector<unsigned char> pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes=2);
++    // shortRef: refs up to 255 bytes become $E1 lo hi len, and a ref is used whenever it saves a byte
++    // (the deepest nesting used goes to depthOut); tries: earlier copies looked at for each command.
++    std::vector<unsigned char> pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes=2, bool shortRef=false, int* depthOut=NULL, int tries=32, int minGain=1);
+     // runs run() in a thread (or directly in the browser, which has no threads here)
+     void start();
+   public:
+diff --git a/src/engine/export/sid.cpp b/src/engine/export/sid.cpp
+index 408fd85..43428c4 100644
+--- a/src/engine/export/sid.cpp
++++ b/src/engine/export/sid.cpp
+@@ -18,22 +18,20 @@
+  */
+ 
+ // Registro Gamer: SID export (Commodore 64, PSID v4, up to 3 SIDs).
+-// the player (siddrv.asm) sits at $0800; the register log follows, split in one stream per
+-// voice (plus one for each SID's filter and volume), each compressed, up to $FFF9 (the RAM under
++// the player (siddrv.asm) sits at $0800; the register log follows up to $FFF9 (the RAM under
+ // I/O and KERNAL is read by switching it in for each byte). CIA 1 timer A sets the tick rate.
+-//
+-// log format:
+-// - $00-$58 vv: write vv to $D400+cmd (2nd SID at $D420, 3rd at $D440)
+-// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested up to 3 levels)
+-// - $F0-$FD: end of tick, then wait cmd-$F0 more ticks
+-// - $FE nn: end of tick, then wait nn more ticks
+-// - $FF: jump to the loop point (or stop if the song ends)
++// each SID gets 11 streams of commands, each compressed on its own: frequency, pulse width and
++// control/ADSR of each voice, filter cutoff and resonance/volume. frequency, pulse width and cutoff
++// are "value" streams: every tick their value is the one some ticks ago (1 to 8) plus a delta, so
++// slides, vibratos, pulse sweeps and arpeggios cost nothing while they keep the same shape.
++// the command formats are described in siddrv.asm.
+ 
+ #include "sid.h"
+ #include "../engine.h"
+ #include "../ta-log.h"
+ #include <fmt/printf.h>
+ #include <map>
++#include <algorithm>
+ #include <stdlib.h>
+ 
+ #include "siddrv.inc"
+@@ -46,7 +44,7 @@ typedef std::vector<unsigned char> Tok;
+ static void putWait(std::vector<Tok>& s, int frames) {
+   while (frames>0) {
+     int k=frames-1;
+-    if (k>255) k=255;
++    if (k>254) k=254; // the player counts waits in 8 bits, including the current tick
+     if (k<=13) {
+       s.push_back(Tok(1,(unsigned char)(0xf0+k)));
+     } else {
+@@ -71,6 +69,17 @@ static void writeBE16(SafeWriter* w, unsigned short v) {
+   w->writeC(v&0xff);
+ }
+ 
++// driver tables (see siddrv.asm): NS bytes each, then the ref stacks and the value history
++#define SID_NS 33
++enum {
++  ST_PTRL=0, ST_PTRH, ST_NEXT, ST_LOOPL, ST_LOOPH, ST_TYPE, ST_REG, ST_SP, ST_ENDL, ST_ENDH,
++  ST_VALL, ST_VALH, ST_DL, ST_DH, ST_LAG, ST_HB, ST_HCNT, ST_APOS, ST_UPF, ST_ACT, ST_MODE, ST_REG1, ST_COUNT
++};
++#define SID_SKPL (SIDDRIVER_TABLES+SID_NS*ST_COUNT)
++#define SID_BHEAD (SID_SKPL+1536)
++#define SID_DATA (SID_SKPL+2304)
++#define SID_LAGS 8
++
+ void DivExportSID::run() {
+   std::vector<int> sys;
+   bool model8580=false, pal=true;
+@@ -94,92 +103,373 @@ void DivExportSID::run() {
+     fail("aborted");
+     return;
+   }
+-  progress[0].amount=0.5f;
++  progress[0].amount=0.4f;
+   logAppend("packing the register log...");
+ 
+-  // one stream per voice (3 per SID) and one for each SID's filter and volume:
+-  // each voice repeats its own patterns, so the streams compress much better than one mixed log
+-  int nStr=sys.size()*4;
++  int nSID=sys.size();
++  int nStr=nSID*11;
++  size_t nT=ticks.size();
++  // stream layout of each SID: 0 freq 1 pulse 2 control/ADSR of voice 1, 3-5 voice 2, 6-8 voice 3, 9 cutoff, 10 res/volume
++  std::vector<int> sType(nStr,0), sReg(nStr,0);
++  bool cutoffBits=true;
++  for (std::vector<RGWrite>& tw: ticks) {
++    for (RGWrite& w: tw) {
++      if (w.addr==0x15 && w.val>7) cutoffBits=false;
++    }
++  }
++  for (int n=0; n<nSID; n++) {
++    for (int v=0; v<3; v++) {
++      sType[n*11+v*3]=1; sReg[n*11+v*3]=n*0x20+v*7;
++      sType[n*11+v*3+1]=1; sReg[n*11+v*3+1]=n*0x20+v*7+2;
++      sType[n*11+v*3+2]=0; sReg[n*11+v*3+2]=n*0x20+v*7+4;
++    }
++    sType[n*11+9]=cutoffBits?2:1; sReg[n*11+9]=n*0x20+0x15;
++    sType[n*11+10]=0; sReg[n*11+10]=n*0x20+0x17;
++  }
++  auto sidOf=[&](int s) -> int {
++    for (int k=0; k<nSID; k++) if (sys[k]==s) return k;
++    return 0;
++  };
++  // which stream a register belongs to
++  auto streamOf=[](int r) -> int {
++    if (r<21) return (r/7)*3+((r%7)<2?0:((r%7)<4?1:2));
++    if (r<23) return 9;
++    return 10;
++  };
++
++  // register state after each tick, and the byte commands of each tick
+   std::vector<std::vector<Tok>> tok(nStr);
+   std::vector<int> pending(nStr,0), loopTok(nStr,-1);
+-  std::map<unsigned int,unsigned int> last;
+-  for (size_t t=0; t<ticks.size(); t++) {
++  std::vector<int> regs(nSID*32,-1);
++  std::vector<int> lastB(nSID*32,-1);
++  // value streams: wanted value per tick (-1: not written yet)
++  std::vector<std::vector<int>> want(nStr);
++  std::vector<std::vector<std::vector<Tok>>> perTick(nT);
++  for (size_t t=0; t<nT; t++) {
+     if ((int)t==loopTick) {
+-      for (int k=0; k<nStr; k++) {
+-        putWait(tok[k],pending[k]);
+-        pending[k]=0;
+-        loopTok[k]=(int)tok[k].size();
+-      }
+-      last.clear();
++      for (int& x: lastB) x=-1;
+     }
+-    std::vector<std::vector<Tok>> f(nStr);
++    perTick[t].resize(nStr);
+     for (RGWrite& w: ticks[t]) {
+       if (w.addr>0x18) continue;
+-      int n=0;
+-      for (size_t k=0; k<sys.size(); k++) if (sys[k]==w.sys) n=k;
+-      unsigned int reg=w.addr+n*0x20;
+-      // control registers (gate, test, sync) must be written even when they repeat
+-      bool always=(w.addr==0x04 || w.addr==0x0b || w.addr==0x12);
+-      std::map<unsigned int,unsigned int>::iterator it=last.find(reg);
+-      if (!always && it!=last.end() && it->second==w.val) continue;
+-      last[reg]=w.val;
++      int n=sidOf(w.sys);
++      int r=w.addr;
++      regs[n*32+r]=w.val&0xff;
++      int k=n*11+streamOf(r);
++      if (sType[k]!=0) continue;
++      if (lastB[n*32+r]==(int)(w.val&0xff)) continue;
++      lastB[n*32+r]=w.val&0xff;
+       Tok c;
+-      c.push_back(reg);
++      c.push_back(n*0x20+r-sReg[k]);
+       c.push_back(w.val&0xff);
+-      f[n*4+((w.addr<21)?(w.addr/7):3)].push_back(c);
++      perTick[t][k].push_back(c);
+     }
+     for (int k=0; k<nStr; k++) {
+-      if (!f[k].empty()) {
++      if (sType[k]==0) continue;
++      int lo=regs[sReg[k]], hi=regs[sReg[k]+1];
++      int v=-1;
++      if (lo>=0 || hi>=0) {
++        if (lo<0) lo=0;
++        if (hi<0) hi=0;
++        v=(sType[k]==2)?((hi<<3)|(lo&7)):(lo|(hi<<8));
++      }
++      want[k].push_back(v);
++    }
++  }
++
++  // value streams: each tick, VAL = (value LAG ticks ago) + DELTA. when that misses, pick the LAG and
++  // DELTA that keep predicting right for the longest
++  std::vector<bool> usesHist(nStr,false);
++  // lag in effect at each tick of each value stream
++  std::vector<std::vector<unsigned char>> lagAt(nStr);
++  for (int k=0; k<nStr; k++) if (sType[k]!=0) lagAt[k].resize(nT,1);
++  {
++    std::vector<std::vector<int>> hist(nStr);
++    std::vector<int> P(nStr,1), D(nStr,0);
++    for (size_t t=0; t<nT; t++) {
++      if ((int)t==loopTick) {
++        for (int k=0; k<nStr; k++) {
++          hist[k].clear();
++          P[k]=1;
++          D[k]=0;
++        }
++      }
++      if ((t&1023)==0) progress[0].amount=0.4f+0.2f*(float)t/(float)nT;
++      for (int k=0; k<nStr; k++) {
++        if (sType[k]==0) continue;
++        int v=want[k][t];
++        if (v<0) continue;
++        std::vector<int>& h=hist[k];
++        std::vector<Tok>& f=perTick[t][k];
++        if (!h.empty() && (int)h.size()>=P[k] && ((h[h.size()-P[k]]+D[k])&0xffff)==v) {
++          h.push_back(v);
++          if (h.size()>SID_LAGS*4) h.erase(h.begin(),h.begin()+SID_LAGS*3);
++          continue;
++        }
++        if (h.empty()) {
++          Tok c;
++          c.push_back(0x80);
++          c.push_back(v&0xff);
++          c.push_back(v>>8);
++          f.push_back(c);
++          P[k]=1;
++          D[k]=0;
++          h.push_back(v);
++          continue;
++        }
++        int bestRun=-1, bestCost=99, bestP=1, bestD=0;
++        int maxP=MIN(SID_LAGS,(int)h.size());
++        for (int p=1; p<=maxP; p++) {
++          int d=(v-h[h.size()-p])&0xffff;
++          int ds=(d>=0x8000)?(d-0x10000):d;
++          int cost=(p==1 && ds>=-32 && ds<32)?1:((ds>=-128 && ds<128)?2:3);
++          // how long does it keep predicting right?
++          std::vector<int> hh(h.end()-maxP,h.end());
++          hh.push_back(v);
++          int run=0;
++          for (size_t q=t+1; q<nT && q<t+64; q++) {
++            if ((int)q==loopTick) break;
++            int x=want[k][q];
++            if (x<0 || ((hh[hh.size()-p]+d)&0xffff)!=x) break;
++            hh.push_back(x);
++            run++;
++          }
++          if (run>bestRun || (run==bestRun && cost<bestCost)) {
++            bestRun=run;
++            bestCost=cost;
++            bestP=p;
++            bestD=ds;
++          }
++        }
++        Tok c;
++        if (bestP==1 && bestD>=-32 && bestD<32) {
++          c.push_back(0x20+bestD);
++        } else if (bestD>=-128 && bestD<128) {
++          c.push_back(0x3f+bestP);
++          c.push_back(bestD&0xff);
++        } else {
++          c.push_back(0x47+bestP);
++          c.push_back(bestD&0xff);
++          c.push_back((bestD>>8)&0xff);
++        }
++        if (bestP>1) usesHist[k]=true;
++        f.push_back(c);
++        P[k]=bestP;
++        D[k]=bestD&0xffff;
++        h.push_back(v);
++        if (h.size()>SID_LAGS*4) h.erase(h.begin(),h.begin()+SID_LAGS*3);
++      }
++      for (int k=0; k<nStr; k++) {
++        if (sType[k]!=0 && want[k][t]>=0) lagAt[k][t]=P[k];
++      }
++    }
++  }
++
++  // into the streams, with the waits
++  for (size_t t=0; t<nT; t++) {
++    if ((int)t==loopTick) {
++      for (int k=0; k<nStr; k++) {
+         putWait(tok[k],pending[k]);
+         pending[k]=0;
+-        tok[k].insert(tok[k].end(),f[k].begin(),f[k].end());
++        loopTok[k]=(int)tok[k].size();
++      }
++    }
++    for (int k=0; k<nStr; k++) {
++      std::vector<Tok>& f=perTick[t][k];
++      if (!f.empty()) {
++        putWait(tok[k],pending[k]);
++        pending[k]=0;
++        tok[k].insert(tok[k].end(),f.begin(),f.end());
+       }
+       pending[k]++;
+     }
+   }
++  // most SID writes a tick can make (every value stream may write 2 registers): the player only starts
++  // working on a tick ahead when its write queue has that much room
++  int maxWrites=0;
++  {
++    int nVal=0;
++    for (int k=0; k<nStr; k++) if (sType[k]!=0) nVal++;
++    for (size_t t=0; t<nT; t++) {
++      int n=2*nVal+4;
++      for (int k=0; k<nStr; k++) {
++        if (sType[k]==0) n+=perTick[t][k].size();
++      }
++      if (n>maxWrites) maxWrites=n;
++    }
++  }
++  perTick.clear();
+   size_t nCmds=0;
+   for (int k=0; k<nStr; k++) {
+     putWait(tok[k],pending[k]);
+     tok[k].push_back(Tok(1,0xff));
+     nCmds+=tok[k].size();
+   }
++  // streams with nothing in them (unused voices, filter never touched) are left out: less work per tick
++  {
++    std::vector<int> act;
++    for (int k=0; k<nStr; k++) {
++      bool used=false;
++      for (Tok& c: tok[k]) {
++        if (c[0]<0xe0) {
++          used=true;
++          break;
++        }
++      }
++      if (used || (k==nStr-1 && act.empty())) act.push_back(k);
++    }
++    std::vector<std::vector<Tok>> tok2;
++    std::vector<int> loop2, type2, reg2;
++    std::vector<bool> hist2;
++    for (int k: act) {
++      tok2.push_back(tok[k]);
++      loop2.push_back(loopTok[k]);
++      type2.push_back(sType[k]);
++      reg2.push_back(sReg[k]);
++      hist2.push_back(usesHist[k]);
++    }
++    tok=tok2;
++    loopTok=loop2;
++    sType=type2;
++    sReg=reg2;
++    usesHist=hist2;
++    nStr=act.size();
++  }
++
++  // compress each stream. the ref stacks of all streams share 256 entries, so the deepest streams
++  // are packed again with less nesting until they all fit
++  progress[0].amount=0.6f;
++  // repeated runs that save few bytes cost player time (each reference is a jump), so the packing first
++  // keeps only references that save a lot, and accepts smaller ones only if the song does not fit otherwise
++  int minGain=1;
++  std::vector<int> maxD(nStr,12), depth(nStr,0);
++  std::vector<std::vector<unsigned char>> packed(nStr);
++  std::vector<int> loopOff(nStr,-1);
++  auto packOne=[&](int k, unsigned int base) {
++    int d=0, lo=-1;
++    packed[k]=pack(tok[k],loopTok[k],base,maxD[k],lo,2,true,&d,128,minGain);
++    depth[k]=d;
++    loopOff[k]=lo;
++  };
++  // the player keeps $01=$35, so the streams go after its tables up to $CFFF and from $E000 to $FFF9
++  // (biggest first, each where it fits)
++  struct Area {
++    unsigned int start, end, used;
++  };
++  std::vector<unsigned int> sStart(nStr,0);
++  size_t total=0, cap=(0xd000-SID_DATA)+(SID_END-0xe000);
++  auto place=[&]() -> bool {
++    std::vector<Area> areas;
++    areas.push_back({SID_DATA,0xd000,0});
++    areas.push_back({0xe000,SID_END,0});
++    std::vector<int> order;
++    for (int k=0; k<nStr; k++) order.push_back(k);
++    std::sort(order.begin(),order.end(),[&](int x, int y) { return packed[x].size()>packed[y].size(); });
++    for (int k: order) {
++      bool placed=false;
++      for (Area& ar: areas) {
++        if (ar.end-ar.start-ar.used>=packed[k].size()) {
++          sStart[k]=ar.start+ar.used;
++          ar.used+=packed[k].size();
++          placed=true;
++          break;
++        }
++      }
++      if (!placed) return false;
++    }
++    return true;
++  };
++  static const int gains[]={12,8,4,1};
++  bool fits=false;
++  for (int gi=0; gi<4 && !fits; gi++) {
++    minGain=gains[gi];
++    progress[0].amount=0.6f+0.025f*gi;
++    maxD.assign(nStr,12);
++    for (int k=0; k<nStr; k++) packOne(k,0);
++    // the ref stacks of all streams share 256 entries: the deepest streams are packed again with
++    // less nesting until they all fit
++    while (true) {
++      int sum=0, big=0;
++      for (int k=0; k<nStr; k++) {
++        sum+=depth[k];
++        if (depth[k]>depth[big]) big=k;
++      }
++      if (sum<=256) break;
++      maxD[big]=depth[big]-1;
++      packOne(big,0);
++    }
++    total=0;
++    for (int k=0; k<nStr; k++) total+=packed[k].size();
++    fits=place();
++  }
++  logAppendf("log: %d commands -> %d bytes (%d bytes free); references saving %d+ bytes",(int)nCmds,(int)total,(int)cap,minGain);
++  if (!fits) {
++    fail(fmt::sprintf(_("the song does not fit in the C64's memory: the log needs %d bytes but only %d are free"),(int)total,(int)cap));
++    return;
++  }
++  for (int k=0; k<nStr; k++) {
++    progress[0].amount=0.7f+0.25f*(float)k/(float)nStr;
++    size_t before=packed[k].size();
++    packOne(k,sStart[k]);
++    if (packed[k].size()!=before) {
++      fail("internal error: stream size changed when placed");
++      return;
++    }
++  }
+ 
+-  // memory: player at $0800, then the state of each stream (20 bytes), then the streams up to $FFF9
+-  unsigned int saveAt=SID_LOAD+sizeof(sidDriver);
+-  unsigned int dataStart=saveAt+nStr*20;
++  // memory image: player, its tables, then the streams
+   std::vector<unsigned char> img(sidDriver,sidDriver+sizeof(sidDriver));
+-  img.resize(dataStart-SID_LOAD,0);
+-  std::vector<unsigned char> log;
++  img.resize(SID_DATA-SID_LOAD,0);
++  auto tab=[&](int which, int k) -> unsigned char& {
++    return img[SIDDRIVER_TABLES+SID_NS*which+k-SID_LOAD];
++  };
++  int stackAt=0, histAt=0;
+   for (int k=0; k<nStr; k++) {
+-    int lo=-1;
+-    unsigned int start=dataStart+log.size();
+-    std::vector<unsigned char> o=pack(tok[k],loopTok[k],start,3,lo);
+-    unsigned char* st=&img[saveAt-SID_LOAD+k*20];
+-    st[0]=start&0xff;
+-    st[1]=start>>8;
+-    if (lo>=0 && loopTick>=0) {
+-      st[6]=(start+lo)&0xff;
+-      st[7]=(start+lo)>>8;
+-    }
+-    log.insert(log.end(),o.begin(),o.end());
+-  }
+-  size_t cap=SID_END-dataStart;
+-  logAppendf("log: %d commands -> %d bytes (%d bytes free)",(int)nCmds,(int)log.size(),(int)cap);
+-  if (log.size()>cap) {
+-    fail(fmt::sprintf(_("the song does not fit in the C64's memory: the log needs %d bytes but only %d are free"),(int)log.size(),(int)cap));
+-    return;
++    tab(ST_PTRL,k)=sStart[k]&0xff;
++    tab(ST_PTRH,k)=sStart[k]>>8;
++    if (loopOff[k]>=0 && loopTick>=0) {
++      tab(ST_LOOPL,k)=(sStart[k]+loopOff[k])&0xff;
++      tab(ST_LOOPH,k)=(sStart[k]+loopOff[k])>>8;
++    }
++    int type=sType[k];
++    if (type!=0 && usesHist[k]) {
++      type|=0x80;
++      tab(ST_HB,k)=histAt;
++      histAt+=8;
++    }
++    tab(ST_TYPE,k)=type;
++    tab(ST_REG,k)=sReg[k];
++    tab(ST_REG1,k)=sReg[k]+1;
++    tab(ST_SP,k)=stackAt;
++    stackAt+=depth[k];
++    tab(ST_LAG,k)=1;
++    tab(ST_APOS,k)=0xff;
++    // every stream reads its first commands on tick 0
++    tab(ST_NEXT,k)=(k+1<nStr)?(k+1):0xff;
++  }
++  for (int i=0; i<256; i++) img[SID_BHEAD+i-SID_LOAD]=0xff;
++  img[SID_BHEAD-SID_LOAD]=0;
++  for (int k=0; k<nStr; k++) {
++    size_t at=sStart[k]-SID_LOAD;
++    if (img.size()<at+packed[k].size()) img.resize(at+packed[k].size(),0);
++    memcpy(&img[at],packed[k].data(),packed[k].size());
+   }
+ 
+-  img[6]=nStr;
++  img[SIDDRIVER_NSTR-SID_LOAD]=nStr;
+   double clock=pal?985248.0:1022727.0;
+-  int timer=(int)(clock/tickRate+0.5);
++  int timer=(int)(clock/tickRate+0.5)-1;
+   if (timer>65535) {
+     timer=65535;
+     logAppend("WARNING: tick rate too low; the song will play faster");
+   }
+-  img[7]=timer&0xff;
+-  img[8]=timer>>8;
+-  img.insert(img.end(),log.begin(),log.end());
++  img[SIDDRIVER_TIMERLO-SID_LOAD]=timer&0xff;
++  img[SIDDRIVER_TIMERHI-SID_LOAD]=timer>>8;
++  // the player stops working ahead when less than this many 256-cycle pages are left before the next tick
++  int margin=3;
++  if (margin>(timer>>8)/2) margin=(timer>>8)/2;
++  img[SIDDRIVER_MARGIN-SID_LOAD]=margin;
++  img[SIDDRIVER_ROOM-SID_LOAD]=(maxWrites<240)?(255-maxWrites):0;
++  logAppendf("tick rate %.2fHz; up to %d writes per tick",tickRate,maxWrites);
+ 
+   // PSID v4 header (big endian)
+   SafeWriter* w=new SafeWriter;
+@@ -188,7 +478,7 @@ void DivExportSID::run() {
+   writeBE16(w,4); // version
+   writeBE16(w,0x7c); // data offset
+   writeBE16(w,0); // load address: in the data
+-  writeBE16(w,SID_LOAD);
++  writeBE16(w,SID_LOAD); // init: jmp at the start of the player
+   writeBE16(w,SID_LOAD+3);
+   writeBE16(w,1); // songs
+   writeBE16(w,1); // start song
+diff --git a/src/engine/export/siddrv.asm b/src/engine/export/siddrv.asm
+index 777dbd5..47eff96 100644
+--- a/src/engine/export/siddrv.asm
++++ b/src/engine/export/siddrv.asm
+@@ -1,117 +1,462 @@
+-; driver SID do Tracker do Registro Gamer: um fluxo de comandos por voz (3 por SID) + 1 geral por SID,
+-; tocados a cada interrupção do timer A da CIA 1. o estado de cada fluxo fica em SAVE+n*20 e é trazido para a página zero.
+-; os dados podem ficar de $0800 até $FFF9: a leitura liga a RAM toda ($01=$34) só durante o byte lido.
+-; comandos: 00-58 vv escreve vv em D400+cmd (SID 2 em D420, SID 3 em D440) · E0 lo hi nl nh toca nh:nl bytes de hi:lo e volta
+-; F0-FD fim do tique e espera cmd-F0 tiques · FE nn espera nn · FF volta à repetição (ou acaba)
++; driver SID do Tracker do Registro Gamer (6502). Por SID, 11 fluxos de comandos: frequência, largura de pulso e
++; controle/ADSR de cada voz, corte do filtro e ressonância/volume.
++; A cada interrupção do timer A da CIA 1 o PLAY primeiro escreve no SID as escritas já prontas do tique (fila de
++; 256), sempre no mesmo instante, e depois usa o tempo que sobra até a próxima interrupção (o timer B da CIA 1
++; conta esse tempo) para adiantar os tiques seguintes na fila: os tiques pesados (início de padrão, muitas notas
++; juntas) não atrasam o som, a fila absorve.
++; Para gastar pouco tempo por tique, só se mexe no que muda: cada fluxo em espera fica numa lista do tique em que
++; volta a ler comandos (256 listas, uma por tique), e os fluxos de valor que andam sozinhos (rampa, LAG>1) ficam
++; numa lista de ativos, cada um com a rotina certa para o seu caso (MODE).
++; Durante o PLAY fica $01=$35 (RAM em $A000-$BFFF e $E000-$FFFF, E/S em $D000): os fluxos ficam depois das
++; tabelas até $CFFF e de $E000 até $FFF9.
++; montar: python3 scripts/rg-asm6502.py siddrv.asm sidDriver "comentário" > siddrv.inc
++;
++; comandos de todos os fluxos:
++;   E0 lo hi nl nh  toca nh:nl bytes que estão em hi:lo e volta (aninhado; a pilha de cada fluxo é do tamanho que ele usa)
++;   E1 lo hi nn     o mesmo, com até 255 bytes
++;   F0-FD           fim do tique; espera cmd-F0 tiques a mais
++;   FE nn           fim do tique; espera nn tiques a mais (nn até 254)
++;   FF              volta ao ponto de repetição (ou acaba)
++; fluxo de registradores (controle/ADSR, ressonância/volume):
++;   00-07 vv        escreve vv no registrador REG+cmd
++; fluxo de valor (16 bits: frequência, pulso; 11 bits: corte): a cada tique, inclusive os de espera,
++; VAL = (valor de LAG tiques atrás) + DELTA, e VAL vai para os registradores. os comandos mudam LAG e DELTA:
++;   00-3F           LAG=1, DELTA=cmd-$20 (-32..31)
++;   40-47 dd        LAG=cmd-$3F (1..8), DELTA=dd (-128..127)
++;   48-4F lo hi     LAG=cmd-$47 (1..8), DELTA=hi:lo
++;   80 lo hi        VAL=hi:lo, LAG=1, DELTA=0
++; TYPE: 0 registradores, 1 valor de 16 bits, 2 corte do filtro (11 bits: 3 em REG, 8 em REG+1); +$80 guarda o histórico
++; (os 8 últimos valores, para LAG>1; a posição GPOS é a mesma para todos e anda um a cada tique).
++; MODE (fluxos de valor ativos): 1 rampa 16 bits, 2 rampa do corte, 3 com histórico 16 bits, 4 com histórico corte,
++; 5 parado com histórico (guarda o valor até o histórico inteiro ser ele, depois sai da lista).
++
++PTR = $E0
++END = $E2
++T0 = $E4
++T1 = $E5
++T2 = $E6
++T3 = $E7
++B01 = $E8
++NS = 33
++
+ .org $0800
+   jmp INIT
+   jmp PLAY
+ NSTR: .byte 0
+ TIMERLO: .byte 0
+ TIMERHI: .byte 0
++MARGIN: .byte 0
++ROOM: .byte 0
+ INIT:
+   lda TIMERLO
+   sta $DC04
+   lda TIMERHI
+   sta $DC05
++  lda $01
++  sta B01
++  lda #$35
++  sta $01
++  lda #0
++  sta TIMED
++  jsr DECODE
++  lda B01
++  sta $01
+   rts
++
+ PLAY:
+-  ldx #0
+-  stx SIDX
+-tl:
+-  stx XSAV
+-  ldy #0
+-ld:
+-  lda SAVE,x
+-  sta WORK,y
+-  inx
++  lda $01
++  sta B01
++  lda #$35
++  sta $01
++  lda $DC04       ; o timer B da CIA 1 conta o tempo que falta até a próxima interrupção (o que o timer A
++  sta $DC06       ; ainda tem) e para no zero: quando ele para, acabou o tempo deste PLAY
++  lda $DC05
++  sta $DC07
++  lda #$19
++  sta $DC0F
++  lda READY
++  bne pl1
++  lda #2          ; a fila não tem o tique inteiro: adianta agora até o fim dele
++  sta TIMED
++  jsr DECODE
++pl1:
++  dec READY
++  ldy RP
++fl:
++  lda BREG,y
++  bmi fle
++  tax
++  lda BVAL,y
++  sta $D400,x
+   iny
+-  cpy #20
+-  bne ld
+-  jsr FRAME
+-  ldx XSAV
+-  ldy #0
+-sv:
+-  lda WORK,y
+-  sta SAVE,x
+-  inx
++  jmp fl
++fle:
+   iny
+-  cpy #20
+-  bne sv
+-  inc SIDX
+-  lda SIDX
+-  cmp NSTR
+-  bne tl
++  sty RP
++  lda #1
++  sta TIMED
++  sta CHK
++  jsr DECODE
++  lda B01
++  sta $01
++  rts
++
++; adianta os próximos tiques, um fluxo por vez, enquanto houver lugar na fila e tempo até a próxima interrupção
++; (TIMED 0: sem olhar o tempo; 1: olhando o timer; 2: só até o fim do tique). PH: 0 começo do tique,
++; 1 fluxos que voltam a ler comandos (lista do tique, NXT = o próximo), 2 fluxos de valor ativos (CUR)
++DECODE:
++  lda PH
++  beq dtk
++  cmp #2
++  beq p2
++  jmp p1
++dtk:
++  lda TIMED
++  cmp #2
++  beq dtk2
++  lda WP          ; começa um tique novo só com lugar na fila para ele inteiro
++  sec
++  sbc RP
++  cmp ROOM
++  bcs dcx
++dtk2:
++  ldy TICK
++  lda BHEAD,y
++  sta NXT
++  lda #$FF
++  sta BHEAD,y
++  lda #1
++  sta PH
++p1:
++  ldx NXT
++  cpx #$FF
++  beq p1e
++  lda NEXT,x
++  sta NXT
++  jsr RUNS
++  dec CHK
++  bne p1
++  jsr CHKT
++  bcc p1
++dcx:
++  rts
++p1e:
++  lda NACT
++  sta CUR
++  lda #2
++  sta PH
++p2:
++  ldy CUR
++  dey
++  bmi dtend
++  sty CUR
++  ldx ACT,y
++  lda UPF,x
++  bne p2u
++  lda MODE,x
++  cmp #3
++  bne p2a
++  jmp H16
++p2a:
++  cmp #5
++  bne p2b
++  jmp HOLD
++p2b:
++  cmp #1
++  bne p2c
++  jmp R16
++p2c:
++  cmp #2
++  beq p2rc
++  jsr CALC        ; corte com histórico
++  jsr PUSH
++  jmp p2n
++p2rc:
++  jsr RAMP
++  jmp p2n
++p2u:
++  lda #0          ; já calculado por um comando neste tique
++  sta UPF,x
++p2n:
++  dec CHK
++  bne p2j
++  jsr CHKT
++  bcs p2x
++p2j:
++  jmp p2
++p2x:
+   rts
++dtend:
++  ldy WP          ; fim do tique na fila
++  lda #$FF
++  sta BREG,y
++  inc WP
++  inc READY
++  inc TICK
++  lda GPOS
++  clc
++  adc #1
++  and #7
++  sta GPOS
++  lda #0
++  sta PH
++  lda TIMED
++  cmp #2
++  beq dtx
++  jmp dtk
++dtx:
++  rts
++
++; com histórico, 16 bits: VAL = histórico[LAG] + DELTA, guarda e põe na fila
++H16:
++  lda GPOS
++  sec
++  sbc LAG,x
++  and #7
++  ora HB,x
++  tay
++  lda HISL,y
++  clc
++  adc DL,x
++  sta VALL,x
++  sta T0
++  lda HISH,y
++  adc DH,x
++  sta T1
++  lda GPOS
++  ora HB,x
++  tay
++  lda T0
++  sta HISL,y
++  lda T1
++  sta HISH,y
++  ldy WP
++  lda REG,x
++  sta BREG,y
++  lda T0
++  sta BVAL,y
++  iny
++  lda T1
++  cmp VALH,x
++  beq h16a        ; byte alto igual: não precisa escrever
++  sta VALH,x
++  sta BVAL,y
++  lda REG1,x
++  sta BREG,y
++  iny
++h16a:
++  sty WP
++  jmp p2n
++; parado com histórico: só guarda (depois de 8 tiques o histórico inteiro já é este valor)
++HOLD:
++  lda GPOS
++  ora HB,x
++  tay
++  lda VALL,x
++  sta HISL,y
++  lda VALH,x
++  sta HISH,y
++  inc HCNT,x
++  lda HCNT,x
++  cmp #8
++  bcc hd1
++  jsr DEACT
++hd1:
++  jmp p2n
++; rampa, 16 bits
++R16:
++  ldy WP
++  lda REG,x
++  sta BREG,y
++  lda VALL,x
++  clc
++  adc DL,x
++  sta VALL,x
++  sta BVAL,y
++  iny
++  lda VALH,x
++  adc DH,x
++  cmp VALH,x
++  beq r16a
++  sta VALH,x
++  sta BVAL,y
++  lda REG1,x
++  sta BREG,y
++  iny
++r16a:
++  sty WP
++  jmp p2n
++
++; o tempo acabou? (C=1: parar). quem chama confere o timer a cada 4 passos (CHK)
++CHKT:
++  lda #4
++  sta CHK
++  lda TIMED
++  cmp #1
++  bne ck0
++  lda $DC0F       ; timer B parado: passou da hora
++  lsr a
++  bcc ck1
++  lda $DC07       ; páginas de 256 ciclos até a próxima interrupção
++  cmp MARGIN
++  bcc ck1
++ck0:
++  clc
++  rts
++ck1:
++  sec
++  rts
++
++; lê os comandos do fluxo X até a próxima espera
++RUNS:
++  lda PTRL,x
++  sta PTR
++  lda PTRH,x
++  sta PTR+1
++  lda ENDL,x
++  sta END
++  lda ENDH,x
++  sta END+1
++  jmp next
++
++; lê um byte do fluxo X (preserva X); no fim de uma referência volta para quem chamou
+ GB:
+   ldy #0
+-  ldx $01
+-  lda #$34
+-  sta $01
+   lda (PTR),y
+-  stx $01
+   inc PTR
+   bne gb1
+-  inc PTRH
++  inc PTR+1
+ gb1:
+-  pha
+-  lda DEPTH
+-  beq gbe
+-  lda RCNT
+-  bne gb2
+-  dec RCNTH
++  ldy PTR
++  cpy END
++  beq gb2
++  rts
+ gb2:
+-  dec RCNT
+-  lda RCNT
+-  ora RCNTH
+-  bne gbe
+-  dec DEPTH
+-  lda DEPTH
+-  asl
+-  asl
+-  tax
+-  lda STK,x
++  ldy PTR+1
++  cpy END+1
++  beq gbp
++  rts
++gbp:
++  pha
++  ldy SP,x
++  dey
++  tya
++  sta SP,x
++  lda SKPL,y
+   sta PTR
+-  lda STK1,x
+-  sta PTRH
+-  lda STK2,x
+-  sta RCNT
+-  lda STK3,x
+-  sta RCNTH
+-gbe:
++  lda SKPH,y
++  sta PTR+1
++  lda SKEL,y
++  sta END
++  lda SKEH,y
++  sta END+1
+   pla
+   rts
+-FRAME:
+-  lda WAIT
+-  beq next
+-  dec WAIT
+-  rts
++
+ next:
+-  jsr GB
+-  cmp #$60
+-  bcc reg
++  ldy #0
++  lda (PTR),y
++  inc PTR
++  bne nx1
++  inc PTR+1
++nx1:
++  ldy PTR
++  cpy END
++  bne nx3
++  jsr gb2
++nx3:
+   cmp #$E0
+-  beq ref
+-  cmp #$F0
+-  bcc next
+-  cmp #$FE
+-  bcc waitk
+-  beq waitn
+-  lda LOOPL
+-  ora LOOPH
+-  beq endsong
+-  lda LOOPL
+-  sta PTR
+-  lda LOOPH
+-  sta PTRH
++  bcc nc
++  jmp ctl
++nc:
++  ldy TYPE,x
++  bne val
++  clc
++  adc REG,x
++  sta T0
++  jsr GB
++  ldy WP
++  sta BVAL,y
++  lda T0
++  sta BREG,y
++  inc WP
+   jmp next
+-reg:
+-  sta REGT
++
++; comandos de valor: mudam LAG e DELTA e calculam o valor deste tique
++val:
++  cmp #$40
++  bcs v40
++  sbc #$1F        ; C=0: A-$20
++  sta DL,x
++  and #$80
++  beq vp
++  lda #$FF
++vp:
++  sta DH,x
++  lda #1
++  sta LAG,x
++  jmp vgo
++v40:
++  cmp #$48
++  bcs v48
++  sbc #$3E        ; C=0: A-$3F
++  sta LAG,x
+   jsr GB
+-  ldx REGT
+-  sta $D400,x
++  sta DL,x
++  and #$80
++  beq vp2
++  lda #$FF
++vp2:
++  sta DH,x
++  jmp vgo
++v48:
++  cmp #$80
++  beq vabs
++  sbc #$46        ; C=0: A-$47
++  sta LAG,x
++  jsr GB
++  sta DL,x
++  jsr GB
++  sta DH,x
++vgo:
++  lda TYPE,x
++  bmi vh
++  jsr RAMP
++  jmp vset
++vh:
++  jsr CALC
++  jsr PUSH
++  jmp vset
++vabs:
++  jsr GB
++  sta VALL,x
++  jsr GB
++  sta VALH,x
++  eor #$FF
++  sta T3          ; escreve os dois bytes
++  lda #1
++  sta LAG,x
++  lda #0
++  sta DL,x
++  sta DH,x
++  jsr WRV
++  lda TYPE,x
++  bpl vset
++  jsr PUSH
++vset:
++  lda #1
++  sta UPF,x
++  jsr SETM
++  jmp next
++
++ctl:
++  cmp #$F0
++  bcs wt
++  cmp #$E1
++  beq ref1
++  bcc ref0
+   jmp next
+-ref:
++ref0:
+   jsr GB
+   sta T0
+   jsr GB
+@@ -120,48 +465,301 @@ ref:
+   sta T2
+   jsr GB
+   sta T3
+-  lda DEPTH
+-  asl
+-  asl
+-  tax
++  jmp refgo
++ref1:
++  jsr GB
++  sta T0
++  jsr GB
++  sta T1
++  jsr GB
++  sta T2
++  lda #0
++  sta T3
++refgo:
++  ldy SP,x
+   lda PTR
+-  sta STK,x
+-  lda PTRH
+-  sta STK1,x
+-  lda RCNT
+-  sta STK2,x
+-  lda RCNTH
+-  sta STK3,x
+-  inc DEPTH
++  sta SKPL,y
++  lda PTR+1
++  sta SKPH,y
++  lda END
++  sta SKEL,y
++  lda END+1
++  sta SKEH,y
++  iny
++  tya
++  sta SP,x
+   lda T0
+   sta PTR
++  clc
++  adc T2
++  sta END
+   lda T1
+-  sta PTRH
+-  lda T2
+-  sta RCNT
+-  lda T3
+-  sta RCNTH
++  sta PTR+1
++  adc T3
++  sta END+1
+   jmp next
+-waitk:
+-  sec
+-  sbc #$F0
+-  sta WAIT
+-  rts
+-waitn:
++
++wt:
++  cmp #$FE
++  bcc wk
++  beq wn
++  ; FF: repetição ou fim
++  lda LOOPL,x
++  ora LOOPH,x
++  beq fim
++  lda LOOPL,x
++  sta PTR
++  lda LOOPH,x
++  sta PTR+1
++  jmp next
++wk:
++  sbc #$EF        ; C=0: A-$F0 (tiques a mais)
++  jmp sav
++wn:
+   jsr GB
+-  sta WAIT
++sav:
++  ; volta daqui a A+1 tiques: entra na lista daquele tique
++  sec
++  adc TICK
++  tay
++  lda BHEAD,y
++  sta NEXT,x
++  txa
++  sta BHEAD,y
++  lda PTR
++  sta PTRL,x
++  lda PTR+1
++  sta PTRH,x
++  lda END
++  sta ENDL,x
++  lda END+1
++  sta ENDH,x
+   rts
+-endsong:
++fim:
++  lda ENDF        ; o volume é zerado uma vez só, pelo primeiro fluxo que acaba
++  bne fm0
++  inc ENDF
++  ldy WP
++  lda #$18
++  sta BREG,y
+   lda #0
+-  sta $D418
+-  sta $D438
+-  sta $D458
+-  lda #$FF
+-  sta WAIT
++  sta BVAL,y
++  iny
++  lda #$38
++  sta BREG,y
++  lda #0
++  sta BVAL,y
++  iny
++  lda #$58
++  sta BREG,y
++  lda #0
++  sta BVAL,y
++  iny
++  sty WP
++fm0:
++  lda #0
++  sta DL,x
++  sta DH,x
++  lda #1
++  sta LAG,x
++  jsr DEACT
+   lda PTR
+-  bne es1
+-  dec PTRH
+-es1:
++  bne fm1
++  dec PTR+1
++fm1:
+   dec PTR
++  lda #254
++  jmp sav
++
++; escolhe o MODE do fluxo de valor e o põe na lista de ativos (ou tira, se não tem nada a fazer sozinho)
++SETM:
++  lda TYPE,x
++  bmi smh
++  lda DL,x        ; sem histórico: só a rampa (LAG é sempre 1)
++  ora DH,x
++  beq DEACT
++  lda TYPE,x
++  jmp smset       ; 1 rampa 16 bits, 2 rampa do corte
++smh:
++  lda LAG,x
++  cmp #1
++  bne smh2
++  lda DL,x
++  ora DH,x
++  bne smh2
++  lda #0          ; parado
++  sta HCNT,x
++  lda #5
++  bne smset
++smh2:
++  lda TYPE,x
++  and #$7F
++  clc
++  adc #2          ; 3 histórico 16 bits, 4 histórico corte
++smset:
++  sta MODE,x
++ACTV:
++  lda APOS,x
++  bpl ac9
++  ldy NACT
++  txa
++  sta ACT,y
++  tya
++  sta APOS,x
++  inc NACT
++ac9:
++  rts
++DEACT:
++  ldy APOS,x
++  bmi da9
++  dec NACT
++  stx T0
++  ldx NACT
++  lda ACT,x       ; o último da lista vai para o lugar deste
++  sta ACT,y
++  tax
++  tya
++  sta APOS,x
++  ldx T0
++  lda #$FF
++  sta APOS,x
++da9:
++  rts
++; VAL = VAL + DELTA e põe na fila (T3 = byte alto anterior)
++RAMP:
++  lda VALH,x
++  sta T3
++  lda VALL,x
++  clc
++  adc DL,x
++  sta VALL,x
++  lda VALH,x
++  adc DH,x
++  sta VALH,x
++  jmp WRV
++; VAL = valor de LAG tiques atrás + DELTA e põe na fila
++CALC:
++  lda LAG,x
++  cmp #1
++  beq RAMP        ; LAG=1: o valor de 1 tique atrás é o próprio VAL
++  lda VALH,x
++  sta T3
++  lda GPOS
++  sec
++  sbc LAG,x
++  and #7
++  ora HB,x
++  tay
++  lda HISL,y
++  clc
++  adc DL,x
++  sta VALL,x
++  lda HISH,y
++  adc DH,x
++  sta VALH,x
++WRV:
++  ldy WP
++  lda TYPE,x
++  and #$7F
++  cmp #2
++  beq wcut
++  lda REG,x
++  sta BREG,y
++  lda VALL,x
++  sta BVAL,y
++  iny
++  lda VALH,x
++  cmp T3
++  beq wv1         ; byte alto igual: não precisa escrever
++  sta BVAL,y
++  lda REG1,x
++  sta BREG,y
++  iny
++wv1:
++  sty WP
++  rts
++wcut:
++  lda REG,x
++  sta BREG,y
++  lda VALL,x
++  and #7
++  sta BVAL,y
++  iny
++  lda VALH,x
++  sta T0
++  lda VALL,x
++  lsr T0
++  ror a
++  lsr T0
++  ror a
++  lsr T0
++  ror a
++  sta BVAL,y
++  lda REG1,x
++  sta BREG,y
++  iny
++  sty WP
++  rts
++; guarda o valor deste tique no histórico
++PUSH:
++  lda #0
++  sta HCNT,x
++  lda GPOS
++  ora HB,x
++  tay
++  lda VALL,x
++  sta HISL,y
++  lda VALH,x
++  sta HISH,y
+   rts
+-SAVE:
++
++GPOS: .byte 0
++TICK: .byte 0
++NACT: .byte 0
++WP: .byte 0
++RP: .byte 0
++READY: .byte 0
++TIMED: .byte 0
++PH: .byte 0
++NXT: .byte 0
++CUR: .byte 0
++CHK: .byte 1
++ENDF: .byte 0
++
++; tabelas (NS bytes cada; o exportador preenche): estado de cada fluxo
++TABLES:
++PTRL = TABLES
++PTRH = TABLES+NS
++NEXT = TABLES+NS*2
++LOOPL = TABLES+NS*3
++LOOPH = TABLES+NS*4
++TYPE = TABLES+NS*5
++REG = TABLES+NS*6
++SP = TABLES+NS*7
++ENDL = TABLES+NS*8
++ENDH = TABLES+NS*9
++VALL = TABLES+NS*10
++VALH = TABLES+NS*11
++DL = TABLES+NS*12
++DH = TABLES+NS*13
++LAG = TABLES+NS*14
++HB = TABLES+NS*15
++HCNT = TABLES+NS*16
++APOS = TABLES+NS*17
++UPF = TABLES+NS*18
++ACT = TABLES+NS*19
++MODE = TABLES+NS*20
++REG1 = TABLES+NS*21
++; pilhas das referências (256 entradas no total: retorno e fim), histórico (8 valores por fluxo),
++; as 256 listas de fluxos que voltam em cada tique ($FF = vazia) e a fila de escritas (registrador, valor;
++; $FF = fim do tique)
++SKPL = TABLES+NS*22
++SKPH = SKPL+256
++SKEL = SKPL+512
++SKEH = SKPL+768
++HISL = SKPL+1024
++HISH = SKPL+1280
++BHEAD = SKPL+1536
++BREG = SKPL+1792
++BVAL = SKPL+2048
++TABEND = SKPL+2304
+diff --git a/src/engine/export/siddrv.inc b/src/engine/export/siddrv.inc
+index 95a2bff..fff5c00 100644
+--- a/src/engine/export/siddrv.inc
++++ b/src/engine/export/siddrv.inc
+@@ -1,23 +1,125 @@
+ // gerado por siddrv.asm (montador 6502 em scripts/rg-asm6502.py); não editar à mão
+-// carregado em $0800: INIT $0800, PLAY $0803; $0806 = número de fluxos, $0807-$0808 = timer da CIA; estado dos fluxos logo depois do código (20 bytes cada)
+-static const unsigned char sidDriver[297]={
+-  0x4c, 0x09, 0x08, 0x4c, 0x16, 0x08, 0x00, 0x00, 0x00, 0xad, 0x07, 0x08, 0x8d, 0x04, 0xdc, 0xad,
+-  0x08, 0x08, 0x8d, 0x05, 0xdc, 0x60, 0xa2, 0x00, 0x86, 0xf8, 0x86, 0xf9, 0xa0, 0x00, 0xbd, 0x29,
+-  0x09, 0x99, 0xe0, 0x00, 0xe8, 0xc8, 0xc0, 0x14, 0xd0, 0xf4, 0x20, 0x89, 0x08, 0xa6, 0xf9, 0xa0,
+-  0x00, 0xb9, 0xe0, 0x00, 0x9d, 0x29, 0x09, 0xe8, 0xc8, 0xc0, 0x14, 0xd0, 0xf4, 0xe6, 0xf8, 0xa5,
+-  0xf8, 0xcd, 0x06, 0x08, 0xd0, 0xd4, 0x60, 0xa0, 0x00, 0xa6, 0x01, 0xa9, 0x34, 0x85, 0x01, 0xb1,
+-  0xe0, 0x86, 0x01, 0xe6, 0xe0, 0xd0, 0x02, 0xe6, 0xe1, 0x48, 0xa5, 0xe3, 0xf0, 0x29, 0xa5, 0xe4,
+-  0xd0, 0x02, 0xc6, 0xe5, 0xc6, 0xe4, 0xa5, 0xe4, 0x05, 0xe5, 0xd0, 0x1b, 0xc6, 0xe3, 0xa5, 0xe3,
+-  0x0a, 0x0a, 0xaa, 0xbd, 0xe8, 0x00, 0x85, 0xe0, 0xbd, 0xe9, 0x00, 0x85, 0xe1, 0xbd, 0xea, 0x00,
+-  0x85, 0xe4, 0xbd, 0xeb, 0x00, 0x85, 0xe5, 0x68, 0x60, 0xa5, 0xe2, 0xf0, 0x03, 0xc6, 0xe2, 0x60,
+-  0x20, 0x47, 0x08, 0xc9, 0x60, 0x90, 0x1f, 0xc9, 0xe0, 0xf0, 0x28, 0xc9, 0xf0, 0x90, 0xf1, 0xc9,
+-  0xfe, 0x90, 0x62, 0xf0, 0x66, 0xa5, 0xe6, 0x05, 0xe7, 0xf0, 0x66, 0xa5, 0xe6, 0x85, 0xe0, 0xa5,
+-  0xe7, 0x85, 0xe1, 0x4c, 0x90, 0x08, 0x85, 0xfa, 0x20, 0x47, 0x08, 0xa6, 0xfa, 0x9d, 0x00, 0xd4,
+-  0x4c, 0x90, 0x08, 0x20, 0x47, 0x08, 0x85, 0xf4, 0x20, 0x47, 0x08, 0x85, 0xf5, 0x20, 0x47, 0x08,
+-  0x85, 0xf6, 0x20, 0x47, 0x08, 0x85, 0xf7, 0xa5, 0xe3, 0x0a, 0x0a, 0xaa, 0xa5, 0xe0, 0x9d, 0xe8,
+-  0x00, 0xa5, 0xe1, 0x9d, 0xe9, 0x00, 0xa5, 0xe4, 0x9d, 0xea, 0x00, 0xa5, 0xe5, 0x9d, 0xeb, 0x00,
+-  0xe6, 0xe3, 0xa5, 0xf4, 0x85, 0xe0, 0xa5, 0xf5, 0x85, 0xe1, 0xa5, 0xf6, 0x85, 0xe4, 0xa5, 0xf7,
+-  0x85, 0xe5, 0x4c, 0x90, 0x08, 0x38, 0xe9, 0xf0, 0x85, 0xe2, 0x60, 0x20, 0x47, 0x08, 0x85, 0xe2,
+-  0x60, 0xa9, 0x00, 0x8d, 0x18, 0xd4, 0x8d, 0x38, 0xd4, 0x8d, 0x58, 0xd4, 0xa9, 0xff, 0x85, 0xe2,
+-  0xa5, 0xe0, 0xd0, 0x02, 0xc6, 0xe1, 0xc6, 0xe0, 0x60,
++// carregado em $0800: INIT $0800, PLAY $0803; $0806 = número de fluxos, $0807-$0808 = timer da CIA, $0809 = margem, $080A = limite da fila; tabelas de estado em SIDDRIVER_TABLES
++#define SIDDRIVER_ACTV 0x0c68
++#define SIDDRIVER_CALC 0x0cb7
++#define SIDDRIVER_CHK 0x0d62
++#define SIDDRIVER_CHKT 0x0a02
++#define SIDDRIVER_CUR 0x0d61
++#define SIDDRIVER_DEACT 0x0c7c
++#define SIDDRIVER_DECODE 0x087c
++#define SIDDRIVER_ENDF 0x0d63
++#define SIDDRIVER_GB 0x0a37
++#define SIDDRIVER_GPOS 0x0d58
++#define SIDDRIVER_H16 0x094f
++#define SIDDRIVER_HOLD 0x09aa
++#define SIDDRIVER_INIT 0x080b
++#define SIDDRIVER_MARGIN 0x0809
++#define SIDDRIVER_NACT 0x0d5a
++#define SIDDRIVER_NSTR 0x0806
++#define SIDDRIVER_NXT 0x0d60
++#define SIDDRIVER_PH 0x0d5f
++#define SIDDRIVER_PLAY 0x082c
++#define SIDDRIVER_PUSH 0x0d3f
++#define SIDDRIVER_R16 0x09cd
++#define SIDDRIVER_RAMP 0x0c9c
++#define SIDDRIVER_READY 0x0d5d
++#define SIDDRIVER_ROOM 0x080a
++#define SIDDRIVER_RP 0x0d5c
++#define SIDDRIVER_RUNS 0x0a20
++#define SIDDRIVER_SETM 0x0c32
++#define SIDDRIVER_TABLES 0x0d64
++#define SIDDRIVER_TICK 0x0d59
++#define SIDDRIVER_TIMED 0x0d5e
++#define SIDDRIVER_TIMERHI 0x0808
++#define SIDDRIVER_TIMERLO 0x0807
++#define SIDDRIVER_WP 0x0d5b
++#define SIDDRIVER_WRV 0x0ce3
++static const unsigned char sidDriver[1380]={
++  0x4c, 0x0b, 0x08, 0x4c, 0x2c, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xad, 0x07, 0x08, 0x8d, 0x04,
++  0xdc, 0xad, 0x08, 0x08, 0x8d, 0x05, 0xdc, 0xa5, 0x01, 0x85, 0xe8, 0xa9, 0x35, 0x85, 0x01, 0xa9,
++  0x00, 0x8d, 0x5e, 0x0d, 0x20, 0x7c, 0x08, 0xa5, 0xe8, 0x85, 0x01, 0x60, 0xa5, 0x01, 0x85, 0xe8,
++  0xa9, 0x35, 0x85, 0x01, 0xad, 0x04, 0xdc, 0x8d, 0x06, 0xdc, 0xad, 0x05, 0xdc, 0x8d, 0x07, 0xdc,
++  0xa9, 0x19, 0x8d, 0x0f, 0xdc, 0xad, 0x5d, 0x0d, 0xd0, 0x08, 0xa9, 0x02, 0x8d, 0x5e, 0x0d, 0x20,
++  0x7c, 0x08, 0xce, 0x5d, 0x0d, 0xac, 0x5c, 0x0d, 0xb9, 0x3a, 0x17, 0x30, 0x0b, 0xaa, 0xb9, 0x3a,
++  0x18, 0x9d, 0x00, 0xd4, 0xc8, 0x4c, 0x58, 0x08, 0xc8, 0x8c, 0x5c, 0x0d, 0xa9, 0x01, 0x8d, 0x5e,
++  0x0d, 0x8d, 0x62, 0x0d, 0x20, 0x7c, 0x08, 0xa5, 0xe8, 0x85, 0x01, 0x60, 0xad, 0x5f, 0x0d, 0xf0,
++  0x07, 0xc9, 0x02, 0xf0, 0x4f, 0x4c, 0xae, 0x08, 0xad, 0x5e, 0x0d, 0xc9, 0x02, 0xf0, 0x0c, 0xad,
++  0x5b, 0x0d, 0x38, 0xed, 0x5c, 0x0d, 0xcd, 0x0a, 0x08, 0xb0, 0x2d, 0xac, 0x59, 0x0d, 0xb9, 0x3a,
++  0x16, 0x8d, 0x60, 0x0d, 0xa9, 0xff, 0x99, 0x3a, 0x16, 0xa9, 0x01, 0x8d, 0x5f, 0x0d, 0xae, 0x60,
++  0x0d, 0xe0, 0xff, 0xf0, 0x14, 0xbd, 0xa6, 0x0d, 0x8d, 0x60, 0x0d, 0x20, 0x20, 0x0a, 0xce, 0x62,
++  0x0d, 0xd0, 0xeb, 0x20, 0x02, 0x0a, 0x90, 0xe6, 0x60, 0xad, 0x5a, 0x0d, 0x8d, 0x61, 0x0d, 0xa9,
++  0x02, 0x8d, 0x5f, 0x0d, 0xac, 0x61, 0x0d, 0x88, 0x30, 0x49, 0x8c, 0x61, 0x0d, 0xbe, 0xd7, 0x0f,
++  0xbd, 0xb6, 0x0f, 0xd0, 0x2b, 0xbd, 0xf8, 0x0f, 0xc9, 0x03, 0xd0, 0x03, 0x4c, 0x4f, 0x09, 0xc9,
++  0x05, 0xd0, 0x03, 0x4c, 0xaa, 0x09, 0xc9, 0x01, 0xd0, 0x03, 0x4c, 0xcd, 0x09, 0xc9, 0x02, 0xf0,
++  0x09, 0x20, 0xb7, 0x0c, 0x20, 0x3f, 0x0d, 0x4c, 0x15, 0x09, 0x20, 0x9c, 0x0c, 0x4c, 0x15, 0x09,
++  0xa9, 0x00, 0x9d, 0xb6, 0x0f, 0xce, 0x62, 0x0d, 0xd0, 0x05, 0x20, 0x02, 0x0a, 0xb0, 0x03, 0x4c,
++  0xd4, 0x08, 0x60, 0xac, 0x5b, 0x0d, 0xa9, 0xff, 0x99, 0x3a, 0x17, 0xee, 0x5b, 0x0d, 0xee, 0x5d,
++  0x0d, 0xee, 0x59, 0x0d, 0xad, 0x58, 0x0d, 0x18, 0x69, 0x01, 0x29, 0x07, 0x8d, 0x58, 0x0d, 0xa9,
++  0x00, 0x8d, 0x5f, 0x0d, 0xad, 0x5e, 0x0d, 0xc9, 0x02, 0xf0, 0x03, 0x4c, 0x88, 0x08, 0x60, 0xad,
++  0x58, 0x0d, 0x38, 0xfd, 0x32, 0x0f, 0x29, 0x07, 0x1d, 0x53, 0x0f, 0xa8, 0xb9, 0x3a, 0x14, 0x18,
++  0x7d, 0xf0, 0x0e, 0x9d, 0xae, 0x0e, 0x85, 0xe4, 0xb9, 0x3a, 0x15, 0x7d, 0x11, 0x0f, 0x85, 0xe5,
++  0xad, 0x58, 0x0d, 0x1d, 0x53, 0x0f, 0xa8, 0xa5, 0xe4, 0x99, 0x3a, 0x14, 0xa5, 0xe5, 0x99, 0x3a,
++  0x15, 0xac, 0x5b, 0x0d, 0xbd, 0x2a, 0x0e, 0x99, 0x3a, 0x17, 0xa5, 0xe4, 0x99, 0x3a, 0x18, 0xc8,
++  0xa5, 0xe5, 0xdd, 0xcf, 0x0e, 0xf0, 0x0d, 0x9d, 0xcf, 0x0e, 0x99, 0x3a, 0x18, 0xbd, 0x19, 0x10,
++  0x99, 0x3a, 0x17, 0xc8, 0x8c, 0x5b, 0x0d, 0x4c, 0x15, 0x09, 0xad, 0x58, 0x0d, 0x1d, 0x53, 0x0f,
++  0xa8, 0xbd, 0xae, 0x0e, 0x99, 0x3a, 0x14, 0xbd, 0xcf, 0x0e, 0x99, 0x3a, 0x15, 0xfe, 0x74, 0x0f,
++  0xbd, 0x74, 0x0f, 0xc9, 0x08, 0x90, 0x03, 0x20, 0x7c, 0x0c, 0x4c, 0x15, 0x09, 0xac, 0x5b, 0x0d,
++  0xbd, 0x2a, 0x0e, 0x99, 0x3a, 0x17, 0xbd, 0xae, 0x0e, 0x18, 0x7d, 0xf0, 0x0e, 0x9d, 0xae, 0x0e,
++  0x99, 0x3a, 0x18, 0xc8, 0xbd, 0xcf, 0x0e, 0x7d, 0x11, 0x0f, 0xdd, 0xcf, 0x0e, 0xf0, 0x0d, 0x9d,
++  0xcf, 0x0e, 0x99, 0x3a, 0x18, 0xbd, 0x19, 0x10, 0x99, 0x3a, 0x17, 0xc8, 0x8c, 0x5b, 0x0d, 0x4c,
++  0x15, 0x09, 0xa9, 0x04, 0x8d, 0x62, 0x0d, 0xad, 0x5e, 0x0d, 0xc9, 0x01, 0xd0, 0x0e, 0xad, 0x0f,
++  0xdc, 0x4a, 0x90, 0x0a, 0xad, 0x07, 0xdc, 0xcd, 0x09, 0x08, 0x90, 0x02, 0x18, 0x60, 0x38, 0x60,
++  0xbd, 0x64, 0x0d, 0x85, 0xe0, 0xbd, 0x85, 0x0d, 0x85, 0xe1, 0xbd, 0x6c, 0x0e, 0x85, 0xe2, 0xbd,
++  0x8d, 0x0e, 0x85, 0xe3, 0x4c, 0x6e, 0x0a, 0xa0, 0x00, 0xb1, 0xe0, 0xe6, 0xe0, 0xd0, 0x02, 0xe6,
++  0xe1, 0xa4, 0xe0, 0xc4, 0xe2, 0xf0, 0x01, 0x60, 0xa4, 0xe1, 0xc4, 0xe3, 0xf0, 0x01, 0x60, 0x48,
++  0xbc, 0x4b, 0x0e, 0x88, 0x98, 0x9d, 0x4b, 0x0e, 0xb9, 0x3a, 0x10, 0x85, 0xe0, 0xb9, 0x3a, 0x11,
++  0x85, 0xe1, 0xb9, 0x3a, 0x12, 0x85, 0xe2, 0xb9, 0x3a, 0x13, 0x85, 0xe3, 0x68, 0x60, 0xa0, 0x00,
++  0xb1, 0xe0, 0xe6, 0xe0, 0xd0, 0x02, 0xe6, 0xe1, 0xa4, 0xe0, 0xc4, 0xe2, 0xd0, 0x03, 0x20, 0x48,
++  0x0a, 0xc9, 0xe0, 0x90, 0x03, 0x4c, 0x38, 0x0b, 0xbc, 0x09, 0x0e, 0xd0, 0x1a, 0x18, 0x7d, 0x2a,
++  0x0e, 0x85, 0xe4, 0x20, 0x37, 0x0a, 0xac, 0x5b, 0x0d, 0x99, 0x3a, 0x18, 0xa5, 0xe4, 0x99, 0x3a,
++  0x17, 0xee, 0x5b, 0x0d, 0x4c, 0x6e, 0x0a, 0xc9, 0x40, 0xb0, 0x16, 0xe9, 0x1f, 0x9d, 0xf0, 0x0e,
++  0x29, 0x80, 0xf0, 0x02, 0xa9, 0xff, 0x9d, 0x11, 0x0f, 0xa9, 0x01, 0x9d, 0x32, 0x0f, 0x4c, 0xf1,
++  0x0a, 0xc9, 0x48, 0xb0, 0x17, 0xe9, 0x3e, 0x9d, 0x32, 0x0f, 0x20, 0x37, 0x0a, 0x9d, 0xf0, 0x0e,
++  0x29, 0x80, 0xf0, 0x02, 0xa9, 0xff, 0x9d, 0x11, 0x0f, 0x4c, 0xf1, 0x0a, 0xc9, 0x80, 0xf0, 0x25,
++  0xe9, 0x46, 0x9d, 0x32, 0x0f, 0x20, 0x37, 0x0a, 0x9d, 0xf0, 0x0e, 0x20, 0x37, 0x0a, 0x9d, 0x11,
++  0x0f, 0xbd, 0x09, 0x0e, 0x30, 0x06, 0x20, 0x9c, 0x0c, 0x4c, 0x2d, 0x0b, 0x20, 0xb7, 0x0c, 0x20,
++  0x3f, 0x0d, 0x4c, 0x2d, 0x0b, 0x20, 0x37, 0x0a, 0x9d, 0xae, 0x0e, 0x20, 0x37, 0x0a, 0x9d, 0xcf,
++  0x0e, 0x49, 0xff, 0x85, 0xe7, 0xa9, 0x01, 0x9d, 0x32, 0x0f, 0xa9, 0x00, 0x9d, 0xf0, 0x0e, 0x9d,
++  0x11, 0x0f, 0x20, 0xe3, 0x0c, 0xbd, 0x09, 0x0e, 0x10, 0x03, 0x20, 0x3f, 0x0d, 0xa9, 0x01, 0x9d,
++  0xb6, 0x0f, 0x20, 0x32, 0x0c, 0x4c, 0x6e, 0x0a, 0xc9, 0xf0, 0xb0, 0x63, 0xc9, 0xe1, 0xf0, 0x1c,
++  0x90, 0x03, 0x4c, 0x6e, 0x0a, 0x20, 0x37, 0x0a, 0x85, 0xe4, 0x20, 0x37, 0x0a, 0x85, 0xe5, 0x20,
++  0x37, 0x0a, 0x85, 0xe6, 0x20, 0x37, 0x0a, 0x85, 0xe7, 0x4c, 0x6f, 0x0b, 0x20, 0x37, 0x0a, 0x85,
++  0xe4, 0x20, 0x37, 0x0a, 0x85, 0xe5, 0x20, 0x37, 0x0a, 0x85, 0xe6, 0xa9, 0x00, 0x85, 0xe7, 0xbc,
++  0x4b, 0x0e, 0xa5, 0xe0, 0x99, 0x3a, 0x10, 0xa5, 0xe1, 0x99, 0x3a, 0x11, 0xa5, 0xe2, 0x99, 0x3a,
++  0x12, 0xa5, 0xe3, 0x99, 0x3a, 0x13, 0xc8, 0x98, 0x9d, 0x4b, 0x0e, 0xa5, 0xe4, 0x85, 0xe0, 0x18,
++  0x65, 0xe6, 0x85, 0xe2, 0xa5, 0xe5, 0x85, 0xe1, 0x65, 0xe7, 0x85, 0xe3, 0x4c, 0x6e, 0x0a, 0xc9,
++  0xfe, 0x90, 0x17, 0xf0, 0x1a, 0xbd, 0xc7, 0x0d, 0x1d, 0xe8, 0x0d, 0xf0, 0x39, 0xbd, 0xc7, 0x0d,
++  0x85, 0xe0, 0xbd, 0xe8, 0x0d, 0x85, 0xe1, 0x4c, 0x6e, 0x0a, 0xe9, 0xef, 0x4c, 0xc2, 0x0b, 0x20,
++  0x37, 0x0a, 0x38, 0x6d, 0x59, 0x0d, 0xa8, 0xb9, 0x3a, 0x16, 0x9d, 0xa6, 0x0d, 0x8a, 0x99, 0x3a,
++  0x16, 0xa5, 0xe0, 0x9d, 0x64, 0x0d, 0xa5, 0xe1, 0x9d, 0x85, 0x0d, 0xa5, 0xe2, 0x9d, 0x6c, 0x0e,
++  0xa5, 0xe3, 0x9d, 0x8d, 0x0e, 0x60, 0xad, 0x63, 0x0d, 0xd0, 0x2a, 0xee, 0x63, 0x0d, 0xac, 0x5b,
++  0x0d, 0xa9, 0x18, 0x99, 0x3a, 0x17, 0xa9, 0x00, 0x99, 0x3a, 0x18, 0xc8, 0xa9, 0x38, 0x99, 0x3a,
++  0x17, 0xa9, 0x00, 0x99, 0x3a, 0x18, 0xc8, 0xa9, 0x58, 0x99, 0x3a, 0x17, 0xa9, 0x00, 0x99, 0x3a,
++  0x18, 0xc8, 0x8c, 0x5b, 0x0d, 0xa9, 0x00, 0x9d, 0xf0, 0x0e, 0x9d, 0x11, 0x0f, 0xa9, 0x01, 0x9d,
++  0x32, 0x0f, 0x20, 0x7c, 0x0c, 0xa5, 0xe0, 0xd0, 0x02, 0xc6, 0xe1, 0xc6, 0xe0, 0xa9, 0xfe, 0x4c,
++  0xc2, 0x0b, 0xbd, 0x09, 0x0e, 0x30, 0x0e, 0xbd, 0xf0, 0x0e, 0x1d, 0x11, 0x0f, 0xf0, 0x3d, 0xbd,
++  0x09, 0x0e, 0x4c, 0x65, 0x0c, 0xbd, 0x32, 0x0f, 0xc9, 0x01, 0xd0, 0x11, 0xbd, 0xf0, 0x0e, 0x1d,
++  0x11, 0x0f, 0xd0, 0x09, 0xa9, 0x00, 0x9d, 0x74, 0x0f, 0xa9, 0x05, 0xd0, 0x08, 0xbd, 0x09, 0x0e,
++  0x29, 0x7f, 0x18, 0x69, 0x02, 0x9d, 0xf8, 0x0f, 0xbd, 0x95, 0x0f, 0x10, 0x0e, 0xac, 0x5a, 0x0d,
++  0x8a, 0x99, 0xd7, 0x0f, 0x98, 0x9d, 0x95, 0x0f, 0xee, 0x5a, 0x0d, 0x60, 0xbc, 0x95, 0x0f, 0x30,
++  0x1a, 0xce, 0x5a, 0x0d, 0x86, 0xe4, 0xae, 0x5a, 0x0d, 0xbd, 0xd7, 0x0f, 0x99, 0xd7, 0x0f, 0xaa,
++  0x98, 0x9d, 0x95, 0x0f, 0xa6, 0xe4, 0xa9, 0xff, 0x9d, 0x95, 0x0f, 0x60, 0xbd, 0xcf, 0x0e, 0x85,
++  0xe7, 0xbd, 0xae, 0x0e, 0x18, 0x7d, 0xf0, 0x0e, 0x9d, 0xae, 0x0e, 0xbd, 0xcf, 0x0e, 0x7d, 0x11,
++  0x0f, 0x9d, 0xcf, 0x0e, 0x4c, 0xe3, 0x0c, 0xbd, 0x32, 0x0f, 0xc9, 0x01, 0xf0, 0xde, 0xbd, 0xcf,
++  0x0e, 0x85, 0xe7, 0xad, 0x58, 0x0d, 0x38, 0xfd, 0x32, 0x0f, 0x29, 0x07, 0x1d, 0x53, 0x0f, 0xa8,
++  0xb9, 0x3a, 0x14, 0x18, 0x7d, 0xf0, 0x0e, 0x9d, 0xae, 0x0e, 0xb9, 0x3a, 0x15, 0x7d, 0x11, 0x0f,
++  0x9d, 0xcf, 0x0e, 0xac, 0x5b, 0x0d, 0xbd, 0x09, 0x0e, 0x29, 0x7f, 0xc9, 0x02, 0xf0, 0x22, 0xbd,
++  0x2a, 0x0e, 0x99, 0x3a, 0x17, 0xbd, 0xae, 0x0e, 0x99, 0x3a, 0x18, 0xc8, 0xbd, 0xcf, 0x0e, 0xc5,
++  0xe7, 0xf0, 0x0a, 0x99, 0x3a, 0x18, 0xbd, 0x19, 0x10, 0x99, 0x3a, 0x17, 0xc8, 0x8c, 0x5b, 0x0d,
++  0x60, 0xbd, 0x2a, 0x0e, 0x99, 0x3a, 0x17, 0xbd, 0xae, 0x0e, 0x29, 0x07, 0x99, 0x3a, 0x18, 0xc8,
++  0xbd, 0xcf, 0x0e, 0x85, 0xe4, 0xbd, 0xae, 0x0e, 0x46, 0xe4, 0x6a, 0x46, 0xe4, 0x6a, 0x46, 0xe4,
++  0x6a, 0x99, 0x3a, 0x18, 0xbd, 0x19, 0x10, 0x99, 0x3a, 0x17, 0xc8, 0x8c, 0x5b, 0x0d, 0x60, 0xa9,
++  0x00, 0x9d, 0x74, 0x0f, 0xad, 0x58, 0x0d, 0x1d, 0x53, 0x0f, 0xa8, 0xbd, 0xae, 0x0e, 0x99, 0x3a,
++  0x14, 0xbd, 0xcf, 0x0e, 0x99, 0x3a, 0x15, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x01, 0x00,
+ };
+-- 
+2.43.0
+

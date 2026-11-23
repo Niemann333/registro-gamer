@@ -63,7 +63,9 @@ class DivExportRG: public DivROMExport {
     // "play len bytes found at address hi:lo, then come back" (nested up to maxDepth levels).
     // base: address where the result will be loaded. loopTok: command where the loop starts;
     // its offset in the result goes to loopOut.
-    std::vector<unsigned char> pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes=2);
+    // shortRef: refs up to 255 bytes become $E1 lo hi len, and a ref is used whenever it saves a byte
+    // (the deepest nesting used goes to depthOut); tries: earlier copies looked at for each command.
+    std::vector<unsigned char> pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes=2, bool shortRef=false, int* depthOut=NULL, int tries=32, int minGain=1);
     // runs run() in a thread (or directly in the browser, which has no threads here)
     void start();
   public:

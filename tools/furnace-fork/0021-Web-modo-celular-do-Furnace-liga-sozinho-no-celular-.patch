@@ -1,7 +1,7 @@
 From d085d3959c97e41af48501f35ef142bad0f861b2 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 17 Nov 2026 02:57:04 -0300
-Subject: [PATCH 21/33] Web: modo celular do Furnace (liga sozinho no celular,
+Subject: [PATCH 21/34] Web: modo celular do Furnace (liga sozinho no celular,
  menu para alternar)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

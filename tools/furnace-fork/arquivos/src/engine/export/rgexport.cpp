@@ -21,6 +21,8 @@
 #include "../engine.h"
 #include "../ta-log.h"
 #include <map>
+#include <stdlib.h>
+#include <stdio.h>
 #include <unordered_map>
 
 // a song that never ends is cut after this many ticks (1 hour at 60Hz)
@@ -110,6 +112,28 @@ bool DivExportRG::capture(const std::vector<int>& sys) {
     e->extValuePresent=false;
   });
   logAppendf("%d ticks at %.2fHz, loop at tick %d",(int)ticks.size(),tickRate,loopTick);
+#ifndef __EMSCRIPTEN__
+  // debugging aid: RG_DUMP=file saves the captured log (loop tick, rate, then count + sys/addr/val per tick)
+  const char* dumpTo=getenv("RG_DUMP");
+  if (dumpTo!=NULL) {
+    FILE* df=fopen(dumpTo,"wb");
+    if (df!=NULL) {
+      int n=(int)ticks.size();
+      fwrite(&n,4,1,df);
+      fwrite(&loopTick,4,1,df);
+      fwrite(&tickRate,8,1,df);
+      for (std::vector<RGWrite>& t: ticks) {
+        int c=(int)t.size();
+        fwrite(&c,4,1,df);
+        for (RGWrite& w: t) {
+          unsigned int rec[3]={(unsigned int)w.sys,w.addr,w.val};
+          fwrite(rec,4,3,df);
+        }
+      }
+      fclose(df);
+    }
+  }
+#endif
   return ok;
 }
 
@@ -123,7 +147,7 @@ const unsigned char* DivExportRG::sampleMem(int sys, int index, size_t& len) {
   return (const unsigned char*)d->getSampleMem(index);
 }
 
-std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes) {
+std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsigned char>>& tok, int loopTok, unsigned int base, int maxDepth, int& loopOut, int addrBytes, bool shortRef, int* depthOut, int tries, int minGain) {
   size_t n=tok.size();
   // give each distinct command a number
   std::vector<int> id(n), sz(n);
@@ -157,14 +181,14 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
   while (i<n) {
     boundary[i]=(int)out.size();
     if ((int)i==loopTok) loopOut=(int)out.size();
-    int bestBytes=0, bestK=0, bestJ=-1, bestDepth=0;
+    int bestBytes=0, bestK=0, bestJ=-1, bestDepth=0, bestGain=0;
     bool isEnd=(tok[i].size()==1 && tok[i][0]==0xff);
     if (!isEnd && budget>0) {
       std::unordered_map<uint64_t,std::vector<int>>::iterator it=seen.find(keyOf(i));
       if (it!=seen.end()) {
         std::vector<int>& cand=it->second;
-        int tries=0;
-        for (int ci=(int)cand.size()-1; ci>=0 && tries<32; ci--, tries++) {
+        int tried=0;
+        for (int ci=(int)cand.size()-1; ci>=0 && tried<tries; ci--, tried++) {
           int j=cand[ci];
           int k=0, raw=0, depth=0;
           while (i+k<n && j+k<(int)i) {
@@ -181,7 +205,16 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
             if (boundary[j+k]>=0 || j+k==(int)i) {
               int span=((j+k==(int)i)?(int)out.size():boundary[j+k])-boundary[j];
               if (span>65535) break;
-              if (raw>bestBytes && depth+1<=maxDepth) {
+              if (shortRef) {
+                int gain=raw-((span<256)?4:(3+addrBytes));
+                if (gain>bestGain && depth+1<=maxDepth) {
+                  bestGain=gain;
+                  bestBytes=raw;
+                  bestK=k;
+                  bestJ=j;
+                  bestDepth=depth+1;
+                }
+              } else if (raw>bestBytes && depth+1<=maxDepth) {
                 bestBytes=raw;
                 bestK=k;
                 bestJ=j;
@@ -192,16 +225,18 @@ std::vector<unsigned char> DivExportRG::pack(const std::vector<std::vector<unsig
         }
       }
     }
-    if (bestBytes>=8) {
+    if (shortRef?(bestGain>=minGain):(bestBytes>=8)) {
       unsigned int addr=base+boundary[bestJ];
       int span=((bestJ+bestK==(int)i)?(int)out.size():boundary[bestJ+bestK])-boundary[bestJ];
-      out.push_back(0xe0);
+      bool isShort=(shortRef && span<256);
+      out.push_back(isShort?0xe1:0xe0);
       out.push_back(addr&0xff);
       out.push_back((addr>>8)&0xff);
       if (addrBytes>2) out.push_back((addr>>16)&0xff);
       out.push_back(span&0xff);
-      out.push_back(span>>8);
+      if (!isShort) out.push_back(span>>8);
       depthAt[i]=bestDepth;
+      if (depthOut!=NULL && bestDepth>*depthOut) *depthOut=bestDepth;
       seen[keyOf(i)].push_back(i);
       i+=bestK;
     } else {
