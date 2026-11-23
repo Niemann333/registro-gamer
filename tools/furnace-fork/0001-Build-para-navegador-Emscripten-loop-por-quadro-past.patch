@@ -1,7 +1,7 @@
 From 6ce84d3505a9d80358805fee81a5383bc174b49d Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 03:18:40 -0300
-Subject: [PATCH 01/29] Build para navegador (Emscripten): loop por quadro,
+Subject: [PATCH 01/31] Build para navegador (Emscripten): loop por quadro,
  pasta no IndexedDB, seletor de arquivos sem threads
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

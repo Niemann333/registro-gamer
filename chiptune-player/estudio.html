@@ -7295,6 +7295,8 @@ var RGMIDI = (function () {
       if (/SNES/.test(o.system)) outs.push('SPC');
       if (/PlayStation/.test(o.system)) outs.push('PSF');
       if (/Pokey/i.test(o.system)) outs.push('SAP');
+      if (/Game Boy/.test(o.system)) outs.push('GBS');
+      if (/C64|6581|8580/.test(o.system)) outs.push('SID');
       var consoleOut = outs.join(' / ');
       $('fdBody').innerHTML = '<div class="msg" style="text-align:left;line-height:1.7">' +
         '<b>' + esc(o.name) + '</b><br>' +

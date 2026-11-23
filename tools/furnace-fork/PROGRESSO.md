@@ -1,4 +1,4 @@
-# Tracker do blog (fork do Furnace) — onde parou (20/11/2026)
+# Tracker do blog (fork do Furnace) — onde parou (23/11/2026)
 
 Código-fonte: os `.patch` desta pasta, aplicados sobre o Furnace oficial
 (`git clone https://github.com/tildearrow/furnace`, `git checkout $(cat BASE_COMMIT_tildearrow.txt)`, `git am *.patch`).
@@ -18,11 +18,17 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
 - Importação no Studio: PSF agora vai para o chip PlayStation; 2SF → Nintendo DS; GSF → Game Boy + GBA MinMod.
 - Exportação roda sem thread no navegador (`DivExportRG::start`).
 
+- **Exportar GBS** (ROM → "Game Boy GBS"): player SM83 (`gbsdrv.asm`, `scripts/rg-asmgb.py`), log em bancos de 16 KB,
+  timer a 4096 Hz/(256-TMA). 13 demos: 0,96–0,99 no gme; GBS do Pokémon → Tracker → GBS: 0,92.
+- **Exportar SID** (ROM → "Commodore 64 SID"): PSID v4, até 3 SIDs, player 6502 (`siddrv.asm`) com timer da CIA,
+  log comprimido. 6 de 8 demos cabem (limite $1000-$CFFF); conferido pelo ripador do Studio: 0,86–0,95.
+- NSF exportado no navegador = idêntico ao da linha de comando (conferido byte a byte).
+- Descrições e erros dos exportadores em português (po/pt_BR.po).
+
 ## Próximos passos
-1. Conferir no navegador o NSF exportado (arquivo ficou em /home/web_user/east.nsf) e o salvamento/baixar.
-2. Traduzir para português as descrições dos exportadores (po/pt_BR.po).
-3. Exportadores ainda não feitos: GBS, SID (PSID), SAP já existe no Furnace (SAP-R); GSF/2SF (mais difíceis).
-4. Publicar o fork no GitHub (Niemann333/furnace) — GPL: o código do Tracker precisa estar disponível.
+1. Exportadores ainda não feitos: HES (PC Engine), KSS (MSX), AY (ZX Spectrum), GSF/2SF (mais difíceis). SAP já existe (SAP-R).
+2. SID/SPC: usar mais memória (SID: RAM sob a ROM; SPC: compressão melhor).
+3. Publicar o fork no GitHub (Niemann333/furnace) — GPL: o código do Tracker precisa estar disponível.
 
 Fontes dos importadores do Studio: `tools/vgm-timbres.js`, `vgm-fur.js`, `fmt-import.js`, `sid-rip.js`, `estudio.src.html`, `build.py`;
 rg-rip.js: `tools/rip-src/` (gme + aopsf + vio2sf + VBA/playgsf com ganchos).
