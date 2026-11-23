@@ -1,0 +1,1397 @@
+/**
+ * Furnace Tracker - multi-system chiptune tracker
+ * Copyright (C) 2021-2026 tildearrow and contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include "gui.h"
+#include "guiConst.h"
+#include "debug.h"
+#include "IconsFontAwesome4.h"
+#include <inttypes.h>
+#include <fmt/printf.h>
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "misc/cpp/imgui_stdlib.h"
+#include "../engine/bsr.h"
+
+PendingDrawOsc _debugDo;
+static float oscDebugData[2048];
+static int oscDebugLen=800;
+static int oscDebugHeight=400;
+static float oscDebugLineSize=1.0;
+static float oscDebugMin=-1.0;
+static float oscDebugMax=1.0;
+static float oscDebugPower=1.0;
+static int oscDebugRepeat=1;
+static int numApples=1;
+static int getGainChan=0;
+static int getGainVol=0;
+static int ptDebugChan=0;
+static int disDebugChan=0;
+static bool disMultiChannel=false;
+static float rotAngle=0.0f;
+
+static int gcdArg0=0;
+static int gcdArg1=0;
+static int gcdOutput=0;
+static int lcmOutput=0;
+
+static int globalRegDispatch=0;
+static int globalRegIndex=0;
+
+static void _drawOsc(const ImDrawList* drawList, const ImDrawCmd* cmd) {
+  if (cmd!=NULL) {
+    if (cmd->UserCallbackData!=NULL) {
+      ((FurnaceGUI*)(((PendingDrawOsc*)cmd->UserCallbackData)->gui))->runPendingDrawOsc((PendingDrawOsc*)cmd->UserCallbackData);
+    }
+  }
+}
+
+#define DISPATCH_DEBUG(_label,...) \
+  ImGui::TableNextRow(); \
+  ImGui::TableNextColumn(); \
+  ImGui::Text(_label); \
+  for (int i=0; i<e->getTotalChannelCount(); i++) { \
+    SharedChannel* ch=e->getDispatchChanState(i); \
+    ImGui::TableNextColumn(); \
+    if (ch!=NULL) { \
+      ImGui::Text(__VA_ARGS__); \
+    } \
+  }
+
+#define DISPATCH_DEBUG_NULL(_label,_state) \
+  ImGui::TableNextRow(); \
+  ImGui::TableNextColumn(); \
+  ImGui::Text(_label); \
+  for (int i=0; i<e->getTotalChannelCount(); i++) { \
+    SharedChannel* ch=e->getDispatchChanState(i); \
+    ImGui::TableNextColumn(); \
+    if (ch!=NULL) { \
+      if ((_state)==DIV_NOTE_NULL) { \
+        ImGui::Text("null"); \
+      } else { \
+        ImGui::Text("%d",_state); \
+      } \
+    } \
+  }
+
+#define DISPATCH_DEBUG_LED(_label,_state) \
+  ImGui::TableNextRow(); \
+  ImGui::TableNextColumn(); \
+  ImGui::Text(_label); \
+  for (int i=0; i<e->getTotalChannelCount(); i++) { \
+    SharedChannel* ch=e->getDispatchChanState(i); \
+    ImGui::TableNextColumn(); \
+    if (ch!=NULL) { \
+      ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,ImGui::GetColorU32(uiColors[(_state)?GUI_COLOR_TOGGLE_ON:GUI_COLOR_TOGGLE_OFF])); \
+    } \
+  }
+
+#define CHANNEL_DEBUG(_label,...) \
+  ImGui::TableNextRow(); \
+  ImGui::TableNextColumn(); \
+  ImGui::Text(_label); \
+  for (int i=0; i<e->getTotalChannelCount(); i++) { \
+    DivChannelState* ch=e->getChanState(i); \
+    ImGui::TableNextColumn(); \
+    if (ch!=NULL) { \
+      ImGui::Text(__VA_ARGS__); \
+    } \
+  }
+
+#define CHANNEL_DEBUG_LED(_label,_state) \
+  ImGui::TableNextRow(); \
+  ImGui::TableNextColumn(); \
+  ImGui::Text(_label); \
+  for (int i=0; i<e->getTotalChannelCount(); i++) { \
+    DivChannelState* ch=e->getChanState(i); \
+    ImGui::TableNextColumn(); \
+    if (ch!=NULL) { \
+      ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,ImGui::GetColorU32(uiColors[(_state)?GUI_COLOR_TOGGLE_ON:GUI_COLOR_TOGGLE_OFF])); \
+    } \
+  }
+
+void FurnaceGUI::drawDebug() {
+  static int bpOrder;
+  static int bpRow;
+  static int bpTick;
+  static bool bpOn;
+
+  static double ptcClock;
+  static double ptcDivider;
+  static int ptcOctave;
+  static int ptcMode;
+  static int ptcBlockBits;
+
+  static bool oscDebugApplyPos;
+  if (nextWindow==GUI_WINDOW_DEBUG) {
+    debugOpen=true;
+    ImGui::SetNextWindowFocus();
+    nextWindow=GUI_WINDOW_NOTHING;
+  }
+  if (!debugOpen) return;
+  ImGui::SetNextWindowSizeConstraints(ImVec2(100.0f*dpiScale,100.0f*dpiScale),ImVec2(canvasW,canvasH));
+  if (ImGui::Begin("Debug",&debugOpen,globalWinFlags|ImGuiWindowFlags_NoDocking,_("Debug"))) {
+    ImGui::Text("NOTE: use with caution.");
+    if (ImGui::TreeNode("Debug Controls")) {
+      if (e->isHalted()) {
+        if (ImGui::Button("Resume")) e->resume();
+      } else {
+        if (ImGui::Button("Pause")) e->halt();
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Frame Advance")) e->haltWhen(DIV_HALT_TICK);
+      ImGui::SameLine();
+      if (ImGui::Button("Row Advance")) e->haltWhen(DIV_HALT_ROW);
+      ImGui::SameLine();
+      if (ImGui::Button("Pattern Advance")) e->haltWhen(DIV_HALT_PATTERN);
+
+      if (ImGui::Button("Panic")) e->syncReset();
+      ImGui::SameLine();
+      if (ImGui::Button("Abort")) {
+        abort();
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Breakpoint")) {
+      ImGui::InputInt("Order",&bpOrder);
+      ImGui::InputInt("Row",&bpRow);
+      ImGui::InputInt("Tick",&bpTick);
+      ImGui::Checkbox("Enable",&bpOn);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Chip Status")) {
+      ImGui::Text("for best results set latency to minimum or use the Frame Advance button.");
+      ImGui::Columns(e->song.systemLen);
+      for (int i=0; i<e->song.systemLen; i++) {
+        void* ch=e->getDispatch(i);
+        ImGui::TextColored(uiColors[GUI_COLOR_ACCENT_PRIMARY],"Chip %d: %s",i,getSystemName(e->song.system[i]));
+        if (e->song.system[i]==DIV_SYSTEM_NULL) {
+          ImGui::Text("NULL");
+        } else {
+          putDispatchChip(ch,e->song.system[i]);
+        }
+        ImGui::NextColumn();
+      }
+      ImGui::Columns();
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Dispatch Status")) {
+      // NEW CODE.
+      ImGui::Checkbox("Multi channel view",&disMultiChannel);
+
+      if (disMultiChannel) {
+        ImGui::PushFont(patFont);
+        if (ImGui::BeginTable("DisStatus",e->getTotalChannelCount()+1,ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY,ImVec2(ImGui::GetContentRegionAvail().x,ImGui::GetTextLineHeightWithSpacing()*24.0f))) {
+          ImGui::TableSetupColumn(NULL,ImGuiTableColumnFlags_WidthFixed);
+          for (int i=0; i<e->getTotalChannelCount(); i++) {
+            ImGui::TableSetupColumn(NULL,ImGuiTableColumnFlags_WidthFixed,oneChar.x*8.0f);
+          }
+          ImGui::TableSetupScrollFreeze(1,1);
+
+          ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+          ImGui::TableNextColumn();
+          for (int i=0; i<e->getTotalChannelCount(); i++) {
+            ImGui::TableNextColumn();
+            ImGui::Text("%d",i);
+          }
+
+          DISPATCH_DEBUG("freq","%x",ch->freq);
+          DISPATCH_DEBUG("base","%x",ch->baseFreq);
+          DISPATCH_DEBUG("pitch","%+d",ch->pitch);
+          DISPATCH_DEBUG("pitch2","%+d",ch->pitch2);
+          DISPATCH_DEBUG("arpOff","%+d",ch->arpOff);
+          DISPATCH_DEBUG("fixed","%d",ch->baseNoteOverride);
+          DISPATCH_DEBUG_NULL("note",ch->note);
+          DISPATCH_DEBUG_NULL("smpNote",ch->sampleNote);
+          DISPATCH_DEBUG("smpND","%d",ch->sampleNoteDelta);
+          DISPATCH_DEBUG("ins","%d",ch->ins);
+          DISPATCH_DEBUG("vol","%d",ch->vol);
+          DISPATCH_DEBUG("outVol","%d",ch->outVol);
+
+          DISPATCH_DEBUG_LED("active",ch->active);
+          DISPATCH_DEBUG_LED("insChanged",ch->insChanged);
+          DISPATCH_DEBUG_LED("freqChanged",ch->freqChanged);
+          DISPATCH_DEBUG_LED("fixedArp",ch->fixedArp);
+          DISPATCH_DEBUG_LED("keyOn",ch->keyOn);
+          DISPATCH_DEBUG_LED("keyOff",ch->keyOff);
+          DISPATCH_DEBUG_LED("portaPause",ch->portaPause);
+          DISPATCH_DEBUG_LED("inPorta",ch->inPorta);
+          DISPATCH_DEBUG_LED("rawFreq",ch->rawFreq);
+
+          ImGui::EndTable();
+        }
+        ImGui::PopFont();
+      } else {
+        ImGui::InputInt("Channel",&disDebugChan,1,1);
+
+        SharedChannel* ch=e->getDispatchChanState(disDebugChan);
+        if (disDebugChan>=0 && disDebugChan<e->getTotalChannelCount()) {
+          ImGui::TextColored(uiColors[GUI_COLOR_ACCENT_PRIMARY],"%d: dispatch %d, chan %d",disDebugChan,e->song.dispatchOfChan[disDebugChan],e->song.dispatchChanOfChan[disDebugChan]);
+        } else {
+          ImGui::Text("out of range...");
+        }
+
+        ImGui::Separator();
+
+        if (ch==NULL) {
+          ImGui::Text("NULL");
+        } else {
+          ImGui::Text("freq: %x (%d)",ch->freq,ch->freq);
+          ImGui::Indent();
+          ImGui::BeginDisabled(ch->fixedArp);
+          ImGui::Text("base: %x (%d)",ch->baseFreq,ch->baseFreq);
+          ImGui::EndDisabled();
+          ImGui::Text("pitch: %+d",ch->pitch);
+          ImGui::Text("pitch2: %+d",ch->pitch2);
+          ImGui::Unindent();
+
+          ImGui::Text("arp: %s",ch->fixedArp?"FIXED":"RELATIVE");
+          ImGui::Indent();
+          ImGui::BeginDisabled(ch->fixedArp);
+          ImGui::Text("arpOff: %d",ch->arpOff);
+          ImGui::EndDisabled();
+          ImGui::BeginDisabled(!ch->fixedArp);
+          ImGui::Text("baseNoteOverride: %d",ch->baseNoteOverride);
+          ImGui::EndDisabled();
+          ImGui::Unindent();
+
+          ImGui::Text("note: %d",ch->note);
+          ImGui::Indent();
+          ImGui::Text("sampleNote: %d",ch->sampleNote);
+          ImGui::Text("sampleNoteDelta: %d",ch->sampleNoteDelta);
+          ImGui::Unindent();
+
+          ImGui::Text("ins: %d",ch->ins);
+
+          ImGui::Text("vol: %d - %d",ch->vol,ch->outVol);
+
+          if (ImGui::BeginTable("DispatchButtons",3,ImGuiTableFlags_SizingStretchSame)) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->active);
+            ImGui::Button("active",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->insChanged);
+            ImGui::Button("ins change",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->freqChanged);
+            ImGui::Button("freq change",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->fixedArp);
+            ImGui::Button("fixed arp",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->keyOn);
+            ImGui::Button("key on",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->keyOff);
+            ImGui::Button("key off",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->portaPause);
+            ImGui::Button("porta pause",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->inPorta);
+            ImGui::Button("in porta",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::TableNextColumn();
+            pushToggleColors(ch->rawFreq);
+            ImGui::Button("raw freq",ImVec2(ImGui::GetContentRegionAvail().x,0));
+            popToggleColors();
+
+            ImGui::EndTable();
+          }
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Channel Status")) {
+      // NEW CODE
+      ImGui::PushFont(patFont);
+      if (ImGui::BeginTable("ChanStatus",e->getTotalChannelCount()+1,ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY,ImVec2(ImGui::GetContentRegionAvail().x,ImGui::GetTextLineHeightWithSpacing()*30.0f))) {
+        ImGui::TableSetupColumn(NULL,ImGuiTableColumnFlags_WidthFixed);
+        for (int i=0; i<e->getTotalChannelCount(); i++) {
+          ImGui::TableSetupColumn(NULL,ImGuiTableColumnFlags_WidthFixed,oneChar.x*8.0f);
+        }
+        ImGui::TableSetupScrollFreeze(1,1);
+
+        ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+        ImGui::TableNextColumn();
+        for (int i=0; i<e->getTotalChannelCount(); i++) {
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",i);
+        }
+
+        CHANNEL_DEBUG("note","%d",ch->note);
+        CHANNEL_DEBUG("oldNote","%d",ch->oldNote);
+        CHANNEL_DEBUG("lastIns","%d",ch->lastIns);
+        CHANNEL_DEBUG("pitch","%+d",ch->pitch);
+
+        CHANNEL_DEBUG("portaSpeed","%d",ch->portaSpeed);
+        CHANNEL_DEBUG("portaNote","%d",ch->portaNote);
+
+        CHANNEL_DEBUG("volume","%x",ch->volume);
+        CHANNEL_DEBUG("volSpeed","%d",ch->volSpeed);
+        CHANNEL_DEBUG("volSpeedTarget","%x",ch->volSpeedTarget);
+        CHANNEL_DEBUG("volMax","%x",ch->volMax);
+
+        CHANNEL_DEBUG("cut","%d",ch->cut);
+        CHANNEL_DEBUG("volCut","%d",ch->volCut);
+
+        CHANNEL_DEBUG("legatoDelay","%d",ch->legatoDelay);
+        CHANNEL_DEBUG("legatoTarget","%d",ch->legatoTarget);
+
+        CHANNEL_DEBUG("rowDelay","%d",ch->rowDelay);
+        CHANNEL_DEBUG("delayPos","%d:%d",ch->delayOrder,ch->delayRow);
+
+        CHANNEL_DEBUG("retrigSpeed","%d",ch->retrigSpeed);
+        CHANNEL_DEBUG("retrigTick","%d",ch->retrigTick);
+
+        CHANNEL_DEBUG("vibratoDepth","%d",ch->vibratoDepth);
+        CHANNEL_DEBUG("vibratoRate","%d",ch->vibratoRate);
+        CHANNEL_DEBUG("vibratoPos","%d",ch->vibratoPos);
+        CHANNEL_DEBUG("vibratoPosGiant","%d",ch->vibratoPosGiant);
+        CHANNEL_DEBUG("vibratoShape","%d",ch->vibratoShape);
+        CHANNEL_DEBUG("vibratoFine","%d",ch->vibratoFine);
+
+        CHANNEL_DEBUG("tremoloDepth","%d",ch->tremoloDepth);
+        CHANNEL_DEBUG("tremoloRate","%d",ch->tremoloRate);
+        CHANNEL_DEBUG("tremoloPos","%d",ch->tremoloPos);
+
+        CHANNEL_DEBUG("panDepth","%d",ch->panDepth);
+        CHANNEL_DEBUG("panRate","%d",ch->panRate);
+        CHANNEL_DEBUG("panPos","%d",ch->panPos);
+        CHANNEL_DEBUG("panSpeed","%d",ch->panSpeed);
+
+        CHANNEL_DEBUG("sampleOff","%d",ch->sampleOff);
+
+        CHANNEL_DEBUG("arp","%d",ch->arp);
+        CHANNEL_DEBUG("arpStage","%d",ch->arpStage);
+        CHANNEL_DEBUG("arpTicks","%d",ch->arpTicks);
+
+        CHANNEL_DEBUG("panL","%d",ch->panL);
+        CHANNEL_DEBUG("panR","%d",ch->panR);
+        CHANNEL_DEBUG("panRL","%d",ch->panRL);
+        CHANNEL_DEBUG("panRR","%d",ch->panRR);
+
+        CHANNEL_DEBUG("lastVibrato","%d",ch->lastVibrato);
+        CHANNEL_DEBUG("lastPorta","%d",ch->lastPorta);
+        CHANNEL_DEBUG("cutType","%d",ch->cutType);
+
+        CHANNEL_DEBUG_LED("doNote",ch->doNote);
+        CHANNEL_DEBUG_LED("legato",ch->legato);
+        CHANNEL_DEBUG_LED("portaStop",ch->portaStop);
+        CHANNEL_DEBUG_LED("keyOn",ch->keyOn);
+        CHANNEL_DEBUG_LED("keyOff",ch->keyOff);
+        CHANNEL_DEBUG_LED("stopOnOff",ch->stopOnOff);
+        CHANNEL_DEBUG_LED("releasing",ch->releasing);
+        CHANNEL_DEBUG_LED("arpYield",ch->arpYield);
+        CHANNEL_DEBUG_LED("delayLocked",ch->delayLocked);
+        CHANNEL_DEBUG_LED("inPorta",ch->inPorta);
+        CHANNEL_DEBUG_LED("schedSlideReset",ch->scheduledSlideReset);
+        CHANNEL_DEBUG_LED("shorthandPorta",ch->shorthandPorta);
+        CHANNEL_DEBUG_LED("wasShortPorta",ch->wasShorthandPorta);
+        CHANNEL_DEBUG_LED("noteOnInhibit",ch->noteOnInhibit);
+        CHANNEL_DEBUG_LED("resetArp",ch->resetArp);
+        CHANNEL_DEBUG_LED("sampleOffSet",ch->sampleOffSet);
+        CHANNEL_DEBUG_LED("wentThroughNote",ch->wentThroughNote);
+        CHANNEL_DEBUG_LED("goneThroughNote",ch->goneThroughNote);
+
+        ImGui::EndTable();
+      }
+      ImGui::PopFont();
+
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Global Register Debug")) {
+      ImGui::SliderInt("Dispatch",&globalRegDispatch,0,e->song.systemLen-1);
+      ImGui::InputInt("Register Index",&globalRegIndex,1,1);
+
+      DivDispatch* d=e->getDispatch(globalRegDispatch);
+      if (d==NULL) {
+        ImGui::Text("What the actual FUCK is wrong with you.");
+      } else {
+        ImGui::Text("%s",e->getSystemName(e->song.system[globalRegDispatch]));
+        DivGlobalRegState* regState=d->getGlobalRegState(globalRegIndex);
+        if (regState==NULL) {
+          ImGui::Text("You might wanna think about that one for a moment...");
+        } else {
+          ImGui::Text("- name: %s",regState->name);
+          ImGui::Text("- type: %d",regState->type);
+          ImGui::Text("- bits: %d",regState->bits);
+          ImGui::Text("- channels: %d-%d",regState->firstChan,regState->lastChan);
+          ImGui::Text("- combine: %s",regState->combine?"yes":"no");
+          ImGui::Text("- value: %.8x",regState->val);
+          if (regState->bits>0) {
+            ImGui::Text("- bit names/icons:");
+            ImGui::Indent();
+            for (int i=0; i<regState->bits; i++) {
+              ImGui::Text("- %d: %s (%s)",i,_(regState->bitName[i]),regState->bitIcon[i]);
+            }
+            ImGui::Unindent();
+          } else {
+            ImGui::Text("- no bits");
+          }
+          if (regState->chanVal.empty()) {
+            ImGui::Text("- no channel state");
+          } else {
+            ImGui::Text("- channel state:");
+            ImGui::Indent();
+            for (size_t i=0; i<regState->chanVal.size(); i++) {
+              ImGui::Text("- %d: %.8x",(int)i+regState->firstChan,regState->chanVal[i]);
+            }
+            ImGui::Unindent();
+            if (regState->firstChan>regState->lastChan) {
+              ImGui::TextColored(uiColors[GUI_COLOR_ERROR],"ERROR: firstChan is greater than lastChan!");
+            } else if (regState->chanVal.size()!=(size_t)(regState->lastChan-regState->firstChan+1)) {
+              ImGui::TextColored(uiColors[GUI_COLOR_ERROR],"ERROR: size of chanVal is not equal to channel count!");
+            }
+          }
+          ImGui::Text("effective channel: %d",regState->effectiveChan);
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Playback Status")) {
+      String pdi=e->getPlaybackDebugInfo();
+      ImGui::TextWrapped("%s",pdi.c_str());
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("GUI Status")) {
+      ImGui::Text("patScroll: %f",patScroll);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Rotation Test")) {
+      ImDrawList* dl=ImGui::GetForegroundDrawList();
+      ImGui::Text("Rotating...........");
+      drawImage(dl,GUI_IMAGE_ICON,ImVec2(0.5f,0.5f),ImVec2(1.0f,1.0f),rotAngle,ImVec2(0.0f,0.0f),ImVec2(1.0f,1.0f),ImVec4(1.0f,1.0f,1.0f,1.0f));
+      rotAngle+=0.05f;
+      if (rotAngle>2.0*M_PI) rotAngle-=2.0*M_PI;
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Song Timestamps")) {
+      if (ImGui::Button("Recalculate")) {
+        e->calcSongTimestamps();
+      }
+
+      DivSongTimestamps& ts=e->curSubSong->ts;
+
+      String timeFormatted=ts.totalTime.toString(-1,TA_TIME_FORMAT_AUTO);
+      ImGui::Text("song duration: %s (%" PRIu64 " ticks; %d rows)",timeFormatted.c_str(),ts.totalTicks,ts.totalRows);
+      if (ts.isLoopDefined) {
+        ImGui::Text("loop region is defined");
+      } else {
+        ImGui::Text("no loop region");
+      }
+      if (ts.isLoopable) {
+        ImGui::Text("song can loop");
+      } else {
+        ImGui::Text("song will stop");
+      }
+
+      ImGui::Text("loop region: %d:%d - %d:%d",ts.loopStart.order,ts.loopStart.row,ts.loopEnd.order,ts.loopEnd.row);
+      timeFormatted=ts.loopStartTime.toString(-1,TA_TIME_FORMAT_AUTO);
+      ImGui::Text("loop start time: %s",timeFormatted.c_str());
+
+      if (ImGui::TreeNode("Maximum rows")) {
+        for (int i=0; i<e->curSubSong->ordersLen; i++) {
+          ImGui::Text("- Order %d: %d",i,ts.maxRow[i]);
+        }
+        ImGui::TreePop();
+      }
+
+      ImGui::Checkbox("Enable row timestamps (in pattern view)",&debugRowTimestamps);
+
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Macro Int Debug")) {
+      static int ch=0;
+      static int macroIndex=0;
+      ImGui::Text("Damn it, get back to work already!\nMacro indices are the same as macro on/off/restart effect.");
+
+      ImGui::InputInt("Channel...",&ch);
+      ImGui::InputInt("Macro ID...",&macroIndex);
+
+      DivMacroInt* macroInt=e->getMacroInt(ch);
+      if (macroInt==NULL) {
+        ImGui::Text("YAAAAAAAAAAAAAAAAAAAA");
+      } else {
+        DivMacroStruct* macroStruct=macroInt->structByType(macroIndex);
+
+        if (macroStruct==NULL) {
+          ImGui::Text("WAAAAAAAAAAAAAAAAAHHHHH");
+        } else {
+          ImGui::TextColored(macroStruct->has?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"has");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->had?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"had");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->actualHad?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"actualHad");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->finished?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"finished");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->will?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"will");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->linger?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"linger");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->began?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"began");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->masked?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"masked");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->activeRelease?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"activeRelease");
+          ImGui::SameLine();
+          ImGui::TextColored(macroStruct->lfoDir?uiColors[GUI_COLOR_TOGGLE_ON]:uiColors[GUI_COLOR_TOGGLE_OFF],"lfoDir");
+
+          ImGui::Text("mode: %d - type: %d",macroStruct->mode,macroStruct->type);
+          ImGui::Text("macroType: %d",macroStruct->macroType);
+          ImGui::Text("pos: %d - lastPos: %d - delay: %d",macroStruct->pos,macroStruct->lastPos,macroStruct->delay);
+          ImGui::Text("val: %d",macroStruct->val);
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("ROM Export Work")) {
+      ImGui::PushFont(headFont);
+      ImGui::TextUnformatted("Instrument");
+      ImGui::PopFont();
+      if (ImGui::BeginCombo("Type",(insCompileType>=DIV_INS_MAX)?_("Unknown"):_(insTypes[insCompileType][0]))) {
+        for (int i=0; insTypes[i][0]; i++) {
+          if (ImGui::Selectable(insTypes[i][0],insCompileType==i)) {
+            insCompileType=i;
+          }
+        }
+        ImGui::EndCombo();
+      }
+      if (ImGui::Button("Let's Go!")) {
+        openFileDialog(GUI_FILE_EXPORT_COMPILED_INS);
+      }
+      if (ImGui::Button("Export only the current instrument")) {
+        openFileDialog(GUI_FILE_EXPORT_COMPILED_INS_ONE);
+      }
+
+      ImGui::PushFont(headFont);
+      ImGui::TextUnformatted("Sequence");
+      ImGui::PopFont();
+      if (ImGui::Button("Play Command Stream")) nextWindow=GUI_WINDOW_CS_PLAYER;
+
+      ImGui::PushFont(headFont);
+      ImGui::TextUnformatted("Sample Data");
+      ImGui::PopFont();
+      ImGui::InputInt("Chip Index",&sampleCompileDispatch);
+      ImGui::InputInt("Memory Index",&sampleCompileIndex);
+      if (ImGui::Button("Compile Memory")) {
+        openFileDialog(GUI_FILE_EXPORT_COMPILED_SAMPLE);
+      }
+      ImGui::Text("%d bytes (compile to update)",(int)sampleCompileSize);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Sample Debug")) {
+      for (int i=0; i<e->song.sampleLen; i++) {
+        DivSample* sample=e->getSample(i);
+        if (sample==NULL) {
+          ImGui::Text("%d: <NULL!>",i);
+          continue;
+        }
+        if (ImGui::TreeNode(fmt::sprintf("%d: %s",i,sample->name).c_str())) {
+          ImGui::Text("centerRate: %d",sample->centerRate);
+          ImGui::Text("loopStart: %d",sample->loopStart);
+          ImGui::Text("loopEnd: %d", sample->loopEnd);
+          ImGui::Text(sample->loop?"loop: Enabled":"loop: Disabled");
+          if (sampleLoopModes[sample->loopMode]!=NULL) {
+            ImGui::Text("loopMode: %d (%s)",(unsigned char)sample->loopMode,sampleLoopModes[sample->loopMode]);
+          } else {
+            ImGui::Text("loopMode: %d (<NULL!>)",(unsigned char)sample->loopMode);
+          }
+
+          ImGui::Text("depth: %d",(unsigned char)sample->depth);
+          ImGui::Text("length8: %d",sample->length8);
+          ImGui::Text("length16: %d",sample->length16);
+          ImGui::Text("length1: %d",sample->length1);
+          ImGui::Text("lengthDPCM: %d",sample->lengthDPCM);
+          ImGui::Text("lengthZ: %d",sample->lengthZ);
+          ImGui::Text("lengthQSoundA: %d",sample->lengthQSoundA);
+          ImGui::Text("lengthA: %d",sample->lengthA);
+          ImGui::Text("lengthB: %d",sample->lengthB);
+          ImGui::Text("lengthBRR: %d",sample->lengthBRR);
+          ImGui::Text("lengthVOX: %d",sample->lengthVOX);
+
+          ImGui::Text("samples: %d",sample->samples);
+          ImGui::TreePop();
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Master Scope Debug")) {
+      ImVec2 size = ImVec2(ImGui::GetContentRegionAvail().x,240.0f);
+      float peakMin=0.0f, peakMax=0.0f;
+      int oscWidth=e->getAudioDescGot().rate*(oscWindowSize/1000.0);
+      if (ImGui::BeginChild("##scopePlotArea",size)) {
+        ImDrawList* dl=ImGui::GetWindowDrawList();
+        ImVec2 origin=ImGui::GetWindowPos();
+        ImVec2 plot[32768];
+        for (int i=0; i<32768; i++) {
+          int offs=(i+(oscDebugApplyPos?e->oscReadPos:0))&0x7fff;
+          plot[i].x=origin.x+((float)i/32768.0f)*size.x;
+          plot[i].y=origin.y+(1.0f-e->oscBuf[0][offs]/2.0f)*size.y/2.0f;
+          if (e->oscBuf[0][offs]>peakMax) peakMax=e->oscBuf[0][offs];
+          if (e->oscBuf[0][offs]<peakMin) peakMin=e->oscBuf[0][offs];
+        }
+        dl->AddPolyline(plot,32768,ImGui::ColorConvertFloat4ToU32(uiColors[GUI_COLOR_OSC_WAVE]),0,1.0f);
+        if (!oscDebugApplyPos) {
+          dl->AddLine(
+            origin+ImVec2(size.x*e->oscReadPos/32768.0f,0.0f),
+            origin+ImVec2(size.x*e->oscReadPos/32768.0f,size.y),
+            ImGui::ColorConvertFloat4ToU32(uiColors[GUI_COLOR_OSC_GUIDE])|IM_COL32_A_MASK,
+            dpiScale
+          );
+          dl->AddRect(
+            origin+ImVec2(size.x*(e->oscReadPos)/32768.0f,0.25f*size.y),
+            origin+ImVec2(size.x*(e->oscReadPos+oscWidth)/32768.0f,0.75*size.y),
+            ImGui::ColorConvertFloat4ToU32(uiColors[GUI_COLOR_OSC_GUIDE])|IM_COL32_A_MASK,
+            dpiScale
+          );
+        }
+      }
+      ImGui::EndChild();
+      ImGui::Text("read pos: %d\nmin: %f\nmax: %f",e->oscReadPos,peakMin,peakMax);
+      ImGui::Checkbox("center on readPos",&oscDebugApplyPos);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Oscilloscope Debug")) {
+      int c=0;
+      ImGui::Checkbox("FFT debug view",&debugFFT);
+      for (int i=0; i<e->song.systemLen; i++) {
+        DivSystem system=e->song.system[i];
+        if (e->getChannelCount(system)>0) {
+          if (ImGui::TreeNode(fmt::sprintf("%d: %s",i,e->getSystemName(system)).c_str())) {
+            if (ImGui::BeginTable("OscilloscopeTable",5,ImGuiTableFlags_Borders|ImGuiTableFlags_SizingStretchSame)) {
+              ImGui::TableSetupColumn("c0",ImGuiTableColumnFlags_WidthFixed);
+              ImGui::TableSetupColumn("c1",ImGuiTableColumnFlags_WidthFixed);
+              ImGui::TableSetupColumn("c2",ImGuiTableColumnFlags_WidthStretch);
+              ImGui::TableSetupColumn("c3",ImGuiTableColumnFlags_WidthStretch);
+              ImGui::TableSetupColumn("c4",ImGuiTableColumnFlags_WidthStretch);
+
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("Channel");
+              ImGui::TableNextColumn();
+              ImGui::Text("Follow");
+              ImGui::TableNextColumn();
+              ImGui::Text("Needle");
+              ImGui::TableNextColumn();
+              ImGui::Text("Data");
+              ImGui::TableNextColumn();
+              ImGui::Text("I am so bored!");
+
+              for (int j=0; j<e->getChannelCount(system); j++, c++) {
+                DivDispatchOscBuffer* oscBuf=e->getOscBuffer(c);
+                if (oscBuf==NULL) {
+                  ImGui::TableNextRow();
+                  // channel
+                  ImGui::TableNextColumn();
+                  ImGui::Text("%d",j);
+                  ImGui::TableNextColumn();
+                  ImGui::Text("<NULL!>");
+                  continue;
+                }
+                ImGui::TableNextRow();
+                // channel
+                ImGui::TableNextColumn();
+                ImGui::Text("%d",j);
+                // follow
+                ImGui::TableNextColumn();
+                ImGui::Checkbox(fmt::sprintf("##%d_OSCFollow_%d",i,c).c_str(),&oscBuf->follow);
+                // address
+                ImGui::TableNextColumn();
+                unsigned int needle=oscBuf->needle;
+                ImGui::Text("%.8x",needle);
+                // data
+                ImGui::TableNextColumn();
+                ImGui::Text("%d",oscBuf->data[needle>>16]);
+                // save
+                ImGui::TableNextColumn();
+                if (ImGui::Button(fmt::sprintf("Help me!##%d_OSCSaveDamnIt",j).c_str())) {
+                  FILE* f=fopen("/tmp/oscbuf.bin","wb");
+                  if (f==NULL) {
+                    showError(fmt::sprintf("screw this bullshit! it FAILED! %s\nnow I am about to be consumed by the tsunami!\nCOME GET ME FAST, my location is [REDACTED] CQD SOS",strerror(errno)));
+                  } else {
+                    e->synchronized([f,oscBuf]() {
+                      fwrite(oscBuf->data,sizeof(short),65536,f);
+                    });
+                    fclose(f);
+                    showError(fmt::sprintf("DATA WRITTEN TO /tmp/oscbuf.bin\nthe needle was at %.8x during operation ((needle>>16)<<1 = %u for its actual position in the file).\n\nnow go inspect the file and find out who's biting on that stupid triangle before\nyou succumb to the tsunami, tildearrow is stabbed by Codename Redacted and the Furnace factory comes to a\nperennial halt. HURRY UP!!!",needle,needle>>16));
+                  }
+                }
+              }
+              ImGui::EndTable();
+            }
+            ImGui::TreePop();
+          }
+        } else {
+          ImGui::Text("%d: <NULL!>",i);
+          continue;
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("GCD")) {
+      ImGui::InputInt("Arg0",&gcdArg0);
+      ImGui::InputInt("Arg1",&gcdArg1);
+      if (ImGui::Button("Calculate")) {
+        gcdOutput=gcd2(gcdArg0,gcdArg1);
+        if (gcdOutput<1) {
+          lcmOutput=0;
+        } else {
+          lcmOutput=(gcdArg0*gcdArg1)/gcdOutput;
+        }
+      }
+      if (gcdArg0>65535 || gcdArg1>65535) {
+        ImGui::SameLine();
+        ImGui::Text("please don't...");
+      }
+      ImGui::Text("GCD: %d",gcdOutput);
+      ImGui::Text("LCM: %d",lcmOutput);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Touch Point Information")) {
+      ImGui::Text("active:");
+      ImGui::Indent();
+      for (TouchPoint& i: activePoints) {
+        ImGui::Text("- %d: %.1f, %.1f (%.2f)",i.id,i.x,i.y,i.x);
+      }
+      ImGui::Unindent();
+      ImGui::Text("pressed:");
+      ImGui::Indent();
+      for (TouchPoint& i: pressedPoints) {
+        ImGui::Text("- %d: %.1f, %.1f (%.2f)",i.id,i.x,i.y,i.x);
+      }
+      ImGui::Unindent();
+      ImGui::Text("released:");
+      ImGui::Indent();
+      for (TouchPoint& i: releasedPoints) {
+        ImGui::Text("- %d: %.1f, %.1f (%.2f)",i.id,i.x,i.y,i.x);
+      }
+      ImGui::Unindent();
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("TimeMicros Test")) {
+      static TimeMicros testTS;
+      static String testTSIn;
+      String testTSFormatted=testTS.toString();
+      ImGui::Text("Current Value: %s",testTSFormatted.c_str());
+
+      if (ImGui::InputText("fromString",&testTSIn)) {
+        try {
+          testTS=TimeMicros::fromString(testTSIn);
+        } catch (std::invalid_argument& e) {
+          ImGui::Text("COULD NOT! (%s)",e.what());
+        }
+      }
+
+      ImGui::InputInt("seconds",&testTS.seconds);
+      ImGui::InputInt("micros",&testTS.micros);
+
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("New File Picker Test")) {
+      static bool check0, check1, check2, check3, check4, check5;
+
+      ImGui::Checkbox("Modal",&check0);
+      ImGui::Checkbox("No Close",&check1);
+      ImGui::Checkbox("Save",&check2);
+      ImGui::Checkbox("Multi Select",&check3);
+      ImGui::Checkbox("Dir Select",&check4);
+      ImGui::Checkbox("Embeddable",&check5);
+
+      int fpFlags=(
+        (check0?FP_FLAGS_MODAL:0)|
+        (check1?FP_FLAGS_NO_CLOSE:0)|
+        (check2?FP_FLAGS_SAVE:0)|
+        (check3?FP_FLAGS_MULTI_SELECT:0)|
+        (check4?FP_FLAGS_DIR_SELECT:0)|
+        (check5?FP_FLAGS_EMBEDDABLE:0)
+      );
+
+      if (ImGui::Button("Open")) {
+        newFilePicker->open("New File Picker","/home","",fpFlags,
+          {_("songs"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe",
+           _("instruments"), "*.fui *.dmp *.tfi *.vgi *.s3i *.sbi *.opli *.opni *.y12 *.bnk *.ff *.gyb *.opm *.wopl *.wopn",
+           _("audio"), "*.wav",
+           _("all files"), "*"}
+        );
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("File Selection Test")) {
+      if (ImGui::Button("Test Open")) {
+        openFileDialog(GUI_FILE_TEST_OPEN);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Test Open Multi")) {
+        openFileDialog(GUI_FILE_TEST_OPEN_MULTI);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Test Save")) {
+        openFileDialog(GUI_FILE_TEST_SAVE);
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Do Action")) {
+      char bindID[1024];
+      for (int j=0; j<GUI_ACTION_MAX; j++) {
+        if (strcmp(guiActions[j].friendlyName,"")==0) continue;
+        if (strstr(guiActions[j].friendlyName,"---")==guiActions[j].friendlyName) {
+          ImGui::TextUnformatted(guiActions[j].friendlyName);
+        } else {
+          snprintf(bindID,1024,"%s##DO_%d",guiActions[j].friendlyName,j);
+          if (ImGui::Button(bindID)) {
+            doAction(j);
+          }
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Scroll Text Test")) {
+      ImGui::ScrollText(ImGui::GetID("scrolltest1"),"Lorem ipsum, quia dolor sit, amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt, ut labore et dolore magnam aliquam quaerat voluptatem. ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur?",ImGui::GetCursorPos());
+      ImGui::ScrollText(ImGui::GetID("scrolltest2"),"quis autem vel eum iure reprehenderit",ImGui::GetCursorPos());
+      ImGui::ScrollText(ImGui::GetID("scrolltest3"),"qui in ea voluptate velit esse",ImGui::GetCursorPos(),ImVec2(100.0f*dpiScale,0),true);
+      ImGui::ScrollText(ImGui::GetID("scrolltest4"),"quam nihil molestiae consequatur, vel illum, qui dolorem eum fugiat, quo voluptas nulla pariatur?",ImGui::GetCursorPos(),ImVec2(0,0),true);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Vertical Text Test")) {
+      VerticalText("Test");
+      VerticalText("Test 2");
+      ImGui::SameLine();
+      VerticalText("Test 3");
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Pitch Table Debug")) {
+      ImGui::InputInt("Channel",&ptDebugChan,1,1);
+      SharedChannel* ch=e->getDispatchChanState(ptDebugChan);
+      if (ch==NULL) {
+        ImGui::Text("invalid channel or not implemented");
+      } else {
+        DivPitchTable* pt=ch->pitchTable;
+        if (pt==NULL) {
+          ImGui::Text("no pitch table assigned to this channel.");
+        } else {
+          ImGui::Text("%s - %s",pt->period?"period":"frequency",pt->linearity?"linear":"non-linear");
+          ImGui::Text("shift: %d",pt->shift);
+          ImGui::Text("max: %x",pt->maxFreq);
+
+          if (ImGui::BeginTable("PTable",3)) {
+            ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+            ImGui::TableNextColumn();
+            ImGui::Text("note");
+            ImGui::TableNextColumn();
+            ImGui::Text("value");
+            ImGui::TableNextColumn();
+            ImGui::Text("delta (to next)");
+
+            for (int i=0; i<=12; i++) {
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("%s",baseNoteNames[i%12]);
+              ImGui::TableNextColumn();
+              ImGui::Text("%x (%d)",pt->pitch[i],pt->pitch[i]);
+              ImGui::TableNextColumn();
+              if (i<12) {
+                if (pt->pitchDiff[i]<0) {
+                  ImGui::Text("%x (%d)",-pt->pitchDiff[i],pt->pitchDiff[i]);
+                } else {
+                  ImGui::Text("%x (%d)",pt->pitchDiff[i],pt->pitchDiff[i]);
+                }
+              }
+            }
+
+            ImGui::EndTable();
+          }
+        }
+        ImGui::Text("freq: %d (%d%+d)",ch->freq,ch->baseFreq,ch->pitch);
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Pitch Table Calculator")) {
+      ImGui::InputDouble("Clock",&ptcClock);
+      ImGui::InputDouble("Divider/FreqBase",&ptcDivider);
+      ImGui::InputInt("Octave",&ptcOctave);
+      if (ImGui::RadioButton("Frequency",ptcMode==0)) ptcMode=0;
+      ImGui::SameLine();
+      if (ImGui::RadioButton("Period",ptcMode==1)) ptcMode=1;
+      ImGui::SameLine();
+      if (ImGui::RadioButton("FreqNum/Block",ptcMode==2)) ptcMode=2;
+
+      if (ptcMode==2) {
+        if (ImGui::InputInt("FreqNum Bits",&ptcBlockBits)) {
+          if (ptcBlockBits<0) ptcBlockBits=0;
+          if (ptcBlockBits>13) ptcBlockBits=13;
+        }
+      }
+
+      if (ImGui::BeginTable("PitchTable",7)) {
+        ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+        ImGui::TableNextColumn();
+        ImGui::Text("Note");
+        ImGui::TableNextColumn();
+        ImGui::Text("Pitch");
+
+        ImGui::TableNextColumn();
+        ImGui::Text("Base");
+        ImGui::TableNextColumn();
+        ImGui::Text("Hex");
+
+        ImGui::TableNextColumn();
+        ImGui::Text("Final");
+
+        ImGui::TableNextColumn();
+        ImGui::Text("Hex");
+
+        ImGui::TableNextColumn();
+        ImGui::Text("Delta");
+
+        int lastFinal=0;
+        for (int i=0; i<12; i++) {
+          int note=(12*ptcOctave)+i;
+          int pitch=0;
+
+          int base=e->calcBaseFreq(ptcClock,ptcDivider,note,ptcMode==1);
+          int final=e->calcFreq(base,pitch,ptcMode==1,0,0,ptcClock,ptcDivider,(ptcMode==2)?ptcBlockBits:0);
+
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",note);
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",pitch);
+
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",base);
+          ImGui::TableNextColumn();
+          ImGui::Text("%x",base);
+
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",final);
+          ImGui::TableNextColumn();
+          ImGui::Text("%x",final);
+
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",final-lastFinal);
+
+          lastFinal=final;
+        }
+
+        ImGui::EndTable();
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNodeEx("Window Debug",ImGuiTreeNodeFlags_DefaultOpen)) {
+      ImGui::Text("Screen: %dx%d+%d+%d",scrW,scrH,scrX,scrY);
+      ImGui::Text("Screen (Conf): %dx%d+%d+%d",scrConfW,scrConfH,scrConfX,scrConfY);
+      ImGui::Text("Canvas: %dx%d",canvasW,canvasH);
+      ImGui::Text("Maximized: %d",scrMax);
+      ImGui::Text("System Managed Scale: %d",sysManagedScale);
+      ImGui::Text("Input Scale: %f",ImGui::GetIO().InputScale);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Audio Debug")) {
+      TAAudioDesc& audioWant=e->getAudioDescWant();
+      TAAudioDesc& audioGot=e->getAudioDescGot();
+
+      ImGui::Text("want:");
+      ImGui::Text("- name: %s",audioWant.name.c_str());
+      ImGui::Text("- device name: %s",audioWant.deviceName.c_str());
+      ImGui::Text("- rate: %f",audioWant.rate);
+      ImGui::Text("- buffer size: %d",audioWant.bufsize);
+      ImGui::Text("- fragments: %d",audioWant.fragments);
+      ImGui::Text("- inputs: %d",audioWant.inChans);
+      ImGui::Text("- outputs: %d",audioWant.outChans);
+      ImGui::Text("- format: %d",audioWant.outFormat);
+
+      ImGui::Text("got:");
+      ImGui::Text("- name: %s",audioGot.name.c_str());
+      ImGui::Text("- device name: %s",audioGot.deviceName.c_str());
+      ImGui::Text("- rate: %f",audioGot.rate);
+      ImGui::Text("- buffer size: %d",audioGot.bufsize);
+      ImGui::Text("- fragments: %d",audioGot.fragments);
+      ImGui::Text("- inputs: %d",audioGot.inChans);
+      ImGui::Text("- outputs: %d",audioGot.outChans);
+      ImGui::Text("- format: %d",audioGot.outFormat);
+
+      ImGui::Text("last call to nextBuf(): in %d, out %d, size %d",e->lastNBIns,e->lastNBOuts,e->lastNBSize);
+
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("MIDI Debug")) {
+      if (ImGui::Button("Enable Debug (go to log viewer)")) {
+        e->setMidiDebug(true);
+        nextWindow=GUI_WINDOW_LOG;
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Visualizer Debug")) {
+      if (ImGui::BeginTable("visX",3,ImGuiTableFlags_Borders)) {
+        ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+        ImGui::TableNextColumn();
+        ImGui::Text("channel");
+        ImGui::TableNextColumn();
+        ImGui::Text("patChanX");
+        ImGui::TableNextColumn();
+        ImGui::Text("patChanSlideY");
+
+        for (int i=0; i<e->getTotalChannelCount(); i++) {
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          ImGui::Text("%d",i);
+          ImGui::TableNextColumn();
+          ImGui::Text("%f",patChanX[i<<DIV_MAX_COLS_SHIFT]);
+          ImGui::TableNextColumn();
+          ImGui::Text("%f",patChanSlideY[i]);
+        }
+
+        ImGui::EndTable();
+      }
+
+      ImGui::Text("particle count: %d",(int)particles.size());
+
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Playground")) {
+      if (pgSys<0 || pgSys>=e->song.systemLen) pgSys=0;
+      if (ImGui::BeginCombo("Chip",fmt::sprintf("%d. %s",pgSys+1,e->getSystemName(e->song.system[pgSys])).c_str())) {
+        for (int i=0; i<e->song.systemLen; i++) {
+          if (ImGui::Selectable(fmt::sprintf("%d. %s",i+1,e->getSystemName(e->song.system[i])).c_str())) {
+            pgSys=i;
+            break;
+          }
+        }
+        ImGui::EndCombo();
+      }
+      ImGui::Text("Program");
+      if (pgProgram.empty()) {
+        ImGui::Text("-nothing here-");
+      } else {
+        char id[32];
+        for (size_t index=0; index<pgProgram.size(); index++) {
+          DivRegWrite& i=pgProgram[index];
+          snprintf(id,31,"pgw%d",(int)index);
+          ImGui::PushID(id);
+          ImGui::SetNextItemWidth(100.0f*dpiScale);
+          ImGui::InputScalar("##PAddress",ImGuiDataType_U32,&i.addr,NULL,NULL,"%.2X",ImGuiInputTextFlags_CharsHexadecimal);
+          ImGui::SameLine();
+          ImGui::Text("=");
+          ImGui::SameLine();
+          ImGui::SetNextItemWidth(100.0f*dpiScale);
+          ImGui::InputScalar("##PValue",ImGuiDataType_U16,&i.val,NULL,NULL,"%.2X",ImGuiInputTextFlags_CharsHexadecimal);
+          ImGui::SameLine();
+          if (ImGui::Button(ICON_FA_TIMES "##PRemove")) {
+            pgProgram.erase(pgProgram.begin()+index);
+            index--;
+          }
+          ImGui::PopID();
+        }
+      }
+      if (ImGui::Button("Execute")) {
+        e->poke(pgSys,pgProgram);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Clear")) {
+        pgProgram.clear();
+      }
+
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("Address");
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(100.0f*dpiScale);
+      ImGui::InputInt("##PAddress",&pgAddr,0,0,ImGuiInputTextFlags_CharsHexadecimal);
+      ImGui::SameLine();
+      ImGui::Text("Value");
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(100.0f*dpiScale);
+      ImGui::InputInt("##PValue",&pgVal,0,0,ImGuiInputTextFlags_CharsHexadecimal);
+      ImGui::SameLine();
+      if (ImGui::Button("Write")) {
+        e->poke(pgSys,pgAddr,pgVal);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Add")) {
+        pgProgram.push_back(DivRegWrite(pgAddr,pgVal));
+      }
+      if (ImGui::TreeNode("Register Cheatsheet")) {
+        const char** sheet=e->getRegisterSheet(pgSys);
+        if (sheet==NULL) {
+          ImGui::Text("no cheatsheet available for this chip.");
+        } else {
+          if (ImGui::BeginTable("RegisterSheet",2,ImGuiTableFlags_SizingFixedSame)) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("Name");
+            ImGui::TableNextColumn();
+            ImGui::Text("Address");
+            for (int i=0; sheet[i]!=NULL; i+=2) {
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("%s",sheet[i]);
+              ImGui::TableNextColumn();
+              ImGui::Text("$%s",sheet[i+1]);
+            }
+            ImGui::EndTable();
+          }
+        }
+        ImGui::TreePop();
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("ADSR Test Area")) {
+      static int tl, ar, dr, d2r, sl, rr, sus, egt, algOrGlobalSus, instType;
+      static float maxArDr, maxTl, maxRr;
+      ImGui::Text("This window was done out of frustration");
+      drawFMEnv(tl,ar,dr,d2r,rr,sl,sus,egt,algOrGlobalSus,maxTl,maxArDr,maxRr,ImVec2(200.0f*dpiScale,100.0f*dpiScale),instType);
+
+      ImGui::InputInt("tl",&tl);
+      ImGui::InputInt("ar",&ar);
+      ImGui::InputInt("dr",&dr);
+      ImGui::InputInt("d2r",&d2r);
+      ImGui::InputInt("sl",&sl);
+      ImGui::InputInt("rr",&rr);
+      ImGui::InputInt("sus",&sus);
+      ImGui::InputInt("egt",&egt);
+      ImGui::InputInt("algOrGlobalSus",&algOrGlobalSus);
+      ImGui::InputInt("instType",&instType);
+      ImGui::InputFloat("maxArDr",&maxArDr);
+      ImGui::InputFloat("maxTl",&maxTl);
+      ImGui::InputFloat("maxRr",&maxRr);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("FM Preview")) {
+      float asFloat[FM_PREVIEW_SIZE];
+      for (int i=0; i<FM_PREVIEW_SIZE; i++) {
+        asFloat[i]=(float)fmPreview[i]/8192.0f;
+      }
+      ImGui::PlotLines("##DebugFMPreview",asFloat,FM_PREVIEW_SIZE,0,"Preview",-1.0,1.0,ImVec2(300.0f*dpiScale,150.0f*dpiScale));
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Recent Files")) {
+      ImGui::Text("Items: %d - Max: %d",(int)recentFile.size(),settings.maxRecentFile);
+      ImGui::Text("readPos: %d - writePos: %d",(int)recentFile.readPos,(int)recentFile.writePos);
+      ImGui::Indent();
+      for (size_t i=0; i<recentFile.size(); i++) {
+        ImGui::Text("%d: %s",(int)i,recentFile[i].c_str());
+      }
+      ImGui::Unindent();
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Texture Test")) {
+      ImGui::Text("Create and Destroy 128 Textures");
+      if (ImGui::Button("No Write")) {
+        for (int i=0; i<128; i++) {
+          FurnaceGUITexture* t=rend->createTexture(false,2048,2048,true,bestTexFormat);
+          if (t==NULL) {
+            showError(fmt::sprintf(_("Failure! %d"),i));
+            break;
+          }
+          rend->destroyTexture(t);
+        }
+      }
+      if (ImGui::Button("Write (update)")) {
+        unsigned char* data=new unsigned char[2048*2048*4];
+        for (int i=0; i<2048*2048*4; i++) {
+          data[i]=rand();
+        }
+        for (int i=0; i<128; i++) {
+          FurnaceGUITexture* t=rend->createTexture(false,2048,2048,true,bestTexFormat);
+          if (t==NULL) {
+            showError(fmt::sprintf(_("Failure! %d"),i));
+            break;
+          }
+          rend->updateTexture(t,data,2048*4);
+          rend->destroyTexture(t);
+        }
+        delete[] data;
+      }
+      if (ImGui::Button("Write (lock)")) {
+        unsigned char* data=NULL;
+        int pitch=0;
+        for (int i=0; i<128; i++) {
+          FurnaceGUITexture* t=rend->createTexture(false,2048,2048,true,bestTexFormat);
+          if (t==NULL) {
+            showError(fmt::sprintf(_("Failure! %d"),i));
+            break;
+          }
+          if (rend->lockTexture(t,(void**)&data,&pitch)) {
+            for (int i=0; i<2048*2048*4; i++) {
+              data[i]=rand();
+            }
+            rend->unlockTexture(t);
+          }
+          rend->destroyTexture(t);
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Locale Test")) {
+      ImGui::TextUnformatted(_("This is a language test."));
+      ImGui::TextUnformatted(_("This is another language test."));
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Osc Render Test")) {
+      ImGui::InputInt("Length",&oscDebugLen);
+      ImGui::InputInt("Height",&oscDebugHeight);
+      ImGui::InputFloat("Line Size",&oscDebugLineSize);
+      ImGui::InputFloat("Min",&oscDebugMin);
+      ImGui::InputFloat("Max",&oscDebugMax);
+      ImGui::InputFloat("Power",&oscDebugPower);
+      ImGui::InputInt("Repeat",&oscDebugRepeat);
+
+      if (oscDebugLen<1) oscDebugLen=1;
+      if (oscDebugLen>2048) oscDebugLen=2048;
+
+      if (oscDebugHeight<1) oscDebugHeight=1;
+      if (oscDebugHeight>2048) oscDebugHeight=2048;
+
+      memset(oscDebugData,0,2048*sizeof(float));
+      for (int i=0; i<oscDebugLen; i++) {
+        oscDebugData[i]=oscDebugMin+(oscDebugMax-oscDebugMin)*pow((float)((i*oscDebugRepeat)%oscDebugLen)/(float)oscDebugLen,oscDebugPower);
+      }
+
+      if (rend->supportsDrawOsc()) {
+        ImDrawList* dl=ImGui::GetWindowDrawList();
+        ImGuiWindow* window=ImGui::GetCurrentWindow();
+
+        ImVec2 size=ImVec2(oscDebugLen,oscDebugHeight);
+        ImVec2 minArea=window->DC.CursorPos;
+        ImVec2 maxArea=ImVec2(
+          minArea.x+size.x,
+          minArea.y+size.y
+        );
+        ImRect rect=ImRect(minArea,maxArea);
+        ImGuiStyle& style=ImGui::GetStyle();
+        ImGui::ItemSize(size,style.FramePadding.y);
+        if (ImGui::ItemAdd(rect,ImGui::GetID("debugOsc"))) {
+          _debugDo.gui=this;
+          _debugDo.data=oscDebugData;
+          _debugDo.len=oscDebugLen;
+          _debugDo.pos0=rect.Min;
+          _debugDo.pos1=rect.Max;
+          _debugDo.color=ImVec4(1.0,1.0,1.0,1.0);
+          _debugDo.lineSize=dpiScale*oscDebugLineSize;
+
+          dl->AddCallback(_drawOsc,&_debugDo);
+          dl->AddCallback(ImDrawCallback_ResetRenderState,NULL);
+        }
+      } else {
+        ImGui::Text("Render Backend does not support osc rendering.");
+      }
+      ImGui::TreePop();
+    }
+#ifdef HAVE_LOCALE
+    if (ImGui::TreeNode("Plural Form Test")) {
+      ImGui::InputInt("Number",&numApples);
+      ImGui::Text(ngettext("%d apple","%d apples",numApples),numApples);
+      ImGui::TreePop();
+    }
+#endif
+    if (ImGui::TreeNode("Get Gain Test")) {
+      float realVol=e->getGain(getGainChan,getGainVol);
+      ImGui::InputInt("Chan",&getGainChan);
+      ImGui::InputInt("Vol",&getGainVol);
+      ImGui::Text("result: %.0f%%",realVol*100.0f);
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Cursor Undo Debug")) {
+      auto DrawSpot=[&](const CursorJumpPoint& spot) {
+        ImGui::Text("[%d:%d] <%d:%d, %d>", spot.subSong, spot.order, spot.point.xCoarse, spot.point.xFine, spot.point.y);
+      };
+      if (ImGui::BeginChild("##CursorUndoDebugChild", ImVec2(0, 300), ImGuiChildFlags_Borders)) {
+        if (ImGui::BeginTable("##CursorUndoDebug", 2, ImGuiTableFlags_Borders|ImGuiTableFlags_SizingStretchSame)) {
+          for (size_t row=0; row<MAX(cursorUndoHist.size(),cursorRedoHist.size()); ++row) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            if (row<cursorUndoHist.size()) DrawSpot(cursorUndoHist[cursorUndoHist.size()-row-1]);
+            ImGui::TableNextColumn();
+            if (row<cursorRedoHist.size()) DrawSpot(cursorRedoHist[cursorRedoHist.size()-row-1]);
+          }
+          ImGui::EndTable();
+        }
+      }
+      ImGui::EndChild();
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("User Interface")) {
+      if (ImGui::Button("Inspect")) {
+        inspectorOpen=!inspectorOpen;
+      }
+      if (ImGui::Button("Spoiler")) {
+        spoilerOpen=!spoilerOpen;
+      }
+      if (ImGui::Button("Kill Graphics")) {
+        killGraphics=true;
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Performance")) {
+      double perfFreq=SDL_GetPerformanceFrequency()/1000000.0;
+      int lastProcTime=(int)e->processTime/1000;
+      TAAudioDesc& audioGot=e->getAudioDescGot();
+
+      ImGui::Text("video frame: %.0fµs",ImGui::GetIO().DeltaTime*1000000.0);
+      ImGui::Text("audio frame: %.0fµs",1000000.0*(double)audioGot.bufsize/(double)audioGot.rate);
+      ImGui::Separator();
+
+      ImGui::Text("audio: %dµs",lastProcTime);
+      ImGui::Text("render: %.0fµs",(double)renderTimeDelta/perfFreq);
+      ImGui::Text("draw: %.0fµs",(double)drawTimeDelta/perfFreq);
+      ImGui::Text("swap: %.0fµs",(double)swapTimeDelta/perfFreq);
+      ImGui::Text("layout: %.0fµs",(double)layoutTimeDelta/perfFreq);
+      ImGui::Text("event: %.0fµs",(double)eventTimeDelta/perfFreq);
+      ImGui::Separator();
+
+      ImGui::Text("details:");
+      for (int i=0; i<perfMetricsLastLen; i++) {
+        ImGui::Text("%s: %.0fµs",perfMetricsLast[i].name,(double)perfMetricsLast[i].elapsed/perfFreq);
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Settings")) {
+      if (ImGui::Button("Sync")) syncSettings();
+      ImGui::SameLine();
+      if (ImGui::Button("Commit")) willCommit=true;
+      ImGui::SameLine();
+      if (ImGui::Button("Force Load")) e->loadConf();
+      ImGui::SameLine();
+      if (ImGui::Button("Force Save")) e->saveConf();
+      ImGui::TreePop();
+    }
+    ImGui::Text("Song format version %d",e->song.version);
+    ImGui::Text("Furnace version " DIV_VERSION " (%d)",DIV_ENGINE_VERSION);
+  }
+  if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) curWindow=GUI_WINDOW_DEBUG;
+  ImGui::End();
+}
