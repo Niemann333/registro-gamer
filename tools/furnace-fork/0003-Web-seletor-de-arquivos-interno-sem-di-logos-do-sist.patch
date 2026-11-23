@@ -1,7 +1,7 @@
 From 783e04fe3e7c2fc2e5dac068f19d560b67edc0a5 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 03:25:11 -0300
-Subject: [PATCH 03/36] =?UTF-8?q?Web:=20seletor=20de=20arquivos=20interno,?=
+Subject: [PATCH 03/37] =?UTF-8?q?Web:=20seletor=20de=20arquivos=20interno,?=
  =?UTF-8?q?=20sem=20di=C3=A1logos=20do=20sistema;=20fallback=20de=20ngette?=
  =?UTF-8?q?xt=20sem=20locale?=
 MIME-Version: 1.0

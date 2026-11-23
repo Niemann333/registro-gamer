@@ -1,7 +1,7 @@
 From 40b5134655daebc371f83e710a8654cfedc74e73 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 04:28:59 -0300
-Subject: [PATCH 12/36] Web: entrada MIDI pelo Web MIDI do navegador
+Subject: [PATCH 12/37] Web: entrada MIDI pelo Web MIDI do navegador
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01RkyeBarU4jeQnXhRw3i52u

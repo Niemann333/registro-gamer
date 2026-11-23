@@ -221,4 +221,43 @@ void DivEngine::registerROMExports() {
     },
     false, DIV_REQPOL_LAX
   );
+
+  romExportDefs[DIV_ROM_HES]=new DivROMExportDef(
+    "PC Engine HES", "Registro Gamer",
+    "HES export for the PC Engine / TurboGrafx-16.\n"
+    "plays on any HES player (foobar2000, Game Music Emu, the blog's Chiptune Player, etc.).\n"
+    "up to about 1MB of song data.\n"
+    "register dump-based (the song is recorded tick by tick).",
+    "HES files", ".hes",
+    {
+      DIV_SYSTEM_PCE
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_KSS]=new DivROMExportDef(
+    "MSX KSS", "Registro Gamer",
+    "KSS export for the MSX: PSG (AY-3-8910), Konami SCC, FM-PAC (OPLL) and MSX-AUDIO (Y8950).\n"
+    "plays on KSS players (foobar2000, NEZplug, the blog's Chiptune Player, etc.).\n"
+    "up to about 1MB of song data.\n"
+    "register dump-based (the song is recorded tick by tick).",
+    "KSS files", ".kss",
+    {
+      DIV_SYSTEM_AY8910, DIV_SYSTEM_SCC, DIV_SYSTEM_SCC_PLUS, DIV_SYSTEM_OPLL, DIV_SYSTEM_OPLL_DRUMS, DIV_SYSTEM_Y8950, DIV_SYSTEM_Y8950_DRUMS
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_AY]=new DivROMExportDef(
+    "ZX Spectrum AY", "Registro Gamer",
+    "AY (ZXAYEMUL) export for the ZX Spectrum 128: one AY-3-8910.\n"
+    "plays on AY players (foobar2000, AY_Emul, Game Music Emu, the blog's Chiptune Player, etc.).\n"
+    "the song must fit in the Spectrum's memory (about 48KB, compressed).\n"
+    "register dump-based (the song is recorded tick by tick).",
+    "AY files", ".ay",
+    {
+      DIV_SYSTEM_AY8910
+    },
+    false, DIV_REQPOL_LAX
+  );
 }

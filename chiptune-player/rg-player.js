@@ -49,7 +49,7 @@
   var NOSOUND_END_MS = 15000;       // faixa que nunca soou
   var DEFAULT_LEN_MS = 180000;      // duração padrão quando o arquivo não informa
 
-  var EXT_CHIP = /\.(vgm|vgz|gym|spc|nsf|nsfe|gbs|ay|mod|s3m|xm|it|mptm|sid|mid|midi|smf)$/i;
+  var EXT_CHIP = /\.(vgm|vgz|gym|spc|nsf|nsfe|gbs|ay|hes|mod|s3m|xm|it|mptm|sid|mid|midi|smf)$/i;
   var EXT_WOTHKE = {
     psx: /\.(psf|minipsf|psf2|minipsf2)$/i,
     gsf: /\.(gsf|minigsf)$/i,
@@ -414,12 +414,12 @@
     return chipCorePromise;
   }
   function loadChipPlayers() {
-    if (!chipPlayersPromise) chipPlayersPromise = loadScript(BASE + 'chip-players.js').then(function () { return self.RGChipPlayers; });
+    if (!chipPlayersPromise) chipPlayersPromise = loadScript(BASE + 'chip-players.js?v=2').then(function () { return self.RGChipPlayers; });
     return chipPlayersPromise;
   }
   function chipClassFor(ext) {
     if (/^(vgm|vgz|gym)$/.test(ext)) return 'VGMPlayer';
-    if (/^(spc|nsf|nsfe|gbs|ay)$/.test(ext)) return 'GMEPlayer';
+    if (/^(spc|nsf|nsfe|gbs|ay|hes)$/.test(ext)) return 'GMEPlayer';
     if (/^(mod|s3m|xm|it|mptm)$/.test(ext)) return 'XMPPlayer';
     if (ext === 'sid') return 'SIDPlayer';
     return 'MIDIPlayer';

@@ -31,6 +31,9 @@
 #include "export/gbs.h"
 #include "export/sid.h"
 #include "export/snsf.h"
+#include "export/hes.h"
+#include "export/kss.h"
+#include "export/ay.h"
 
 DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
   DivROMExport* exporter=NULL;
@@ -70,6 +73,15 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
       break;
     case DIV_ROM_SNSF:
       exporter=new DivExportSNSF;
+      break;
+    case DIV_ROM_HES:
+      exporter=new DivExportHES;
+      break;
+    case DIV_ROM_KSS:
+      exporter=new DivExportKSS;
+      break;
+    case DIV_ROM_AY:
+      exporter=new DivExportAY;
       break;
     default:
       exporter=new DivROMExport;

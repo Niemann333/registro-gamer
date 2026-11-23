@@ -1,4 +1,4 @@
-# Tracker do blog (fork do Furnace) — onde parou (23/11/2026, noite)
+# Tracker do blog (fork do Furnace) — onde parou (23/11/2026, madrugada)
 
 Código-fonte: os `.patch` desta pasta, aplicados sobre o Furnace oficial
 (`git clone https://github.com/tildearrow/furnace`, `git checkout $(cat BASE_COMMIT_tildearrow.txt)`, `git am *.patch`).
@@ -51,14 +51,33 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
   Exportação no navegador = idêntica à da linha de comando. SPC que não cabe agora sugere SNSF.
 - Player: chiptune-player/rg-snsf.js/.wasm (fonte e build em tools/snsf-player), motor "SNSF" em rg-player.js
   (player.html ?v=18); gadgets (i18n/src chiptune.html e mobile.html) aceitam .snsf/.minisnsf/.snsflib.
-- Próximo: HES (PC Engine), KSS (MSX), AY (ZX Spectrum); depois formatos/ferramentas do OpenMPT (MOD/XM/S3M/IT/MPTM
+- Depois: formatos/ferramentas do OpenMPT (MOD/XM/S3M/IT/MPTM
   para músicas de samples + ferramentas de sample), aprovado pelo usuário. Também: avisos de "adaptar formato" em
   outros exportadores quando aparecerem (pedido do usuário).
 - Pendência de reprodutibilidade: nsfdrv.asm e spcdrv.asm dependem de constantes passadas por fora ao montador
   (os .inc estão certos); colocar as constantes dentro dos .asm.
 
+## HES, KSS e AY — PRONTOS (23/11, madrugada)
+- **HES** (ROM → "PC Engine HES"): hes.cpp + hesdrv.asm (HuC6280, montado com rg-asm6502.py; `tam` como bytes).
+  Driver em $E000, registro em bancos de 8 KB (janela $4000), interrupção do timer com acumulador de 24 bits
+  (~4 chamadas por tique), referências de 24 bits. 10/10 demos de PC Engine: 0,94-0,99 no gme.
+- **KSS** (ROM → "MSX KSS"): kss.cpp + kssdrv.asm (Z80, z80asm + scripts/rg-z80inc.py). PSG, SCC, OPLL e Y8950
+  (com a memória ADPCM enviada no início). Bancos de 8 KB na janela $A000. Clock do AY ajustado ao do MSX
+  (ayconv.h). Cada chamada do PLAY é dividida em passos com espera contada (16+ por quadro), então qualquer taxa de
+  tique toca no tempo certo. Demos de MSX: 0,92-0,99 no libkss (kss2wav).
+- **AY** (ROM → "ZX Spectrum AY"): ay.cpp + aydrv.asm (Z80 em $4100, pilha logo abaixo). ZXAYEMUL v3, um AY,
+  períodos convertidos para 1773400 Hz, mesmo esquema de passos do KSS a 50 Hz. Registro até $FFFF (~48 KB).
+  11/11 demos de AY-3-8910 cabem: 0,95-0,99 no gme. Se não couber, o erro sugere VGM ou KSS.
+- Player: .hes vai para o Game Music Emu (chip-players.js aceita "hes"); .kss continua no NEZplug; .ay já tocava.
+  Gadget do PC aceita .hes (o do celular já aceitava). Studio mostra HES / KSS / AY nos formatos de volta.
+- Traduções em po/pt_BR.po.
+
+## Próximo: OpenMPT
+- Exportar MOD/XM/S3M/IT/MPTM para músicas de samples (Amiga/ES5506/samples genéricos) + ferramentas de sample
+  inspiradas no OpenMPT (aprovado pelo usuário: "o máximo que conseguir").
+
 ## Próximos passos
-1. Exportadores ainda não feitos: HES (PC Engine), KSS (MSX), AY (ZX Spectrum), GSF/2SF (mais difíceis). SAP já existe (SAP-R).
+1. Exportadores ainda não feitos: GSF/2SF (mais difíceis). SAP já existe (SAP-R).
 2. SPC: as músicas que ainda não cabem são as de samples grandes (o limite é a RAM do próprio console).
    → Plano: SNSF (pedido pelo usuário, "SNSF no tracker e player"): ROM de SNES com driver 65816 que manda samples
    pela porta do APU (protocolo IPL) e toca o registro direto da ROM; e tocador de SNSF (snsf9x/snes9x) no

@@ -29,6 +29,9 @@ pequeno programa do próprio console que repete as escritas de registrador grava
 | PSF | PlayStation | [psf.cpp](arquivos/src/engine/export/psf.cpp) | [psfdrv.s](arquivos/src/engine/export/psfdrv.s) (MIPS) |
 | GBS | Game Boy | [gbs.cpp](arquivos/src/engine/export/gbs.cpp) | [gbsdrv.asm](arquivos/src/engine/export/gbsdrv.asm) (SM83) |
 | SID | Commodore 64 (até 3 SIDs) | [sid.cpp](arquivos/src/engine/export/sid.cpp) | [siddrv.asm](arquivos/src/engine/export/siddrv.asm) (6502) |
+| HES | PC Engine / TurboGrafx-16 | [hes.cpp](arquivos/src/engine/export/hes.cpp) | [hesdrv.asm](arquivos/src/engine/export/hesdrv.asm) (HuC6280) |
+| KSS | MSX: PSG, SCC, FM-PAC (OPLL), MSX-AUDIO (Y8950) | [kss.cpp](arquivos/src/engine/export/kss.cpp) | [kssdrv.asm](arquivos/src/engine/export/kssdrv.asm) (Z80) |
+| AY | ZX Spectrum 128 | [ay.cpp](arquivos/src/engine/export/ay.cpp) | [aydrv.asm](arquivos/src/engine/export/aydrv.asm) (Z80) |
 
 A parte comum (gravar a música tique a tique e comprimir) fica em
 [rgexport.cpp](arquivos/src/engine/export/rgexport.cpp).

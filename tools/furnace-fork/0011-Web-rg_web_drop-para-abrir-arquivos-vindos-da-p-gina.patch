@@ -1,7 +1,7 @@
 From f250566ce3ccff58af93c97cc8f291f26aa1d2a8 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 04:16:37 -0300
-Subject: [PATCH 11/36] =?UTF-8?q?Web:=20rg=5Fweb=5Fdrop=20para=20abrir=20a?=
+Subject: [PATCH 11/37] =?UTF-8?q?Web:=20rg=5Fweb=5Fdrop=20para=20abrir=20a?=
  =?UTF-8?q?rquivos=20vindos=20da=20p=C3=A1gina?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

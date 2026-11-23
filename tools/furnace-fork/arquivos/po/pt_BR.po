@@ -23857,3 +23857,48 @@ msgstr "as samples não cabem na RAM de som do SNES: precisam de %d bytes, mas s
 
 msgid "the song is too long for a SNES ROM: %d bytes of data (at most %d)"
 msgstr "a música é longa demais para uma ROM de SNES: %d bytes de dados (no máximo %d)"
+
+msgid "no AY-3-8910 in this song"
+msgstr "não há AY-3-8910 nesta música"
+
+msgid "no MSX chip (AY-3-8910, SCC, OPLL or Y8950) in this song"
+msgstr "não há chip de MSX (AY-3-8910, SCC, OPLL ou Y8950) nesta música"
+
+msgid "no PC Engine chip in this song"
+msgstr "não há chip de PC Engine nesta música"
+
+msgid "the song does not fit in the ZX Spectrum's memory: the log needs %d bytes but only %d are free.\nexport it as VGM instead (it has no size limit), or as KSS if it can be an MSX song."
+msgstr "a música não cabe na memória do ZX Spectrum: o registro precisa de %d bytes, mas só há %d livres.\nexporte em VGM (não tem limite de tamanho), ou em KSS se ela puder ser uma música de MSX."
+
+msgid "the song is too big for a HES (%d KB of the 1016 KB limit)"
+msgstr "a música é grande demais para um HES (%d KB do limite de 1016 KB)"
+
+msgid "the song is too big for a KSS (%d KB of the 1016 KB limit)"
+msgstr "a música é grande demais para um KSS (%d KB do limite de 1016 KB)"
+
+msgid "PC Engine HES"
+msgstr "PC Engine HES"
+
+msgid "HES export for the PC Engine / TurboGrafx-16.\nplays on any HES player (foobar2000, Game Music Emu, the blog's Chiptune Player, etc.).\nup to about 1MB of song data.\nregister dump-based (the song is recorded tick by tick)."
+msgstr "exportação HES para PC Engine / TurboGrafx-16.\ntoca em qualquer player de HES (foobar2000, Game Music Emu, o Chiptune Player do blog etc.).\naté cerca de 1 MB de dados da música.\nfeita a partir das escritas nos registradores (a música é gravada tique a tique)."
+
+msgid "HES files"
+msgstr "arquivos HES"
+
+msgid "MSX KSS"
+msgstr "MSX KSS"
+
+msgid "KSS export for the MSX: PSG (AY-3-8910), Konami SCC, FM-PAC (OPLL) and MSX-AUDIO (Y8950).\nplays on KSS players (foobar2000, NEZplug, the blog's Chiptune Player, etc.).\nup to about 1MB of song data.\nregister dump-based (the song is recorded tick by tick)."
+msgstr "exportação KSS para MSX: PSG (AY-3-8910), SCC da Konami, FM-PAC (OPLL) e MSX-AUDIO (Y8950).\ntoca em players de KSS (foobar2000, NEZplug, o Chiptune Player do blog etc.).\naté cerca de 1 MB de dados da música.\nfeita a partir das escritas nos registradores (a música é gravada tique a tique)."
+
+msgid "KSS files"
+msgstr "arquivos KSS"
+
+msgid "ZX Spectrum AY"
+msgstr "ZX Spectrum AY"
+
+msgid "AY (ZXAYEMUL) export for the ZX Spectrum 128: one AY-3-8910.\nplays on AY players (foobar2000, AY_Emul, Game Music Emu, the blog's Chiptune Player, etc.).\nthe song must fit in the Spectrum's memory (about 48KB, compressed).\nregister dump-based (the song is recorded tick by tick)."
+msgstr "exportação AY (ZXAYEMUL) para ZX Spectrum 128: um AY-3-8910.\ntoca em players de AY (foobar2000, AY_Emul, Game Music Emu, o Chiptune Player do blog etc.).\na música precisa caber na memória do Spectrum (cerca de 48 KB, comprimida).\nfeita a partir das escritas nos registradores (a música é gravada tique a tique)."
+
+msgid "AY files"
+msgstr "arquivos AY"
