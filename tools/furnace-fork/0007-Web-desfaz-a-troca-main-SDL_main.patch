@@ -1,7 +1,7 @@
 From 290c46ec3b22d372d247fa739733205111334e8b Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 03:31:24 -0300
-Subject: [PATCH 07/31] =?UTF-8?q?Web:=20desfaz=20a=20troca=20main=E2=86=92?=
+Subject: [PATCH 07/33] =?UTF-8?q?Web:=20desfaz=20a=20troca=20main=E2=86=92?=
  =?UTF-8?q?SDL=5Fmain?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

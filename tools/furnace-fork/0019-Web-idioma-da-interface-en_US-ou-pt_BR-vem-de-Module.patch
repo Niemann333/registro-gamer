@@ -1,7 +1,7 @@
 From 10c8e650368d19173325d072d176a3991b537d35 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 17 Nov 2026 02:25:26 -0300
-Subject: [PATCH 19/31] Web: idioma da interface (en_US ou pt_BR) vem de
+Subject: [PATCH 19/33] Web: idioma da interface (en_US ou pt_BR) vem de
  Module.rgLang
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

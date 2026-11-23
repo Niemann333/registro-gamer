@@ -18,12 +18,13 @@
  */
 
 // Registro Gamer: SID export (Commodore 64, PSID v4, up to 3 SIDs).
-// the player (siddrv.asm) sits at $1000 and the compressed register log follows it,
-// up to $CFFF. CIA 1 timer A sets the tick rate.
+// the player (siddrv.asm) sits at $0800; the register log follows, split in one stream per
+// voice (plus one for each SID's filter and volume), each compressed, up to $FFF9 (the RAM under
+// I/O and KERNAL is read by switching it in for each byte). CIA 1 timer A sets the tick rate.
 //
 // log format:
 // - $00-$58 vv: write vv to $D400+cmd (2nd SID at $D420, 3rd at $D440)
-// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested)
+// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested up to 3 levels)
 // - $F0-$FD: end of tick, then wait cmd-$F0 more ticks
 // - $FE nn: end of tick, then wait nn more ticks
 // - $FF: jump to the loop point (or stop if the song ends)
@@ -33,11 +34,12 @@
 #include "../ta-log.h"
 #include <fmt/printf.h>
 #include <map>
+#include <stdlib.h>
 
 #include "siddrv.inc"
 
-#define SID_LOAD 0x1000
-#define SID_END 0xd000
+#define SID_LOAD 0x0800
+#define SID_END 0xfffa
 
 typedef std::vector<unsigned char> Tok;
 
@@ -95,17 +97,22 @@ void DivExportSID::run() {
   progress[0].amount=0.5f;
   logAppend("packing the register log...");
 
-  std::vector<Tok> tok;
-  int loopTok=-1, pending=0;
+  // one stream per voice (3 per SID) and one for each SID's filter and volume:
+  // each voice repeats its own patterns, so the streams compress much better than one mixed log
+  int nStr=sys.size()*4;
+  std::vector<std::vector<Tok>> tok(nStr);
+  std::vector<int> pending(nStr,0), loopTok(nStr,-1);
   std::map<unsigned int,unsigned int> last;
   for (size_t t=0; t<ticks.size(); t++) {
     if ((int)t==loopTick) {
-      putWait(tok,pending);
-      pending=0;
-      loopTok=(int)tok.size();
+      for (int k=0; k<nStr; k++) {
+        putWait(tok[k],pending[k]);
+        pending[k]=0;
+        loopTok[k]=(int)tok[k].size();
+      }
       last.clear();
     }
-    std::vector<Tok> f;
+    std::vector<std::vector<Tok>> f(nStr);
     for (RGWrite& w: ticks[t]) {
       if (w.addr>0x18) continue;
       int n=0;
@@ -119,45 +126,59 @@ void DivExportSID::run() {
       Tok c;
       c.push_back(reg);
       c.push_back(w.val&0xff);
-      f.push_back(c);
+      f[n*4+((w.addr<21)?(w.addr/7):3)].push_back(c);
     }
-    if (!f.empty()) {
-      putWait(tok,pending);
-      pending=0;
-      tok.insert(tok.end(),f.begin(),f.end());
+    for (int k=0; k<nStr; k++) {
+      if (!f[k].empty()) {
+        putWait(tok[k],pending[k]);
+        pending[k]=0;
+        tok[k].insert(tok[k].end(),f[k].begin(),f[k].end());
+      }
+      pending[k]++;
     }
-    pending++;
   }
-  putWait(tok,pending);
-  tok.push_back(Tok(1,0xff));
+  size_t nCmds=0;
+  for (int k=0; k<nStr; k++) {
+    putWait(tok[k],pending[k]);
+    tok[k].push_back(Tok(1,0xff));
+    nCmds+=tok[k].size();
+  }
 
-  unsigned int dataStart=SID_LOAD+sizeof(sidDriver);
-  int loopOut=-1;
-  std::vector<unsigned char> log=pack(tok,loopTok,dataStart,8,loopOut);
+  // memory: player at $0800, then the state of each stream (20 bytes), then the streams up to $FFF9
+  unsigned int saveAt=SID_LOAD+sizeof(sidDriver);
+  unsigned int dataStart=saveAt+nStr*20;
+  std::vector<unsigned char> img(sidDriver,sidDriver+sizeof(sidDriver));
+  img.resize(dataStart-SID_LOAD,0);
+  std::vector<unsigned char> log;
+  for (int k=0; k<nStr; k++) {
+    int lo=-1;
+    unsigned int start=dataStart+log.size();
+    std::vector<unsigned char> o=pack(tok[k],loopTok[k],start,3,lo);
+    unsigned char* st=&img[saveAt-SID_LOAD+k*20];
+    st[0]=start&0xff;
+    st[1]=start>>8;
+    if (lo>=0 && loopTick>=0) {
+      st[6]=(start+lo)&0xff;
+      st[7]=(start+lo)>>8;
+    }
+    log.insert(log.end(),o.begin(),o.end());
+  }
   size_t cap=SID_END-dataStart;
-  logAppendf("log: %d commands -> %d bytes (%d bytes free)",(int)tok.size(),(int)log.size(),(int)cap);
+  logAppendf("log: %d commands -> %d bytes (%d bytes free)",(int)nCmds,(int)log.size(),(int)cap);
   if (log.size()>cap) {
     fail(fmt::sprintf(_("the song does not fit in the C64's memory: the log needs %d bytes but only %d are free"),(int)log.size(),(int)cap));
     return;
   }
 
-  std::vector<unsigned char> img(sidDriver,sidDriver+sizeof(sidDriver));
-  img[6]=dataStart&0xff;
-  img[7]=dataStart>>8;
-  if (loopOut>=0) {
-    unsigned int la=dataStart+loopOut;
-    img[8]=la&0xff;
-    img[9]=la>>8;
-    img[10]=1;
-  }
+  img[6]=nStr;
   double clock=pal?985248.0:1022727.0;
   int timer=(int)(clock/tickRate+0.5);
   if (timer>65535) {
     timer=65535;
     logAppend("WARNING: tick rate too low; the song will play faster");
   }
-  img[11]=timer&0xff;
-  img[12]=timer>>8;
+  img[7]=timer&0xff;
+  img[8]=timer>>8;
   img.insert(img.end(),log.begin(),log.end());
 
   // PSID v4 header (big endian)
@@ -179,8 +200,8 @@ void DivExportSID::run() {
   if (sys.size()>1) flags|=(model8580?(2<<6):(1<<6));
   if (sys.size()>2) flags|=(model8580?(2<<8):(1<<8));
   writeBE16(w,flags);
-  w->writeC(0); // start page: let the player find one
-  w->writeC(0); // page length
+  w->writeC(0x04); // start page: the player may use $0400-$07FF (everything else is the song)
+  w->writeC(0x04); // page length
   w->writeC(sys.size()>1?0x42:0); // 2nd SID at $D420
   w->writeC(sys.size()>2?0x44:0); // 3rd SID at $D440
   w->writeC(SID_LOAD&0xff);

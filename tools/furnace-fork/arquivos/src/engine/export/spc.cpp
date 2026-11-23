@@ -21,13 +21,15 @@
 // the SPC is a snapshot of the 64KB sound RAM: the player (spcdrv.asm) sits at $0200,
 // Furnace's sample directory, wavetables and BRR samples start at $0400, and the
 // register log fills the free RAM after the samples (up to the echo buffer).
-// the log is compressed by pointing repeated parts back at earlier ones, so that a
-// song that repeats its patterns fits in the little memory there is.
+// the log is split in 9 streams (one per voice and one for the rest), each compressed by
+// pointing repeated parts back at earlier ones, so that a song fits in the little memory there is.
 //
 // log format:
 // - $00-$7F vv: write vv to DSP register cmd
-// - $82 lo hi nn data...: copy nn bytes to RAM at hi:lo (sample directory, wavetables)
-// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested up to 8 levels)
+// - $82 lo hi nn data...: copy nn bytes to RAM at hi:lo (sample directory)
+// - $83 dl dh sl sh nn: copy nn bytes from sh:sl to dh:dl (wavetables, kept once each in a pool)
+// - $84 / $85: key this stream's voice on / off (written to KON/KOFF at the end of the tick)
+// - $E0 lo hi nl nh: play nh:nl bytes of log found at hi:lo, then come back (nested up to 3 levels)
 // - $F0-$FD: end of tick, then wait cmd-$F0 more ticks
 // - $FE nn: end of tick, then wait nn more ticks
 // - $FF: jump to the loop point (or stop if the song ends)
@@ -37,6 +39,8 @@
 #include "../ta-log.h"
 #include <fmt/printf.h>
 #include <map>
+#include <algorithm>
+#include <stdlib.h>
 
 #include "spcdrv.inc"
 
@@ -96,53 +100,124 @@ void DivExportSPC::run() {
     memcpy(&ram[SPC_TAB],smp,MIN(smpLen,65536-SPC_TAB));
     delete[] smp;
   }
-  size_t dataStart=SPC_TAB+smpLen;
+  // wavetables written while the song plays are kept once each in a pool after the samples
+  size_t poolBase=SPC_TAB+smpLen;
+  std::vector<unsigned char> pool;
+  std::map<Tok,unsigned int> poolIdx;
   std::vector<bool> ramKnown(65536,true);
 
-  // tokens (one command each)
-  std::vector<Tok> tok;
-  int loopTok=-1, pending=0, maxEDL=0;
+  // commands, split in 9 streams: one per voice (its registers, sample directory entry,
+  // wavetable and key on/off) and one for the rest. each voice repeats its own patterns,
+  // so the streams compress much better than one mixed log.
+  #define SPC_STREAMS 9
+  auto streamOf=[](unsigned int a) -> int {
+    if (a>=0x400 && a<0x420) return (a-0x400)>>2;          // sample directory entry of a voice
+    if (a>=0x420 && a<0x420+8*144) return (a-0x420)/144;    // wavetable area of a voice
+    return 8;
+  };
+  std::vector<std::vector<Tok>> tok(SPC_STREAMS);
+  std::vector<int> pending(SPC_STREAMS,0), loopTok(SPC_STREAMS,-1);
+  int maxEDL=0;
   std::map<unsigned int,unsigned int> lastDSP;
   for (size_t t=0; t<ticks.size(); t++) {
     if ((int)t==loopTick) {
-      putWait(tok,pending);
-      pending=0;
-      loopTok=(int)tok.size();
+      for (int k=0; k<SPC_STREAMS; k++) {
+        putWait(tok[k],pending[k]);
+        pending[k]=0;
+        loopTok[k]=(int)tok[k].size();
+      }
       lastDSP.clear();
       for (size_t k=0; k<ramKnown.size(); k++) ramKnown[k]=false;
     }
-    std::vector<Tok> f;
+    std::vector<std::vector<Tok>> f(SPC_STREAMS);
     Tok run;
     unsigned int runStart=0, runNext=0;
+    // a run of RAM writes: long ones (wavetables) are kept once in the pool and copied from there;
+    // short ones (sample directory) are written byte by byte, skipping what is already there
     auto flushRun=[&]() {
       if (run.empty()) return;
+      std::vector<Tok>& out=f[streamOf(runStart)];
+      if (run.size()>=16) {
+        bool same=true;
+        for (size_t k=0; k<run.size(); k++) {
+          if (!ramKnown[runStart+k] || ram[runStart+k]!=run[k]) {
+            same=false;
+            break;
+          }
+        }
+        if (!same) {
+          std::map<Tok,unsigned int>::iterator it=poolIdx.find(run);
+          unsigned int at;
+          if (it==poolIdx.end()) {
+            at=pool.size();
+            poolIdx[run]=at;
+            pool.insert(pool.end(),run.begin(),run.end());
+          } else {
+            at=it->second;
+          }
+          for (size_t k=0; k<run.size(); k+=255) {
+            size_t n=MIN((size_t)255,run.size()-k);
+            unsigned int dst=runStart+k, src=poolBase+at+k;
+            Tok c;
+            c.push_back(0x83);
+            c.push_back(dst&0xff);
+            c.push_back(dst>>8);
+            c.push_back(src&0xff);
+            c.push_back(src>>8);
+            c.push_back(n);
+            out.push_back(c);
+          }
+          for (size_t k=0; k<run.size(); k++) {
+            ram[runStart+k]=run[k];
+            ramKnown[runStart+k]=true;
+          }
+        }
+        run.clear();
+        return;
+      }
       Tok c;
-      c.push_back(0x82);
-      c.push_back(runStart&0xff);
-      c.push_back(runStart>>8);
-      c.push_back(run.size());
-      c.insert(c.end(),run.begin(),run.end());
-      f.push_back(c);
+      for (size_t k=0; k<=run.size(); k++) {
+        bool keep=(k<run.size()) && !(ramKnown[runStart+k] && ram[runStart+k]==run[k]);
+        if (keep) {
+          if (c.empty()) {
+            c.push_back(0x82);
+            c.push_back((runStart+k)&0xff);
+            c.push_back((runStart+k)>>8);
+            c.push_back(0);
+          }
+          c.push_back(run[k]);
+          c[3]++;
+          ram[runStart+k]=run[k];
+          ramKnown[runStart+k]=true;
+        } else if (!c.empty()) {
+          out.push_back(c);
+          c.clear();
+        }
+      }
       run.clear();
     };
     for (RGWrite& w: ticks[t]) {
       if (w.addr<0x80) {
         flushRun();
         if (w.addr==0x7d && (int)(w.val&15)>maxEDL) maxEDL=w.val&15;
-        bool always=(w.addr==0x4c || w.addr==0x5c || w.addr==0x7c);
+        if (w.addr==0x4c || w.addr==0x5c) {
+          // key on/off: each voice sets its own bit; the player writes the masks at the end of the tick
+          for (int v=0; v<8; v++) {
+            if (w.val&(1<<v)) f[v].push_back(Tok(1,(unsigned char)(w.addr==0x4c?0x84:0x85)));
+          }
+          continue;
+        }
+        bool always=(w.addr==0x7c);
         std::map<unsigned int,unsigned int>::iterator it=lastDSP.find(w.addr);
         if (!always && it!=lastDSP.end() && it->second==w.val) continue;
         lastDSP[w.addr]=w.val;
         Tok c;
         c.push_back(w.addr);
         c.push_back(w.val&0xff);
-        f.push_back(c);
+        f[((w.addr&15)<10)?(w.addr>>4):8].push_back(c);
       } else if (w.addr>=0x10000 && w.addr<0x20000) {
         unsigned int a=w.addr&0xffff;
-        if (ramKnown[a] && ram[a]==(w.val&0xff)) continue;
-        ram[a]=w.val&0xff;
-        ramKnown[a]=true;
-        if (run.empty() || a!=runNext || run.size()>=255) {
+        if (run.empty() || a!=runNext || streamOf(a)!=streamOf(runStart)) {
           flushRun();
           runStart=a;
         }
@@ -151,15 +226,19 @@ void DivExportSPC::run() {
       }
     }
     flushRun();
-    if (!f.empty()) {
-      putWait(tok,pending);
-      pending=0;
-      tok.insert(tok.end(),f.begin(),f.end());
+    for (int k=0; k<SPC_STREAMS; k++) {
+      if (!f[k].empty()) {
+        putWait(tok[k],pending[k]);
+        pending[k]=0;
+        tok[k].insert(tok[k].end(),f[k].begin(),f[k].end());
+      }
+      pending[k]++;
     }
-    pending++;
   }
-  putWait(tok,pending);
-  tok.push_back(Tok(1,0xff));
+  for (int k=0; k<SPC_STREAMS; k++) {
+    putWait(tok[k],pending[k]);
+    tok[k].push_back(Tok(1,0xff));
+  }
 
   // the runtime writes went into the image above; start from the initial one again
   {
@@ -171,20 +250,70 @@ void DivExportSPC::run() {
       delete[] s2;
     }
   }
+  size_t dataStart=poolBase+pool.size();
+  if (dataStart<65536) memcpy(&ram[poolBase],pool.data(),MIN(pool.size(),65536-poolBase));
 
-  // compress: repeated runs of commands become references to their first copy
+  // compress each stream: repeated runs of commands become references to their first copy.
+  // the streams are independent, so each goes to whichever free area of RAM it fits in:
+  // after the samples, the tail of RAM above the echo buffer ($F808-$FFFF; the player turns
+  // the boot ROM off) and the gap after the player ($0384-$03FF)
   progress[0].amount=0.7f;
-  int loopOut=-1;
-  std::vector<unsigned char> out=pack(tok,loopTok,dataStart,8,loopOut);
-
   size_t freeEnd=0xf800-maxEDL*2048;
-  size_t cap=(freeEnd>dataStart)?(freeEnd-dataStart):0;
-  logAppendf("samples: %d bytes; log: %d commands -> %d bytes (%d bytes free)",(int)smpLen,(int)tok.size(),(int)out.size(),(int)cap);
-  if (out.size()>cap) {
-    fail(fmt::sprintf(_("the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer. try shorter samples or a shorter song"),(int)out.size(),(int)cap));
-    return;
+  struct Area {
+    size_t start, end, used;
+  };
+  std::vector<Area> areas;
+  if (freeEnd>dataStart) areas.push_back({dataStart,freeEnd,0});
+  areas.push_back({0xf808,0x10000,0});
+  areas.push_back({SPC_DRV+sizeof(spcDriver)+3,SPC_TAB,0});
+  size_t cap=0;
+  for (Area& ar: areas) cap+=ar.end-ar.start;
+
+  std::vector<size_t> sSize(SPC_STREAMS);
+  size_t nCmds=0, total=0;
+  for (int k=0; k<SPC_STREAMS; k++) {
+    int lo=-1;
+    sSize[k]=pack(tok[k],loopTok[k],0,3,lo).size();
+    nCmds+=tok[k].size();
+    total+=sSize[k];
   }
-  memcpy(&ram[dataStart],out.data(),out.size());
+  logAppendf("samples: %d bytes; waves: %d bytes; log: %d commands -> %d bytes (%d bytes free)",(int)smpLen,(int)pool.size(),(int)nCmds,(int)total,(int)cap);
+  // biggest stream first, each in the first area with room
+  std::vector<int> order;
+  for (int k=0; k<SPC_STREAMS; k++) order.push_back(k);
+  std::sort(order.begin(),order.end(),[&](int x, int y) { return sSize[x]>sSize[y]; });
+  std::vector<unsigned int> sStart(SPC_STREAMS,0), sLoop(SPC_STREAMS,0);
+  for (int k: order) {
+    bool placed=false;
+    for (Area& ar: areas) {
+      if (ar.end-ar.start-ar.used>=sSize[k]) {
+        sStart[k]=ar.start+ar.used;
+        ar.used+=sSize[k];
+        placed=true;
+        break;
+      }
+    }
+    if (!placed) {
+      fail(fmt::sprintf(_("the song does not fit in the SNES sound RAM: the log needs %d bytes but only %d are free after the samples and the echo buffer. try shorter samples or a shorter song"),(int)total,(int)cap));
+      return;
+    }
+  }
+  for (int k=0; k<SPC_STREAMS; k++) {
+    int lo=-1;
+    std::vector<unsigned char> o=pack(tok[k],loopTok[k],sStart[k],3,lo);
+    if (lo>=0 && loopTick>=0) sLoop[k]=sStart[k]+lo;
+    memcpy(&ram[sStart[k]],o.data(),o.size());
+  }
+  bool looping=(loopTick>=0);
+
+  // state of each stream (page zero, $30+n*20): pointer, wait, level, count, loop point, ref stack
+  for (int k=0; k<SPC_STREAMS; k++) {
+    unsigned char* st=&ram[0x30+k*20];
+    st[0]=sStart[k]&0xff;
+    st[1]=sStart[k]>>8;
+    st[6]=sLoop[k]&0xff;
+    st[7]=sLoop[k]>>8;
+  }
 
   // player
   memcpy(&ram[SPC_DRV],spcDriver,sizeof(spcDriver));
@@ -195,25 +324,17 @@ void DivExportSPC::run() {
     logAppend("WARNING: tick rate below 31.25Hz; the song will play faster");
   }
   ram[SPC_DRV+4]=timer&0xff;
-  ram[0x3f0]=dataStart&0xff;
-  ram[0x3f1]=dataStart>>8;
-  if (loopOut>=0) {
-    unsigned int la=dataStart+loopOut;
-    ram[0x3f2]=la&0xff;
-    ram[0x3f3]=la>>8;
-    ram[0x3f4]=1;
-  }
 
   // DSP: everything off until the log starts; echo buffer pointed away from the player
   unsigned char dsp[128];
   memset(dsp,0,128);
   dsp[0x6c]=0xe0;
-  dsp[0x6d]=0xff;
+  dsp[0x6d]=0xf8; // echo buffer (4 bytes when off) at $F800, outside the log areas
   dsp[0x5d]=SPC_TAB>>8;
 
   // header
   double secs=(double)ticks.size()/tickRate;
-  if (loopOut>=0 && loopTick>=0) secs=(double)ticks.size()/tickRate+(double)(ticks.size()-loopTick)/tickRate;
+  if (looping) secs=(double)ticks.size()/tickRate+(double)(ticks.size()-loopTick)/tickRate;
   int isecs=(int)(secs+1);
   if (isecs>999) isecs=999;
   unsigned char hdr[256];
@@ -231,7 +352,7 @@ void DivExportSPC::run() {
   putText(&hdr[0x6e],"Registro Gamer",16);
   putText(&hdr[0x7e],"Furnace (Registro Gamer Tracker)",32);
   putText(&hdr[0xa9],fmt::sprintf("%d",isecs),3);
-  putText(&hdr[0xac],(loopOut>=0)?"10000":"0",5);
+  putText(&hdr[0xac],looping?"10000":"0",5);
   putText(&hdr[0xb1],e->song.author,32);
 
   SafeWriter* w=new SafeWriter;

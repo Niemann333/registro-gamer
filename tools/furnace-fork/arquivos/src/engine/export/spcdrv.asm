@@ -1,24 +1,66 @@
-; driver SPC do Tracker do Registro Gamer: a cada tique do timer 0 repete as escritas gravadas no S-DSP
-; o log fica na RAM livre depois dos samples; comandos iguais aos de rgexport (ver spc.cpp)
+; driver SPC do Tracker do Registro Gamer: 9 fluxos de comandos (uma voz cada + 1 geral) tocados a cada tique do timer 0
+; o estado de cada fluxo fica em SAVE+n*20 (ponteiro, espera, pilha das referências, repetição) e é trazido para a página zero
+; comandos: 00-7F vv escreve vv no registrador do DSP · 82 lo hi nn dados… copia para a RAM · 83 dl dh sl sh nn copia de sh:sl
+; 84 liga esta voz (KON) · 85 desliga esta voz (KOFF: pulso no fim do tique, antes do KON) · E0 lo hi nl nh toca nh:nl bytes de hi:lo e volta (até 3 níveis)
+; F0-FD fim do tique e espera cmd-F0 tiques · FE nn espera nn · FF volta à repetição (ou acaba)
 .org $0200
 INIT:
   mov $F1,#$00
   mov $FA,#TIMER
   mov $F1,#$01
-  mov a,!STREAMLO
-  mov PTR,a
-  mov a,!STREAMHI
-  mov PTRH,a
-  mov WAIT,#0
-  mov DEPTH,#0
+  mov KONM,#0
+  mov KOFFM,#0
 main:
   mov a,$FD
   beq main
   mov CNT,a
 fl:
-  call !FRAME
+  call !TICK
   dbnz CNT,fl
   bra main
+TICK:
+  mov SIDX,#0
+  mov VBIT,#1
+  mov y,#0
+tl:
+  mov YSAV,y
+  mov x,#0
+ld:
+  mov a,!SAVE+y
+  mov WORK+x,a
+  inc x
+  inc y
+  cmp x,#20
+  bne ld
+  call !FRAME
+  mov y,YSAV
+  mov x,#0
+sv:
+  mov a,WORK+x
+  mov !SAVE+y,a
+  inc x
+  inc y
+  cmp x,#20
+  bne sv
+  asl VBIT
+  inc SIDX
+  mov a,SIDX
+  cmp a,#9
+  bne tl
+  mov $F2,#$5C
+  mov a,KOFFM
+  mov $F3,a
+  mov x,#20
+kdly:
+  dec x
+  bne kdly
+  mov $F3,#$00
+  mov $F2,#$4C
+  mov a,KONM
+  mov $F3,a
+  mov KONM,#0
+  mov KOFFM,#0
+  ret
 GB:
   mov y,#0
   mov a,[PTR]+y
@@ -59,12 +101,30 @@ next:
   bra next
 notdsp:
   cmp a,#$F0
-  bcs waitop
+  bcc nwait
+  jmp !waitop
+nwait:
+  cmp a,#$84
+  beq kon
+  cmp a,#$85
+  beq koff
   cmp a,#$82
   beq blk
+  cmp a,#$83
+  beq cpy
   cmp a,#$E0
   beq ref
-  jmp !next
+  bra next
+kon:
+  mov a,VBIT
+  or a,KONM
+  mov KONM,a
+  bra next
+koff:
+  mov a,VBIT
+  or a,KOFFM
+  mov KOFFM,a
+  bra next
 blk:
   call !GB
   mov BLO,a
@@ -78,7 +138,26 @@ blkl:
   mov [BLO]+y,a
   incw BLO
   dbnz BCNT,blkl
-  bra next
+  jmp !next
+cpy:
+  call !GB
+  mov BLO,a
+  call !GB
+  mov BHI,a
+  call !GB
+  mov TLO,a
+  call !GB
+  mov THI,a
+  call !GB
+  mov BCNT,a
+cpyl:
+  mov y,#0
+  mov a,[TLO]+y
+  mov [BLO]+y,a
+  incw TLO
+  incw BLO
+  dbnz BCNT,cpyl
+  jmp !next
 ref:
   call !GB
   mov TLO,a
@@ -120,22 +199,19 @@ waitn:
   mov WAIT,a
   ret
 loopop:
-  mov a,!HASLOOP
+  mov a,LOOPL
+  or a,LOOPH
   beq endsong
-  mov a,!LOOPLO
-  mov PTR,a
-  mov a,!LOOPHI
-  mov PTRH,a
+  movw ya,LOOPL
+  movw PTR,ya
   jmp !next
 endsong:
+  mov a,SIDX
+  cmp a,#8
+  bne es2
   mov $F2,#$5C
   mov $F3,#$FF
+es2:
   mov WAIT,#$FF
   decw PTR
   ret
-.org $03F0
-STREAMLO: .byte 0
-STREAMHI: .byte 0
-LOOPLO: .byte 0
-LOOPHI: .byte 0
-HASLOOP: .byte 0

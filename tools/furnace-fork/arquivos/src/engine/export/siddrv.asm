@@ -1,32 +1,55 @@
-; driver SID do Tracker do Registro Gamer: a cada interrupção do timer A da CIA 1 repete as escritas gravadas no SID
+; driver SID do Tracker do Registro Gamer: um fluxo de comandos por voz (3 por SID) + 1 geral por SID,
+; tocados a cada interrupção do timer A da CIA 1. o estado de cada fluxo fica em SAVE+n*20 e é trazido para a página zero.
+; os dados podem ficar de $0800 até $FFF9: a leitura liga a RAM toda ($01=$34) só durante o byte lido.
 ; comandos: 00-58 vv escreve vv em D400+cmd (SID 2 em D420, SID 3 em D440) · E0 lo hi nl nh toca nh:nl bytes de hi:lo e volta
-; F0-FD fim do tique e espera cmd-F0 tiques · FE nn espera nn · FF repete/acaba
-.org $1000
+; F0-FD fim do tique e espera cmd-F0 tiques · FE nn espera nn · FF volta à repetição (ou acaba)
+.org $0800
   jmp INIT
   jmp PLAY
-STREAMLO: .byte 0
-STREAMHI: .byte 0
-LOOPLO: .byte 0
-LOOPHI: .byte 0
-HASLOOP: .byte 0
+NSTR: .byte 0
 TIMERLO: .byte 0
 TIMERHI: .byte 0
 INIT:
-  lda STREAMLO
-  sta PTR
-  lda STREAMHI
-  sta PTRH
-  lda #0
-  sta WAIT
-  sta DEPTH
   lda TIMERLO
   sta $DC04
   lda TIMERHI
   sta $DC05
   rts
+PLAY:
+  ldx #0
+  stx SIDX
+tl:
+  stx XSAV
+  ldy #0
+ld:
+  lda SAVE,x
+  sta WORK,y
+  inx
+  iny
+  cpy #20
+  bne ld
+  jsr FRAME
+  ldx XSAV
+  ldy #0
+sv:
+  lda WORK,y
+  sta SAVE,x
+  inx
+  iny
+  cpy #20
+  bne sv
+  inc SIDX
+  lda SIDX
+  cmp NSTR
+  bne tl
+  rts
 GB:
   ldy #0
+  ldx $01
+  lda #$34
+  sta $01
   lda (PTR),y
+  stx $01
   inc PTR
   bne gb1
   inc PTRH
@@ -58,7 +81,7 @@ gb2:
 gbe:
   pla
   rts
-PLAY:
+FRAME:
   lda WAIT
   beq next
   dec WAIT
@@ -74,16 +97,18 @@ next:
   cmp #$FE
   bcc waitk
   beq waitn
-  lda HASLOOP
+  lda LOOPL
+  ora LOOPH
   beq endsong
-  lda LOOPLO
+  lda LOOPL
   sta PTR
-  lda LOOPHI
+  lda LOOPH
   sta PTRH
   jmp next
 reg:
-  tax
+  sta REGT
   jsr GB
+  ldx REGT
   sta $D400,x
   jmp next
 ref:
@@ -139,3 +164,4 @@ endsong:
 es1:
   dec PTR
   rts
+SAVE:

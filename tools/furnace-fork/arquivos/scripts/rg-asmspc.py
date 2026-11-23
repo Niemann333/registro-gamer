@@ -2,6 +2,14 @@
 import re
 # padrão -> (opcode, ordem dos operandos)   d=byte de página direta, i=imediato, a=endereço absoluto 16 bits, r=desvio relativo
 PAT=[
+ (r'inc x$', 0x3D, ''),
+ (r'dec x$', 0x1D, ''),
+ (r'inc y$', 0xFC, ''),
+ (r'cmp x,#(.+)$', 0xC8, 'i'),
+ (r'mov a,!(.+)\+y$', 0xF6, 'a'),
+ (r'mov !(.+)\+y,a$', 0xD6, 'a'),
+ (r'or a,([\w$]+)$', 0x04, 'd'),
+ (r'mov ([\w$]+),y$', 0xCB, 'd'),
  (r'mov x,a$',         0x5D, ''),
  (r'mov ([\w$]+)\+x,a$', 0xD4, 'd'),
  (r'mov a,([\w$]+)\+x$', 0xF4, 'd'),
@@ -37,6 +45,8 @@ PAT=[
  (r'setc$',            0x80, ''),
  (r'sbc a,#(.+)$',     0xA8, 'i'),
  (r'jmp !(.+)$',       0x5F, 'a'),
+ (r'asl ([\w$]+)$', 0x0B, 'd'),
+ (r'mov y,([\w$]+)$', 0xEB, 'd'),
 ]
 def assemble(src,org,consts):
   lines=[]
