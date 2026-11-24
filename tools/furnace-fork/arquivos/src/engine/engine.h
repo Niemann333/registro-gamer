@@ -1552,6 +1552,13 @@ class DivEngine {
 
     // dispatch a command
     int dispatchCmd(DivCommand c);
+    // Registro Gamer: headless player for the Chiptune Player (rgplay.cpp)
+    // starts the current subsong from the beginning, rendering at rate
+    bool rgPlayStart(int rate);
+    // renders n stereo frames; returns false once the song has stopped (FFxx)
+    bool rgPlayRender(float* l, float* r, unsigned int n);
+    // length (seconds), loop start (seconds) and whether the song loops
+    void rgPlayTimes(double& total, double& loopStart, bool& loops);
     // Registro Gamer: called with every command sent to the chips (set by the module exporter)
     std::function<void(const DivCommand&)> rgCmdHook;
 

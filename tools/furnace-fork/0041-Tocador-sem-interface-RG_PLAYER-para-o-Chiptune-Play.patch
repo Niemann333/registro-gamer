@@ -1,0 +1,351 @@
+From 47a76fea72ff9b57fc02483415b8e2ac9759e10f Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 04:13:59 -0300
+Subject: [PATCH 41/41] Tocador sem interface (RG_PLAYER) para o Chiptune
+ Player: toca .fur, .dmf, .ftm, .0cc, .dnm, .eft, .tfm/.tfe, .fc com o motor
+ do Furnace
+
+---
+ CMakeLists.txt          |  17 +++-
+ src/engine/engine.h     |   7 ++
+ src/engine/filePlayer.h |   1 +
+ src/engine/rgplay.cpp   |  55 +++++++++++++
+ src/fileutils/cfile.cpp |   1 +
+ src/rgplayer.cpp        | 172 ++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 251 insertions(+), 2 deletions(-)
+ create mode 100644 src/engine/rgplay.cpp
+ create mode 100644 src/rgplayer.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e4e48e4..cbce39f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -148,6 +148,7 @@ option(CONSOLE_SUBSYSTEM "Build Furnace with Console subsystem on Windows" OFF)
+ option(FORCE_CODEVIEW "Force -gcodeview on MinGW GCC" OFF)
+ option(FLATPAK_WORKAROUNDS "Enable Flatpak-specific workaround for system file picker" OFF)
+ option(NO_INTRO "Disable intro animation entirely" OFF)
++option(RG_PLAYER "Registro Gamer: build only the headless player library for the Chiptune Player" OFF)
+ option(ORIG_NDS_CORE "Use original NDS emulation core (no acquireDirect)" OFF)
+ if (APPLE)
+   option(FORCE_APPLE_BIN "Force enable binary installation to /bin" OFF)
+@@ -836,6 +837,7 @@ src/engine/pitchTable.cpp
+ src/engine/playback.cpp
+ src/engine/sample.cpp
+ src/engine/rgsampletools.cpp
++src/engine/rgplay.cpp
+ src/engine/song.cpp
+ src/engine/sysDef.cpp
+ src/engine/wavetable.cpp
+@@ -1350,7 +1352,11 @@ if (WITH_LOCALE)
+   endif()
+ endif()
+ 
+-set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} ${CLI_SOURCES} src/main.cpp)
++if (RG_PLAYER)
++  set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} src/rgplayer.cpp)
++else()
++  set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} ${CLI_SOURCES} src/main.cpp)
++endif()
+ 
+ if (USE_BACKWARD)
+   list(APPEND USED_SOURCES src/backtrace.cpp)
+@@ -1470,7 +1476,14 @@ endif()
+ target_include_directories(${FURNACE} SYSTEM PRIVATE ${DEPENDENCIES_INCLUDE_DIRS})
+ target_compile_options(${FURNACE} PRIVATE ${DEPENDENCIES_COMPILE_OPTIONS})
+ target_link_libraries(${FURNACE} PRIVATE ${DEPENDENCIES_LIBRARIES})
+-if (EMSCRIPTEN)
++if (EMSCRIPTEN AND RG_PLAYER)
++  # Registro Gamer: só o tocador, para o Chiptune Player
++  target_link_options(${FURNACE} PRIVATE
++    "SHELL:-sMODULARIZE=1" "SHELL:-sEXPORT_NAME=RGFUR" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=67108864"
++    "SHELL:-sTOTAL_STACK=2097152" "SHELL:-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,stringToUTF8,HEAPF32,HEAPF64,HEAPU8"
++    "SHELL:-sEXPORTED_FUNCTIONS=_malloc,_free" "-fexceptions" "SHELL:-sEXIT_RUNTIME=0" "SHELL:-sENVIRONMENT=web,worker,node"
++    "SHELL:-sFILESYSTEM=1")
++elseif (EMSCRIPTEN)
+   # Registro Gamer: build para navegador
+   target_link_options(${FURNACE} PRIVATE
+     "SHELL:-sASYNCIFY" "SHELL:-sASYNCIFY_STACK_SIZE=131072" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=134217728"
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 8202c14..dae161c 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -1552,6 +1552,13 @@ class DivEngine {
+ 
+     // dispatch a command
+     int dispatchCmd(DivCommand c);
++    // Registro Gamer: headless player for the Chiptune Player (rgplay.cpp)
++    // starts the current subsong from the beginning, rendering at rate
++    bool rgPlayStart(int rate);
++    // renders n stereo frames; returns false once the song has stopped (FFxx)
++    bool rgPlayRender(float* l, float* r, unsigned int n);
++    // length (seconds), loop start (seconds) and whether the song loops
++    void rgPlayTimes(double& total, double& loopStart, bool& loops);
+     // Registro Gamer: called with every command sent to the chips (set by the module exporter)
+     std::function<void(const DivCommand&)> rgCmdHook;
+ 
+diff --git a/src/engine/filePlayer.h b/src/engine/filePlayer.h
+index b3a8b74..6de3fcb 100644
+--- a/src/engine/filePlayer.h
++++ b/src/engine/filePlayer.h
+@@ -20,6 +20,7 @@
+ #ifndef _FILEPLAYER_H
+ #define _FILEPLAYER_H
+ 
++#include <climits>
+ #include "../ta-utils.h"
+ #include "../timeutils.h"
+ #include <thread>
+diff --git a/src/engine/rgplay.cpp b/src/engine/rgplay.cpp
+new file mode 100644
+index 0000000..3afd5ff
+--- /dev/null
++++ b/src/engine/rgplay.cpp
+@@ -0,0 +1,55 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: headless playback used by the Chiptune Player build (rgplayer.cpp).
++
++#include "engine.h"
++
++bool DivEngine::rgPlayStart(int rate) {
++  stop();
++  repeatPattern=false;
++  setOrder(0);
++  remainingLoops=-1;
++  got.rate=rate;
++  quitDispatch();
++  initDispatch(true);
++  renderSamplesP();
++  playSub(false);
++  freelance=false;
++  return playing;
++}
++
++bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
++  float* out[2]={l,r};
++  for (unsigned int i=0; i<n; i++) {
++    l[i]=0;
++    r[i]=0;
++  }
++  if (!playing) return false;
++  nextBuf(NULL,out,0,2,n,true);
++  return playing;
++}
++
++void DivEngine::rgPlayTimes(double& total, double& loopStart, bool& loops) {
++  calcSongTimestamps();
++  DivSongTimestamps& ts=curSubSong->ts;
++  total=ts.totalTime.toDouble();
++  loops=ts.isLoopable;
++  loopStart=loops?ts.loopStartTime.toDouble():total;
++}
+diff --git a/src/fileutils/cfile.cpp b/src/fileutils/cfile.cpp
+index 13208cd..40d1b33 100644
+--- a/src/fileutils/cfile.cpp
++++ b/src/fileutils/cfile.cpp
+@@ -17,6 +17,7 @@
+  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
+ 
++#include <string.h>
+ #include "../fileutils.h"
+ 
+ // the only implementation for now
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+new file mode 100644
+index 0000000..f7904b6
+--- /dev/null
++++ b/src/rgplayer.cpp
+@@ -0,0 +1,172 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++// Registro Gamer: Furnace's engine as a module player for the blog's Chiptune Player.
++// plays everything Furnace opens: .fur, .dmf, .ftm, .0cc, .dnm, .eft, .tfm, .tfe, .fc, .mod, .s3m, .xm, .it...
++// built with -DRG_PLAYER=ON (no interface, no audio backend: the page asks for audio with rgf_render).
++
++#include "engine/engine.h"
++#include "ta-log.h"
++#include <string.h>
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#define RGF_EXPORT extern "C" EMSCRIPTEN_KEEPALIVE
++#else
++#define RGF_EXPORT extern "C"
++#endif
++
++// main.cpp is not part of this build
++void reportError(String what) {
++  logE("%s",what);
++}
++
++static DivEngine* e=NULL;
++static int sampleRate=44100;
++static String strBuf;
++
++RGF_EXPORT int rgf_init(int rate) {
++  if (e!=NULL) return 1;
++  sampleRate=rate;
++  logLevel=LOGLEVEL_WARN;
++  e=new DivEngine;
++  e->setAudio(DIV_AUDIO_DUMMY);
++  e->setView(DIV_STATUS_NOTHING);
++  e->preInit(true);
++  if (!e->init()) return 0;
++  return 1;
++}
++
++// data is copied; nameHint helps with formats that have no magic (.tfe, .mod)
++RGF_EXPORT int rgf_load(const unsigned char* data, int len, const char* nameHint) {
++  if (e==NULL || len<=0) return 0;
++  unsigned char* buf=new unsigned char[len];
++  memcpy(buf,data,len);
++  if (!e->load(buf,len,nameHint)) {
++    return 0;
++  }
++  return e->rgPlayStart(sampleRate)?1:0;
++}
++
++RGF_EXPORT const char* rgf_error() {
++  strBuf=(e==NULL)?String("not initialized"):e->getLastError();
++  return strBuf.c_str();
++}
++
++RGF_EXPORT int rgf_subsongs() {
++  return (e==NULL)?0:(int)e->song.subsong.size();
++}
++
++RGF_EXPORT int rgf_subsong(int i) {
++  if (e==NULL || i<0 || i>=(int)e->song.subsong.size()) return 0;
++  e->changeSongP(i);
++  return e->rgPlayStart(sampleRate)?1:0;
++}
++
++RGF_EXPORT int rgf_restart() {
++  return (e!=NULL && e->rgPlayStart(sampleRate))?1:0;
++}
++
++// renders n frames into l and r; returns 0 when the song has stopped
++RGF_EXPORT int rgf_render(float* l, float* r, int n) {
++  if (e==NULL) return 0;
++  return e->rgPlayRender(l,r,n)?1:0;
++}
++
++// times in milliseconds: [total, loop start, loops (0/1)]
++RGF_EXPORT void rgf_times(double* out) {
++  double total=0, loopStart=0;
++  bool loops=false;
++  if (e!=NULL) e->rgPlayTimes(total,loopStart,loops);
++  out[0]=total*1000.0;
++  out[1]=loopStart*1000.0;
++  out[2]=loops?1:0;
++}
++
++RGF_EXPORT const char* rgf_info(int what) {
++  if (e==NULL) return "";
++  switch (what) {
++    case 0: strBuf=e->song.name; break;
++    case 1: strBuf=e->song.author; break;
++    case 2: strBuf=e->song.category; break; // game
++    case 3: strBuf=e->song.systemName; break;
++    case 4: strBuf=e->curSubSong->name; break;
++    default: strBuf=""; break;
++  }
++  return strBuf.c_str();
++}
++
++RGF_EXPORT int rgf_channels() {
++  return (e==NULL)?0:e->getTotalChannelCount();
++}
++
++RGF_EXPORT const char* rgf_channel_name(int c) {
++  if (e==NULL) return "";
++  strBuf=e->getChannelName(c);
++  return strBuf.c_str();
++}
++
++RGF_EXPORT void rgf_mute(int c, int mute) {
++  if (e!=NULL && c>=0 && c<e->getTotalChannelCount()) e->muteChannel(c,mute!=0);
++}
++
++#ifndef __EMSCRIPTEN__
++// native test: rgplayer file.ftm out.raw seconds
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++int main(int argc, char** argv) {
++  if (argc<4) return 1;
++  FILE* f=fopen(argv[1],"rb");
++  if (!f) return 1;
++  fseek(f,0,SEEK_END);
++  long n=ftell(f);
++  fseek(f,0,SEEK_SET);
++  unsigned char* d=new unsigned char[n];
++  if (fread(d,1,n,f)!=(size_t)n) return 1;
++  fclose(f);
++  rgf_init(44100);
++  if (!rgf_load(d,n,argv[1])) {
++    fprintf(stderr,"load failed: %s\n",rgf_error());
++    return 2;
++  }
++  double t[3];
++  rgf_times(t);
++  fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
++  FILE* o=fopen(argv[2],"wb");
++  int total=atoi(argv[3])*44100;
++  float l[1024], r[1024];
++  short s[2048];
++  for (int done=0; done<total; done+=1024) {
++    rgf_render(l,r,1024);
++    for (int i=0; i<1024; i++) {
++      float a=l[i], b=r[i];
++      if (a>1) a=1;
++      if (a<-1) a=-1;
++      if (b>1) b=1;
++      if (b<-1) b=-1;
++      s[i*2]=(short)(a*32767);
++      s[i*2+1]=(short)(b*32767);
++    }
++    fwrite(s,4,1024,o);
++  }
++  fclose(o);
++  fflush(stderr);
++  _exit(0);
++}
++#endif
+-- 
+2.43.0
+

@@ -2807,6 +2807,11 @@ class FurnaceGUI {
   unsigned int sampleDragLen;
   float sampleFilterL, sampleFilterB, sampleFilterH, sampleFilterRes, sampleFilterCutStart, sampleFilterCutEnd;
   bool sampleFilterSweep, sampleFilterFirstFrame;
+  // Registro Gamer: sample tools
+  int rgToolDeclick;
+  bool rgToolTuneToC;
+  double rgToolPitch;
+  float rgToolStretch, rgToolSemis;
   int sampleCrossFadeLoopLength, sampleCrossFadeLoopLaw;
   unsigned char sampleFilterPower;
   short* sampleClipboard;

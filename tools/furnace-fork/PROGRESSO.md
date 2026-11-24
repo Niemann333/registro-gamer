@@ -92,6 +92,26 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
 - Ganchos novos: DivEngine::rgCmdHook (comandos para os chips) e DivExportRG::tickHook (depois de cada tique).
 - Verificação: `openmpt123 --batch --render --no-float --samplerate 44100 --end-time 45 arquivo` + cmpwav.py.
 
+## Ferramentas de sample — PRONTAS (24/11)
+- Botão de chave inglesa no editor de samples: remover DC, tirar estalos das pontas, afinação automática (YIN),
+  levar o loop ao cruzamento com zero, esticar o tempo (WSOLA) e mudar a altura. src/engine/rgsampletools.*.
+- O "erro" da afinação automática não existia: eu tinha lido 363 Hz no print, mas era 263 Hz (o teste nativo com a
+  sample real dá 263,3 Hz → 8233 Hz, o mesmo do navegador).
+
+## Tocador de projetos de tracker no Chiptune Player — PRONTO (24/11)
+- O motor do Furnace sem interface: src/rgplayer.cpp (API C rgf_*) + src/engine/rgplay.cpp, opção -DRG_PLAYER=ON.
+- Build web (pasta build-rgpweb):
+  `emcmake cmake .. -DBUILD_GUI=OFF -DRG_PLAYER=ON -DUSE_SDL2=OFF -DUSE_RTMIDI=OFF -DWITH_JSON=OFF -DCMAKE_BUILD_TYPE=Release
+   -DWITH_INSTRUMENTS=OFF -DWITH_WAVETABLES=OFF -DWITH_LOCALE=OFF -DUSE_SNDFILE=ON -DWITH_OGG=OFF -DWITH_MPEG=OFF
+   -DUSE_FREETYPE=OFF -DCMAKE_CXX_FLAGS=-fexceptions -DCMAKE_C_FLAGS=-fexceptions` e `emmake make furnace`
+  → copiar furnace.js/.wasm como chiptune-player/rg-furnace.js/.wasm (4,4 MB). Native de teste: build-rgp
+  (`./furnace arquivo saida.raw segundos`).
+- rg-player.js: EXT_FUR (fur, dmf, ftm, 0cc, dnm, eft, tfm, tfe, fc, fc13, fc14, smod) → makeFurEngine (ring),
+  com loop/duração pelo calcSongTimestamps, subsongs, canais com mute. 20 s renderizam em ~0,1 s.
+- Os 70+ projetos do acervo (.ftm, .dnm, .tfe, .dmf, .fur) abrem e tocam. SMB .ftm × NSF original: 0,98.
+- 0CC: o importador do Furnace já lê grooves, PARAMS_EXTRA e taxas até 1000 Hz; ignora DETUNETABLES,
+  PARAMS_EMU, BOOKMARKS, JSON. Falta testar com arquivos .0cc do usuário.
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com

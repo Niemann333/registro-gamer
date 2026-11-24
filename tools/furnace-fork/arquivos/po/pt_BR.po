@@ -23983,3 +23983,60 @@ msgstr "editável (padrões e instrumentos)"
 
 msgid "the patterns, instruments and effects are converted one by one, ready to keep editing in OpenMPT.\nwhat the format can't do is left out (the export log says what)."
 msgstr "os padrões, instrumentos e efeitos são convertidos um a um, prontos para continuar editando no OpenMPT.\no que o formato não consegue fazer fica de fora (o registro da exportação diz o quê)."
+
+msgid "More tools (OpenMPT style)"
+msgstr "Mais ferramentas (no estilo do OpenMPT)"
+
+msgid "selection (or the whole sample):"
+msgstr "seleção (ou a sample inteira):"
+
+msgid "Remove DC offset"
+msgstr "Remover deslocamento DC"
+
+msgid "centers the waveform on zero (removes the constant offset that causes clicks)."
+msgstr "centraliza a onda no zero (tira o deslocamento constante que causa estalos)."
+
+msgid "Remove clicks at the edges"
+msgstr "Tirar estalos das pontas"
+
+msgid "frames##RGDeclick"
+msgstr "amostras##RGDeclick"
+
+msgid "whole sample:"
+msgstr "sample inteira:"
+
+msgid "Auto-tune"
+msgstr "Afinação automática"
+
+msgid "finds the pitch of the sample and changes its C-4 rate so it plays in tune."
+msgstr "encontra a altura da sample e muda a taxa do C-4 para ela tocar afinada."
+
+msgid "to C (otherwise to the nearest note)"
+msgstr "em Dó (senão, na nota mais próxima)"
+
+msgid "no pitch found in this sample."
+msgstr "nenhuma altura encontrada nesta sample."
+
+msgid "pitch found: %.2f Hz; C-4 rate now %d Hz"
+msgstr "altura encontrada: %.2f Hz; taxa do C-4 agora %d Hz"
+
+msgid "Snap loop points to zero crossings"
+msgstr "Levar os pontos do loop para cruzamentos com zero"
+
+msgid "Time stretch"
+msgstr "Esticar o tempo"
+
+msgid "changes the length without changing the pitch."
+msgstr "muda a duração sem mudar a altura."
+
+msgid "% of the length##RGStretch"
+msgstr "% da duração##RGStretch"
+
+msgid "Pitch shift"
+msgstr "Mudar a altura"
+
+msgid "changes the pitch without changing the length."
+msgstr "muda a altura sem mudar a duração."
+
+msgid "semitones##RGSemis"
+msgstr "semitons##RGSemis"

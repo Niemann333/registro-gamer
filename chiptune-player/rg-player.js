@@ -59,6 +59,8 @@
   };
   var EXT_SAP = /\.sap$/i;
   var EXT_SNSF = /\.(snsf|minisnsf)$/i;
+  // projetos de tracker que o Furnace abre (Furnace, DefleMask, FamiTracker/0CC/Dn-FamiTracker, TFM Music Maker, Future Composer)
+  var EXT_FUR = /\.(fur|dmf|ftm|0cc|dnm|eft|tfm|tfe|fc|fc13|fc14|smod)$/i;
   var EXT_AHX = /\.(ahx|thx)$/i;
   var EXT_OMPT = /\.mptm$/i;                 // OpenMPT: só o libopenmpt toca certo (tempo moderno, swing...)
   var EXT_MOD_FALLBACK = /\.(mod|s3m|xm|it)$/i; // se o libxmp não abrir, tenta o libopenmpt
@@ -723,6 +725,99 @@
     };
   }
 
+  // ───────────────────────── motor: Furnace (projetos de tracker) ─────────────────────────
+  // rg-furnace.js/.wasm: o motor do Furnace do fork, sem interface (src/rgplayer.cpp, build com -DRG_PLAYER=ON).
+  // Toca tudo o que o Furnace abre; cada chip é emulado como no Tracker do blog.
+  var furPromise = null;
+  function loadFur() {
+    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=1').then(function () {
+      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=1'; } });
+    }).then(function (M) {
+      if (!M._rgf_init(SR)) throw new Error('Furnace: não iniciou');
+      return M;
+    });
+    return furPromise;
+  }
+  function makeFurEngine(M) {
+    var L = 0, R = 0, cap = 0, frames = 0, info = null, mask = [], names = [], sub = 0, nsub = 1;
+    function bufs(n) {
+      if (n <= cap) return;
+      if (L) { M._free(L); M._free(R); }
+      cap = n; L = M._malloc(n * 4); R = M._malloc(n * 4);
+    }
+    function medir() {
+      var p = M._malloc(24);
+      M._rgf_times(p);
+      var t = M.HEAPF64.subarray(p >> 3, (p >> 3) + 3);
+      var tot = t[0], ls = t[1], lp = t[2] > 0;
+      M._free(p);
+      if (!(tot > 0)) return { durMs: DEFAULT_LEN_MS, hasLoop: false };
+      if (!lp || ls >= tot) return { durMs: tot, hasLoop: false };
+      return { durMs: tot, hasLoop: true, introMs: ls, loopMs: tot - ls, totalMs: tot };
+    }
+    function prepara() {
+      frames = 0;
+      info = medir();
+      var n = M._rgf_channels();
+      names = []; mask = [];
+      for (var i = 0; i < n; i++) { names.push(M.UTF8ToString(M._rgf_channel_name(i))); mask.push(true); }
+    }
+    return {
+      kind: 'ring',
+      load: function (data, path) {
+        var p = M._malloc(data.length);
+        M.HEAPU8.set(data, p);
+        var nm = M._malloc(256), nome = fileName(path || 'x.fur').slice(-200);
+        M.stringToUTF8 ? M.stringToUTF8(nome, nm, 256) : (function () { for (var i = 0; i < nome.length; i++) M.HEAPU8[nm + i] = nome.charCodeAt(i) & 255; M.HEAPU8[nm + nome.length] = 0; })();
+        var ok = M._rgf_load(p, data.length, nm);
+        M._free(p); M._free(nm);
+        if (!ok) throw new Error('Furnace: ' + M.UTF8ToString(M._rgf_error()));
+        nsub = Math.max(1, M._rgf_subsongs()); sub = 0;
+        prepara();
+      },
+      render: function (l, r, n) {
+        var done = 0;
+        bufs(CHUNK);
+        while (done < n) {
+          var k = Math.min(CHUNK, n - done);
+          M._rgf_render(L, R, k);
+          var h = M.HEAPF32, a = L >> 2, b = R >> 2;
+          for (var i = 0; i < k; i++) { l[done + i] = h[a + i]; r[done + i] = h[b + i]; }
+          done += k;
+        }
+        frames += n;
+        return { ended: false };
+      },
+      posMs: function () { return frames * 1000 / SR; },
+      durInfo: function (loops) {
+        if (!info || !info.hasLoop) return { durMs: info ? info.durMs : DEFAULT_LEN_MS, own: true, report: (info ? info.durMs : DEFAULT_LEN_MS) + FADE_MS };
+        var d = info.introMs + info.loopMs * loops;
+        return { durMs: d, own: true, report: d + FADE_MS, hasLoop: true, introMs: info.introMs, loopMs: info.loopMs, totalMs: info.totalMs };
+      },
+      seek: function (ms) {          // recomeça e toca sem som até o ponto pedido
+        M._rgf_restart();
+        frames = 0;
+        bufs(CHUNK);
+        var alvo = Math.floor(Math.max(0, ms) * SR / 1000);
+        while (frames < alvo) { var k = Math.min(CHUNK, alvo - frames); M._rgf_render(L, R, k); frames += k; }
+      },
+      voices: function () {
+        var sys = M.UTF8ToString(M._rgf_info(3)) || 'Furnace';
+        return { names: names.slice(), mask: mask.slice(), groups: [{ name: sys, voices: names.map(function (x, i) { return { idx: i, name: x }; }) }] };
+      },
+      setVoiceMask: function (m) { for (var i = 0; i < mask.length; i++) { var v = m[i] !== false; if (v !== mask[i]) { mask[i] = v; M._rgf_mute(i, v ? 0 : 1); } } },
+      numSubtunes: function () { return nsub; },
+      subtune: function () { return sub; },
+      durations: function () { return [info ? (info.hasLoop ? info.introMs + info.loopMs : info.durMs) : 0]; },
+      playSubtune: function (i) { if (i >= 0 && i < nsub) { M._rgf_subsong(i); sub = i; prepara(); } },
+      title: function () {
+        var t = M.UTF8ToString(M._rgf_info(0)), a = M.UTF8ToString(M._rgf_info(1));
+        return t ? (a ? a + ' - ' + t : t) : '';
+      },
+      stop: function () {}
+    };
+  }
+
   // ───────────────────────── motor: AHX (Amiga, Abyss' Highest eXperience) ─────────────────────────
   // O replayer (ahx.js) só calcula o estado dos 4 canais a cada quadro do Amiga (50 Hz);
   // a mistura é feita aqui, em estéreo como no Amiga (canais 1 e 4 à esquerda, 2 e 3 à direita,
@@ -954,7 +1049,7 @@
   var audioDecPromise = null;
   function loadAudioDec() {
     if (!audioDecPromise) audioDecPromise = loadScript(BASE + 'rg-audiodec.js?v=1').then(function () {
-      return self.RGAudioDec({ locateFile: function (f) { return BASE + f + '?v=1'; } });
+      return self.RGAudioDec({ locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=1'; } });
     }).catch(function (e) { audioDecPromise = null; throw e; });
     return audioDecPromise;
   }
@@ -1137,6 +1232,8 @@
       enginePromise = ensureRing().then(function () { return makeSapEngine(); });
     } else if (EXT_SNSF.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadSnsf()]).then(function (a) { return makeSnsfEngine(a[1]); });
+    } else if (EXT_FUR.test(name)) {
+      enginePromise = Promise.all([ensureRing(), loadFur()]).then(function (a) { return makeFurEngine(a[1]); });
     } else if (EXT_AHX.test(name)) {
       enginePromise = Promise.all([ensureRing(), loadAhx()]).then(function () { return makeAhxEngine(); });
     } else if (EXT_OMPT.test(name)) {

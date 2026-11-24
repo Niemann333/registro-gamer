@@ -148,6 +148,7 @@ option(CONSOLE_SUBSYSTEM "Build Furnace with Console subsystem on Windows" OFF)
 option(FORCE_CODEVIEW "Force -gcodeview on MinGW GCC" OFF)
 option(FLATPAK_WORKAROUNDS "Enable Flatpak-specific workaround for system file picker" OFF)
 option(NO_INTRO "Disable intro animation entirely" OFF)
+option(RG_PLAYER "Registro Gamer: build only the headless player library for the Chiptune Player" OFF)
 option(ORIG_NDS_CORE "Use original NDS emulation core (no acquireDirect)" OFF)
 if (APPLE)
   option(FORCE_APPLE_BIN "Force enable binary installation to /bin" OFF)
@@ -835,6 +836,8 @@ src/engine/pattern.cpp
 src/engine/pitchTable.cpp
 src/engine/playback.cpp
 src/engine/sample.cpp
+src/engine/rgsampletools.cpp
+src/engine/rgplay.cpp
 src/engine/song.cpp
 src/engine/sysDef.cpp
 src/engine/wavetable.cpp
@@ -1349,7 +1352,11 @@ if (WITH_LOCALE)
   endif()
 endif()
 
-set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} ${CLI_SOURCES} src/main.cpp)
+if (RG_PLAYER)
+  set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} src/rgplayer.cpp)
+else()
+  set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} ${CLI_SOURCES} src/main.cpp)
+endif()
 
 if (USE_BACKWARD)
   list(APPEND USED_SOURCES src/backtrace.cpp)
@@ -1469,7 +1476,14 @@ endif()
 target_include_directories(${FURNACE} SYSTEM PRIVATE ${DEPENDENCIES_INCLUDE_DIRS})
 target_compile_options(${FURNACE} PRIVATE ${DEPENDENCIES_COMPILE_OPTIONS})
 target_link_libraries(${FURNACE} PRIVATE ${DEPENDENCIES_LIBRARIES})
-if (EMSCRIPTEN)
+if (EMSCRIPTEN AND RG_PLAYER)
+  # Registro Gamer: só o tocador, para o Chiptune Player
+  target_link_options(${FURNACE} PRIVATE
+    "SHELL:-sMODULARIZE=1" "SHELL:-sEXPORT_NAME=RGFUR" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=67108864"
+    "SHELL:-sTOTAL_STACK=2097152" "SHELL:-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,stringToUTF8,HEAPF32,HEAPF64,HEAPU8"
+    "SHELL:-sEXPORTED_FUNCTIONS=_malloc,_free" "-fexceptions" "SHELL:-sEXIT_RUNTIME=0" "SHELL:-sENVIRONMENT=web,worker,node"
+    "SHELL:-sFILESYSTEM=1")
+elseif (EMSCRIPTEN)
   # Registro Gamer: build para navegador
   target_link_options(${FURNACE} PRIVATE
     "SHELL:-sASYNCIFY" "SHELL:-sASYNCIFY_STACK_SIZE=131072" "SHELL:-sALLOW_MEMORY_GROWTH=1" "SHELL:-sINITIAL_MEMORY=134217728"
