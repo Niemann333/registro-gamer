@@ -44,7 +44,9 @@ jobs:
                       if ext in ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay',
                                  '.gbs','.hes','.kss','.sap','.ahx','.thx','.sid','.mod','.s3m',
                                  '.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf',
-                                 '.2sf','.psf','.ssf','.dsf','.usf','.miniusf','.2sf','.mini2sf']:
+                                 '.2sf','.psf','.ssf','.dsf','.usf','.miniusf','.2sf','.mini2sf',
+                                 '.snsf','.minisnsf','.fur','.dmf','.ftm','.0cc','.dnm','.eft','.tfm','.tfe',
+                                 '.fc','.fc13','.fc14','.smod']:
                           result.append({
                               "name": entry.name,
                               "type": "file",
@@ -80,7 +82,8 @@ jobs:
           import os, json
           EXT = ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay','.gbs','.hes','.kss','.sap','.ahx','.thx','.sid',
                  '.mod','.s3m','.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf','.2sf','.psf','.ssf',
-                 '.dsf','.usf','.miniusf','.mini2sf']
+                 '.dsf','.usf','.miniusf','.mini2sf','.snsf','.minisnsf','.fur','.dmf','.ftm','.0cc','.dnm','.eft',
+                 '.tfm','.tfe','.fc','.fc13','.fc14','.smod']
           def scan(path):
               result = []
               try:
