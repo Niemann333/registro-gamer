@@ -127,7 +127,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     <li data-en="files with several songs (NSF, GBS, SID...) import the track chosen below;">arquivos com várias músicas (NSF, GBS, SID...) importam a faixa escolhida abaixo;</li>
     <li data-en="the result opens as a new project; save it (File → Save) to keep it.">o resultado abre como um projeto novo; salve (Arquivo → Salvar) para guardar.</li>
   </ul>
-  <p class="trk"><label><span data-en="Track:">Faixa:</span> <input type="number" id="impTrk" min="1" value="1" style="width:64px"></label></p>
+  <p class="trk"><span><span data-en="Track:">Faixa:</span> <button class="btn" id="impTrkM" type="button" style="padding:2px 10px">−</button> <input type="text" inputmode="numeric" id="impTrk" value="1" style="width:48px;text-align:center"> <button class="btn" id="impTrkP" type="button" style="padding:2px 10px">+</button></span></p>
   <div class="row"><button class="btn" id="impNo" data-en="Cancel">Cancelar</button><button class="btn pri" id="impGo" data-en="Choose file…">Escolher arquivo…</button></div>
 </div></div>
 <div class="drop" id="drop" data-en="Drop the file to open it in the Tracker">Solte o arquivo para abrir no Tracker</div>
@@ -320,6 +320,11 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   function closeImport() { $('imp').classList.remove('show'); impData = null; $('canvas').focus(); }
   $('bImp').onclick = function () { askImport(null, ''); };
   $('impNo').onclick = closeImport;
+  // botões próprios: o seletor de números do navegador não via o soltar do mouse (o Tracker o captura) e não parava de contar
+  function trkVal() { return Math.max(1, parseInt($('impTrk').value, 10) || 1); }
+  $('impTrkM').onclick = function (e) { e.preventDefault(); $('impTrk').value = Math.max(1, trkVal() - 1); };
+  $('impTrkP').onclick = function (e) { e.preventDefault(); $('impTrk').value = Math.min(999, trkVal() + 1); };
+  $('impTrk').oninput = function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3); };
   $('imp').onclick = function (e) { if (e.target === this) closeImport(); };
   $('impGo').onclick = function () {
     var trk = Math.max(0, (parseInt($('impTrk').value, 10) || 1) - 1);
