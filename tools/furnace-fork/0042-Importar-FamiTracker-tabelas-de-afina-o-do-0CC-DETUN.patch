@@ -1,0 +1,196 @@
+From 1ddf6bfc291d9e79df941dab9c0516fd40f5a37e Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 11:08:16 -0300
+Subject: [PATCH 42/42] =?UTF-8?q?Importar=20FamiTracker:=20tabelas=20de=20?=
+ =?UTF-8?q?afina=C3=A7=C3=A3o=20do=200CC=20(DETUNETABLES)=20viram=20afina?=
+ =?UTF-8?q?=C3=A7=C3=A3o=20da=20m=C3=BAsica=20e=20transposi=C3=A7=C3=A3o?=
+ =?UTF-8?q?=20por=20chip;=20log=20dos=20efeitos=20sem=20equivalente?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/engine/fileOps/ftm.cpp | 95 +++++++++++++++++++++++++++++++++++++-
+ src/rgplayer.cpp           | 10 ++++
+ 2 files changed, 103 insertions(+), 2 deletions(-)
+
+diff --git a/src/engine/fileOps/ftm.cpp b/src/engine/fileOps/ftm.cpp
+index 1f6da41..0fe35b1 100644
+--- a/src/engine/fileOps/ftm.cpp
++++ b/src/engine/fileOps/ftm.cpp
+@@ -26,6 +26,7 @@
+ // - format code?
+ 
+ #include "fileOpsCommon.h"
++#include <algorithm>
+ 
+ #define CHECK_BLOCK_VERSION(x) \
+   if (blockVersion>x) { \
+@@ -460,6 +461,13 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+ 
+     int total_chans = 0;
+ 
++    // Registro Gamer: 0CC-FamiTracker detune tables (per chip: NTSC, PAL, Saw, VRC7, FDS, N163)
++    int rgDetune[6][96];
++    int rgUnsupported[64];
++    memset(rgUnsupported,0,sizeof(rgUnsupported));
++    bool rgHasDetune[6]={false,false,false,false,false,false};
++    memset(rgDetune,0,sizeof(rgDetune));
++
+     memset(n163WaveOff,0,128*sizeof(int));
+     memset(hasSequence, 0, 256 * 8 * sizeof(bool));
+     memset(sequenceIndex, 0, 256 * 8);
+@@ -1941,6 +1949,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                     } else {
+                       pat->newData[row][DIV_PAT_FX(j)] = ftEffectMap[nextEffect];
+                       pat->newData[row][DIV_PAT_FXVAL(j)] = ftEffectMap[nextEffect] == -1 ? -1 : nextEffectVal;
++                      if (ftEffectMap[nextEffect]==-1 && nextEffect>0 && nextEffect<64) rgUnsupported[nextEffect]++;
+ 
+                       if (ftEffectMap[nextEffect] == 0x0f && nextEffectVal > 0x1f) {
+                         pat->newData[row][DIV_PAT_FX(j)] = 0xfd; // BPM speed change!
+@@ -2377,8 +2386,24 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+         reader.seek(blockSize, SEEK_CUR);
+       } else if (blockName == "DETUNETABLES") {
+         CHECK_BLOCK_VERSION(1);
+-        logW("block DETUNETABLES not supported...");
+-        reader.seek(blockSize, SEEK_CUR);
++        // Registro Gamer: read them; they become the song tuning plus a transposition per chip (see the end)
++        {
++          size_t blockEnd=reader.tell()+blockSize;
++          int count=(unsigned char)reader.readC();
++          for (int i=0; i<count && reader.tell()<blockEnd; i++) {
++            int chip=(unsigned char)reader.readC();
++            int items=(unsigned char)reader.readC();
++            for (int j=0; j<items; j++) {
++              int note=(unsigned char)reader.readC();
++              int offset=reader.readI();
++              if (chip<6 && note<96) {
++                rgDetune[chip][note]=offset;
++                rgHasDetune[chip]=true;
++              }
++            }
++          }
++          reader.seek(blockEnd,SEEK_SET);
++        }
+       } else if (blockName == "COMMENTS") {
+         CHECK_BLOCK_VERSION(1);
+         unsigned int display_comment = reader.readI();
+@@ -2832,6 +2857,72 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+ 
+     ds.recalcChans();
+ 
++    for (int i=0; i<64; i++) {
++      if (rgUnsupported[i]) logW("FamiTracker effect %d not supported: used %d times",i,rgUnsupported[i]);
++    }
++
++    // Registro Gamer: 0CC detune tables. each table shifts the pitch of a chip; the shift (in cents) is measured
++    // over the notes, the 2A03 one becomes the song tuning and the others become a transposition of their
++    // channels (whole semitones; the rest is under half a semitone).
++    if (rgHasDetune[0] || rgHasDetune[1] || rgHasDetune[2] || rgHasDetune[3] || rgHasDetune[4] || rgHasDetune[5]) {
++      double ntscClock=1789772.7272/16.0, palClock=1662607.0/16.0;
++      auto centsOf=[&](int chip) -> double {
++        std::vector<double> c;
++        for (int i=0; i<96; i++) {
++          int off=rgDetune[chip][i];
++          if (off==0) continue;
++          double f=440.0*pow(2.0,(i-45)/12.0);
++          double base=0, shifted=0;
++          switch (chip) {
++            case 0: base=ntscClock/f-0.5; shifted=base-off; break;
++            case 1: base=palClock/f-0.5; shifted=base-off; break;
++            case 2: base=(ntscClock*16.0)/(f*14.0)-0.5; shifted=base-off; break;
++            case 3: if (i>=12) continue; base=f*262144.0/49716.0+0.5; shifted=base+off; break;
++            case 4: base=(f*65536.0)/ntscClock+0.5; shifted=base+off; break;
++            case 5: base=((f*MAX(1,(int)n163Chans)*983040.0)/ntscClock+0.5)/4.0; shifted=base+off; break;
++          }
++          if (base<8 || shifted<=0) continue; // too coarse to measure
++          double cents=(chip<3)?1200.0*log2(base/shifted):1200.0*log2(shifted/base);
++          c.push_back(cents);
++        }
++        if (c.empty()) return 0.0;
++        std::sort(c.begin(),c.end());
++        return c[c.size()/2];
++      };
++      int mainChip=pal?1:0;
++      double globalCents=rgHasDetune[mainChip]?centsOf(mainChip):0.0;
++      if (globalCents!=0.0) {
++        ds.tuning*=pow(2.0,globalCents/1200.0);
++        logI("0CC detune: %+.1f cents -> tuning %.2f",globalCents,ds.tuning);
++      }
++      auto transpose=[&](int chan, int semis) {
++        if (chan<0 || chan>=DIV_MAX_CHANS || semis==0) return;
++        for (size_t j=0; j<ds.subsong.size(); j++) {
++          for (int k=0; k<DIV_MAX_PATTERNS; k++) {
++            DivPattern* pt=ds.subsong[j]->pat[chan].data[k];
++            if (pt==NULL) continue;
++            for (int l=0; l<DIV_MAX_ROWS; l++) {
++              short& n=pt->newData[l][DIV_PAT_NOTE];
++              if (n>=0 && n<180) n=CLAMP(n+semis,0,179);
++            }
++          }
++        }
++      };
++      const int chipOf[4]={2,3,4,5};
++      for (int k=0; k<4; k++) {
++        int chip=chipOf[k];
++        if (!rgHasDetune[chip]) continue;
++        double res=centsOf(chip)-globalCents;
++        int semis=(int)round(res/100.0);
++        if (semis==0) continue;
++        logI("0CC detune: chip %d is %+.1f cents off; transposed by %d semitones",chip,res,semis);
++        if (chip==2) transpose(vrc6_saw_chan==0xff?-1:vrc6_saw_chan,semis);
++        if (chip==3) for (int c=0; c<6; c++) transpose(vrc7_chans[c]==0xff?-1:vrc7_chans[c],semis);
++        if (chip==4) transpose(fds_chan==0xff?-1:fds_chan,semis);
++        if (chip==5) for (int c=0; c<8; c++) transpose(n163_chans[c]==0xff?-1:n163_chans[c],semis);
++      }
++    }
++
+     if (active) quitDispatch();
+     BUSY_BEGIN_SOFT;
+     saveLock.lock();
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index f7904b6..5dcc450 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -23,7 +23,9 @@
+ 
+ #include "engine/engine.h"
+ #include "ta-log.h"
++#include <fmt/printf.h>
+ #include <string.h>
++#include <stdlib.h>
+ #ifdef __EMSCRIPTEN__
+ #include <emscripten.h>
+ #define RGF_EXPORT extern "C" EMSCRIPTEN_KEEPALIVE
+@@ -44,6 +46,12 @@ RGF_EXPORT int rgf_init(int rate) {
+   if (e!=NULL) return 1;
+   sampleRate=rate;
+   logLevel=LOGLEVEL_WARN;
++#ifndef __EMSCRIPTEN__
++  if (getenv("RGF_LOG")) {
++    initLog(stderr);
++    logLevel=atoi(getenv("RGF_LOG"));
++  }
++#endif
+   e=new DivEngine;
+   e->setAudio(DIV_AUDIO_DUMMY);
+   e->setView(DIV_STATUS_NOTHING);
+@@ -106,6 +114,7 @@ RGF_EXPORT const char* rgf_info(int what) {
+     case 2: strBuf=e->song.category; break; // game
+     case 3: strBuf=e->song.systemName; break;
+     case 4: strBuf=e->curSubSong->name; break;
++    case 5: strBuf=fmt::sprintf("%.2f",e->song.tuning); break;
+     default: strBuf=""; break;
+   }
+   return strBuf.c_str();
+@@ -147,6 +156,7 @@ int main(int argc, char** argv) {
+   }
+   double t[3];
+   rgf_times(t);
++  fprintf(stderr,"tuning %s\n",rgf_info(5));
+   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
+   FILE* o=fopen(argv[2],"wb");
+   int total=atoi(argv[3])*44100;
+-- 
+2.43.0
+

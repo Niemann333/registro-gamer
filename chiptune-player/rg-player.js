@@ -730,8 +730,8 @@
   // Toca tudo o que o Furnace abre; cada chip é emulado como no Tracker do blog.
   var furPromise = null;
   function loadFur() {
-    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=1').then(function () {
-      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=1'; } });
+    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=2').then(function () {
+      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=2'; } });
     }).then(function (M) {
       if (!M._rgf_init(SR)) throw new Error('Furnace: não iniciou');
       return M;
@@ -1049,7 +1049,7 @@
   var audioDecPromise = null;
   function loadAudioDec() {
     if (!audioDecPromise) audioDecPromise = loadScript(BASE + 'rg-audiodec.js?v=1').then(function () {
-      return self.RGAudioDec({ locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=1'; } });
+      return self.RGAudioDec({ locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=2'; } });
     }).catch(function (e) { audioDecPromise = null; throw e; });
     return audioDecPromise;
   }

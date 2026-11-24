@@ -109,8 +109,12 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
 - rg-player.js: EXT_FUR (fur, dmf, ftm, 0cc, dnm, eft, tfm, tfe, fc, fc13, fc14, smod) → makeFurEngine (ring),
   com loop/duração pelo calcSongTimestamps, subsongs, canais com mute. 20 s renderizam em ~0,1 s.
 - Os 70+ projetos do acervo (.ftm, .dnm, .tfe, .dmf, .fur) abrem e tocam. SMB .ftm × NSF original: 0,98.
-- 0CC: o importador do Furnace já lê grooves, PARAMS_EXTRA e taxas até 1000 Hz; ignora DETUNETABLES,
-  PARAMS_EMU, BOOKMARKS, JSON. Falta testar com arquivos .0cc do usuário.
+- 0CC: o importador do Furnace já lê grooves, PARAMS_EXTRA e taxas até 1000 Hz. NOVO (24/11): DETUNETABLES —
+  a afinação de cada chip é medida em cents; a do 2A03 vira a afinação da música e os outros chips, se ficarem a
+  meio semitom ou mais dela, têm as notas transpostas. O arquivo 0CC do acervo (DJ Maximum - Lights of are Minds.ftm,
+  28 canais com as 6 expansões) tem todas as tabelas em +39 cents → afinação 450,04 Hz. O importador agora avisa
+  no log quais efeitos do FamiTracker não têm equivalente (FDS volume/auto-FM, Mxy, VRC7 patch etc.); esse arquivo
+  não usa nenhum. Sem um NSF exportado pelo próprio 0CC não dá para comparar o som.
 
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"

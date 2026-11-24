@@ -26,6 +26,7 @@
 // - format code?
 
 #include "fileOpsCommon.h"
+#include <algorithm>
 
 #define CHECK_BLOCK_VERSION(x) \
   if (blockVersion>x) { \
@@ -459,6 +460,13 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
     unsigned char mmc5_chans[2] = {0xff, 0xff};
 
     int total_chans = 0;
+
+    // Registro Gamer: 0CC-FamiTracker detune tables (per chip: NTSC, PAL, Saw, VRC7, FDS, N163)
+    int rgDetune[6][96];
+    int rgUnsupported[64];
+    memset(rgUnsupported,0,sizeof(rgUnsupported));
+    bool rgHasDetune[6]={false,false,false,false,false,false};
+    memset(rgDetune,0,sizeof(rgDetune));
 
     memset(n163WaveOff,0,128*sizeof(int));
     memset(hasSequence, 0, 256 * 8 * sizeof(bool));
@@ -1941,6 +1949,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                     } else {
                       pat->newData[row][DIV_PAT_FX(j)] = ftEffectMap[nextEffect];
                       pat->newData[row][DIV_PAT_FXVAL(j)] = ftEffectMap[nextEffect] == -1 ? -1 : nextEffectVal;
+                      if (ftEffectMap[nextEffect]==-1 && nextEffect>0 && nextEffect<64) rgUnsupported[nextEffect]++;
 
                       if (ftEffectMap[nextEffect] == 0x0f && nextEffectVal > 0x1f) {
                         pat->newData[row][DIV_PAT_FX(j)] = 0xfd; // BPM speed change!
@@ -2377,8 +2386,24 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
         reader.seek(blockSize, SEEK_CUR);
       } else if (blockName == "DETUNETABLES") {
         CHECK_BLOCK_VERSION(1);
-        logW("block DETUNETABLES not supported...");
-        reader.seek(blockSize, SEEK_CUR);
+        // Registro Gamer: read them; they become the song tuning plus a transposition per chip (see the end)
+        {
+          size_t blockEnd=reader.tell()+blockSize;
+          int count=(unsigned char)reader.readC();
+          for (int i=0; i<count && reader.tell()<blockEnd; i++) {
+            int chip=(unsigned char)reader.readC();
+            int items=(unsigned char)reader.readC();
+            for (int j=0; j<items; j++) {
+              int note=(unsigned char)reader.readC();
+              int offset=reader.readI();
+              if (chip<6 && note<96) {
+                rgDetune[chip][note]=offset;
+                rgHasDetune[chip]=true;
+              }
+            }
+          }
+          reader.seek(blockEnd,SEEK_SET);
+        }
       } else if (blockName == "COMMENTS") {
         CHECK_BLOCK_VERSION(1);
         unsigned int display_comment = reader.readI();
@@ -2831,6 +2856,72 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
     }
 
     ds.recalcChans();
+
+    for (int i=0; i<64; i++) {
+      if (rgUnsupported[i]) logW("FamiTracker effect %d not supported: used %d times",i,rgUnsupported[i]);
+    }
+
+    // Registro Gamer: 0CC detune tables. each table shifts the pitch of a chip; the shift (in cents) is measured
+    // over the notes, the 2A03 one becomes the song tuning and the others become a transposition of their
+    // channels (whole semitones; the rest is under half a semitone).
+    if (rgHasDetune[0] || rgHasDetune[1] || rgHasDetune[2] || rgHasDetune[3] || rgHasDetune[4] || rgHasDetune[5]) {
+      double ntscClock=1789772.7272/16.0, palClock=1662607.0/16.0;
+      auto centsOf=[&](int chip) -> double {
+        std::vector<double> c;
+        for (int i=0; i<96; i++) {
+          int off=rgDetune[chip][i];
+          if (off==0) continue;
+          double f=440.0*pow(2.0,(i-45)/12.0);
+          double base=0, shifted=0;
+          switch (chip) {
+            case 0: base=ntscClock/f-0.5; shifted=base-off; break;
+            case 1: base=palClock/f-0.5; shifted=base-off; break;
+            case 2: base=(ntscClock*16.0)/(f*14.0)-0.5; shifted=base-off; break;
+            case 3: if (i>=12) continue; base=f*262144.0/49716.0+0.5; shifted=base+off; break;
+            case 4: base=(f*65536.0)/ntscClock+0.5; shifted=base+off; break;
+            case 5: base=((f*MAX(1,(int)n163Chans)*983040.0)/ntscClock+0.5)/4.0; shifted=base+off; break;
+          }
+          if (base<8 || shifted<=0) continue; // too coarse to measure
+          double cents=(chip<3)?1200.0*log2(base/shifted):1200.0*log2(shifted/base);
+          c.push_back(cents);
+        }
+        if (c.empty()) return 0.0;
+        std::sort(c.begin(),c.end());
+        return c[c.size()/2];
+      };
+      int mainChip=pal?1:0;
+      double globalCents=rgHasDetune[mainChip]?centsOf(mainChip):0.0;
+      if (globalCents!=0.0) {
+        ds.tuning*=pow(2.0,globalCents/1200.0);
+        logI("0CC detune: %+.1f cents -> tuning %.2f",globalCents,ds.tuning);
+      }
+      auto transpose=[&](int chan, int semis) {
+        if (chan<0 || chan>=DIV_MAX_CHANS || semis==0) return;
+        for (size_t j=0; j<ds.subsong.size(); j++) {
+          for (int k=0; k<DIV_MAX_PATTERNS; k++) {
+            DivPattern* pt=ds.subsong[j]->pat[chan].data[k];
+            if (pt==NULL) continue;
+            for (int l=0; l<DIV_MAX_ROWS; l++) {
+              short& n=pt->newData[l][DIV_PAT_NOTE];
+              if (n>=0 && n<180) n=CLAMP(n+semis,0,179);
+            }
+          }
+        }
+      };
+      const int chipOf[4]={2,3,4,5};
+      for (int k=0; k<4; k++) {
+        int chip=chipOf[k];
+        if (!rgHasDetune[chip]) continue;
+        double res=centsOf(chip)-globalCents;
+        int semis=(int)round(res/100.0);
+        if (semis==0) continue;
+        logI("0CC detune: chip %d is %+.1f cents off; transposed by %d semitones",chip,res,semis);
+        if (chip==2) transpose(vrc6_saw_chan==0xff?-1:vrc6_saw_chan,semis);
+        if (chip==3) for (int c=0; c<6; c++) transpose(vrc7_chans[c]==0xff?-1:vrc7_chans[c],semis);
+        if (chip==4) transpose(fds_chan==0xff?-1:fds_chan,semis);
+        if (chip==5) for (int c=0; c<8; c++) transpose(n163_chans[c]==0xff?-1:n163_chans[c],semis);
+      }
+    }
 
     if (active) quitDispatch();
     BUSY_BEGIN_SOFT;

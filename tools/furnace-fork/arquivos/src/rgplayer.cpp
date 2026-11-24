@@ -23,7 +23,9 @@
 
 #include "engine/engine.h"
 #include "ta-log.h"
+#include <fmt/printf.h>
 #include <string.h>
+#include <stdlib.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #define RGF_EXPORT extern "C" EMSCRIPTEN_KEEPALIVE
@@ -44,6 +46,12 @@ RGF_EXPORT int rgf_init(int rate) {
   if (e!=NULL) return 1;
   sampleRate=rate;
   logLevel=LOGLEVEL_WARN;
+#ifndef __EMSCRIPTEN__
+  if (getenv("RGF_LOG")) {
+    initLog(stderr);
+    logLevel=atoi(getenv("RGF_LOG"));
+  }
+#endif
   e=new DivEngine;
   e->setAudio(DIV_AUDIO_DUMMY);
   e->setView(DIV_STATUS_NOTHING);
@@ -106,6 +114,7 @@ RGF_EXPORT const char* rgf_info(int what) {
     case 2: strBuf=e->song.category; break; // game
     case 3: strBuf=e->song.systemName; break;
     case 4: strBuf=e->curSubSong->name; break;
+    case 5: strBuf=fmt::sprintf("%.2f",e->song.tuning); break;
     default: strBuf=""; break;
   }
   return strBuf.c_str();
@@ -147,6 +156,7 @@ int main(int argc, char** argv) {
   }
   double t[3];
   rgf_times(t);
+  fprintf(stderr,"tuning %s\n",rgf_info(5));
   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
   FILE* o=fopen(argv[2],"wb");
   int total=atoi(argv[3])*44100;
