@@ -111,7 +111,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 </div>
 <input type="file" id="fileIn" multiple hidden>
 <input type="file" id="midiIn" accept=".vgm,.vgz" multiple hidden>
-<input type="file" id="impIn" accept=".vgm,.vgz" hidden>
+<input type="file" id="impIn" accept=".vgm,.vgz,.s98,.nsf,.nsfe,.gbs,.kss,.sap,.hes,.ay,.spc,.sid,.psf,.minipsf,.2sf,.mini2sf,.gsf,.minigsf,.psflib,.2sflib,.gsflib" multiple hidden>
 <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
 <div id="load"><div><div class="big">🎛️</div><h2 data-en="Loading the Tracker">Carregando o Tracker</h2>
   <p id="loadTxt" data-en="The first time it is about 10 MB; after that the program is cached in the browser and opens fast.">Na primeira vez são cerca de 10 MB; depois fica guardado no navegador e abre rápido.</p><div class="spin"></div></div></div>
@@ -120,12 +120,14 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div class="imp" id="imp"><div class="box">
   <h3 data-en="⤵ Import Chiptune">⤵ Importar Chiptune</h3>
   <p id="impFn" class="fn"></p>
-  <p data-en="A VGM is not a project: it is a log of instructions for playback on the sound chip. Importing rebuilds patterns, instruments and samples from that log, so:">Um VGM não é um projeto: é um registro com instruções para reprodução no chip de som. A importação reconstrói padrões, instrumentos e samples a partir desse registro, por isso:</p>
+  <p data-en="A chiptune is not a project: it is a recording of the sound chip (VGM, S98) or the game's own music program (NSF, SPC, PSF, SID...). Importing plays it here, records what goes to the chip and rebuilds patterns, instruments and samples from that, so:">Um chiptune não é um projeto: é uma gravação do chip de som (VGM, S98) ou o próprio programa de música do jogo (NSF, SPC, PSF, SID...). A importação toca a música aqui, grava o que vai para o chip e reconstrói padrões, instrumentos e samples a partir disso, por isso:</p>
   <ul>
     <li data-en="the reading is not 100% accurate: tempo, effects and some sounds may differ from the original;">a leitura não é 100% fiel: tempo, efeitos e alguns timbres podem sair diferentes do original;</li>
-    <li data-en="for now only Mega Drive / Genesis (YM2612 + SN76489) and Master System (SN76489);">por enquanto só Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489);</li>
+    <li data-en="formats: VGM/VGZ, S98, NSF/NSFE, GBS, KSS, SAP, HES, AY, SPC, SID, PSF, 2SF and GSF (the same ones as in Chiptune Studio). PSF, 2SF and GSF need their _lib file: open it together, or open from the collection;">formatos: VGM/VGZ, S98, NSF/NSFE, GBS, KSS, SAP, HES, AY, SPC, SID, PSF, 2SF e GSF (os mesmos do Chiptune Studio). PSF, 2SF e GSF precisam do arquivo _lib: abra junto, ou abra pelo acervo;</li>
+    <li data-en="files with several songs (NSF, GBS, SID...) import the track chosen below;">arquivos com várias músicas (NSF, GBS, SID...) importam a faixa escolhida abaixo;</li>
     <li data-en="the result opens as a new project; save it (File → Save) to keep it.">o resultado abre como um projeto novo; salve (Arquivo → Salvar) para guardar.</li>
   </ul>
+  <p class="trk"><label><span data-en="Track:">Faixa:</span> <input type="number" id="impTrk" min="1" value="1" style="width:64px"></label></p>
   <div class="row"><button class="btn" id="impNo" data-en="Cancel">Cancelar</button><button class="btn pri" id="impGo" data-en="Choose file…">Escolher arquivo…</button></div>
 </div></div>
 <div class="drop" id="drop" data-en="Drop the file to open it in the Tracker">Solte o arquivo para abrir no Tracker</div>
@@ -173,23 +175,116 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     delete importing[path];
     setTimeout(function () { Module.ccall('rg_web_drop', null, ['string'], [path]); }, delay || 0);
   }
-  // VGM → projeto do Furnace (direto, com os timbres do chip)
-  function vgmToFur(u8, name, delay) {
-    if (!window.RGVGM || !window.RGFUR) { notify(T('Conversor de VGM não carregou.','The VGM converter did not load.')); return; }
+  // chiptune → projeto do Furnace (o mesmo conversor do Chiptune Studio)
+  // VGM e S98 são gravações do chip; NSF, SPC, PSF, SID etc. têm o programa da música: o rg-rip.wasm (ou o
+  // leitor de SID em JavaScript) roda o programa e grava cada escrita nos chips; o leitor faz disso notas e timbres
+  var CONV_RE = /\.(vgm|vgz|s98|nsf|nsfe|gbs|kss|sap|hes|ay|spc|sid|psf|minipsf|2sf|mini2sf|gsf|minigsf)$/i;
+  function isConv(p) { return CONV_RE.test(p || ''); }
+  var localByName = {};   // arquivos abertos do aparelho (para achar o _lib dos PSF)
+  var ripP = null, subsP = null;
+  function loadRip() {
+    if (!ripP) ripP = new Promise(function (ok, no) {
+      var sc = document.createElement('script'); sc.src = 'rg-rip.js?v=4';
+      sc.onload = function () { RGRIP().then(ok, no); }; sc.onerror = function () { ripP = null; no(new Error(T('não consegui carregar o leitor','could not load the reader'))); };
+      document.head.appendChild(sc);
+    });
+    return ripP;
+  }
+  // nomes e durações das faixas (o mesmo arquivo que o player usa); só para músicas do acervo
+  function subList(rel) {
+    if (!rel) return Promise.resolve(null);
+    if (!subsP) subsP = fetch('subfaixas.json?v=' + Math.floor(Date.now() / 3.6e6)).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    return subsP.then(function (j) { var dir = rel.split('/').slice(0, -1).join('/'), f = rel.split('/').pop(); return j && j[dir] && j[dir][f] ? j[dir][f] : null; });
+  }
+  function zInflate(u8) { var st = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate')); return new Response(st).arrayBuffer().then(function (ab) { return new Uint8Array(ab); }); }
+  // arquivo vizinho (as _lib do PSF ficam na mesma pasta): do acervo, ou entre os abertos do aparelho
+  function sibling(rel, name) {
+    if (!rel) {
+      var hit = localByName[name.toLowerCase()];
+      return hit ? Promise.resolve(hit) : Promise.reject(new Error(T('abra junto o arquivo ','also open the file ') + name));
+    }
+    var dir = rel.split('/').slice(0, -1).join('/');
+    return acvFetch((dir ? dir + '/' : '') + name);
+  }
+  function ripLog(M, cnt) { return new Float64Array(M.HEAPF64.buffer, M._rip_log(), cnt * 4).slice(); }
+  function ripBlob(M) { return M.HEAPU8.slice(M._rip_blob(), M._rip_blob() + M._rip_blob_size()); }
+  // lê a música (rel = caminho no acervo, ou vazio para arquivo do aparelho; trk = faixa, começando em 0)
+  function parseChip(u8, nm, rel, trk) {
+    var kind = RGVGM.ripKind(u8);
+    var psfTags = function (ld) { return { song: ld.tags.title || '', game: ld.tags.game || '', author: ld.tags.artist || '' }; };
+    if (!kind) return RGVGM.inflate(new Uint8Array(u8)).then(function (raw) { return RGVGM.parse(raw, { events: true, pcm: true, name: nm }); });
+    if (kind === 'psf') return Promise.all([loadRip(), RGVGM.fmt.psfLoad(u8, function (n) { return sibling(rel, n); }, zInflate)]).then(function (a) {
+      var M = a[0], ld = a[1];
+      if (!M._psf_begin()) throw new Error('PSF');
+      ld.sections.forEach(function (sx, i) { var p = M._malloc(sx.length); M.HEAPU8.set(sx, p); M._psf_section(p, sx.length, i === 0 ? 1 : 0); M._free(p); });
+      var secs = Math.min(300, RGVGM.fmt.psfSecs(ld.tags) || 180), cnt = M._psf_run(secs);
+      if (cnt < 0) throw new Error(T('o PSF não iniciou','the PSF did not start'));
+      return RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: { log: ripLog(M, cnt), blob: ripBlob(M), info: psfTags(ld), seconds: secs } });
+    });
+    if (kind === '2sf') return Promise.all([loadRip(), RGVGM.fmt.psfLoad(u8, function (n) { return sibling(rel, n); }, zInflate)]).then(function (a) {
+      var M = a[0], ld = a[1];
+      return RGVGM.fmt.ndsImage(ld, zInflate).then(function (im) {
+        var secs = Math.min(300, RGVGM.fmt.psfSecs(ld.tags) || 180);
+        var pr = M._malloc(im.rom.length || 1); M.HEAPU8.set(im.rom, pr);
+        var ps = M._malloc(im.save.length || 1); M.HEAPU8.set(im.save, ps);
+        var cnt = M._nds_run(pr, im.rom.length, ps, im.save.length, im.frames, im.clockdown, im.a7, im.a9, im.sync, secs);
+        M._free(pr); M._free(ps);
+        if (cnt < 0) throw new Error(T('o 2SF não iniciou','the 2SF did not start'));
+        return RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: { log: ripLog(M, cnt), blob: ripBlob(M), info: psfTags(ld), seconds: secs } });
+      });
+    });
+    if (kind === 'gsf') return Promise.all([loadRip(), RGVGM.fmt.psfLoad(u8, function (n) { return sibling(rel, n); }, zInflate)]).then(function (a) {
+      var M = a[0], ld = a[1], im = RGVGM.fmt.gbaImage(ld);
+      if (!im) throw new Error('GSF');
+      var secs = Math.min(300, RGVGM.fmt.psfSecs(ld.tags) || 180);
+      var pi = M._malloc(im.img.length); M.HEAPU8.set(im.img, pi);
+      var cnt = M._gba_run(pi, im.img.length, im.entry, secs); M._free(pi);
+      if (cnt < 0) throw new Error(T('o GSF não iniciou','the GSF did not start'));
+      return RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: { log: ripLog(M, cnt), blob: ripBlob(M), info: psfTags(ld), seconds: secs } });
+    });
+    if (kind === 'sid') return subList(rel).then(function (subs) {
+      var n = RGSID.tracks(u8), st = u8[16] << 8 | u8[17];
+      var i = trk >= 0 ? Math.min(n - 1, trk) : Math.max(0, st - 1);
+      var info = subs && subs.filter(function (x) { return x[0] === i; })[0];
+      var R = RGSID.rip(u8, i, Math.min(300, info && info[2] > 0 ? info[2] / 1000 + 1 : 180));
+      var res = RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: R });
+      if (info && info[1] && n > 1) res.info.title = info[1];
+      return res;
+    });
+    return Promise.all([loadRip(), subList(rel)]).then(function (a) {
+      var M = a[0], subs = a[1], p = M._malloc(u8.length); M.HEAPU8.set(u8, p);
+      var n = M._rip_open(p, u8.length); M._free(p);
+      if (n < 0) throw new Error(T('formato não reconhecido','unknown format'));
+      var i = Math.max(0, Math.min(n - 1, trk >= 0 ? trk : 0));
+      var info = subs && subs.filter(function (x) { return x[0] === i; })[0];
+      var ms = info && info[2] > 0 ? info[2] : M._rip_len(i), secs = Math.min(300, ms > 0 ? ms / 1000 + 1 : 150);
+      var cnt = M._rip_run(i, secs);
+      var R = { log: ripLog(M, cnt), blob: ripBlob(M), info: {}, seconds: secs };
+      ['song', 'game', 'author', 'system'].forEach(function (k2, j) { R.info[k2] = M.UTF8ToString(M._rip_str(i, j)); });
+      var res = RGVGM.parse(u8, { events: true, pcm: true, name: nm, rip: R });
+      if (info && info[1] && n > 1) res.info.title = info[1];
+      return res;
+    });
+  }
+  function chipToFur(u8, name, delay, rel, trk) {
+    if (!window.RGVGM || !window.RGFUR) { notify(T('Conversor não carregou.','The converter did not load.')); return; }
     notify(T('🎛 Convertendo ','🎛 Converting ') + name + T(' para o Furnace…',' to Furnace…'));
-    RGVGM.inflate(new Uint8Array(u8)).then(function (raw) {
-      var r = RGVGM.parse(raw, { events: true, pcm: true });
+    parseChip(u8, name, rel || '', trk == null ? -1 : trk).then(function (r) {
       var o = RGFUR.build(r, { lang: rgI18n.lang });
       var fn = RGFUR.fileName(r, name.replace(/\.[^.]+$/, ''));
       openBytes(fn, o.bytes, delay);
       notify('🎛 ' + fn + ' — ' + (o.instruments - o.samples) + T(' instrumentos',' instruments') + (o.samples ? ', ' + o.samples + ' samples' : '') + T(', linha = ',', row = ') + o.rowFrames + T(' quadro',' frame') + (o.rowFrames === 1 ? '' : 's') + (o.missing && o.missing.length ? T(' · ficou de fora: ',' · left out: ') + o.missing.join(', ') : '') + (o.sampled && o.sampled.length ? T(' · virou sample: ',' · as samples: ') + o.sampled.join(', ') : ''));
     }).catch(function (e) { notify('🎛 ' + name + ': ' + (e.message || e)); });
   }
+  // nome antigo (ainda chamado por outras partes)
+  function vgmToFur(u8, name, delay) { chipToFur(u8, name, delay, '', -1); }
   function openFiles(list, fhs) {
     if (!ready) { alert(T('Espere o Tracker terminar de carregar.','Wait for the Tracker to finish loading.')); return; }
     Array.prototype.forEach.call(list, function (f, i) {
       f.arrayBuffer().then(function (ab) {
-        if (isVGM(f.name)) { askImport(new Uint8Array(ab), f.name); return; }
+        localByName[f.name.toLowerCase()] = new Uint8Array(ab);
+        if (/\.(psflib|2sflib|gsflib)$/i.test(f.name)) return;   // _lib: só serve de apoio para o PSF
+        if (isConv(f.name)) { askImport(new Uint8Array(ab), f.name, ''); return; }
         var safe = f.name.replace(/[\/\\]/g, '_');
         var path = HOME + '/' + folderFor(safe) + '/' + safe;
         if (fhs && fhs[i]) handles[path] = fhs[i]; else delete handles[path];
@@ -213,11 +308,13 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 
   // ── importar VGM: é uma conversão (não um projeto), então sempre passa por este aviso ──
   var impData = null;
-  function askImport(u8, name) {
-    impData = u8 ? { u8: u8, name: name } : null;
+  function askImport(u8, name, rel) {
+    impData = u8 ? { u8: u8, name: name, rel: rel || '' } : null;
+    $('impTrk').value = 1;
     $('impFn').textContent = name || '';
     $('impFn').style.display = name ? '' : 'none';
     $('impGo').textContent = u8 ? T('⤵ Importar', '⤵ Import') : T('Escolher arquivo…', 'Choose file…');
+    $('impTrk').parentNode.parentNode.style.display = (!u8 || /\.(nsf|nsfe|gbs|kss|sap|hes|ay|sid)$/i.test(name || '')) ? '' : 'none';
     $('imp').classList.add('show');
   }
   function closeImport() { $('imp').classList.remove('show'); impData = null; $('canvas').focus(); }
@@ -225,13 +322,19 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   $('impNo').onclick = closeImport;
   $('imp').onclick = function (e) { if (e.target === this) closeImport(); };
   $('impGo').onclick = function () {
-    if (impData) { var d = impData; closeImport(); vgmToFur(d.u8, d.name, 0); return; }
+    var trk = Math.max(0, (parseInt($('impTrk').value, 10) || 1) - 1);
+    if (impData) { var d = impData; closeImport(); chipToFur(d.u8, d.name, 0, d.rel, trk); return; }
     $('impIn').value = ''; $('impIn').click();
   };
   $('impIn').onchange = function () {
-    var f = this.files && this.files[0]; if (!f) return;
+    var fs = Array.prototype.slice.call(this.files || []); if (!fs.length) return;
     if (!ready) { alert(T('Espere o Tracker terminar de carregar.', 'Wait for the Tracker to finish loading.')); return; }
-    f.arrayBuffer().then(function (ab) { closeImport(); vgmToFur(new Uint8Array(ab), f.name, 0); });
+    var trk = Math.max(0, (parseInt($('impTrk').value, 10) || 1) - 1);
+    // lê todos (os _lib dos PSF vêm junto) e importa as músicas
+    Promise.all(fs.map(function (f) { return f.arrayBuffer().then(function (ab) { localByName[f.name.toLowerCase()] = new Uint8Array(ab); return [f.name, new Uint8Array(ab)]; }); })).then(function (all) {
+      closeImport();
+      all.filter(function (x) { return isConv(x[0]); }).forEach(function (x, i) { chipToFur(x[1], x[0], i * 400, '', trk); });
+    });
   };
   $('fileIn').onchange = function () { if (this.files.length) openFiles(this.files); };
 
@@ -371,7 +474,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     return get.then(function (u8) {
       if (!u8) return false;
       if (!vfsLoaded[p]) { importing[p] = 1; Module.FS.writeFile(p, u8); delete importing[p]; vfsLoaded[p] = 1; }
-      if (open && isVGM(name)) { askImport(u8, name); return true; }
+      if (open && isConv(name)) { askImport(u8, name, acvFiles[p] || ''); return true; }
       return false;
     });
   };
@@ -463,7 +566,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     });
   }
   $('tMidi').onclick = function () { if (lastSaved) vgmToMidi(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
-  $('tFur').onclick = function () { if (lastSaved) askImport(Module.FS.readFile(lastSaved), lastSaved.split('/').pop()); };
+  $('tFur').onclick = function () { if (lastSaved) askImport(Module.FS.readFile(lastSaved), lastSaved.split('/').pop(), ''); };
 
   // projeto mandado pelo Chiptune Studio (botão "Abrir no Tracker")
   function checkInbox() {

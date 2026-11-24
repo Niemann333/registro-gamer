@@ -1,7 +1,7 @@
 """Índice do Acervo para o Tracker (Chiptune Studio).
 
 O Chiptune Player usa chiptunes-index.json, que só tem o que ele toca. O Tracker abre também
-projetos (Furnace .fur, DefleMask .dmf, módulos, FamiTracker...) e importa VGM; então ele usa
+projetos (Furnace .fur, DefleMask .dmf, módulos, FamiTracker...) e importa chiptunes (VGM, NSF, SPC, PSF, SID...); então ele usa
 este índice, com esses formatos. Gera chiptune-player/tracker-index.json.
 """
 import json
@@ -14,6 +14,9 @@ EXT = {
     '.smod', '.fc', '.tfe', '.tfm',
     # importação
     '.vgm', '.vgz', '.mid', '.midi', '.kar', '.smf', '.fub',
+    # chiptunes que o Tracker converte em projeto (os mesmos do Chiptune Studio)
+    '.s98', '.nsf', '.nsfe', '.gbs', '.kss', '.sap', '.hes', '.ay', '.spc', '.sid', '.psf', '.minipsf',
+    '.2sf', '.mini2sf', '.gsf', '.minigsf',
     # instrumentos
     '.fui', '.dmp', '.tfi', '.vgi', '.s3i', '.sbi', '.opli', '.opni', '.y12', '.bnk', '.ff', '.gyb',
     '.opm', '.wopl', '.wopn',
