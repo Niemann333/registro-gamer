@@ -39,6 +39,8 @@ A	src/engine/export/kss.cpp
 A	src/engine/export/kss.h
 A	src/engine/export/kssdrv.asm
 A	src/engine/export/kssdrv.inc
+A	src/engine/export/module.cpp
+A	src/engine/export/module.h
 A	src/engine/export/nsf.cpp
 A	src/engine/export/nsf.h
 A	src/engine/export/nsfdrv.asm
@@ -79,9 +81,12 @@ M	src/engine/fileOps/tfm.cpp
 M	src/engine/fileOps/xm.cpp
 M	src/engine/fileOpsIns.cpp
 M	src/engine/fileOpsSample.cpp
+M	src/engine/platform/amiga.h
+M	src/engine/platform/pcmdac.h
 A	src/engine/platform/psx.cpp
 A	src/engine/platform/psx.h
 M	src/engine/platform/snes.cpp
+M	src/engine/playback.cpp
 M	src/engine/s98Ops.cpp
 M	src/engine/sysDef.cpp
 M	src/engine/sysDef.h

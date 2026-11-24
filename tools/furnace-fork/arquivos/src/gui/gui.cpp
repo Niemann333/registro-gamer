@@ -935,7 +935,9 @@ void FurnaceGUI::updateROMExportAvail() {
   if (!romExportAvail[romTarget]) {
     // find a new one
     romTarget=DIV_ROM_ABSTRACT;
-    for (int i=0; i<DIV_ROM_MAX; i++) {
+    for (int k=0; k<DIV_ROM_MAX; k++) {
+      // Registro Gamer: the Amiga validation export (a test, "do not use!") is only picked last
+      int i=(k==DIV_ROM_MAX-1)?(int)DIV_ROM_AMIGA_VALIDATION:((k>=(int)DIV_ROM_AMIGA_VALIDATION)?k+1:k);
       const DivROMExportDef* newDef=e->getROMExportDef((DivROMExportOptions)i);
       if (newDef!=NULL) {
         if (romExportAvail[i]) {

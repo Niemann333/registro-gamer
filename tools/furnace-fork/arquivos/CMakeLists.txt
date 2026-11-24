@@ -936,6 +936,7 @@ src/engine/export/snsf.cpp
 src/engine/export/hes.cpp
 src/engine/export/kss.cpp
 src/engine/export/ay.cpp
+src/engine/export/module.cpp
 src/engine/export/tiuna.cpp
 src/engine/export/zsm.cpp
 src/engine/export/ipod.cpp

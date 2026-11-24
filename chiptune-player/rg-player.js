@@ -1223,7 +1223,10 @@
       if (err === 'stale') return;
       console.error(err);
       status('Erro: ' + (err && err.message || err), 'error');
-      send({ type: 'error', msg: String(err && err.message || err) });
+      var emsg = String(err && err.message || err);
+      // OPL4 (YMF278B): precisa da ROM de sons da Yamaha (yrw801), que tem direitos autorais e não vai no site
+      if (/yrw801/i.test(emsg)) { status('OPL4: sons da Yamaha com direitos autorais', 'error'); send({ type: 'error', msg: emsg, known: 'opl4' }); return; }
+      send({ type: 'error', msg: emsg });
     });
   }
 

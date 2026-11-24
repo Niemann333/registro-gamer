@@ -23902,3 +23902,84 @@ msgstr "exportação AY (ZXAYEMUL) para ZX Spectrum 128: um AY-3-8910.\ntoca em 
 
 msgid "AY files"
 msgstr "arquivos AY"
+
+msgid ".\nexport it as MPTM, which goes up to 400 ticks per second."
+msgstr ".\nexporte em MPTM, que vai até 400 tiques por segundo."
+
+msgid "no sample chip in this song (the module export works with Amiga and Generic PCM)"
+msgstr "não há chip de samples nesta música (a exportação de módulo funciona com Amiga e PCM genérico)"
+
+msgid "the song has %d sample channels, but %s supports up to %d"
+msgstr "a música tem %d canais de samples, mas o %s aceita até %d"
+
+msgid "the song is too long for %s: it needs %d patterns and %d orders (up to %d and %d).\nexport it as XM, IT or MPTM, which have bigger patterns."
+msgstr "a música é longa demais para %s: precisa de %d padrões e %d posições na ordem (o limite é %d e %d).\nexporte em XM, IT ou MPTM, que têm padrões maiores."
+
+msgid "the song plays no samples"
+msgstr "a música não toca nenhuma sample"
+
+msgid "the song runs at %.2f ticks per second, too fast for %s (up to %.1f)%s"
+msgstr "a música roda a %.2f tiques por segundo, rápido demais para %s (até %.1f)%s"
+
+msgid "the song runs at %.2f ticks per second, too slow for a module (at least 12.8)"
+msgstr "a música roda a %.2f tiques por segundo, devagar demais para um módulo (mínimo de 12,8)"
+
+msgid "the song uses %d different samples (and waves), but %s supports up to %d"
+msgstr "a música usa %d samples (e ondas) diferentes, mas o %s aceita até %d"
+
+msgid "ProTracker MOD"
+msgstr "ProTracker MOD"
+
+msgid "Scream Tracker S3M"
+msgstr "Scream Tracker S3M"
+
+msgid "FastTracker XM"
+msgstr "FastTracker XM"
+
+msgid "Impulse Tracker IT"
+msgstr "Impulse Tracker IT"
+
+msgid "OpenMPT MPTM"
+msgstr "OpenMPT MPTM"
+
+msgid "MOD files"
+msgstr "arquivos MOD"
+
+msgid "S3M files"
+msgstr "arquivos S3M"
+
+msgid "XM files"
+msgstr "arquivos XM"
+
+msgid "IT files"
+msgstr "arquivos IT"
+
+msgid "MPTM files"
+msgstr "arquivos MPTM"
+
+msgid "MOD (ProTracker) export: 8-bit samples, up to 31 of them, 4 or more channels.\nthe most compatible module format, but the most limited: one effect column and no volume column.\nsongs must be short (128 orders of 64 rows, one row per tick).\ntwo modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\nworks with sample chips: Amiga and Generic PCM."
+msgstr "exportação MOD (ProTracker): samples de 8 bits, até 31 delas, 4 canais ou mais.\no formato de módulo mais compatível, mas o mais limitado: uma coluna de efeito e nenhuma de volume.\nas músicas precisam ser curtas (128 posições de 64 linhas, uma linha por tique).\ndois modos: fiel (gravado tique a tique, soa como no Furnace) ou editável (padrões, instrumentos e efeitos convertidos, para continuar editando no OpenMPT).\nfunciona com chips de samples: Amiga e PCM genérico."
+
+msgid "S3M (Scream Tracker 3) export: up to 99 samples and 32 channels, with a volume column.\npatterns have 64 rows (one row per tick), so long songs may not fit.\ntwo modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\nworks with sample chips: Amiga and Generic PCM."
+msgstr "exportação S3M (Scream Tracker 3): até 99 samples e 32 canais, com coluna de volume.\nos padrões têm 64 linhas (uma linha por tique), então músicas longas podem não caber.\ndois modos: fiel (gravado tique a tique, soa como no Furnace) ou editável (padrões, instrumentos e efeitos convertidos, para continuar editando no OpenMPT).\nfunciona com chips de samples: Amiga e PCM genérico."
+
+msgid "XM (FastTracker 2) export: up to 128 samples (8 or 16-bit) and 32 channels, with a volume column and linear slides.\nruns up to 51 ticks per second with full pitch accuracy (102 with fine slides only).\ntwo modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\nworks with sample chips: Amiga and Generic PCM."
+msgstr "exportação XM (FastTracker 2): até 128 samples (8 ou 16 bits) e 32 canais, com coluna de volume e slides lineares.\naté 51 tiques por segundo com a afinação completa (102 só com slides finos).\ndois modos: fiel (gravado tique a tique, soa como no Furnace) ou editável (padrões, instrumentos e efeitos convertidos, para continuar editando no OpenMPT).\nfunciona com chips de samples: Amiga e PCM genérico."
+
+msgid "IT (Impulse Tracker) export: up to 240 samples (8 or 16-bit; Impulse Tracker itself plays 99), 64 channels, ping-pong loops.\ntwo modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\nworks with sample chips: Amiga and Generic PCM."
+msgstr "exportação IT (Impulse Tracker): até 240 samples (8 ou 16 bits; o próprio Impulse Tracker toca 99), 64 canais, loops de ida e volta.\ndois modos: fiel (gravado tique a tique, soa como no Furnace) ou editável (padrões, instrumentos e efeitos convertidos, para continuar editando no OpenMPT).\nfunciona com chips de samples: Amiga e PCM genérico."
+
+msgid "MPTM (OpenMPT) export: like IT, but with bigger patterns (1024 rows) and tempo up to 1000, including fractional tempo, so any tick rate plays exactly.\ntwo modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\nworks with sample chips: Amiga and Generic PCM."
+msgstr "exportação MPTM (OpenMPT): como o IT, mas com padrões maiores (1024 linhas) e andamento até 1000, inclusive fracionário, então qualquer taxa de tique toca exata.\ndois modos: fiel (gravado tique a tique, soa como no Furnace) ou editável (padrões, instrumentos e efeitos convertidos, para continuar editando no OpenMPT).\nfunciona com chips de samples: Amiga e PCM genérico."
+
+msgid "faithful (sounds as in Furnace)"
+msgstr "fiel (soa como no Furnace)"
+
+msgid "the song is recorded tick by tick: macros, arpeggios, slides and volumes sound as in Furnace.\nthe patterns are made for playing, not for editing."
+msgstr "a música é gravada tique a tique: macros, arpejos, slides e volumes soam como no Furnace.\nos padrões são feitos para tocar, não para editar."
+
+msgid "editable (patterns and instruments)"
+msgstr "editável (padrões e instrumentos)"
+
+msgid "the patterns, instruments and effects are converted one by one, ready to keep editing in OpenMPT.\nwhat the format can't do is left out (the export log says what)."
+msgstr "os padrões, instrumentos e efeitos são convertidos um a um, prontos para continuar editando no OpenMPT.\no que o formato não consegue fazer fica de fora (o registro da exportação diz o quê)."

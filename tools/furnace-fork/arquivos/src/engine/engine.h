@@ -1552,6 +1552,8 @@ class DivEngine {
 
     // dispatch a command
     int dispatchCmd(DivCommand c);
+    // Registro Gamer: called with every command sent to the chips (set by the module exporter)
+    std::function<void(const DivCommand&)> rgCmdHook;
 
     // get system IDs
     static DivSystem systemFromFileFur(unsigned short val);

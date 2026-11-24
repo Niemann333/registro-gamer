@@ -72,9 +72,35 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
   Gadget do PC aceita .hes (o do celular já aceitava). Studio mostra HES / KSS / AY nos formatos de volta.
 - Traduções em po/pt_BR.po.
 
-## Próximo: OpenMPT
-- Exportar MOD/XM/S3M/IT/MPTM para músicas de samples (Amiga/ES5506/samples genéricos) + ferramentas de sample
-  inspiradas no OpenMPT (aprovado pelo usuário: "o máximo que conseguir").
+## OpenMPT, parte 1: exportar MOD / S3M / XM / IT / MPTM — PRONTO (24/11)
+- ROM → "ProTracker MOD", "Scream Tracker S3M", "FastTracker XM", "Impulse Tracker IT", "OpenMPT MPTM" (module.cpp).
+  Chips aceitos: Amiga e PCM genérico (os outros chips da música são ignorados com aviso).
+- Dois modos (opção na janela de exportação; na linha de comando `-romconf mode=editable`):
+  - **fiel** (padrão): grava o estado de cada canal em cada tique (sample, frequência, volume, pan, início de nota)
+    e escreve uma linha por tique. Velocidade 2 (andamento = 5 × taxa de tique) para slides normais no meio da linha;
+    acima de 51 Hz, velocidade 1 com slides finos. A afinação segue com slides extra-finos (1/64 de semitom) e as
+    samples ganham uma afinação de referência que deixa os inícios de nota em notas inteiras. Ondas do Amiga viram
+    samples (repetidas são juntadas; se passar do limite, as menos usadas se juntam às mais parecidas).
+    MOD: samples reamostradas por oitava para caber em 128 KB e nas 3 oitavas do ProTracker.
+    MPTM: andamento até 1000 e fracionário (bloco "STPM" com DT.. e DTFR + bloco "228" vazio) → qualquer taxa exata.
+    Resultado (openmpt123 × Furnace): IT/XM/S3M/MPTM 0,95–1,00; MOD 0,78–0,94 (formato limitado).
+  - **editável**: os padrões viram padrões (uma posição da ordem por posição), instrumentos viram instrumentos
+    (IT/MPTM/XM: mapa de samples por nota, macro de volume → envelope de volume, macro de arpejo → envelope de pitch
+    no IT), efeitos traduzidos (00, 01, 02, 03, 04, 05/06, 07, 08/80, 09/0F, 0A, 0B, 0C, 0D, 90, EC, ED, F0, F1-F4,
+    F8/F9, FA). Efeitos contínuos do Furnace são repetidos a cada linha; o que não cabe vai para a coluna de volume
+    ou fica de fora (o log conta). Resultado: 0,96–1,00 nas músicas sem síntese de onda.
+- Ganchos novos: DivEngine::rgCmdHook (comandos para os chips) e DivExportRG::tickHook (depois de cada tique).
+- Verificação: `openmpt123 --batch --render --no-float --samplerate 44100 --end-time 45 arquivo` + cmpwav.py.
+
+## OpenMPT, próximos passos
+- Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
+  (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com
+  zero, esticar o tempo, mudar a altura). Código DSP em src/engine/rgsampletools.* (cópia em /home/claude/work/stash).
+  PROBLEMA: a afinação automática dá certo no teste nativo (363 Hz, afinação 435.93 → 5961 / 8430), mas no navegador
+  dá 8233 nos dois modos. Investigar antes de publicar. O resto (WSOLA) foi testado e funciona.
+- OPL4 (YMF278B): precisa da ROM yrw801 da Yamaha (direitos autorais) → o player avisa e pula (pedido do usuário).
+- Soundfont gmgsx-plus.sf2: origem duvidosa; sugerido trocar por GeneralUser GS / FluidR3 (aguardando o usuário).
+- Mais chips no modo fiel (ondas de PCE/SCC/Game Boy, pulsos, ruído) gerando samples.
 
 ## Próximos passos
 1. Exportadores ainda não feitos: GSF/2SF (mais difíceis). SAP já existe (SAP-R).

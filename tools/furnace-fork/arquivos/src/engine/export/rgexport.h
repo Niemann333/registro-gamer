@@ -28,6 +28,7 @@
 #include "../export.h"
 #include "../dispatch.h"
 #include <thread>
+#include <functional>
 #include <vector>
 
 struct RGWrite {
@@ -50,6 +51,8 @@ class DivExportRG: public DivROMExport {
     int loopTick;
     // tick rate of the song
     double tickRate;
+    // called after each captured tick (inside the engine lock), with the tick number
+    std::function<void(int)> tickHook;
 
     virtual void run()=0;
     void fail(const String& why);

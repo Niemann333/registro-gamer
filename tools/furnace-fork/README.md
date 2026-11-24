@@ -32,6 +32,7 @@ pequeno programa do próprio console que repete as escritas de registrador grava
 | HES | PC Engine / TurboGrafx-16 | [hes.cpp](arquivos/src/engine/export/hes.cpp) | [hesdrv.asm](arquivos/src/engine/export/hesdrv.asm) (HuC6280) |
 | KSS | MSX: PSG, SCC, FM-PAC (OPLL), MSX-AUDIO (Y8950) | [kss.cpp](arquivos/src/engine/export/kss.cpp) | [kssdrv.asm](arquivos/src/engine/export/kssdrv.asm) (Z80) |
 | AY | ZX Spectrum 128 | [ay.cpp](arquivos/src/engine/export/ay.cpp) | [aydrv.asm](arquivos/src/engine/export/aydrv.asm) (Z80) |
+| MOD / S3M / XM / IT / MPTM | músicas de samples (Amiga, PCM genérico) | [module.cpp](arquivos/src/engine/export/module.cpp) | — (módulos tocam em qualquer tracker/player) |
 
 A parte comum (gravar a música tique a tique e comprimir) fica em
 [rgexport.cpp](arquivos/src/engine/export/rgexport.cpp).

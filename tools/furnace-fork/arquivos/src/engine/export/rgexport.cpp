@@ -89,6 +89,7 @@ bool DivExportRG::capture(const std::vector<int>& sys) {
       ticks.push_back(pre);
       pre.clear();
       collect(ticks.back());
+      if (tickHook) tickHook((int)ticks.size()-1);
       if (ticks.size()>=RG_MAX_TICKS) {
         logAppend("song too long; cutting at one hour");
         break;

@@ -34,6 +34,7 @@
 #include "export/hes.h"
 #include "export/kss.h"
 #include "export/ay.h"
+#include "export/module.h"
 
 DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
   DivROMExport* exporter=NULL;
@@ -82,6 +83,21 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
       break;
     case DIV_ROM_AY:
       exporter=new DivExportAY;
+      break;
+    case DIV_ROM_MOD:
+      exporter=new DivExportModule(RG_FMT_MOD);
+      break;
+    case DIV_ROM_S3M:
+      exporter=new DivExportModule(RG_FMT_S3M);
+      break;
+    case DIV_ROM_XM:
+      exporter=new DivExportModule(RG_FMT_XM);
+      break;
+    case DIV_ROM_IT:
+      exporter=new DivExportModule(RG_FMT_IT);
+      break;
+    case DIV_ROM_MPTM:
+      exporter=new DivExportModule(RG_FMT_MPTM);
       break;
     default:
       exporter=new DivROMExport;

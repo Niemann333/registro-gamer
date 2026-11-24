@@ -260,4 +260,64 @@ void DivEngine::registerROMExports() {
     },
     false, DIV_REQPOL_LAX
   );
+
+  romExportDefs[DIV_ROM_MOD]=new DivROMExportDef(
+    "ProTracker MOD", "Registro Gamer",
+    "MOD (ProTracker) export: 8-bit samples, up to 31 of them, 4 or more channels.\nthe most compatible module format, but the most limited: one effect column and no volume column.\nsongs must be short (128 orders of 64 rows, one row per tick).\n"
+    "two modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\n"
+    "works with sample chips: Amiga and Generic PCM.",
+    "MOD files", ".mod",
+    {
+      DIV_SYSTEM_AMIGA, DIV_SYSTEM_PCM_DAC
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_S3M]=new DivROMExportDef(
+    "Scream Tracker S3M", "Registro Gamer",
+    "S3M (Scream Tracker 3) export: up to 99 samples and 32 channels, with a volume column.\npatterns have 64 rows (one row per tick), so long songs may not fit.\n"
+    "two modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\n"
+    "works with sample chips: Amiga and Generic PCM.",
+    "S3M files", ".s3m",
+    {
+      DIV_SYSTEM_AMIGA, DIV_SYSTEM_PCM_DAC
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_XM]=new DivROMExportDef(
+    "FastTracker XM", "Registro Gamer",
+    "XM (FastTracker 2) export: up to 128 samples (8 or 16-bit) and 32 channels, with a volume column and linear slides.\nruns up to 51 ticks per second with full pitch accuracy (102 with fine slides only).\n"
+    "two modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\n"
+    "works with sample chips: Amiga and Generic PCM.",
+    "XM files", ".xm",
+    {
+      DIV_SYSTEM_AMIGA, DIV_SYSTEM_PCM_DAC
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_IT]=new DivROMExportDef(
+    "Impulse Tracker IT", "Registro Gamer",
+    "IT (Impulse Tracker) export: up to 240 samples (8 or 16-bit; Impulse Tracker itself plays 99), 64 channels, ping-pong loops.\n"
+    "two modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\n"
+    "works with sample chips: Amiga and Generic PCM.",
+    "IT files", ".it",
+    {
+      DIV_SYSTEM_AMIGA, DIV_SYSTEM_PCM_DAC
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_MPTM]=new DivROMExportDef(
+    "OpenMPT MPTM", "Registro Gamer",
+    "MPTM (OpenMPT) export: like IT, but with bigger patterns (1024 rows) and tempo up to 1000, including fractional tempo, so any tick rate plays exactly.\n"
+    "two modes: faithful (recorded tick by tick, sounds as in Furnace) or editable (patterns, instruments and effects converted, to keep editing in OpenMPT).\n"
+    "works with sample chips: Amiga and Generic PCM.",
+    "MPTM files", ".mptm",
+    {
+      DIV_SYSTEM_AMIGA, DIV_SYSTEM_PCM_DAC
+    },
+    false, DIV_REQPOL_LAX
+  );
 }

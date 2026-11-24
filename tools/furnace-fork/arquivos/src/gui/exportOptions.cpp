@@ -564,6 +564,32 @@ void FurnaceGUI::drawExportROM(bool onWindow) {
       }
       break;
     }
+    case DIV_ROM_MOD:
+    case DIV_ROM_S3M:
+    case DIV_ROM_XM:
+    case DIV_ROM_IT:
+    case DIV_ROM_MPTM: {
+      // Registro Gamer: module export mode
+      bool editable=(romConfig.getString("mode","faithful")=="editable");
+      if (ImGui::RadioButton(_("faithful (sounds as in Furnace)"),!editable)) {
+        editable=false;
+        altered=true;
+      }
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s",_("the song is recorded tick by tick: macros, arpeggios, slides and volumes sound as in Furnace.\nthe patterns are made for playing, not for editing."));
+      }
+      if (ImGui::RadioButton(_("editable (patterns and instruments)"),editable)) {
+        editable=true;
+        altered=true;
+      }
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s",_("the patterns, instruments and effects are converted one by one, ready to keep editing in OpenMPT.\nwhat the format can't do is left out (the export log says what)."));
+      }
+      if (altered) {
+        romConfig.set("mode",editable?"editable":"faithful");
+      }
+      break;
+    }
     case DIV_ROM_ABSTRACT:
       ImGui::TextWrapped("%s",_("select a target from the menu at the top of this dialog."));
       break;
