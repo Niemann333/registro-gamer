@@ -1,0 +1,85 @@
+From 5772061dfa17fdc0aae24d0f0578e54916ca533e Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 14:38:32 -0300
+Subject: [PATCH 43/43] =?UTF-8?q?Tocador=20sem=20interface:=20busca=20r?=
+ =?UTF-8?q?=C3=A1pida=20(avan=C3=A7a=20os=20tiques=20sem=20gerar=20som)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/engine/engine.h   |  2 ++
+ src/engine/rgplay.cpp | 18 ++++++++++++++++++
+ src/rgplayer.cpp      |  7 +++++++
+ 3 files changed, 27 insertions(+)
+
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index dae161c..5ed182c 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -1557,6 +1557,8 @@ class DivEngine {
+     bool rgPlayStart(int rate);
+     // renders n stereo frames; returns false once the song has stopped (FFxx)
+     bool rgPlayRender(float* l, float* r, unsigned int n);
++    // jumps to sec (seconds from the start, loops included) without rendering audio; returns where it landed
++    double rgPlaySeek(double sec);
+     // length (seconds), loop start (seconds) and whether the song loops
+     void rgPlayTimes(double& total, double& loopStart, bool& loops);
+     // Registro Gamer: called with every command sent to the chips (set by the module exporter)
+diff --git a/src/engine/rgplay.cpp b/src/engine/rgplay.cpp
+index 3afd5ff..0d6a61b 100644
+--- a/src/engine/rgplay.cpp
++++ b/src/engine/rgplay.cpp
+@@ -46,6 +46,24 @@ bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
+   return playing;
+ }
+ 
++double DivEngine::rgPlaySeek(double sec) {
++  if (!rgPlayStart(got.rate)) return 0;
++  if (sec<=0) return 0;
++  // like playSub(): run the ticks with the chips' register writes muted, then make them write everything again
++  skipping=true;
++  for (int i=0; i<song.systemLen; i++) disCont[i].dispatch->setSkipRegisterWrites(true);
++  while (playing && totalTime.toDouble()<sec) {
++    if (nextTick(false)) break;
++  }
++  skipping=false;
++  cmdStream.clear();
++  for (int i=0; i<song.systemLen; i++) {
++    disCont[i].dispatch->setSkipRegisterWrites(false);
++    disCont[i].dispatch->forceIns();
++  }
++  return totalTime.toDouble();
++}
++
+ void DivEngine::rgPlayTimes(double& total, double& loopStart, bool& loops) {
+   calcSongTimestamps();
+   DivSongTimestamps& ts=curSubSong->ts;
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index 5dcc450..866eece 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -90,6 +90,12 @@ RGF_EXPORT int rgf_restart() {
+   return (e!=NULL && e->rgPlayStart(sampleRate))?1:0;
+ }
+ 
++// jumps to ms without rendering; returns where it landed (ms)
++RGF_EXPORT double rgf_seek(double ms) {
++  if (e==NULL) return 0;
++  return e->rgPlaySeek(ms/1000.0)*1000.0;
++}
++
+ // renders n frames into l and r; returns 0 when the song has stopped
+ RGF_EXPORT int rgf_render(float* l, float* r, int n) {
+   if (e==NULL) return 0;
+@@ -158,6 +164,7 @@ int main(int argc, char** argv) {
+   rgf_times(t);
+   fprintf(stderr,"tuning %s\n",rgf_info(5));
+   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
++  if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
+   FILE* o=fopen(argv[2],"wb");
+   int total=atoi(argv[3])*44100;
+   float l[1024], r[1024];
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
 From 1af853f6ca460ead9a3c7b03eaa660b190693aea Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Mon, 23 Nov 2026 12:48:16 -0300
-Subject: [PATCH 33/42] SID: um fluxo por voz, dados de $0800 a $FFF9 (RAM sob
+Subject: [PATCH 33/43] SID: um fluxo por voz, dados de $0800 a $FFF9 (RAM sob
  E/S e KERNAL), 63 KB livres
 
 ---

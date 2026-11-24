@@ -730,8 +730,8 @@
   // Toca tudo o que o Furnace abre; cada chip é emulado como no Tracker do blog.
   var furPromise = null;
   function loadFur() {
-    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=2').then(function () {
-      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=2'; } });
+    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=3').then(function () {
+      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=3'; } });
     }).then(function (M) {
       if (!M._rgf_init(SR)) throw new Error('Furnace: não iniciou');
       return M;
@@ -794,12 +794,9 @@
         var d = info.introMs + info.loopMs * loops;
         return { durMs: d, own: true, report: d + FADE_MS, hasLoop: true, introMs: info.introMs, loopMs: info.loopMs, totalMs: info.totalMs };
       },
-      seek: function (ms) {          // recomeça e toca sem som até o ponto pedido
-        M._rgf_restart();
-        frames = 0;
-        bufs(CHUNK);
-        var alvo = Math.floor(Math.max(0, ms) * SR / 1000);
-        while (frames < alvo) { var k = Math.min(CHUNK, alvo - frames); M._rgf_render(L, R, k); frames += k; }
+      seek: function (ms) {          // o motor avança os tiques sem gerar som (rápido) e volta a tocar dali
+        var got = M._rgf_seek(Math.max(0, ms));
+        frames = Math.round(got * SR / 1000);
       },
       voices: function () {
         var sys = M.UTF8ToString(M._rgf_info(3)) || 'Furnace';
@@ -1049,7 +1046,7 @@
   var audioDecPromise = null;
   function loadAudioDec() {
     if (!audioDecPromise) audioDecPromise = loadScript(BASE + 'rg-audiodec.js?v=1').then(function () {
-      return self.RGAudioDec({ locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=2'; } });
+      return self.RGAudioDec({ locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=3'; } });
     }).catch(function (e) { audioDecPromise = null; throw e; });
     return audioDecPromise;
   }

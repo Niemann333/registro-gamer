@@ -1557,6 +1557,8 @@ class DivEngine {
     bool rgPlayStart(int rate);
     // renders n stereo frames; returns false once the song has stopped (FFxx)
     bool rgPlayRender(float* l, float* r, unsigned int n);
+    // jumps to sec (seconds from the start, loops included) without rendering audio; returns where it landed
+    double rgPlaySeek(double sec);
     // length (seconds), loop start (seconds) and whether the song loops
     void rgPlayTimes(double& total, double& loopStart, bool& loops);
     // Registro Gamer: called with every command sent to the chips (set by the module exporter)

@@ -46,6 +46,24 @@ bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
   return playing;
 }
 
+double DivEngine::rgPlaySeek(double sec) {
+  if (!rgPlayStart(got.rate)) return 0;
+  if (sec<=0) return 0;
+  // like playSub(): run the ticks with the chips' register writes muted, then make them write everything again
+  skipping=true;
+  for (int i=0; i<song.systemLen; i++) disCont[i].dispatch->setSkipRegisterWrites(true);
+  while (playing && totalTime.toDouble()<sec) {
+    if (nextTick(false)) break;
+  }
+  skipping=false;
+  cmdStream.clear();
+  for (int i=0; i<song.systemLen; i++) {
+    disCont[i].dispatch->setSkipRegisterWrites(false);
+    disCont[i].dispatch->forceIns();
+  }
+  return totalTime.toDouble();
+}
+
 void DivEngine::rgPlayTimes(double& total, double& loopStart, bool& loops) {
   calcSongTimestamps();
   DivSongTimestamps& ts=curSubSong->ts;

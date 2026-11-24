@@ -90,6 +90,12 @@ RGF_EXPORT int rgf_restart() {
   return (e!=NULL && e->rgPlayStart(sampleRate))?1:0;
 }
 
+// jumps to ms without rendering; returns where it landed (ms)
+RGF_EXPORT double rgf_seek(double ms) {
+  if (e==NULL) return 0;
+  return e->rgPlaySeek(ms/1000.0)*1000.0;
+}
+
 // renders n frames into l and r; returns 0 when the song has stopped
 RGF_EXPORT int rgf_render(float* l, float* r, int n) {
   if (e==NULL) return 0;
@@ -158,6 +164,7 @@ int main(int argc, char** argv) {
   rgf_times(t);
   fprintf(stderr,"tuning %s\n",rgf_info(5));
   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
+  if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
   FILE* o=fopen(argv[2],"wb");
   int total=atoi(argv[3])*44100;
   float l[1024], r[1024];
