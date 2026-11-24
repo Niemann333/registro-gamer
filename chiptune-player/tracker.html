@@ -99,8 +99,8 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 <div class="bar">
   <div class="logo"><i>🎛️</i><span>CHIPTUNE STUDIO · TRACKER</span></div>
   <button class="btn pri" id="bOpen" title="Abrir um projeto do seu aparelho: Furnace (.fur), DefleMask (.dmf), módulos (MOD, XM, S3M, IT, FTM…), instrumentos, wavetables ou samples" data-en-title="Open a project from your device: Furnace (.fur), DefleMask (.dmf), modules (MOD, XM, S3M, IT, FTM…), instruments, wavetables or samples">📂 <span class="lbl" data-en="Open project">Abrir projeto</span></button>
-  <button class="btn" id="bImp" title="Importar um VGM (registro de instruções para o chip de som do Mega Drive ou do Master System) e transformar em projeto. É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chip recording (Mega Drive or Master System VGM) and turn it into a project. It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import VGM">Importar VGM</span></button>
-  <button class="btn" id="bMidi" title="Converter um VGM (arquivo local) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a VGM (local file) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 VGM → MIDI</button>
+  <button class="btn" id="bImp" title="Importar um chiptune e transformar em projeto (por enquanto VGM de Mega Drive e Master System; os outros formatos convertem pelo Chiptune Studio). É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chiptune and turn it into a project (for now Mega Drive and Master System VGM; other formats convert in Chiptune Studio). It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import Chiptune">Importar Chiptune</span></button>
+  <button class="btn" id="bMidi" title="Converter um chiptune (arquivo VGM do aparelho) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a chiptune (VGM file from your device) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 Chiptune → MIDI</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
   <div class="sp"></div>
@@ -118,7 +118,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 
 <div class="toast" id="toast"><span id="tTxt"></span><button class="btn" id="tFur" style="display:none" title="Importar este VGM como projeto (timbres do chip)" data-en-title="Import this VGM as a project (chip sounds)" data-en="⤵ Import as project">⤵ Importar como projeto</button><button class="btn" id="tMidi" style="display:none" title="Converter este VGM para MIDI e baixar" data-en-title="Convert this VGM to MIDI and download it">🎼 MIDI</button><button class="btn" id="tX">✕</button></div>
 <div class="imp" id="imp"><div class="box">
-  <h3 data-en="⤵ Import VGM">⤵ Importar VGM</h3>
+  <h3 data-en="⤵ Import Chiptune">⤵ Importar Chiptune</h3>
   <p id="impFn" class="fn"></p>
   <p data-en="A VGM is not a project: it is a log of instructions for playback on the sound chip. Importing rebuilds patterns, instruments and samples from that log, so:">Um VGM não é um projeto: é um registro com instruções para reprodução no chip de som. A importação reconstrói padrões, instrumentos e samples a partir desse registro, por isso:</p>
   <ul>
@@ -126,7 +126,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     <li data-en="for now only Mega Drive / Genesis (YM2612 + SN76489) and Master System (SN76489);">por enquanto só Mega Drive / Genesis (YM2612 + SN76489) e Master System (SN76489);</li>
     <li data-en="the result opens as a new project; save it (File → Save) to keep it.">o resultado abre como um projeto novo; salve (Arquivo → Salvar) para guardar.</li>
   </ul>
-  <div class="row"><button class="btn" id="impNo" data-en="Cancel">Cancelar</button><button class="btn pri" id="impGo" data-en="Choose VGM…">Escolher VGM…</button></div>
+  <div class="row"><button class="btn" id="impNo" data-en="Cancel">Cancelar</button><button class="btn pri" id="impGo" data-en="Choose file…">Escolher arquivo…</button></div>
 </div></div>
 <div class="drop" id="drop" data-en="Drop the file to open it in the Tracker">Solte o arquivo para abrir no Tracker</div>
 
@@ -217,7 +217,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     impData = u8 ? { u8: u8, name: name } : null;
     $('impFn').textContent = name || '';
     $('impFn').style.display = name ? '' : 'none';
-    $('impGo').textContent = u8 ? T('⤵ Importar', '⤵ Import') : T('Escolher VGM…', 'Choose VGM…');
+    $('impGo').textContent = u8 ? T('⤵ Importar', '⤵ Import') : T('Escolher arquivo…', 'Choose file…');
     $('imp').classList.add('show');
   }
   function closeImport() { $('imp').classList.remove('show'); impData = null; $('canvas').focus(); }
