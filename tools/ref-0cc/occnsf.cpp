@@ -20,7 +20,7 @@ int main(int argc, char **argv) try {
 	in.Open(argv[1], std::ios::in | std::ios::binary);
 	in.ValidateFile();
 	std::cerr << "versão do arquivo: " << std::hex << in.GetFileVersion() << std::dec << "\n";
-	if (!CFamiTrackerDocIO {in, module_error_level_t::MODULE_ERROR_DEFAULT}.Load(modfile)) { std::cerr << "falha ao carregar\n"; return 2; }
+	if (!CFamiTrackerDocIO {in, (getenv("OCC_LENIENT") ? module_error_level_t::MODULE_ERROR_NONE : module_error_level_t::MODULE_ERROR_DEFAULT)}.Load(modfile)) { std::cerr << "falha ao carregar\n"; return 2; }
 	int machine = argc > 3 ? atoi(argv[3]) : 0;
 	bool nsfe = argc > 4 && atoi(argv[4]);
 	CSimpleFile out(argv[2], std::ios::out | std::ios::binary);

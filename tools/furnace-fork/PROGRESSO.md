@@ -133,6 +133,12 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   restam: penguins 3 quadros, Strut 27, gastly 3 (G00 do driver), Captain Houkin 304 (ruído não reescrito em
   algumas notas — investigar prevFreq do canal de ruído), Hellpath.dnm (o 0CC não é referência certa para .dnm:
   precisa do Dn-FamiTracker), laser.ftm (o 0CC não abre).
+- 25/11 (tarde): ruído com vibrato/arpejo, 000/1xx/2xx/Qxy/Rxy substituem o 3xx da mesma linha, sweep de hardware,
+  notas limitadas a C-0..B-7, slides até o limite do registrador. 30 de 31 módulos com o 2A03 idêntico
+  (laser.ftm comparado com OCC_LENIENT=1). Falta só Hellpath.dnm (precisa de referência do Dn-FamiTracker,
+  que só compila no Windows/MFC — pedir WAV/NSF ao usuário).
+- Exportar áudio (WAV etc.) na web abortava a página: o Furnace usava std::thread, e a build web não tem threads.
+  Agora roda numa fiber (ASYNCIFY), ~25 ms por quadro da interface (wavOps.cpp rgExportStep/rgExportYield).
 - Próximo: mesmas regras nos chips de expansão (VRC6, N163, FDS, MMC5, VRC7, S5B) — hoje só o 2A03 tem o modo
   FamiTracker; comparar também os registradores das expansões (apucmp.py só lê o 2A03); Hellpath (Dn-FT).
 

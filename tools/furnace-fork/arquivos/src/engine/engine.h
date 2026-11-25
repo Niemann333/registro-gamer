@@ -1319,6 +1319,9 @@ class DivEngine {
      * this function should not be called directly. it is used by saveAudio().
      */
     void runExportThread();
+    // RG: na versão web (sem threads) a exportação de áudio roda em fatias, numa fiber
+    void rgExportStep();
+    void rgExportYield();
 
     /**
      * this function handles audio output.

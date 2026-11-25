@@ -389,7 +389,8 @@ void DivPlatformNES::tick(bool sysTick) {
             }
           }
           // RG: no FamiTracker a sequência de pitch soma direto no índice do ruído (o importador inverte o sinal pensando nos pulsos)
-          if (parent->song.compatFlags.rgFamiTracker) ntPos-=chan[i].pitch2;
+          // RG: e o vibrato/pitch fino (efeitos 4xy/Pxx) também mexem no índice do ruído, como no FamiTracker
+          if (parent->song.compatFlags.rgFamiTracker) ntPos-=chan[i].pitch2+chan[i].pitch;
           else ntPos+=chan[i].pitch2;
           if (isE) {
             chan[i].freq=31-(ntPos&31);
@@ -426,7 +427,10 @@ void DivPlatformNES::tick(bool sysTick) {
       if (i==3) { // noise
         rWrite(0x4002+i*4,(chan[i].duty<<7)|chan[i].freq);
         rWrite(0x4003+i*4,(chan[i].len<<3));
+      } else if (parent->song.compatFlags.rgFamiTracker && i<2 && chan[i].sweep!=0x08 && !chan[i].rgSweepPend && !chan[i].keyOn) {
+        // RG: com o sweep de hardware ligado o FamiTracker deixa o chip mudar a altura sozinho
       } else {
+        chan[i].rgSweepPend=false;
         rWrite(0x4002+i*4,chan[i].freq&0xff);
         if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || i==2) {
           rWrite(0x4003+i*4,(chan[i].len<<3)|(chan[i].freq>>8));
@@ -707,6 +711,11 @@ int DivPlatformNES::dispatch(DivCommand c) {
       break;
     case DIV_CMD_NOTE_PORTA: {
       int destFreq=chan[c.chan].calcBaseFreq(c.value2+chan[c.chan].sampleNoteDelta);
+      // RG: no FamiTracker os slides 1xx/2xx só param no limite do registrador (0..0x7FF), não na última nota
+      if (parent->song.compatFlags.rgFamiTracker && c.chan<3) {
+        if (c.value2+chan[c.chan].sampleNoteDelta>155) destFreq=1;
+        else if (c.value2+chan[c.chan].sampleNoteDelta<60) destFreq=0x800;
+      }
       bool return2=false;
       if (destFreq>chan[c.chan].baseFreq) {
         chan[c.chan].baseFreq+=c.value;
@@ -752,6 +761,9 @@ int DivPlatformNES::dispatch(DivCommand c) {
       }
       rWrite(0x4001+(c.chan*4),chan[c.chan].sweep);
       chan[c.chan].sweepChanged=true;
+      chan[c.chan].rgSweepPend=true;
+      // RG: o FamiTracker escreve a altura junto com o sweep, no mesmo quadro
+      if (parent->song.compatFlags.rgFamiTracker && chan[c.chan].sweep!=0x08) chan[c.chan].freqChanged=true;
       break;
     case DIV_CMD_NES_ENV_MODE:
       chan[c.chan].envMode=c.value&3;
@@ -814,6 +826,14 @@ int DivPlatformNES::dispatch(DivCommand c) {
       }
       break;
     case DIV_CMD_LEGATO:
+      // RG: modo FamiTracker: o arpejo do efeito também vale no ruído (o "período" do ruído é a própria nota)
+      if (c.chan==3 && c.value2==1 && parent->song.compatFlags.rgFamiTracker) {
+        if (!chan[c.chan].std.arp.has) {
+          chan[c.chan].baseFreq=c.value;
+          chan[c.chan].freqChanged=true;
+        }
+        break;
+      }
       if (c.chan==3) break;
       // RG: modo FamiTracker: arpejo do efeito (value2=1) não mexe na nota base e é ignorado enquanto a sequência de arpejo do instrumento roda
       if (c.value2==1 && parent->song.compatFlags.rgFamiTracker) {
@@ -1071,6 +1091,9 @@ void DivPlatformNES::notifyPitchTable(int sample) {
       if (n<0 || n>=192) continue;
       pitchTable.rgExactTab[n]=CLAMP(pitchTable.rgExactTab[n]-1-rgDetune[i],0,0x7ff)+1;
     }
+    // RG: o FamiTracker limita as notas a C-0..B-7 (Furnace 60..155)
+    for (int i=0; i<60; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[60];
+    for (int i=156; i<192; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[155];
   }
   samplePitchTable.update<Channel>(chan,5,parent->song.tuning,1,1,32000,false,parent->song.compatFlags.linearPitch,sample);
 }

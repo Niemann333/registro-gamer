@@ -7160,6 +7160,8 @@ bool FurnaceGUI::loop() {
     if (ImGui::BeginPopupModal(_("Rendering..."),NULL,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings)) {
       // WHAT the HELL?!
       WAKE_UP;
+      // RG: versão web: roda mais uma fatia da exportação a cada quadro
+      e->rgExportStep();
       if (audioExportOptions.mode!=DIV_EXPORT_MODE_MANY_CHAN) {
         ImGui::Text(_("Please wait..."));
       }

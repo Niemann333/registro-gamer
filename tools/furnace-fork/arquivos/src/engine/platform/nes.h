@@ -36,11 +36,14 @@ class DivPlatformNES: public DivDispatch {
     int rgMacVol;
     // RG: duty padrão (último Vxx); no FamiTracker cada nota nova volta a ele
     unsigned char rgDefDuty;
+    // RG: sweep de hardware acabou de ser (re)aplicado: só então o FamiTracker escreve a altura
+    bool rgSweepPend;
     Channel(bool linear=true):
       SharedChannel(15,linear),
       rgVolNZ(true),
       rgMacVol(15),
       rgDefDuty(0),
+      rgSweepPend(false),
       prevFreq(65535),
       duty(0),
       sweep(8),

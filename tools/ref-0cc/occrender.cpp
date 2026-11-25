@@ -31,7 +31,8 @@ public:
 	CFamiTrackerModule *mod = nullptr;
 	CInstrumentManager *GetInstrumentManager() const override { return mod->GetInstrumentManager(); }
 	void OnTick() override { }
-	void OnStepRow() override { }
+	CSoundDriver *drv = nullptr; int *frame = nullptr;
+	void OnStepRow() override { if (getenv("RGROWS")) fprintf(stderr, "ROW q%d o%d l%d\n", *frame, drv->GetPlayerCursor()->GetCurrentFrame(), drv->GetPlayerCursor()->GetCurrentRow()); }
 	void OnPlayNote(stChannelID, const stChanNote &) override { }
 	void OnUpdateRow(int, int) override { }
 	bool IsChannelMuted(stChannelID) const override { return false; }
@@ -44,11 +45,12 @@ int main(int argc, char **argv) try {
 	CDocumentFile in;
 	in.Open(argv[1], std::ios::in | std::ios::binary);
 	in.ValidateFile();
-	if (!CFamiTrackerDocIO {in, module_error_level_t::MODULE_ERROR_DEFAULT}.Load(modfile)) { std::cerr << "falha ao carregar\n"; return 2; }
+	if (!CFamiTrackerDocIO {in, (getenv("OCC_LENIENT") ? module_error_level_t::MODULE_ERROR_NONE : module_error_level_t::MODULE_ERROR_DEFAULT)}.Load(modfile)) { std::cerr << "falha ao carregar\n"; return 2; }
 	int track = argc > 4 ? atoi(argv[4]) : 0;
 	CLogAPU apu; apu.out = fopen(argv[2], "w");
 	CRgGen gen; gen.mod = &modfile;
 	CSoundDriver drv(&gen);
+	int curFrame = 0; gen.drv = &drv; gen.frame = &curFrame;
 	drv.SetupTracks();
 	drv.AssignModule(modfile);
 	drv.LoadAPU(apu);
@@ -63,7 +65,7 @@ int main(int argc, char **argv) try {
 	int frames = (int)(atof(argv[3]) * rate);
 	std::cerr << "taxa " << rate << " Hz, " << frames << " quadros\n";
 	for (int f = 0; f < frames; f++) {
-		apu.t = f / rate; apu.n = 0;
+		apu.t = f / rate; apu.n = 0; curFrame = f;
 		drv.Tick();
 	}
 	fclose(apu.out);

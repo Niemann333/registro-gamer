@@ -1,0 +1,153 @@
+From 581e77ac85c93bdf204f3262f13f1d36b5085a66 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 16:51:45 -0300
+Subject: [PATCH 47/47] =?UTF-8?q?Web:=20exporta=C3=A7=C3=A3o=20de=20=C3=A1?=
+ =?UTF-8?q?udio=20em=20fatias=20(fiber=20com=20ASYNCIFY)=20em=20vez=20de?=
+ =?UTF-8?q?=20thread=20=E2=80=94=20a=20p=C3=A1gina=20n=C3=A3o=20aborta=20m?=
+ =?UTF-8?q?ais=20e=20mostra=20o=20progresso?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/engine/engine.h   |  3 +++
+ src/engine/wavOps.cpp | 61 +++++++++++++++++++++++++++++++++++++++++++
+ src/gui/gui.cpp       |  2 ++
+ 3 files changed, 66 insertions(+)
+
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 41c2578..4134788 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -1319,6 +1319,9 @@ class DivEngine {
+      * this function should not be called directly. it is used by saveAudio().
+      */
+     void runExportThread();
++    // RG: na versão web (sem threads) a exportação de áudio roda em fatias, numa fiber
++    void rgExportStep();
++    void rgExportYield();
+ 
+     /**
+      * this function handles audio output.
+diff --git a/src/engine/wavOps.cpp b/src/engine/wavOps.cpp
+index dc0c154..9872bc2 100644
+--- a/src/engine/wavOps.cpp
++++ b/src/engine/wavOps.cpp
+@@ -26,6 +26,50 @@
+ 
+ #define EXPORT_BUFSIZE 2048
+ 
++#ifdef __EMSCRIPTEN__
++// RG: a versão web não tem threads; a exportação roda numa fiber e a interface chama rgExportStep()
++// a cada quadro, que executa ~25 ms de exportação e devolve o controle (a página não trava).
++#include <emscripten.h>
++#include <emscripten/fiber.h>
++static emscripten_fiber_t rgMainFib, rgExpFib;
++static void* rgMainAsy=NULL;
++static void* rgExpAsy=NULL;
++static void* rgExpStack=NULL;
++static bool rgExpRunning=false;
++static bool rgExpFinished=true;
++static double rgSliceEnd=0.0;
++#define RG_MAIN_ASY_SIZE (256*1024)
++#define RG_EXP_ASY_SIZE (1024*1024)
++#define RG_EXP_STACK_SIZE (4*1024*1024)
++
++static void rgExpEntry(void* arg) {
++  ((DivEngine*)arg)->runExportThread();
++  rgExpFinished=true;
++  emscripten_fiber_swap(&rgExpFib,&rgMainFib);
++}
++
++void DivEngine::rgExportYield() {
++  if (!rgExpRunning) return;
++  if (emscripten_get_now()<rgSliceEnd) return;
++  emscripten_fiber_swap(&rgExpFib,&rgMainFib);
++}
++
++void DivEngine::rgExportStep() {
++  if (rgExpFinished || rgExpRunning) return;
++  rgExpRunning=true;
++  rgSliceEnd=emscripten_get_now()+25.0;
++  emscripten_fiber_swap(&rgMainFib,&rgExpFib);
++  rgExpRunning=false;
++}
++#define RG_EXPORT_YIELD rgExportYield()
++#else
++void DivEngine::rgExportYield() {
++}
++void DivEngine::rgExportStep() {
++}
++#define RG_EXPORT_YIELD
++#endif
++
+ void _runExportThread(DivEngine* caller) {
+   caller->runExportThread();
+ }
+@@ -240,6 +284,7 @@ void DivEngine::runExportThread() {
+       while (playing) {
+         size_t total=0;
+         nextBuf(NULL,outBuf,0,exportOutputs,EXPORT_BUFSIZE,true);
++        RG_EXPORT_YIELD;
+         if (totalProcessed>EXPORT_BUFSIZE) {
+           logE("error: total processed is bigger than export bufsize! %d>%d",totalProcessed,EXPORT_BUFSIZE);
+           totalProcessed=EXPORT_BUFSIZE;
+@@ -335,6 +380,7 @@ void DivEngine::runExportThread() {
+       while (playing) {
+         size_t total=0;
+         nextBuf(NULL,outBuf,0,2,EXPORT_BUFSIZE,true);
++        RG_EXPORT_YIELD;
+         if (totalProcessed>EXPORT_BUFSIZE) {
+           logE("error: total processed is bigger than export bufsize! %d>%d",totalProcessed,EXPORT_BUFSIZE);
+           totalProcessed=EXPORT_BUFSIZE;
+@@ -495,6 +541,7 @@ void DivEngine::runExportThread() {
+         while (playing) {
+           size_t total=0;
+           nextBuf(NULL,outBuf,0,exportOutputs,EXPORT_BUFSIZE,true);
++        RG_EXPORT_YIELD;
+           if (totalProcessed>EXPORT_BUFSIZE) {
+             logE("error: total processed is bigger than export bufsize! %d>%d",totalProcessed,EXPORT_BUFSIZE);
+             totalProcessed=EXPORT_BUFSIZE;
+@@ -640,12 +687,26 @@ bool DivEngine::saveAudio(const char* path, DivAudioExportOptions options) {
+   if (exportOutputs>DIV_MAX_OUTPUTS) exportOutputs=DIV_MAX_OUTPUTS;
+ 
+   exportLoopCount=options.loops+1;
++#ifdef __EMSCRIPTEN__
++  // RG: sem threads na web: prepara a fiber; a interface vai chamando rgExportStep()
++  if (rgMainAsy==NULL) rgMainAsy=malloc(RG_MAIN_ASY_SIZE);
++  if (rgExpAsy==NULL) rgExpAsy=malloc(RG_EXP_ASY_SIZE);
++  if (rgExpStack==NULL) rgExpStack=malloc(RG_EXP_STACK_SIZE);
++  emscripten_fiber_init_from_current_context(&rgMainFib,rgMainAsy,RG_MAIN_ASY_SIZE);
++  emscripten_fiber_init(&rgExpFib,rgExpEntry,this,rgExpStack,RG_EXP_STACK_SIZE,rgExpAsy,RG_EXP_ASY_SIZE);
++  rgExpFinished=false;
++  exportThread=NULL;
++#else
+   exportThread=new std::thread(_runExportThread,this);
++#endif
+   return true;
+ #endif
+ }
+ 
+ void DivEngine::waitAudioFile() {
++#ifdef __EMSCRIPTEN__
++  while (!rgExpFinished) rgExportStep();
++#endif
+   if (exportThread!=NULL) {
+     exportThread->join();
+   }
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index ed04bcd..f902f98 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -7160,6 +7160,8 @@ bool FurnaceGUI::loop() {
+     if (ImGui::BeginPopupModal(_("Rendering..."),NULL,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings)) {
+       // WHAT the HELL?!
+       WAKE_UP;
++      // RG: versão web: roda mais uma fatia da exportação a cada quadro
++      e->rgExportStep();
+       if (audioExportOptions.mode!=DIV_EXPORT_MODE_MANY_CHAN) {
+         ImGui::Text(_("Please wait..."));
+       }
+-- 
+2.43.0
+

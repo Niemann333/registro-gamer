@@ -999,6 +999,13 @@ void DivEngine::processRow(int i, bool afterDelay) {
     // RG: no FamiTracker o canal tem um só efeito contínuo: portamento/slide (1xx 2xx 3xx Qxy Rxy) substitui o arpejo
     if (song.compatFlags.rgFamiTracker && (effect==0x01 || effect==0x02 || effect==0x03 || effect==0xe1 || effect==0xe2)) {
       chan[i].arp=0;
+      // RG: 1xx/2xx/Qxy/Rxy depois de um 3xx na mesma linha substituem o portamento: a nota toca normalmente
+      if (effect!=0x03 && calledPorta) {
+        calledPorta=false;
+        chan[i].inPorta=false;
+        dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
+        if (chan[i].keyOn) chan[i].doNote=true;
+      }
     }
     if (!perSystemEffect(i,effect,effectVal)) switch (effect) {
       /// PANNING
@@ -1351,14 +1358,21 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].arp=effectVal;
         // RG: no FamiTracker o canal tem um só "efeito contínuo": o arpejo substitui portamento/slide
         // (000 também conta: no FamiTracker ele ocupa o slot e desliga o portamento)
-        if (song.compatFlags.rgFamiTracker && chan[i].portaSpeed>0) {
+        if (song.compatFlags.rgFamiTracker && (chan[i].portaSpeed>0 || calledPorta)) {
           chan[i].portaSpeed=-1;
           chan[i].inPorta=false;
           dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,0));
+          dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
+          // se o 3xx estava na mesma linha, a nota volta a tocar normalmente
+          if (calledPorta) {
+            calledPorta=false;
+            if (chan[i].keyOn) chan[i].doNote=true;
+          }
         }
         // COMPAT FLAG: reset note to base on arp stop (inverted in the GUI)
         // - a 0000 effect resets arpeggio position
-        if (chan[i].arp==0 && song.compatFlags.arp0Reset) {
+        // RG: no FamiTracker o 000 só desliga o arpejo; a altura fica onde estava
+        if (chan[i].arp==0 && song.compatFlags.arp0Reset && !song.compatFlags.rgFamiTracker) {
           chan[i].resetArp=true;
         }
         dispatchCmd(DivCommand(DIV_CMD_HINT_ARPEGGIO,i,chan[i].arp));

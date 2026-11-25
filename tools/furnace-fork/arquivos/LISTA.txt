@@ -107,6 +107,7 @@ M	src/engine/sysDef.cpp
 M	src/engine/sysDef.h
 M	src/engine/vgmOps.cpp
 M	src/engine/vgmOps_after_surgery.cpp
+M	src/engine/wavOps.cpp
 M	src/fileutils/cfile.cpp
 M	src/gui/compatFlags.cpp
 M	src/gui/cursor.cpp
