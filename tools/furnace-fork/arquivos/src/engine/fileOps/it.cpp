@@ -17,6 +17,18 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+// RG: liga/desliga o surround (efeito 1Fxx do ES5506) se a música usa surround; IT: qualquer pan desliga o surround
+#define RG_IT_SURR(v) \
+  if (rgSurroundUsed && effectCol[chan]<(DIV_MAX_EFFECTS-1)*2) { \
+    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x1f; \
+    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(v); \
+  }
+#ifndef RG_IT_ATT
+#define RG_IT_ATT (-274) // calibrado contra o OpenMPT (pan linear derruba 6 dB no centro)
+#endif
+#ifndef RG_IT_MIXGAIN
+#define RG_IT_MIXGAIN 1.0f
+#endif
 #include "fileOpsCommon.h"
 
 extern "C" {
@@ -193,6 +205,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
   bool doesArp[64];
   bool doesTremolo[64];
   bool doesPanbrello[64];
+  bool rgSurroundUsed=false; // RG: a música usa surround (S91 ou canal 100)
 
   memset(doesPitchSlide,0,64*sizeof(bool));
   memset(doesVibrato,0,64*sizeof(bool));
@@ -1012,6 +1025,9 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
             case 'Y': // panbrello
               doesPanbrello[chan]=true;
               break;
+            case 'S': // RG: S91 = surround
+              if ((effectVal[chan]&0xf0)==0x90 && (effectVal[chan]&15)<2) rgSurroundUsed=true;
+              break;
           }
         }
       }
@@ -1345,6 +1361,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
             if (vol[chan]>=128 && vol[chan]<=192) { // panning
               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=CLAMP((vol[chan]-128)<<2,0,255);
+              RG_IT_SURR(0);
             } else if (vol[chan]>=65 && vol[chan]<=74) { // fine vol up
             } else if (vol[chan]>=75 && vol[chan]<=84) { // fine vol down
             } else if (vol[chan]>=85 && vol[chan]<=94) { // vol slide up
@@ -1563,7 +1580,18 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
                   break;
                 case 0x8: // panning
                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
-                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal[chan]&15)<<4;
+                  // RG: S8x vai de 0 a 15 => 0 a 255 (antes x<<4 nunca chegava ao lado direito)
+                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal[chan]&15)*17;
+                  RG_IT_SURR(0);
+                  break;
+                case 0x9: // RG: S90 = surround desligado, S91 = surround ligado (pan no centro)
+                  if ((effectVal[chan]&15)==1) {
+                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                    RG_IT_SURR(1);
+                  } else if ((effectVal[chan]&15)==0) {
+                    RG_IT_SURR(0);
+                  }
                   break;
                 case 0xa: // offset (high nibble)
                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x92;
@@ -1599,6 +1627,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
             case 'X': // panning
               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=effectVal[chan];
+              RG_IT_SURR(0);
               break;
             case 'Y': // panbrello
               if (effectVal[chan]!=0) {
@@ -1665,6 +1694,16 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
       ds.systemChans[i]=MIN(32,chansToCount);
       chansToCount-=ds.systemChans[i];
       ds.systemFlags[i].set("amigaVol",true);
+      // RG: volume global inicial e "mix volume" do cabeçalho (o Impulse Tracker/OpenMPT aplicam ambos)
+      // aplicado como atenuação dentro do chip (escala log: 256 = 6 dB) para não saturar antes do mixer
+      {
+        float rgF=((float)MAX(MIN(globalVol,128),1)/128.0f)*((float)MAX(MIN(masterVol,128),1)/128.0f)*RG_IT_MIXGAIN;
+        int rgAtt=(int)round(-log2(MIN(rgF,1.0f))*256.0);
+        rgAtt+=RG_IT_ATT;
+        ds.systemFlags[i].set("volScale",4095-CLAMP(rgAtt,0,4095));
+        if (rgAtt<0) ds.systemVol[i]=pow(2.0,(double)-rgAtt/256.0); // o resto do ganho vai no mixer
+        ds.systemFlags[i].set("panLaw",1); // pan linear, como no Impulse Tracker
+      }
       if (!ds.compatFlags.linearPitch) {
         ds.systemFlags[i].set("amigaPitch",true);
       }
@@ -1690,6 +1729,12 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
               // should be surround...
               p->newData[0][DIV_PAT_FX(k)]=0x80;
               p->newData[0][DIV_PAT_FXVAL(k)]=0x80;
+              // RG: surround de verdade (fase invertida à direita)
+              if (k+1<DIV_MAX_EFFECTS && p->newData[0][DIV_PAT_FX(k+1)]==-1) {
+                p->newData[0][DIV_PAT_FX(k+1)]=0x1f;
+                p->newData[0][DIV_PAT_FXVAL(k+1)]=0x01;
+                if (ds.subsong[i]->pat[j].effectCols<=k+1) ds.subsong[i]->pat[j].effectCols=k+2;
+              }
             } else {
               p->newData[0][DIV_PAT_FX(k)]=0x80;
               p->newData[0][DIV_PAT_FXVAL(k)]=CLAMP((chanPan[j]&127)<<2,0,255);

@@ -3,6 +3,8 @@ A	emjsdeps.h
 M	extern/imgui_patched/backends/imgui_impl_sdl2.cpp
 M	extern/imgui_patched/imgui.cpp
 M	extern/imgui_patched/imgui.h
+M	extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
+M	extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp
 M	po/locale/pt_BR/LC_MESSAGES/furnace.mo
 M	po/pt_BR.po
 A	res/web/fonts/OFL.txt
@@ -17,6 +19,8 @@ M	src/audio/midi.cpp
 A	src/audio/webmidi.cpp
 A	src/audio/webmidi.h
 M	src/engine/cmdStream.cpp
+M	src/engine/cmdStreamOps.cpp
+M	src/engine/dispatch.h
 M	src/engine/dispatchContainer.cpp
 M	src/engine/engine.cpp
 M	src/engine/engine.h
@@ -82,7 +86,12 @@ M	src/engine/fileOps/xm.cpp
 M	src/engine/fileOpsIns.cpp
 M	src/engine/fileOpsSample.cpp
 M	src/engine/filePlayer.h
+M	src/engine/pitchTable.cpp
 M	src/engine/platform/amiga.h
+M	src/engine/platform/es5506.cpp
+M	src/engine/platform/es5506.h
+M	src/engine/platform/nes.cpp
+M	src/engine/platform/nes.h
 M	src/engine/platform/pcmdac.h
 A	src/engine/platform/psx.cpp
 A	src/engine/platform/psx.h
@@ -92,11 +101,14 @@ A	src/engine/rgplay.cpp
 A	src/engine/rgsampletools.cpp
 A	src/engine/rgsampletools.h
 M	src/engine/s98Ops.cpp
+M	src/engine/song.cpp
+M	src/engine/song.h
 M	src/engine/sysDef.cpp
 M	src/engine/sysDef.h
 M	src/engine/vgmOps.cpp
 M	src/engine/vgmOps_after_surgery.cpp
 M	src/fileutils/cfile.cpp
+M	src/gui/compatFlags.cpp
 M	src/gui/cursor.cpp
 M	src/gui/debugWindow.cpp
 M	src/gui/editControls.cpp

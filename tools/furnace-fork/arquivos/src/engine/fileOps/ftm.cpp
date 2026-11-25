@@ -26,6 +26,7 @@
 // - format code?
 
 #include "fileOpsCommon.h"
+#include <map>
 #include <algorithm>
 
 #define CHECK_BLOCK_VERSION(x) \
@@ -276,8 +277,61 @@ int findEmptyFx(short* data) {
   return -1;
 }
 
+// RG: sequência hi-pitch (x16) do FamiTracker de cada instrumento; é somada à macro de pitch no fim da importação
+static std::map<DivInstrument*,DivInstrumentMacro> rgHiPitch;
+
+// RG: soma a hi-pitch (16 unidades por passo) na macro de pitch relativa, simulando as duas sequências quadro a quadro
+static void rgMergeHiPitch(DivInstrument* ins, const DivInstrumentMacro& hi) {
+  DivInstrumentMacro& P=ins->std.pitchMacro;
+  bool pRel=(P.len==0 || P.mode==1);
+  if (!pRel || hi.len==0) return;
+  // valor (já no sinal do Furnace) da sequência no quadro t; 0 depois do fim
+  auto at=[](const DivInstrumentMacro& m, int t, bool raw) -> int {
+    int len=m.len;
+    if (len<=0) return 0;
+    int loop=(m.loop<len)?m.loop:-1;
+    int idx;
+    if (t<len) idx=t;
+    else if (loop>=0) idx=loop+((t-len)%(len-loop));
+    else return 0;
+    int v=m.val[idx];
+    if (raw) v=(v<0x80)?(-v):(0x100-v);
+    return v;
+  };
+  auto startOf=[](const DivInstrumentMacro& m) { return (m.len<=0)?0:((m.loop<m.len)?(int)m.loop:(int)m.len); };
+  auto periodOf=[](const DivInstrumentMacro& m) { return (m.len<=0 || m.loop>=m.len)?1:(int)(m.len-m.loop); };
+  bool anyLoop=(P.len>0 && P.loop<P.len) || (hi.loop<hi.len);
+  int S=MAX(startOf(P),startOf(hi));
+  int per=1;
+  if (anyLoop) {
+    int a=periodOf(P), b=periodOf(hi);
+    int g=a, h=b;
+    while (h) { int t=g%h; g=h; h=t; }
+    per=a/g*b;
+  }
+  int total=anyLoop?(S+per):MAX((int)P.len,(int)hi.len);
+  if (total>255) total=255;
+  DivInstrumentMacro out(P);
+  for (int t=0; t<total; t++) out.val[t]=at(P,t,false)+16*at(hi,t,true);
+  out.len=total;
+  out.loop=(anyLoop && S<total)?S:255;
+  out.mode=1;
+  if (P.len==0) { out.rel=255; out.delay=0; out.speed=1; }
+  out.open=true;
+  P=out;
+  logV("RG: hi-pitch somada à macro de pitch (%d passos, loop %d)",total,(int)out.loop);
+}
+
 void copyMacro(DivInstrument* ins, DivInstrumentMacro* from, int macro_type, int setting) {
   DivInstrumentMacro* to = NULL;
+
+  // RG: hi-pitch (tipo 3) não tem macro própria no Furnace: guarda para somar na de pitch depois
+  if (macro_type==3) {
+    auto rgIt=rgHiPitch.find(ins);
+    if (rgIt!=rgHiPitch.end()) rgIt->second=*from;
+    else rgHiPitch.emplace(ins,*from);
+    return;
+  }
 
   switch (ins->type) {
     case DIV_INS_NES: {
@@ -504,6 +558,12 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
     ds.subsong.clear();
 
     ds.compatFlags.linearPitch = 0;
+    rgHiPitch.clear();
+    ds.compatFlags.rgFamiTracker = true; // RG: efeitos com o comportamento do FamiTracker
+    ds.compatFlags.noVolSlideReset = true;
+    ds.compatFlags.resetMacroOnPorta = true; // RG: nota com portamento reinicia as sequências (FamiTracker)
+    ds.compatFlags.continuousVibrato = true; // RG: no FamiTracker a fase do vibrato não recomeça a cada nota
+    ds.compatFlags.rgFTVibUp = true; // RG: até ler PARAMS (arquivos antigos usam o vibrato antigo) // RG: no FamiTracker o Axy continua ativo depois de chegar a 0/15
 
     unsigned int pal = 0;
 
@@ -605,6 +665,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
         if (blockVersion >= 3) {
           newVibrato = reader.readI();
         }
+        ds.compatFlags.rgFTVibUp = (newVibrato == 0); // RG: estilo antigo de vibrato (só para cima)
         if (blockVersion >= 9) {
           sweepReset = reader.readI();
         }
@@ -1944,7 +2005,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                       }
 
                       if ((eftEffectMap[nextEffect] == 0xe1 || eftEffectMap[nextEffect] == 0xe2) && (nextEffectVal & 0xf0) == 0) {
-                        pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed!
+                        if (!ds.compatFlags.rgFamiTracker) pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed! (RG: com rgFamiTracker a velocidade já é 2x+1)
                       }
                     } else {
                       pat->newData[row][DIV_PAT_FX(j)] = ftEffectMap[nextEffect];
@@ -1956,7 +2017,30 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                       }
 
                       if ((ftEffectMap[nextEffect] == 0xe1 || ftEffectMap[nextEffect] == 0xe2) && (nextEffectVal & 0xf0) == 0) {
-                        pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed!
+                        if (!ds.compatFlags.rgFamiTracker) pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed! (RG: com rgFamiTracker a velocidade já é 2x+1)
+                      }
+                    }
+                    // RG: Yxx no DPCM: o FamiTracker avança xx*64 bytes; no Furnace 91xx conta 256 amostras de 1 bit (32 bytes)
+                    if (map_channels[ch] == 4 && pat->newData[row][DIV_PAT_FX(j)] == 0x90) {
+                      pat->newData[row][DIV_PAT_FX(j)] = 0x91;
+                      pat->newData[row][DIV_PAT_FXVAL(j)] = MIN((pat->newData[row][DIV_PAT_FXVAL(j)] & 0x3f) * 2, 255);
+                    }
+                    // RG: Axy do FamiTracker desce y/8 e sobe x/8 de volume por quadro;
+                    // o 0Axy do Furnace anda y/4 (64/256) e o F3xx/F4xx anda xx/256 por tick
+                    if (pat->newData[row][DIV_PAT_FX(j)] == 0x0a && pat->newData[row][DIV_PAT_FXVAL(j)] > 0) {
+                      int rgV = pat->newData[row][DIV_PAT_FXVAL(j)];
+                      int rgNet = (rgV >> 4) - (rgV & 15);
+                      int rgA = rgNet < 0 ? -rgNet : rgNet;
+                      if (rgNet == 0) {
+                        pat->newData[row][DIV_PAT_FXVAL(j)] = 0;
+                      } else if ((rgA & 1) == 0) {
+                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? ((rgA >> 1) << 4) : (rgA >> 1);
+                      } else if (rgA * 32 <= 255) {
+                        pat->newData[row][DIV_PAT_FX(j)] = rgNet > 0 ? 0xf3 : 0xf4;
+                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgA * 32;
+                      } else {
+                        int rgH = MIN((rgA + 1) >> 1, 15);
+                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? (rgH << 4) : rgH;
                       }
                     }
                     for (int v = 0; v < 8; v++) {
@@ -2861,6 +2945,10 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
       if (rgUnsupported[i]) logW("FamiTracker effect %d not supported: used %d times",i,rgUnsupported[i]);
     }
 
+    // RG: soma as sequências hi-pitch nas macros de pitch
+    for (auto& rgH: rgHiPitch) rgMergeHiPitch(rgH.first,rgH.second);
+    rgHiPitch.clear();
+
     // Registro Gamer: 0CC detune tables. each table shifts the pitch of a chip; the shift (in cents) is measured
     // over the notes, the 2A03 one becomes the song tuning and the others become a transposition of their
     // channels (whole semitones; the rest is under half a semitone).
@@ -2891,6 +2979,19 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
       };
       int mainChip=pal?1:0;
       double globalCents=rgHasDetune[mainChip]?centsOf(mainChip):0.0;
+      // RG: modo FamiTracker: a tabela do 2A03 vai nota a nota para o chip NES (como o 0CC soma no registrador)
+      if (ds.compatFlags.rgFamiTracker && rgHasDetune[mainChip]) {
+        String rgDet;
+        for (int i=0; i<96; i++) {
+          if (i) rgDet+=",";
+          rgDet+=fmt::sprintf("%d",rgDetune[mainChip][i]);
+        }
+        for (int i=0; i<ds.systemLen; i++) {
+          if (ds.system[i]==DIV_SYSTEM_NES) ds.systemFlags[i].set("rgDetune",rgDet);
+        }
+        logI("0CC detune: 2A03 table applied per note");
+        globalCents=0.0;
+      }
       if (globalCents!=0.0) {
         ds.tuning*=pow(2.0,globalCents/1200.0);
         logI("0CC detune: %+.1f cents -> tuning %.2f",globalCents,ds.tuning);

@@ -449,6 +449,7 @@ bool DivCSPlayer::tick() {
           case DIV_CMD_ES5506_ENVELOPE_LVRAMP:
           case DIV_CMD_ES5506_ENVELOPE_RVRAMP:
           case DIV_CMD_ES5506_PAUSE:
+          case DIV_CMD_ES5506_SURROUND:
           case DIV_CMD_ES5506_FILTER_MODE:
           case DIV_CMD_SNES_GLOBAL_VOL_LEFT:
           case DIV_CMD_SNES_GLOBAL_VOL_RIGHT:

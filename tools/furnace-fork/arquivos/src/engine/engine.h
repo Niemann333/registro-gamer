@@ -315,6 +315,8 @@ struct DivChannelState {
   // - 1: note release
   // - 2: macro release
   unsigned char arp, arpStage, arpTicks, arpSpeed, panL, panR, panRL, panRR, lastVibrato, lastPorta, cutType;
+  // RG: estado do arpejo usado neste tick (no modo FamiTracker arpStage guarda o próximo)
+  unsigned char rgArpUse;
   // doNote: whether a note is going to occur.
   // legato: whether legato (EAxx) is enabled.
   // portaStop: a compatibility thing.
@@ -372,6 +374,7 @@ struct DivChannelState {
     sampleOff(0),
     arp(0),
     arpStage(-1),
+    rgArpUse(0),
     arpTicks(1),
     arpSpeed(1),
     panL(255),
@@ -802,6 +805,8 @@ class DivEngine {
   // on each tick, the numerator is added.
   // while it exceeds or meets the denominator, the tick counter is decreased.
   short tempoAccum;
+  // RG: acumulador de tempo do FamiTracker (modo FamiTracker)
+  int rgFTAccum;
   // current console status view mode.
   DivStatusView view;
   // when to halt (pause playback).
@@ -2318,6 +2323,7 @@ class DivEngine {
       virtualTempoN(150),
       virtualTempoD(150),
       tempoAccum(0),
+      rgFTAccum(0),
       view(DIV_STATUS_NOTHING),
       haltOn(DIV_HALT_NONE),
       audioEngine(DIV_AUDIO_NULL),

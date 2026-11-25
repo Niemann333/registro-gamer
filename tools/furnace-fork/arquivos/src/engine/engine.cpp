@@ -205,7 +205,7 @@ const char* DivEngine::getEffectDesc(unsigned char effect, int chan, bool notNul
 
 void DivEngine::calcSongTimestamps() {
   if (curSubSong!=NULL) {
-    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior);
+    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker);
   }
 }
 
@@ -1741,6 +1741,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     ticks=1;
     subticks=0;
     tempoAccum=0;
+    rgFTAccum=0;
     totalTime=TimeMicros(0,0);
     totalTimeDrift=0;
     totalTicksR=0;
@@ -1790,7 +1791,9 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
       runMidiTime(cycles);
     }
     if (oldOrder!=curOrder) break;
-    if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
+    if (song.compatFlags.rgFamiTracker) {
+      if (ticks-1<1 && curRow>=goalRow) break;
+    } else if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
   }
   for (int i=0; i<song.systemLen; i++) disCont[i].dispatch->setSkipRegisterWrites(false);
   if (goal>0 || goalRow>0) {
@@ -1827,6 +1830,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     prevRow=curRow;
     prevSpeed=nextSpeed;
     tempoAccum=0;
+    rgFTAccum=0;
   }
   skipping=false;
   cmdStream.clear();
@@ -4063,6 +4067,7 @@ void DivEngine::quitDispatch() {
   stepPlay=0;
   ticks=0;
   tempoAccum=0;
+    rgFTAccum=0;
   curRow=0;
   curOrder=0;
   prevRow=0;

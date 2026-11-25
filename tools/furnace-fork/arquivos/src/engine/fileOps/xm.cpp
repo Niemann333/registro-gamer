@@ -17,6 +17,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#ifndef RG_XM_ATT
+#define RG_XM_FT2_ATT 0
+#define RG_XM_ATT 58 // calibrado contra o OpenMPT (era 4095-3900 com pan de balanço)
+#endif
 #include "fileOpsCommon.h"
 
 void readEnvelope(DivInstrument* ins, int env, unsigned char flags, unsigned char numPoints, unsigned char loopStart, unsigned char loopEnd, unsigned char susPoint, short* points) {
@@ -309,7 +313,15 @@ bool DivEngine::loadXM(unsigned char* file, size_t len) {
       chansToCount-=ds.systemChans[i];
       ds.systemFlags[i].set("amigaVol",true);
       ds.systemFlags[i].set("amigaPitch",(ds.compatFlags.linearPitch==0));
-      ds.systemFlags[i].set("volScale",3900);
+      // RG: níveis de mixagem como no OpenMPT: arquivos do Fasttracker 2 (e clones que imitam o FT2)
+      // usam pan por raiz quadrada e pré-amplificação 192/256; os demais, pan linear
+      {
+        bool rgFT2=(trackerName.find("FastTracker")==0 || trackerName.find("Fasttracker II clone")==0 ||
+                    (trackerName.find("MilkyTracker ")==0 && trackerName.size()>13 && trackerName.find_first_not_of(' ',12)!=String::npos));
+        int rgAtt=RG_XM_ATT+(rgFT2?RG_XM_FT2_ATT:0);
+        ds.systemFlags[i].set("volScale",4095-CLAMP(rgAtt,0,4095));
+        ds.systemFlags[i].set("panLaw",rgFT2?2:1);
+      }
     }
     ds.systemLen=(totalChans+31)>>5;
 
@@ -985,11 +997,8 @@ bool DivEngine::loadXM(unsigned char* file, size_t len) {
                   break;
                 case 0xc: // panning
                   p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=0x80;
-                  if ((vol&15)==8) {
-                    p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=0x80;
-                  } else {
-                    p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=(vol&15)|((vol&15)<<4);
-                  }
+                  // RG: no FT2 a coluna de volume Px dá pan = x*16 (0 a 240, não simétrico)
+                  p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=(vol&15)<<4;
                   writePanning=false;
                   break;
                 case 0xd: // pan slide left

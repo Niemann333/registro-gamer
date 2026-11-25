@@ -17,6 +17,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#define RG_S3M_SURR(v) \
+  if (rgSurroundUsed && effectCol[chan]<(DIV_MAX_EFFECTS-1)*2) { \
+    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x1f; \
+    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(v); \
+  }
+#ifndef RG_S3M_ATT
+#define RG_S3M_ATT (-32) // calibrado contra o OpenMPT (era 4095-3900 com pan de balanço)
+#endif
 #include "fileOpsCommon.h"
 
 static void readSbiOpData(sbi_t& sbi, SafeReader& reader) {
@@ -58,6 +66,7 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
   bool doesArp[32];
   bool doesTremolo[32];
   bool doesPanbrello[32];
+  bool rgSurroundUsed=false;
 
   memset(chanSettings,0,32);
   memset(insPtr,0,256*sizeof(unsigned int));
@@ -347,9 +356,17 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
     if (hasPCM) {
       ds.system[ds.systemLen]=DIV_SYSTEM_ES5506;
       ds.systemChans[ds.systemLen]=32; // for now
-      ds.systemVol[ds.systemLen]=(float)globalVol/64.0;
+      // RG: master volume (bits 0-6) também é aplicado pelo Scream Tracker/OpenMPT
+      ds.systemVol[ds.systemLen]=1.0f;
       ds.systemPan[ds.systemLen]=0;
-      ds.systemFlags[ds.systemLen].set("volScale",3900);
+      {
+        // atenuação original (3900) + volume global e master volume, dentro do chip para não saturar
+        float rgF=((float)MAX(MIN(globalVol,64),1)/64.0f)*((float)MAX(masterVol&127,16)/64.0f);
+        int rgAtt=RG_S3M_ATT+(int)round(-log2(MIN(rgF,1.0f))*256.0);
+        ds.systemFlags[ds.systemLen].set("volScale",4095-CLAMP(rgAtt,0,4095));
+        if (rgAtt<0) ds.systemVol[ds.systemLen]=pow(2.0,(double)-rgAtt/256.0);
+        ds.systemFlags[ds.systemLen].set("panLaw",1); // pan linear, como no Scream Tracker 3
+      }
       ds.systemFlags[ds.systemLen].set("amigaVol",true);
       ds.systemFlags[ds.systemLen].set("amigaPitch",true);
       ds.systemLen++;
@@ -678,7 +695,10 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
         }
         if (hasEffect) {
           unsigned char effect=reader.readC();
-          reader.readC(); // effect val
+          unsigned char rgEffVal=reader.readC(); // effect val
+
+          // RG: surround (S91 ou XA4, extensões do ModPlug/OpenMPT)
+          if ((effect+'A'-1=='S' && rgEffVal==0x91) || (effect+'A'-1=='X' && rgEffVal==0xa4)) rgSurroundUsed=true;
 
           switch (effect+'A'-1) {
             case 'D': // vol slide
@@ -1120,7 +1140,18 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
                   break;
                 case 0x8: // panning
                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
-                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&15)<<4;
+                  // RG: S8x vai de 0 a 15 => 0 a 255 (antes x<<4 nunca chegava ao lado direito)
+                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&15)*17;
+                  RG_S3M_SURR(0);
+                  break;
+                case 0x9: // RG: S90/S91 = surround desligado/ligado (extensão do ModPlug/OpenMPT)
+                  if ((effectVal&15)==1) {
+                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                    RG_S3M_SURR(1);
+                  } else if ((effectVal&15)==0) {
+                    RG_S3M_SURR(0);
+                  }
                   break;
                 case 0xc: // note cut
                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0xec;
@@ -1151,6 +1182,11 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
               if (effectVal<=0x80) {
                 p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
                 p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&0x80)?0xff:(effectVal<<1);
+                RG_S3M_SURR(0);
+              } else if (effectVal==0xa4) { // RG: XA4 = surround
+                p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                RG_S3M_SURR(1);
               }
               break;
             case 'Y': // panbrello (extension)

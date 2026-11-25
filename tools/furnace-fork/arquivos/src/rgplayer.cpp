@@ -164,6 +164,11 @@ int main(int argc, char** argv) {
   rgf_times(t);
   fprintf(stderr,"tuning %s\n",rgf_info(5));
   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
+  // RG_SOLO=n: toca só o canal n (para comparar canal a canal)
+  if (getenv("RGF_SOLO")) {
+    int solo=atoi(getenv("RGF_SOLO"));
+    for (int i=0; i<rgf_channels(); i++) rgf_mute(i,i!=solo);
+  }
   if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
   FILE* o=fopen(argv[2],"wb");
   int total=atoi(argv[3])*44100;

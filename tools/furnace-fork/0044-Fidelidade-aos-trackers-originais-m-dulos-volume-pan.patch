@@ -1,0 +1,1729 @@
+From 7f5b3d9433973beeaf55bdedb1044616499340c1 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 21:13:22 -0300
+Subject: [PATCH 44/44] =?UTF-8?q?Fidelidade=20aos=20trackers=20originais:?=
+ =?UTF-8?q?=20m=C3=B3dulos=20(volume,=20pan,=20surround)=20e=20modo=20Fami?=
+ =?UTF-8?q?Tracker?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Módulos (comparado com o OpenMPT):
+- IT: volume global e "mix volume" do cabeçalho; S3M: master volume; XM: nível do FT2.
+  A atenuação é feita dentro do ES5506 (antes saturava e distorcia).
+- ES5506: lei de pan (linear no IT/S3M/XM, raiz quadrada no Fasttracker 2) e efeito
+  1Fxx de surround (fase invertida à direita), usado por S91/XA4/canal 100.
+- S8x de pan ia só até 0xF0; Px da coluna de volume do XM = x*16 como no FT2.
+
+FamiTracker/0CC/Dn-FamiTracker (opção de compatibilidade "FamiTracker effect behavior",
+ligada pelo importador; comparado quadro a quadro com o player do 0CC 0.3.15.3):
+- Axy em oitavos por quadro; Qxy/Rxy com velocidade 2x+1; slide continua ativo em 0/15.
+- tabela de períodos exata nota a nota e detune do 0CC por nota.
+- volume (instrumento*canal)/15 nunca zera; duty volta ao Vxx a cada nota.
+- arpejo: um só efeito contínuo (00xy/1xx/2xx/3xx/Qxy/Rxy), ciclo de 2 passos com y=0,
+  fase contínua, sequência de arpejo do instrumento tem prioridade e redefine o período.
+- vibrato com a tabela e a fase do FamiTracker (estilo novo e antigo).
+- nota nova cancela Qxy/Rxy; 3xx continua ativo depois de chegar; nota com portamento
+  reinicia as sequências; note-off não desliga o arpejo; Gxx toca na linha seguinte.
+- hi-pitch somada à macro de pitch; pitch do ruído no sentido certo; Wxx e Yxx do DPCM.
+- tempo com o acumulador do FamiTracker (linhas de 3/4 quadros na mesma ordem).
+---
+ .../vgsound_emu/src/es550x/es5506.cpp         |   1 +
+ .../vgsound_emu/src/es550x/es5506.hpp         |   3 +
+ src/engine/cmdStream.cpp                      |   1 +
+ src/engine/cmdStreamOps.cpp                   |   4 +-
+ src/engine/dispatch.h                         |  15 +-
+ src/engine/engine.cpp                         |   9 +-
+ src/engine/engine.h                           |   6 +
+ src/engine/fileOps/ftm.cpp                    | 105 ++++++++++-
+ src/engine/fileOps/it.cpp                     |  47 ++++-
+ src/engine/fileOps/s3m.cpp                    |  44 ++++-
+ src/engine/fileOps/xm.cpp                     |  21 ++-
+ src/engine/pitchTable.cpp                     |  14 ++
+ src/engine/platform/es5506.cpp                |  45 ++++-
+ src/engine/platform/es5506.h                  |   4 +
+ src/engine/platform/nes.cpp                   | 103 ++++++++++-
+ src/engine/platform/nes.h                     |  16 ++
+ src/engine/playback.cpp                       | 173 ++++++++++++++----
+ src/engine/song.cpp                           |  55 +++++-
+ src/engine/song.h                             |  12 +-
+ src/engine/sysDef.cpp                         |   3 +-
+ src/gui/compatFlags.cpp                       |   6 +
+ src/rgplayer.cpp                              |   5 +
+ 22 files changed, 619 insertions(+), 73 deletions(-)
+
+diff --git a/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp b/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
+index 4b80882..0eb1a73 100644
+--- a/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
++++ b/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
+@@ -104,6 +104,7 @@ void es5506_core::voice_t::tick(u8 voice)
+ 		// Send to output
+ 		m_output[0] = m_mute ? 0 : volume_calc(m_lvol, m_filter.o4_1() >> 1);
+ 		m_output[1] = m_mute ? 0 : volume_calc(m_rvol, m_filter.o4_1() >> 1);
++		if (m_invr) m_output[1] = -m_output[1]; // RG: surround
+ 
+ 		m_ch.set_left(m_output[0]);
+ 		m_ch.set_right(m_output[1]);
+diff --git a/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp b/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp
+index df44181..bf6f72f 100644
+--- a/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp
++++ b/extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp
+@@ -187,6 +187,7 @@ class es5506_core : public es550x_shared_core
+ 
+ 				// for debug/preview only
+ 				inline void set_mute(bool mute) { m_mute = mute; }
++				inline void set_invert_right(bool inv) { m_invr = inv; }
+ 
+ 				inline s32 left_out() { return m_mute ? 0 : m_output[0]; }
+ 
+@@ -212,6 +213,7 @@ class es5506_core : public es550x_shared_core
+ 				u8 m_filtcount = 0;			  // Internal counter for slow mode
+ 				output_t m_ch;				  // channel output
+ 				bool m_mute = false;		  // mute flag (for debug purpose)
++				bool m_invr = false;		  // RG: inverte a fase do lado direito (surround)
+ 				s32 m_output[2];  // output preview (for debug purpose)
+ 		};
+ 
+@@ -341,6 +343,7 @@ class es5506_core : public es550x_shared_core
+ 		}
+ 
+ 		inline void set_mute(u8 ch, bool mute) { m_voice[ch & 0x1f].set_mute(mute); }
++		inline void set_invert_right(u8 ch, bool inv) { m_voice[ch & 0x1f].set_invert_right(inv); }
+ 
+ 		// per-voice outputs
+ 		inline s32 voice_lout(u8 voice) { return (voice < 32) ? m_voice[voice].left_out() : 0; }
+diff --git a/src/engine/cmdStream.cpp b/src/engine/cmdStream.cpp
+index a036a03..1632cb6 100644
+--- a/src/engine/cmdStream.cpp
++++ b/src/engine/cmdStream.cpp
+@@ -449,6 +449,7 @@ bool DivCSPlayer::tick() {
+           case DIV_CMD_ES5506_ENVELOPE_LVRAMP:
+           case DIV_CMD_ES5506_ENVELOPE_RVRAMP:
+           case DIV_CMD_ES5506_PAUSE:
++          case DIV_CMD_ES5506_SURROUND:
+           case DIV_CMD_ES5506_FILTER_MODE:
+           case DIV_CMD_SNES_GLOBAL_VOL_LEFT:
+           case DIV_CMD_SNES_GLOBAL_VOL_RIGHT:
+diff --git a/src/engine/cmdStreamOps.cpp b/src/engine/cmdStreamOps.cpp
+index 34a8ca8..1302271 100644
+--- a/src/engine/cmdStreamOps.cpp
++++ b/src/engine/cmdStreamOps.cpp
+@@ -115,6 +115,7 @@ int DivCS::getCmdLength(unsigned char ext) {
+     case DIV_CMD_ES5506_ENVELOPE_LVRAMP:
+     case DIV_CMD_ES5506_ENVELOPE_RVRAMP:
+     case DIV_CMD_ES5506_PAUSE:
++    case DIV_CMD_ES5506_SURROUND:
+     case DIV_CMD_ES5506_FILTER_MODE:
+     case DIV_CMD_SNES_GLOBAL_VOL_LEFT:
+     case DIV_CMD_SNES_GLOBAL_VOL_RIGHT:
+@@ -550,6 +551,7 @@ void writeCommandValues(SafeWriter* w, const DivCommand& c, bool bigEndian) {
+     case DIV_CMD_ES5506_ENVELOPE_LVRAMP:
+     case DIV_CMD_ES5506_ENVELOPE_RVRAMP:
+     case DIV_CMD_ES5506_PAUSE:
++    case DIV_CMD_ES5506_SURROUND:
+     case DIV_CMD_ES5506_FILTER_MODE:
+     case DIV_CMD_SNES_GLOBAL_VOL_LEFT:
+     case DIV_CMD_SNES_GLOBAL_VOL_RIGHT:
+@@ -1416,7 +1418,7 @@ SafeWriter* DivEngine::saveCommand(DivCSProgress* progress, DivCSOptions options
+     }
+     if (loopTick==-1) {
+       if (loopOrder==curOrder && loopRow==curRow) {
+-        if ((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0) {
++        if (song.compatFlags.rgFamiTracker?(ticks-1<=0):((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0)) {
+           logI("loop is on tick %d",tick);
+           loopTick=tick;
+           // loop marker
+diff --git a/src/engine/dispatch.h b/src/engine/dispatch.h
+index 5be953d..80216f5 100644
+--- a/src/engine/dispatch.h
++++ b/src/engine/dispatch.h
+@@ -352,6 +352,8 @@ enum DivDispatchCmds {
+ 
+   DIV_CMD_TEST_REG, // (register, value)
+ 
++  DIV_CMD_ES5506_SURROUND, // (on) RG: inverte a fase do lado direito (surround do IT/S3M/OpenMPT)
++
+   DIV_CMD_MAX
+ };
+ 
+@@ -383,6 +385,9 @@ struct DivPitchTable {
+   // period: whether this table is "periodic" or "frequency".
+   // linearity: this should reflect the song's pitch linearity setting.
+   bool period, linearity;
++  // RG: tabela exata nota a nota (como o FamiTracker calcula), usada se rgExact
++  bool rgExact;
++  int rgExactTab[192];
+ 
+   /**
+    * compute the frequency of a note. used by SharedChannel::calcFreq().
+@@ -428,10 +433,18 @@ struct DivPitchTable {
+    */
+   void init(float tuning, double clock, double divider, int maximum, bool period, bool linear);
+ 
++  /**
++   * RG: calcula a tabela exata nota a nota (período = round(clock/(f*divider)), limitado a minimum..maximum).
++   * só vale em modo período e pitch não linear; chame depois de init().
++   */
++  void initExact(float tuning, double clock, double divider, int minimum, int maximum);
++
+   DivPitchTable():
+     maxFreq(0xffffffff),
+     period(false),
+-    linearity(true) {
++    linearity(true),
++    rgExact(false) {
++    memset(rgExactTab,0,sizeof(rgExactTab));
+     memset(pitch,0,sizeof(pitch));
+     memset(pitchDiff,0,sizeof(pitchDiff));
+   }
+diff --git a/src/engine/engine.cpp b/src/engine/engine.cpp
+index 81c0977..42d1d51 100644
+--- a/src/engine/engine.cpp
++++ b/src/engine/engine.cpp
+@@ -205,7 +205,7 @@ const char* DivEngine::getEffectDesc(unsigned char effect, int chan, bool notNul
+ 
+ void DivEngine::calcSongTimestamps() {
+   if (curSubSong!=NULL) {
+-    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior);
++    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker);
+   }
+ }
+ 
+@@ -1741,6 +1741,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+     ticks=1;
+     subticks=0;
+     tempoAccum=0;
++    rgFTAccum=0;
+     totalTime=TimeMicros(0,0);
+     totalTimeDrift=0;
+     totalTicksR=0;
+@@ -1790,7 +1791,9 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+       runMidiTime(cycles);
+     }
+     if (oldOrder!=curOrder) break;
+-    if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
++    if (song.compatFlags.rgFamiTracker) {
++      if (ticks-1<1 && curRow>=goalRow) break;
++    } else if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
+   }
+   for (int i=0; i<song.systemLen; i++) disCont[i].dispatch->setSkipRegisterWrites(false);
+   if (goal>0 || goalRow>0) {
+@@ -1827,6 +1830,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+     prevRow=curRow;
+     prevSpeed=nextSpeed;
+     tempoAccum=0;
++    rgFTAccum=0;
+   }
+   skipping=false;
+   cmdStream.clear();
+@@ -4063,6 +4067,7 @@ void DivEngine::quitDispatch() {
+   stepPlay=0;
+   ticks=0;
+   tempoAccum=0;
++    rgFTAccum=0;
+   curRow=0;
+   curOrder=0;
+   prevRow=0;
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 5ed182c..41c2578 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -315,6 +315,8 @@ struct DivChannelState {
+   // - 1: note release
+   // - 2: macro release
+   unsigned char arp, arpStage, arpTicks, arpSpeed, panL, panR, panRL, panRR, lastVibrato, lastPorta, cutType;
++  // RG: estado do arpejo usado neste tick (no modo FamiTracker arpStage guarda o próximo)
++  unsigned char rgArpUse;
+   // doNote: whether a note is going to occur.
+   // legato: whether legato (EAxx) is enabled.
+   // portaStop: a compatibility thing.
+@@ -372,6 +374,7 @@ struct DivChannelState {
+     sampleOff(0),
+     arp(0),
+     arpStage(-1),
++    rgArpUse(0),
+     arpTicks(1),
+     arpSpeed(1),
+     panL(255),
+@@ -802,6 +805,8 @@ class DivEngine {
+   // on each tick, the numerator is added.
+   // while it exceeds or meets the denominator, the tick counter is decreased.
+   short tempoAccum;
++  // RG: acumulador de tempo do FamiTracker (modo FamiTracker)
++  int rgFTAccum;
+   // current console status view mode.
+   DivStatusView view;
+   // when to halt (pause playback).
+@@ -2318,6 +2323,7 @@ class DivEngine {
+       virtualTempoN(150),
+       virtualTempoD(150),
+       tempoAccum(0),
++      rgFTAccum(0),
+       view(DIV_STATUS_NOTHING),
+       haltOn(DIV_HALT_NONE),
+       audioEngine(DIV_AUDIO_NULL),
+diff --git a/src/engine/fileOps/ftm.cpp b/src/engine/fileOps/ftm.cpp
+index 0fe35b1..213db8f 100644
+--- a/src/engine/fileOps/ftm.cpp
++++ b/src/engine/fileOps/ftm.cpp
+@@ -26,6 +26,7 @@
+ // - format code?
+ 
+ #include "fileOpsCommon.h"
++#include <map>
+ #include <algorithm>
+ 
+ #define CHECK_BLOCK_VERSION(x) \
+@@ -276,9 +277,62 @@ int findEmptyFx(short* data) {
+   return -1;
+ }
+ 
++// RG: sequência hi-pitch (x16) do FamiTracker de cada instrumento; é somada à macro de pitch no fim da importação
++static std::map<DivInstrument*,DivInstrumentMacro> rgHiPitch;
++
++// RG: soma a hi-pitch (16 unidades por passo) na macro de pitch relativa, simulando as duas sequências quadro a quadro
++static void rgMergeHiPitch(DivInstrument* ins, const DivInstrumentMacro& hi) {
++  DivInstrumentMacro& P=ins->std.pitchMacro;
++  bool pRel=(P.len==0 || P.mode==1);
++  if (!pRel || hi.len==0) return;
++  // valor (já no sinal do Furnace) da sequência no quadro t; 0 depois do fim
++  auto at=[](const DivInstrumentMacro& m, int t, bool raw) -> int {
++    int len=m.len;
++    if (len<=0) return 0;
++    int loop=(m.loop<len)?m.loop:-1;
++    int idx;
++    if (t<len) idx=t;
++    else if (loop>=0) idx=loop+((t-len)%(len-loop));
++    else return 0;
++    int v=m.val[idx];
++    if (raw) v=(v<0x80)?(-v):(0x100-v);
++    return v;
++  };
++  auto startOf=[](const DivInstrumentMacro& m) { return (m.len<=0)?0:((m.loop<m.len)?(int)m.loop:(int)m.len); };
++  auto periodOf=[](const DivInstrumentMacro& m) { return (m.len<=0 || m.loop>=m.len)?1:(int)(m.len-m.loop); };
++  bool anyLoop=(P.len>0 && P.loop<P.len) || (hi.loop<hi.len);
++  int S=MAX(startOf(P),startOf(hi));
++  int per=1;
++  if (anyLoop) {
++    int a=periodOf(P), b=periodOf(hi);
++    int g=a, h=b;
++    while (h) { int t=g%h; g=h; h=t; }
++    per=a/g*b;
++  }
++  int total=anyLoop?(S+per):MAX((int)P.len,(int)hi.len);
++  if (total>255) total=255;
++  DivInstrumentMacro out(P);
++  for (int t=0; t<total; t++) out.val[t]=at(P,t,false)+16*at(hi,t,true);
++  out.len=total;
++  out.loop=(anyLoop && S<total)?S:255;
++  out.mode=1;
++  if (P.len==0) { out.rel=255; out.delay=0; out.speed=1; }
++  out.open=true;
++  P=out;
++  logV("RG: hi-pitch somada à macro de pitch (%d passos, loop %d)",total,(int)out.loop);
++}
++
+ void copyMacro(DivInstrument* ins, DivInstrumentMacro* from, int macro_type, int setting) {
+   DivInstrumentMacro* to = NULL;
+ 
++  // RG: hi-pitch (tipo 3) não tem macro própria no Furnace: guarda para somar na de pitch depois
++  if (macro_type==3) {
++    auto rgIt=rgHiPitch.find(ins);
++    if (rgIt!=rgHiPitch.end()) rgIt->second=*from;
++    else rgHiPitch.emplace(ins,*from);
++    return;
++  }
++
+   switch (ins->type) {
+     case DIV_INS_NES: {
+       if (convertMacros2A03[macro_type] == -1)
+@@ -504,6 +558,12 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+     ds.subsong.clear();
+ 
+     ds.compatFlags.linearPitch = 0;
++    rgHiPitch.clear();
++    ds.compatFlags.rgFamiTracker = true; // RG: efeitos com o comportamento do FamiTracker
++    ds.compatFlags.noVolSlideReset = true;
++    ds.compatFlags.resetMacroOnPorta = true; // RG: nota com portamento reinicia as sequências (FamiTracker)
++    ds.compatFlags.continuousVibrato = true; // RG: no FamiTracker a fase do vibrato não recomeça a cada nota
++    ds.compatFlags.rgFTVibUp = true; // RG: até ler PARAMS (arquivos antigos usam o vibrato antigo) // RG: no FamiTracker o Axy continua ativo depois de chegar a 0/15
+ 
+     unsigned int pal = 0;
+ 
+@@ -605,6 +665,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+         if (blockVersion >= 3) {
+           newVibrato = reader.readI();
+         }
++        ds.compatFlags.rgFTVibUp = (newVibrato == 0); // RG: estilo antigo de vibrato (só para cima)
+         if (blockVersion >= 9) {
+           sweepReset = reader.readI();
+         }
+@@ -1944,7 +2005,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                       }
+ 
+                       if ((eftEffectMap[nextEffect] == 0xe1 || eftEffectMap[nextEffect] == 0xe2) && (nextEffectVal & 0xf0) == 0) {
+-                        pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed!
++                        if (!ds.compatFlags.rgFamiTracker) pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed! (RG: com rgFamiTracker a velocidade já é 2x+1)
+                       }
+                     } else {
+                       pat->newData[row][DIV_PAT_FX(j)] = ftEffectMap[nextEffect];
+@@ -1956,7 +2017,30 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                       }
+ 
+                       if ((ftEffectMap[nextEffect] == 0xe1 || ftEffectMap[nextEffect] == 0xe2) && (nextEffectVal & 0xf0) == 0) {
+-                        pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed!
++                        if (!ds.compatFlags.rgFamiTracker) pat->newData[row][DIV_PAT_FXVAL(j)] |= 0x10; // in FamiTracker if e1/e2 commands speed is 0 the portamento still has some speed! (RG: com rgFamiTracker a velocidade já é 2x+1)
++                      }
++                    }
++                    // RG: Yxx no DPCM: o FamiTracker avança xx*64 bytes; no Furnace 91xx conta 256 amostras de 1 bit (32 bytes)
++                    if (map_channels[ch] == 4 && pat->newData[row][DIV_PAT_FX(j)] == 0x90) {
++                      pat->newData[row][DIV_PAT_FX(j)] = 0x91;
++                      pat->newData[row][DIV_PAT_FXVAL(j)] = MIN((pat->newData[row][DIV_PAT_FXVAL(j)] & 0x3f) * 2, 255);
++                    }
++                    // RG: Axy do FamiTracker desce y/8 e sobe x/8 de volume por quadro;
++                    // o 0Axy do Furnace anda y/4 (64/256) e o F3xx/F4xx anda xx/256 por tick
++                    if (pat->newData[row][DIV_PAT_FX(j)] == 0x0a && pat->newData[row][DIV_PAT_FXVAL(j)] > 0) {
++                      int rgV = pat->newData[row][DIV_PAT_FXVAL(j)];
++                      int rgNet = (rgV >> 4) - (rgV & 15);
++                      int rgA = rgNet < 0 ? -rgNet : rgNet;
++                      if (rgNet == 0) {
++                        pat->newData[row][DIV_PAT_FXVAL(j)] = 0;
++                      } else if ((rgA & 1) == 0) {
++                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? ((rgA >> 1) << 4) : (rgA >> 1);
++                      } else if (rgA * 32 <= 255) {
++                        pat->newData[row][DIV_PAT_FX(j)] = rgNet > 0 ? 0xf3 : 0xf4;
++                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgA * 32;
++                      } else {
++                        int rgH = MIN((rgA + 1) >> 1, 15);
++                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? (rgH << 4) : rgH;
+                       }
+                     }
+                     for (int v = 0; v < 8; v++) {
+@@ -2861,6 +2945,10 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+       if (rgUnsupported[i]) logW("FamiTracker effect %d not supported: used %d times",i,rgUnsupported[i]);
+     }
+ 
++    // RG: soma as sequências hi-pitch nas macros de pitch
++    for (auto& rgH: rgHiPitch) rgMergeHiPitch(rgH.first,rgH.second);
++    rgHiPitch.clear();
++
+     // Registro Gamer: 0CC detune tables. each table shifts the pitch of a chip; the shift (in cents) is measured
+     // over the notes, the 2A03 one becomes the song tuning and the others become a transposition of their
+     // channels (whole semitones; the rest is under half a semitone).
+@@ -2891,6 +2979,19 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+       };
+       int mainChip=pal?1:0;
+       double globalCents=rgHasDetune[mainChip]?centsOf(mainChip):0.0;
++      // RG: modo FamiTracker: a tabela do 2A03 vai nota a nota para o chip NES (como o 0CC soma no registrador)
++      if (ds.compatFlags.rgFamiTracker && rgHasDetune[mainChip]) {
++        String rgDet;
++        for (int i=0; i<96; i++) {
++          if (i) rgDet+=",";
++          rgDet+=fmt::sprintf("%d",rgDetune[mainChip][i]);
++        }
++        for (int i=0; i<ds.systemLen; i++) {
++          if (ds.system[i]==DIV_SYSTEM_NES) ds.systemFlags[i].set("rgDetune",rgDet);
++        }
++        logI("0CC detune: 2A03 table applied per note");
++        globalCents=0.0;
++      }
+       if (globalCents!=0.0) {
+         ds.tuning*=pow(2.0,globalCents/1200.0);
+         logI("0CC detune: %+.1f cents -> tuning %.2f",globalCents,ds.tuning);
+diff --git a/src/engine/fileOps/it.cpp b/src/engine/fileOps/it.cpp
+index c4b6d3c..4549c42 100644
+--- a/src/engine/fileOps/it.cpp
++++ b/src/engine/fileOps/it.cpp
+@@ -17,6 +17,18 @@
+  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
+ 
++// RG: liga/desliga o surround (efeito 1Fxx do ES5506) se a música usa surround; IT: qualquer pan desliga o surround
++#define RG_IT_SURR(v) \
++  if (rgSurroundUsed && effectCol[chan]<(DIV_MAX_EFFECTS-1)*2) { \
++    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x1f; \
++    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(v); \
++  }
++#ifndef RG_IT_ATT
++#define RG_IT_ATT (-274) // calibrado contra o OpenMPT (pan linear derruba 6 dB no centro)
++#endif
++#ifndef RG_IT_MIXGAIN
++#define RG_IT_MIXGAIN 1.0f
++#endif
+ #include "fileOpsCommon.h"
+ 
+ extern "C" {
+@@ -193,6 +205,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+   bool doesArp[64];
+   bool doesTremolo[64];
+   bool doesPanbrello[64];
++  bool rgSurroundUsed=false; // RG: a música usa surround (S91 ou canal 100)
+ 
+   memset(doesPitchSlide,0,64*sizeof(bool));
+   memset(doesVibrato,0,64*sizeof(bool));
+@@ -1012,6 +1025,9 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+             case 'Y': // panbrello
+               doesPanbrello[chan]=true;
+               break;
++            case 'S': // RG: S91 = surround
++              if ((effectVal[chan]&0xf0)==0x90 && (effectVal[chan]&15)<2) rgSurroundUsed=true;
++              break;
+           }
+         }
+       }
+@@ -1345,6 +1361,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+             if (vol[chan]>=128 && vol[chan]<=192) { // panning
+               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=CLAMP((vol[chan]-128)<<2,0,255);
++              RG_IT_SURR(0);
+             } else if (vol[chan]>=65 && vol[chan]<=74) { // fine vol up
+             } else if (vol[chan]>=75 && vol[chan]<=84) { // fine vol down
+             } else if (vol[chan]>=85 && vol[chan]<=94) { // vol slide up
+@@ -1563,7 +1580,18 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+                   break;
+                 case 0x8: // panning
+                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+-                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal[chan]&15)<<4;
++                  // RG: S8x vai de 0 a 15 => 0 a 255 (antes x<<4 nunca chegava ao lado direito)
++                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal[chan]&15)*17;
++                  RG_IT_SURR(0);
++                  break;
++                case 0x9: // RG: S90 = surround desligado, S91 = surround ligado (pan no centro)
++                  if ((effectVal[chan]&15)==1) {
++                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                    RG_IT_SURR(1);
++                  } else if ((effectVal[chan]&15)==0) {
++                    RG_IT_SURR(0);
++                  }
+                   break;
+                 case 0xa: // offset (high nibble)
+                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x92;
+@@ -1599,6 +1627,7 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+             case 'X': // panning
+               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+               p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=effectVal[chan];
++              RG_IT_SURR(0);
+               break;
+             case 'Y': // panbrello
+               if (effectVal[chan]!=0) {
+@@ -1665,6 +1694,16 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+       ds.systemChans[i]=MIN(32,chansToCount);
+       chansToCount-=ds.systemChans[i];
+       ds.systemFlags[i].set("amigaVol",true);
++      // RG: volume global inicial e "mix volume" do cabeçalho (o Impulse Tracker/OpenMPT aplicam ambos)
++      // aplicado como atenuação dentro do chip (escala log: 256 = 6 dB) para não saturar antes do mixer
++      {
++        float rgF=((float)MAX(MIN(globalVol,128),1)/128.0f)*((float)MAX(MIN(masterVol,128),1)/128.0f)*RG_IT_MIXGAIN;
++        int rgAtt=(int)round(-log2(MIN(rgF,1.0f))*256.0);
++        rgAtt+=RG_IT_ATT;
++        ds.systemFlags[i].set("volScale",4095-CLAMP(rgAtt,0,4095));
++        if (rgAtt<0) ds.systemVol[i]=pow(2.0,(double)-rgAtt/256.0); // o resto do ganho vai no mixer
++        ds.systemFlags[i].set("panLaw",1); // pan linear, como no Impulse Tracker
++      }
+       if (!ds.compatFlags.linearPitch) {
+         ds.systemFlags[i].set("amigaPitch",true);
+       }
+@@ -1690,6 +1729,12 @@ bool DivEngine::loadIT(unsigned char* file, size_t len) {
+               // should be surround...
+               p->newData[0][DIV_PAT_FX(k)]=0x80;
+               p->newData[0][DIV_PAT_FXVAL(k)]=0x80;
++              // RG: surround de verdade (fase invertida à direita)
++              if (k+1<DIV_MAX_EFFECTS && p->newData[0][DIV_PAT_FX(k+1)]==-1) {
++                p->newData[0][DIV_PAT_FX(k+1)]=0x1f;
++                p->newData[0][DIV_PAT_FXVAL(k+1)]=0x01;
++                if (ds.subsong[i]->pat[j].effectCols<=k+1) ds.subsong[i]->pat[j].effectCols=k+2;
++              }
+             } else {
+               p->newData[0][DIV_PAT_FX(k)]=0x80;
+               p->newData[0][DIV_PAT_FXVAL(k)]=CLAMP((chanPan[j]&127)<<2,0,255);
+diff --git a/src/engine/fileOps/s3m.cpp b/src/engine/fileOps/s3m.cpp
+index 3d531ad..b05b176 100644
+--- a/src/engine/fileOps/s3m.cpp
++++ b/src/engine/fileOps/s3m.cpp
+@@ -17,6 +17,14 @@
+  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
+ 
++#define RG_S3M_SURR(v) \
++  if (rgSurroundUsed && effectCol[chan]<(DIV_MAX_EFFECTS-1)*2) { \
++    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x1f; \
++    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(v); \
++  }
++#ifndef RG_S3M_ATT
++#define RG_S3M_ATT (-32) // calibrado contra o OpenMPT (era 4095-3900 com pan de balanço)
++#endif
+ #include "fileOpsCommon.h"
+ 
+ static void readSbiOpData(sbi_t& sbi, SafeReader& reader) {
+@@ -58,6 +66,7 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
+   bool doesArp[32];
+   bool doesTremolo[32];
+   bool doesPanbrello[32];
++  bool rgSurroundUsed=false;
+ 
+   memset(chanSettings,0,32);
+   memset(insPtr,0,256*sizeof(unsigned int));
+@@ -347,9 +356,17 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
+     if (hasPCM) {
+       ds.system[ds.systemLen]=DIV_SYSTEM_ES5506;
+       ds.systemChans[ds.systemLen]=32; // for now
+-      ds.systemVol[ds.systemLen]=(float)globalVol/64.0;
++      // RG: master volume (bits 0-6) também é aplicado pelo Scream Tracker/OpenMPT
++      ds.systemVol[ds.systemLen]=1.0f;
+       ds.systemPan[ds.systemLen]=0;
+-      ds.systemFlags[ds.systemLen].set("volScale",3900);
++      {
++        // atenuação original (3900) + volume global e master volume, dentro do chip para não saturar
++        float rgF=((float)MAX(MIN(globalVol,64),1)/64.0f)*((float)MAX(masterVol&127,16)/64.0f);
++        int rgAtt=RG_S3M_ATT+(int)round(-log2(MIN(rgF,1.0f))*256.0);
++        ds.systemFlags[ds.systemLen].set("volScale",4095-CLAMP(rgAtt,0,4095));
++        if (rgAtt<0) ds.systemVol[ds.systemLen]=pow(2.0,(double)-rgAtt/256.0);
++        ds.systemFlags[ds.systemLen].set("panLaw",1); // pan linear, como no Scream Tracker 3
++      }
+       ds.systemFlags[ds.systemLen].set("amigaVol",true);
+       ds.systemFlags[ds.systemLen].set("amigaPitch",true);
+       ds.systemLen++;
+@@ -678,7 +695,10 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
+         }
+         if (hasEffect) {
+           unsigned char effect=reader.readC();
+-          reader.readC(); // effect val
++          unsigned char rgEffVal=reader.readC(); // effect val
++
++          // RG: surround (S91 ou XA4, extensões do ModPlug/OpenMPT)
++          if ((effect+'A'-1=='S' && rgEffVal==0x91) || (effect+'A'-1=='X' && rgEffVal==0xa4)) rgSurroundUsed=true;
+ 
+           switch (effect+'A'-1) {
+             case 'D': // vol slide
+@@ -1120,7 +1140,18 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
+                   break;
+                 case 0x8: // panning
+                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+-                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&15)<<4;
++                  // RG: S8x vai de 0 a 15 => 0 a 255 (antes x<<4 nunca chegava ao lado direito)
++                  p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&15)*17;
++                  RG_S3M_SURR(0);
++                  break;
++                case 0x9: // RG: S90/S91 = surround desligado/ligado (extensão do ModPlug/OpenMPT)
++                  if ((effectVal&15)==1) {
++                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                    p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                    RG_S3M_SURR(1);
++                  } else if ((effectVal&15)==0) {
++                    RG_S3M_SURR(0);
++                  }
+                   break;
+                 case 0xc: // note cut
+                   p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0xec;
+@@ -1151,6 +1182,11 @@ bool DivEngine::loadS3M(unsigned char* file, size_t len) {
+               if (effectVal<=0x80) {
+                 p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
+                 p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=(effectVal&0x80)?0xff:(effectVal<<1);
++                RG_S3M_SURR(0);
++              } else if (effectVal==0xa4) { // RG: XA4 = surround
++                p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                p->newData[readRow][DIV_PAT_FX(0)+effectCol[chan]++]=0x80;
++                RG_S3M_SURR(1);
+               }
+               break;
+             case 'Y': // panbrello (extension)
+diff --git a/src/engine/fileOps/xm.cpp b/src/engine/fileOps/xm.cpp
+index 977f3ca..e841bdf 100644
+--- a/src/engine/fileOps/xm.cpp
++++ b/src/engine/fileOps/xm.cpp
+@@ -17,6 +17,10 @@
+  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
+ 
++#ifndef RG_XM_ATT
++#define RG_XM_FT2_ATT 0
++#define RG_XM_ATT 58 // calibrado contra o OpenMPT (era 4095-3900 com pan de balanço)
++#endif
+ #include "fileOpsCommon.h"
+ 
+ void readEnvelope(DivInstrument* ins, int env, unsigned char flags, unsigned char numPoints, unsigned char loopStart, unsigned char loopEnd, unsigned char susPoint, short* points) {
+@@ -309,7 +313,15 @@ bool DivEngine::loadXM(unsigned char* file, size_t len) {
+       chansToCount-=ds.systemChans[i];
+       ds.systemFlags[i].set("amigaVol",true);
+       ds.systemFlags[i].set("amigaPitch",(ds.compatFlags.linearPitch==0));
+-      ds.systemFlags[i].set("volScale",3900);
++      // RG: níveis de mixagem como no OpenMPT: arquivos do Fasttracker 2 (e clones que imitam o FT2)
++      // usam pan por raiz quadrada e pré-amplificação 192/256; os demais, pan linear
++      {
++        bool rgFT2=(trackerName.find("FastTracker")==0 || trackerName.find("Fasttracker II clone")==0 ||
++                    (trackerName.find("MilkyTracker ")==0 && trackerName.size()>13 && trackerName.find_first_not_of(' ',12)!=String::npos));
++        int rgAtt=RG_XM_ATT+(rgFT2?RG_XM_FT2_ATT:0);
++        ds.systemFlags[i].set("volScale",4095-CLAMP(rgAtt,0,4095));
++        ds.systemFlags[i].set("panLaw",rgFT2?2:1);
++      }
+     }
+     ds.systemLen=(totalChans+31)>>5;
+ 
+@@ -985,11 +997,8 @@ bool DivEngine::loadXM(unsigned char* file, size_t len) {
+                   break;
+                 case 0xc: // panning
+                   p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=0x80;
+-                  if ((vol&15)==8) {
+-                    p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=0x80;
+-                  } else {
+-                    p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=(vol&15)|((vol&15)<<4);
+-                  }
++                  // RG: no FT2 a coluna de volume Px dá pan = x*16 (0 a 240, não simétrico)
++                  p->newData[j][DIV_PAT_FX(0)+effectCol[k]++]=(vol&15)<<4;
+                   writePanning=false;
+                   break;
+                 case 0xd: // pan slide left
+diff --git a/src/engine/pitchTable.cpp b/src/engine/pitchTable.cpp
+index 169a7da..19234ff 100644
+--- a/src/engine/pitchTable.cpp
++++ b/src/engine/pitchTable.cpp
+@@ -135,6 +135,8 @@ int DivPitchTable::get(int base, int pitch1, int pitch2) {
+ }
+ 
+ int DivPitchTable::getBase(int note) {
++  // RG: tabela exata
++  if (!linearity && rgExact && note>=0 && note<192) return rgExactTab[note];
+   // non-linear pitch
+   if (!linearity) {
+     int index=note%12;
+@@ -217,6 +219,18 @@ void DivPitchTable::init(float tuning, double clock, double divider, int maximum
+   }
+ }
+ 
++void DivPitchTable::initExact(float tuning, double clock, double divider, int minimum, int maximum) {
++  rgExact=(period && !linearity);
++  for (int i=0; i<192; i++) {
++    double f=(tuning*0.0625)*pow(2.0,(double)(i-60+3)/12.0);
++    // o Furnace ainda subtrai 1 ao escrever o registrador: guarda round(x-1)+1 como o FamiTracker arredonda
++    int v=(int)floor((clock/f)/divider-1.0+0.5);
++    if (v<minimum) v=minimum;
++    if (v>maximum) v=maximum;
++    rgExactTab[i]=v+1;
++  }
++}
++
+ // DivPitchTableFNum
+ 
+ int DivPitchTableFNum::get(int base, int pitch1, int pitch2) {
+diff --git a/src/engine/platform/es5506.cpp b/src/engine/platform/es5506.cpp
+index 47be639..090e137 100644
+--- a/src/engine/platform/es5506.cpp
++++ b/src/engine/platform/es5506.cpp
+@@ -250,7 +250,7 @@ void DivPlatformES5506::acquire(short** buf, size_t len) {
+       buf[(o<<1)|1][h]=es5506.rout(o);
+     }
+     for (int i=chanMax; i>=0; i--) {
+-      oscBuf[i]->putSample(h,(es5506.voice_lout(i)+es5506.voice_rout(i))>>5);
++      oscBuf[i]->putSample(h,(es5506.voice_lout(i)+(rgSurround[i]?-es5506.voice_rout(i):es5506.voice_rout(i)))>>5);
+     }
+   }
+   for (int i=0; i<=chanMax; i++) {
+@@ -309,6 +309,20 @@ static const short amigaPanTable[128]={
+   0xFE0, 0xFE4, 0xFE8, 0xFEC, 0xFF0, 0xFF4, 0xFF8, 0xFFF
+ };
+ 
++// RG: volume de saída (escala log da tabela acima) de um lado, a partir do pan dividido (L/R) do Furnace
++int DivPlatformES5506::amigaPanOut(int l, int r, bool right) {
++  if (panLaw==0) return amigaPanTable[((right?r:l)>>1)&127];
++  // o Furnace manda o pan na lei de balanço (centro = 255/255); volta para a posição 0..1
++  float p=(255.0f-(float)l+(float)r)/510.0f;
++  if (p<0.0f) p=0.0f;
++  if (p>1.0f) p=1.0f;
++  float g=right?p:(1.0f-p);
++  // escala o volume total pelo maior lado (pan dividido com os dois lados abaixo de 255 = volume menor)
++  g*=(float)MAX(l,r)/255.0f;
++  if (panLaw==2) g=sqrtf(g);
++  return amigaPanTable[CLAMP((int)round(g*127.0f),0,127)];
++}
++
+ void DivPlatformES5506::updateNoteChangesAsNeeded(int ch) {
+   if (chan[ch].noteChanged.changed) { // note value changed or frequency offset is changed
+     if (chan[ch].noteChanged.offs) {
+@@ -986,10 +1000,10 @@ int DivPlatformES5506::dispatch(DivCommand c) {
+       }
+       if (amigaVol) {
+         if (!chan[c.chan].std.panL.will) {
+-          chan[c.chan].outLVol=amigaPanTable[(chan[c.chan].lVol>>1)&127];
++          chan[c.chan].outLVol=amigaPanOut(chan[c.chan].lVol,chan[c.chan].rVol,false);
+         }
+         if (!chan[c.chan].std.panR.will) {
+-          chan[c.chan].outRVol=amigaPanTable[(chan[c.chan].rVol>>1)&127];
++          chan[c.chan].outRVol=amigaPanOut(chan[c.chan].lVol,chan[c.chan].rVol,true);
+         }
+       } else {
+         if (!chan[c.chan].std.panL.will) {
+@@ -1041,7 +1055,21 @@ int DivPlatformES5506::dispatch(DivCommand c) {
+         chan[c.chan].ca=0;
+         chan[c.chan].volChanged.ca=1;
+       }
+-      if (amigaVol) {
++      if (amigaVol && panLaw!=0) {
++        // RG: com lei de pan, cada lado depende dos dois valores
++        if (chan[c.chan].lVol!=c.value || chan[c.chan].rVol!=c.value2) {
++          chan[c.chan].lVol=c.value;
++          chan[c.chan].rVol=c.value2;
++          if (!chan[c.chan].std.panL.has) {
++            chan[c.chan].outLVol=amigaPanOut(c.value,c.value2,false);
++            chan[c.chan].volChanged.lVol=1;
++          }
++          if (!chan[c.chan].std.panR.has) {
++            chan[c.chan].outRVol=amigaPanOut(c.value,c.value2,true);
++            chan[c.chan].volChanged.rVol=1;
++          }
++        }
++      } else if (amigaVol) {
+         // Left volume
+         if (chan[c.chan].lVol!=c.value) {
+           chan[c.chan].lVol=c.value;
+@@ -1213,6 +1241,10 @@ int DivPlatformES5506::dispatch(DivCommand c) {
+       chan[c.chan].envChanged.k2Ramp=1;
+       break;
+     // controls
++    case DIV_CMD_ES5506_SURROUND:
++      rgSurround[c.chan]=c.value&1;
++      es5506.set_invert_right(c.chan,rgSurround[c.chan]);
++      break;
+     case DIV_CMD_ES5506_PAUSE:
+       if (chan[c.chan].active) {
+         if (chan[c.chan].pcm.pause!=(bool)(c.value&1)) {
+@@ -1372,6 +1404,8 @@ void DivPlatformES5506::reset() {
+     chan[i].pitchTable=samplePitchTable.get(-1);
+     chan[i].vol=amigaVol?64:255;
+     chan[i].outVol=amigaVol?64:255;
++    rgSurround[i]=false;
++    es5506.set_invert_right(i,false);
+     chan[i].std.setEngine(parent);
+   }
+   es5506.reset();
+@@ -1447,6 +1481,7 @@ void DivPlatformES5506::setFlags(const DivConfig& flags) {
+   volScale=4095-flags.getInt("volScale",4095);
+   amigaVol=flags.getBool("amigaVol",false);
+   amigaPitch=flags.getBool("amigaPitch",false);
++  panLaw=CLAMP(flags.getInt("panLaw",0),0,2);
+   chanMax=initChanMax;
+   pageWriteMask(0x00,0x60,0x0b,(unsigned int)chanMax);
+ 
+@@ -1596,6 +1631,8 @@ DivPlatformES5506::DivPlatformES5506():
+   DivDispatch(),
+   es550x_intf(),
+   es5506(*this) {
++  panLaw=0;
++  memset(rgSurround,0,sizeof(rgSurround));
+   sampleOffES5506=new unsigned int[32768];
+   sampleLoaded=new bool[32768];
+ }
+diff --git a/src/engine/platform/es5506.h b/src/engine/platform/es5506.h
+index 916b2f4..8e20a63 100644
+--- a/src/engine/platform/es5506.h
++++ b/src/engine/platform/es5506.h
+@@ -274,6 +274,10 @@ class DivPlatformES5506: public DivDispatch, public es550x_intf {
+   unsigned int irqv;
+   bool isReaded;
+   bool irqTrigger, amigaVol, amigaPitch;
++  // RG: lei de pan no modo amigaVol (0 = balanço, padrão do Furnace; 1 = linear, IT/S3M/MOD; 2 = raiz quadrada, Fasttracker 2)
++  int panLaw;
++  bool rgSurround[32];
++  int amigaPanOut(int l, int r, bool right);
+   unsigned int curCR;
+ 
+   unsigned char initChanMax, chanMax;
+diff --git a/src/engine/platform/nes.cpp b/src/engine/platform/nes.cpp
+index 574cb53..1b00fa8 100644
+--- a/src/engine/platform/nes.cpp
++++ b/src/engine/platform/nes.cpp
+@@ -295,6 +295,12 @@ unsigned char DivPlatformNES::calcDPCMRate(int inRate) {
+   return 15;
+ }
+ 
++int DivPlatformNES::rgFTVol(int ch) {
++  int v=((chan[ch].vol&15)*chan[ch].rgMacVol)/15;
++  if (v==0 && chan[ch].rgMacVol>0 && ((chan[ch].vol&15)>0 || chan[ch].rgVolNZ)) v=1;
++  return v;
++}
++
+ void DivPlatformNES::tick(bool sysTick) {
+   for (int i=0; i<4; i++) {
+     chan[i].std.next();
+@@ -302,6 +308,10 @@ void DivPlatformNES::tick(bool sysTick) {
+       // ok, why are the volumes like that?
+       chan[i].outVol=VOL_SCALE_LINEAR_BROKEN(chan[i].vol&15,MIN(15,chan[i].std.vol.val),15);
+       if (chan[i].outVol<0) chan[i].outVol=0;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        chan[i].rgMacVol=CLAMP(chan[i].std.vol.val,0,15);
++        chan[i].outVol=rgFTVol(i);
++      }
+       if (i==2) { // triangle
+         rWrite(0x4000+i*4,(chan[i].outVol==0)?0:linearCount);
+         chan[i].freqChanged=true;
+@@ -318,7 +328,8 @@ void DivPlatformNES::tick(bool sysTick) {
+         if (chan[i].baseFreq>255+60) chan[i].baseFreq=255+60;
+         if (chan[i].baseFreq<60) chan[i].baseFreq=60;
+       } else {
+-        if (!chan[i].inPorta) {
++        // RG: no FamiTracker cada passo da sequência de arpejo redefine o período, mesmo durante portamento
++        if (!chan[i].inPorta || parent->song.compatFlags.rgFamiTracker) {
+           chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+         }
+       }
+@@ -373,7 +384,9 @@ void DivPlatformNES::tick(bool sysTick) {
+               ntPos+=chan[i].arpOff;
+             }
+           }
+-          ntPos+=chan[i].pitch2;
++          // RG: no FamiTracker a sequência de pitch soma direto no índice do ruído (o importador inverte o sinal pensando nos pulsos)
++          if (parent->song.compatFlags.rgFamiTracker) ntPos-=chan[i].pitch2;
++          else ntPos+=chan[i].pitch2;
+           if (isE) {
+             chan[i].freq=31-(ntPos&31);
+           } else if (parent->song.compatFlags.properNoiseLayout) {
+@@ -504,6 +517,7 @@ void DivPlatformNES::tick(bool sysTick) {
+   }
+ 
+   nextDPCMFreq=-1;
++  rgDPCMPitch=-1;
+ }
+ 
+ int DivPlatformNES::dispatch(DivCommand c) {
+@@ -526,6 +540,8 @@ int DivPlatformNES::dispatch(DivCommand c) {
+           if (ins->amiga.useNoteMap) {
+             nextDPCMFreq=ins->amiga.getDPCMFreq(c.value);
+             if (nextDPCMFreq<0 || nextDPCMFreq>15) nextDPCMFreq=lastDPCMFreq;
++            // RG: Wxx na mesma linha tem prioridade (FamiTracker)
++            if (rgDPCMPitch>=0) nextDPCMFreq=rgDPCMPitch;
+             lastDPCMFreq=nextDPCMFreq;
+             nextDPCMDelta=ins->amiga.getDPCMDelta(c.value);
+           } else {
+@@ -563,7 +579,8 @@ int DivPlatformNES::dispatch(DivCommand c) {
+         if (chan[c.chan].setPos) {
+           chan[c.chan].setPos=false;
+         } else {
+-          dacPos=0;
++          // RG: no FamiTracker o offset (Yxx) continua valendo nas notas seguintes
++          dacPos=parent->song.compatFlags.rgFamiTracker?rgDPCMOff:0;
+         }
+         dacPeriod=0;
+         if (c.value!=DIV_NOTE_NULL) {
+@@ -596,12 +613,23 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       }
+       chan[c.chan].active=true;
+       chan[c.chan].keyOn=true;
++      // RG: modo FamiTracker: nota nova volta ao duty padrão (a macro de duty, se houver, sobrescreve no tick)
++      if (parent->song.compatFlags.rgFamiTracker && c.value!=DIV_NOTE_NULL && c.chan!=2) {
++        chan[c.chan].duty=chan[c.chan].rgDefDuty;
++        if (c.chan==3) chan[c.chan].freqChanged=true;
++      }
+       chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_NES));
+       if (!parent->song.compatFlags.brokenOutVol && !chan[c.chan].std.vol.will) {
+         chan[c.chan].outVol=chan[c.chan].vol;
+       }
++      if (parent->song.compatFlags.rgFamiTracker) {
++        chan[c.chan].rgMacVol=15;
++        chan[c.chan].outVol=rgFTVol(c.chan);
++      }
+       if (c.chan==2) {
+         rWrite(0x4000+c.chan*4,linearCount);
++      } else if (parent->song.compatFlags.rgFamiTracker) {
++        rWrite(0x4000+c.chan*4,(chan[c.chan].envMode<<4)|chan[c.chan].outVol|((chan[c.chan].duty&3)<<6));
+       } else if (!parent->song.compatFlags.brokenOutVol2) {
+         rWrite(0x4000+c.chan*4,(chan[c.chan].envMode<<4)|chan[c.chan].vol|((chan[c.chan].duty&3)<<6));
+       }
+@@ -635,6 +663,23 @@ int DivPlatformNES::dispatch(DivCommand c) {
+     case DIV_CMD_VOLUME:
+       // DPCM lacks volume control
+       if (c.chan>3) break;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rgVolNZ=(c.value2!=0);
++        int nv=rgFTVol(c.chan);
++        if (nv!=chan[c.chan].outVol || !chan[c.chan].active) {
++          chan[c.chan].outVol=nv;
++          if (chan[c.chan].active) {
++            if (c.chan==2) {
++              rWrite(0x4000+c.chan*4,(nv==0)?0:linearCount);
++            } else {
++              rWrite(0x4000+c.chan*4,(chan[c.chan].envMode<<4)|nv|((chan[c.chan].duty&3)<<6));
++            }
++          }
++        }
++        break;
++      }
+       if (chan[c.chan].vol!=c.value) {
+         chan[c.chan].vol=c.value;
+         if (!chan[c.chan].std.vol.has) {
+@@ -681,6 +726,7 @@ int DivPlatformNES::dispatch(DivCommand c) {
+     }
+     case DIV_CMD_STD_NOISE_MODE:
+       chan[c.chan].duty=c.value;
++      chan[c.chan].rgDefDuty=c.value;
+       if (c.chan==3) { // noise
+         chan[c.chan].freqChanged=true;
+       } else if (c.chan==2 && isE) {
+@@ -746,6 +792,7 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_SAMPLE_FREQ: {
+       bool goingToLoop=parent->getSample(dacSample)->isLoopable();
++      if (dpcmMode && parent->song.compatFlags.rgFamiTracker) rgDPCMPitch=c.value&15;
+       if (dpcmMode) {
+         nextDPCMFreq=c.value&15;
+         rWrite(0x4010,(c.value&15)|(goingToLoop?0x40:0));
+@@ -754,6 +801,7 @@ int DivPlatformNES::dispatch(DivCommand c) {
+     }
+     case DIV_CMD_SAMPLE_POS:
+       if (c.chan!=4) break;
++      rgDPCMOff=c.value;
+       dacPos=c.value;
+       dpcmPos=c.value;
+       chan[c.chan].setPos=true;
+@@ -763,6 +811,14 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_LEGATO:
+       if (c.chan==3) break;
++      // RG: modo FamiTracker: arpejo do efeito (value2=1) não mexe na nota base e é ignorado enquanto a sequência de arpejo do instrumento roda
++      if (c.value2==1 && parent->song.compatFlags.rgFamiTracker) {
++        if (!chan[c.chan].std.arp.has) {
++          chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+chan[c.chan].sampleNoteDelta);
++          chan[c.chan].freqChanged=true;
++        }
++        break;
++      }
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+chan[c.chan].sampleNoteDelta+((HACKY_LEGATO_MESS)?(chan[c.chan].std.arp.val):(0)));
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].note=c.value;
+@@ -770,8 +826,16 @@ int DivPlatformNES::dispatch(DivCommand c) {
+     case DIV_CMD_PRE_PORTA:
+       if (chan[c.chan].active && c.value2) {
+         if (parent->song.compatFlags.resetMacroOnPorta) chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_NES));
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento e ao duty padrão
++        if (parent->song.compatFlags.rgFamiTracker && c.chan<4) {
++          chan[c.chan].rgMacVol=15;
++          chan[c.chan].outVol=rgFTVol(c.chan);
++          if (c.chan!=2) chan[c.chan].duty=chan[c.chan].rgDefDuty;
++          if (c.chan==3) chan[c.chan].freqChanged=true;
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !parent->song.compatFlags.rgFamiTracker) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_GET_VOLMAX:
+@@ -876,6 +940,8 @@ void DivPlatformNES::reset() {
+   goingToLoop=false;
+   countMode=false;
+   nextDPCMFreq=-1;
++  rgDPCMPitch=-1;
++  rgDPCMOff=0;
+   nextDPCMDelta=-1;
+   lastDPCMFreq=15;
+   linearCount=255;
+@@ -899,7 +965,8 @@ void DivPlatformNES::reset() {
+   }
+   memset(regPool,0,128);
+ 
+-  rWrite(0x4015,0x1f);
++  // RG: no FamiTracker o DPCM só é habilitado quando um sample toca
++  rWrite(0x4015,parent->song.compatFlags.rgFamiTracker?0x0f:0x1f);
+   rWrite(0x4001,chan[0].sweep);
+   rWrite(0x4005,chan[1].sweep);
+ 
+@@ -926,6 +993,18 @@ bool DivPlatformNES::hasAcquireDirect() {
+ }
+ 
+ void DivPlatformNES::setFlags(const DivConfig& flags) {
++  // RG: tabela de detune do 0CC (lista de 96 inteiros)
++  memset(rgDetune,0,sizeof(rgDetune));
++  {
++    String rgDet=flags.getString("rgDetune","");
++    int idx=0;
++    const char* p=rgDet.c_str();
++    while (*p && idx<96) {
++      rgDetune[idx++]=strtol(p,(char**)&p,10);
++      if (*p==',') p++;
++      else if (*p) break;
++    }
++  }
+   int clockSel=flags.getInt("clockSel",0);
+   if (clockSel==2) { // Dendy
+     chipClock=COLOR_PAL*2.0/5.0;
+@@ -977,6 +1056,18 @@ void DivPlatformNES::notifyInsDeletion(void* ins) {
+ 
+ void DivPlatformNES::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,CHIP_DIVIDER,0x800,true,parent->song.compatFlags.linearPitch);
++  // RG: modo FamiTracker: tabela de períodos exata nota a nota (como o FamiTracker/0CC)
++  pitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker) {
++    pitchTable.initExact(parent->song.tuning,chipClock,CHIP_DIVIDER,0,0x7ff);
++    // RG: detune do 0CC: soma no registrador (o +1 do Furnace já está na tabela)
++    for (int i=0; i<96; i++) {
++      if (!rgDetune[i]) continue;
++      int n=i+60;
++      if (n<0 || n>=192) continue;
++      pitchTable.rgExactTab[n]=CLAMP(pitchTable.rgExactTab[n]-1-rgDetune[i],0,0x7ff)+1;
++    }
++  }
+   samplePitchTable.update<Channel>(chan,5,parent->song.tuning,1,1,32000,false,parent->song.compatFlags.linearPitch,sample);
+ }
+ 
+@@ -1146,6 +1237,8 @@ void DivPlatformNES::quit() {
+ 
+ // initialization of important arrays
+ DivPlatformNES::DivPlatformNES() {
++  memset(rgDetune,0,sizeof(rgDetune));
++  rgDPCMOff=0;
+   sampleOffDPCM=new unsigned int[32768];
+   sampleLoaded=new bool[32768];
+ }
+diff --git a/src/engine/platform/nes.h b/src/engine/platform/nes.h
+index b2fde76..9148452 100644
+--- a/src/engine/platform/nes.h
++++ b/src/engine/platform/nes.h
+@@ -31,8 +31,16 @@ class DivPlatformNES: public DivDispatch {
+     int prevFreq;
+     unsigned char duty, sweep, envMode, len;
+     bool sweepChanged, setPos;
++    // RG: modo FamiTracker: volume do canal tem fração (>0 mesmo com parte inteira 0) e último valor da macro de volume
++    bool rgVolNZ;
++    int rgMacVol;
++    // RG: duty padrão (último Vxx); no FamiTracker cada nota nova volta a ele
++    unsigned char rgDefDuty;
+     Channel(bool linear=true):
+       SharedChannel(15,linear),
++      rgVolNZ(true),
++      rgMacVol(15),
++      rgDefDuty(0),
+       prevFreq(65535),
+       duty(0),
+       sweep(8),
+@@ -64,6 +72,10 @@ class DivPlatformNES: public DivDispatch {
+   unsigned char apuType;
+   unsigned char linearCount;
+   signed char nextDPCMFreq;
++  // RG: Wxx do FamiTracker (pitch do DPCM só para a nota da mesma linha)
++  signed char rgDPCMPitch;
++  // RG: offset do DPCM (Yxx) que continua valendo para as notas seguintes, como no FamiTracker
++  unsigned int rgDPCMOff;
+   signed char nextDPCMDelta;
+   signed char lastDPCMFreq;
+   bool dpcmMode;
+@@ -85,6 +97,10 @@ class DivPlatformNES: public DivDispatch {
+ 
+   friend void putDispatchChip(void*,int);
+   friend void putDispatchChan(void*,int,int);
++  // RG: volume de saída como no FamiTracker: (instrumento*canal)/15, nunca 0 se os dois forem > 0
++  int rgFTVol(int ch);
++  // RG: tabela de detune do 0CC (deslocamento do registrador por nota, notas 0-95 do FamiTracker)
++  int rgDetune[96];
+ 
+   void doWrite(int ts, unsigned short addr, unsigned char data);
+   unsigned char calcDPCMRate(int inRate);
+diff --git a/src/engine/playback.cpp b/src/engine/playback.cpp
+index c85041c..798cc25 100644
+--- a/src/engine/playback.cpp
++++ b/src/engine/playback.cpp
+@@ -341,9 +341,41 @@ const char* cmdName[]={
+   "KLATTSCH_BW_SCALE",
+   "KLATTSCH_FORMANT_SHIFT",
+ 
+-  "TEST_REG"
++  "TEST_REG",
++
++  "ES5506_SURROUND"
+ };
+ 
++// RG: vibrato do FamiTracker/0CC (tabela de 1/4 de seno com 16 profundidades; fase 0-63)
++static int rgFTVibrato(int depth, int phase, bool up) {
++  static int tab[2][256];
++  static bool init=false;
++  if (!init) {
++    const double NEWD[16]={0.0, 1.5, 2.5, 4.0, 5.0, 7.0, 10.0, 12.0, 14.0, 17.0, 22.0, 30.0, 44.0, 64.0, 96.0, 128.0};
++    const double OLDD[16]={0.0, 1.0, 2.0, 3.0, 4.0, 7.0, 8.0, 15.0, 16.0, 31.0, 32.0, 63.0, 64.0, 127.0, 128.0, 255.0};
++    for (int d=0; d<16; d++) for (int p=0; p<16; p++) {
++      tab[0][d*16+p]=(int)(sin((double)p*M_PI/32.0)*NEWD[d]);
++      tab[1][d*16+p]=(int)((double)p*OLDD[d]/16.0+1.0);
++    }
++    init=true;
++  }
++  const int* t=tab[up?1:0];
++  int D=(depth&15)<<4;
++  phase&=63;
++  int v=0;
++  if ((phase&0x30)==0x00) v=t[D+phase];
++  else if ((phase&0x30)==0x10) v=t[D+15-(phase-16)];
++  else if ((phase&0x30)==0x20) v=-t[D+(phase-32)];
++  else v=-t[D+15-(phase-48)];
++  if (up) {
++    v+=t[D+15]+1;
++    v>>=1;
++  }
++  return v;
++}
++
++#define RG_VIBVAL(i) (song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
++
+ // fail build if you forgot to update the array
+ static_assert((sizeof(cmdName)/sizeof(void*))==DIV_CMD_MAX,"update cmdName!");
+ 
+@@ -783,7 +815,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       if (song.compatFlags.legacyVolumeSlides && chan[i].volume==chan[i].volMax+1) {
+         logV("forcing volume");
+         chan[i].volume=chan[i].volMax;
+-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+       }
+     }
+@@ -892,7 +924,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+     // ...unless there's a way to trigger keyOn twice
+     if (!chan[i].keyOn) {
+       // the behavior of arpeggio reset upon note off varies per system
+-      if (song.dispatchChanOfChan[i]>=0) if (disCont[song.dispatchOfChan[i]].dispatch->keyOffAffectsArp(song.dispatchChanOfChan[i])) {
++      // RG: no FamiTracker note-off/release não desliga o arpejo
++      if (song.dispatchChanOfChan[i]>=0 && !song.compatFlags.rgFamiTracker) if (disCont[song.dispatchOfChan[i]].dispatch->keyOffAffectsArp(song.dispatchChanOfChan[i])) {
+         chan[i].arp=0;
+         dispatchCmd(DivCommand(DIV_CMD_HINT_ARPEGGIO,i,chan[i].arp));
+       }
+@@ -936,7 +969,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       }
+       // set the volume (bottom byte is set to 0)
+       chan[i].volume=pat->newData[whatRow][DIV_PAT_VOL]<<8;
+-      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+       dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+     }
+   }
+@@ -963,6 +996,10 @@ void DivEngine::processRow(int i, bool afterDelay) {
+ 
+     // per-system effect
+     // if there isn't one, go through normal effects
++    // RG: no FamiTracker o canal tem um só efeito contínuo: portamento/slide (1xx 2xx 3xx Qxy Rxy) substitui o arpejo
++    if (song.compatFlags.rgFamiTracker && (effect==0x01 || effect==0x02 || effect==0x03 || effect==0xe1 || effect==0xe2)) {
++      chan[i].arp=0;
++    }
+     if (!perSystemEffect(i,effect,effectVal)) switch (effect) {
+       /// PANNING
+       case 0x08: // panning (split 4-bit)
+@@ -1129,6 +1166,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+           chan[i].inPorta=false;
+           dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
+         } else {
++          // RG: 3xx é um portamento normal: esquece um slide Qxy/Rxy anterior
++          if (song.compatFlags.rgFamiTracker) chan[i].wasShorthandPorta=false;
+           // lastPorta is used for the 06xy effect
+           chan[i].lastPorta=effectVal;
+           // this here is for a compatibility flag...
+@@ -1158,7 +1197,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+           // - ...unless noteOffResetsSlides is disabled
+           chan[i].stopOnOff=song.compatFlags.stopPortaOnNoteOff; // what?!
+           chan[i].scheduledSlideReset=false;
+-          dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,1));
++          // RG: no FamiTracker só uma nota (não o 3xx sozinho) reinicia as sequências do instrumento
++          dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,(song.compatFlags.rgFamiTracker && !chan[i].keyOn)?0:1));
+           // this is used to inhibit any other slide commands if the respective compat flag is enabled
+           lastSlide=0x1337; // i hate this so much
+         }
+@@ -1170,8 +1210,14 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].vibratoDepth=effectVal&15;
+         chan[i].vibratoRate=effectVal>>4;
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
++        if (song.compatFlags.rgFamiTracker) {
++          // RG: 400 recomeça a fase (48 no estilo antigo); o resto é feito a cada tick
++          if (effectVal==0) chan[i].vibratoPos=song.compatFlags.rgFTVibUp?48:0;
++          dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp)));
++          break;
++        }
+         // update pitch now
+-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
++        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
+         break;
+       /// VOLUME-RELATED
+       case 0x05: // vol slide + vibrato
+@@ -1186,7 +1232,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         }
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
+         // update pitch now
+-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
++        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
+         // TODO: non-0x-or-x0 value should be treated as 00
+         if (effectVal!=0) {
+           if ((effectVal&15)!=0) {
+@@ -1268,7 +1314,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+           chan[i].volSpeedTarget=-1;
+         } else {
+           // restore the volume if tremolo is disabled
+-          dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++          dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+           dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+         }
+         break;
+@@ -1296,6 +1342,13 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         // don't accept simultaneous arp and raw frequency
+         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
+         chan[i].arp=effectVal;
++        // RG: no FamiTracker o canal tem um só "efeito contínuo": o arpejo substitui portamento/slide
++        // (000 também conta: no FamiTracker ele ocupa o slot e desliga o portamento)
++        if (song.compatFlags.rgFamiTracker && chan[i].portaSpeed>0) {
++          chan[i].portaSpeed=-1;
++          chan[i].inPorta=false;
++          dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,0));
++        }
+         // COMPAT FLAG: reset note to base on arp stop (inverted in the GUI)
+         // - a 0000 effect resets arpeggio position
+         if (chan[i].arp==0 && song.compatFlags.arp0Reset) {
+@@ -1396,7 +1449,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         // it is ignored in raw frequency mode...
+         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
+         chan[i].portaNote=chan[i].note+(effectVal&15);
+-        chan[i].portaSpeed=(effectVal>>4)*4;
++        // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
++        chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
+         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+         // these are for compatibility stuff
+         chan[i].portaStop=true;
+@@ -1427,7 +1481,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         // it is ignored in raw frequency mode...
+         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
+         chan[i].portaNote=chan[i].note-(effectVal&15);
+-        chan[i].portaSpeed=(effectVal>>4)*4;
++        // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
++        chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
+         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+         chan[i].portaStop=true;
+         // COMPAT FLAG: stop portamento on note off
+@@ -1460,7 +1515,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       case 0xe5: // pitch
+         chan[i].pitch=effectVal-0x80;
+         // send pitch now
+-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
++        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
+         dispatchCmd(DivCommand(DIV_CMD_HINT_PITCH,i,chan[i].pitch));
+         break;
+       case 0xe6: // delayed legato
+@@ -1585,7 +1640,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].volSpeed=0; // add compat flag?
+         chan[i].volSpeedTarget=-1;
+         chan[i].volume=MIN(chan[i].volume+effectVal*256,chan[i].volMax);
+-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+         break;
+       case 0xf9: // single volume slide down
+@@ -1593,7 +1648,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].volSpeed=0; // add compat flag?
+         chan[i].volSpeedTarget=-1;
+         chan[i].volume=MAX(chan[i].volume-effectVal*256,0);
+-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+         break;
+       case 0xfa: // fast volume slide
+@@ -1668,7 +1723,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+       chan[i].vibratoPos=0;
+     }
+     // send pitch now (why? didn't we do that already?)
+-    dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
++    dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
+     // handle legato
+     // COMPAT FLAG: broken portamento during legato
+     // - portamento would not occur if legato is on
+@@ -1679,6 +1734,14 @@ void DivEngine::processRow(int i, bool afterDelay) {
+     } else {
+       // this is where we actually send a note on command to the dispatch.
+       // this does not occur if portamento is in progress and it is not a shortcut slide (E1xy/E2xy)
++      // RG: no FamiTracker uma nota nova cancela o slide Qxy/Rxy (E1/E2) em andamento e toca normalmente
++      if (song.compatFlags.rgFamiTracker && chan[i].inPorta && chan[i].keyOn && !chan[i].shorthandPorta && chan[i].wasShorthandPorta) {
++        chan[i].portaSpeed=-1;
++        dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,0));
++        dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
++        chan[i].wasShorthandPorta=false;
++        chan[i].inPorta=false;
++      }
+       if (chan[i].inPorta && chan[i].keyOn && !chan[i].shorthandPorta) {
+         // COMPAT FLAG: E1xy/E2xy stop on same note
+         // - if there was a shortcut slide, stop it
+@@ -1695,6 +1758,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+           // otherwise we change the portamento target
+           chan[i].portaNote=chan[i].note;
+           dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
++          // RG: no FamiTracker a nota nova reinicia as sequências do instrumento mesmo durante o portamento
++          if (song.compatFlags.rgFamiTracker && !calledPorta) dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,1));
+         }
+       } else if (!chan[i].noteOnInhibit) {
+         // noteOnInhibit is set during live playback to prevent an extra note from playing
+@@ -1731,7 +1796,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
+     // cap the volume if it is too high and not key on
+     if (!chan[i].keyOn && chan[i].volume>chan[i].volMax) {
+       chan[i].volume=chan[i].volMax;
+-      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+       dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+     }
+     // now set key on
+@@ -1892,6 +1957,11 @@ void DivEngine::nextRow() {
+     if (song.compatFlags.delayBehavior!=2) {
+       chan[i].rowDelay=0;
+     }
++    // RG: no FamiTracker, se a linha nova chega com um Gxx ainda contando, a nota atrasada toca agora
++    if (song.compatFlags.rgFamiTracker && chan[i].rowDelay>0) {
++      chan[i].rowDelay=0;
++      processRow(i,true);
++    }
+     processRow(i,false);
+   }
+ 
+@@ -1975,6 +2045,8 @@ void DivEngine::nextRow() {
+     // cache the next speed for future operations
+     nextSpeed=speeds.val[curSpeed];
+   }
++  // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
++  if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks);
+ 
+   /*
+   if (skipping) {
+@@ -2247,11 +2319,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+       // then advance tick counter and then call nextRow()
+       if (stepPlay!=1) {
+         // increase accumulator by virtual tempo numerator
+-        tempoAccum+=virtualTempoN;
++        // RG: no modo FamiTracker um tick do Furnace é um quadro real (o tempo já está na duração da linha)
++        const int rgVN=song.compatFlags.rgFamiTracker?1:virtualTempoN;
++        const int rgVD=song.compatFlags.rgFamiTracker?1:virtualTempoD;
++        tempoAccum+=rgVN;
+         // while accumulator is higher than virtual tempo denominator
+-        while (tempoAccum>=virtualTempoD) {
++        while (tempoAccum>=rgVD) {
+           // wrap the accumulator back
+-          tempoAccum-=virtualTempoD;
++          tempoAccum-=rgVD;
+           // tick the tick counter
+           if (--ticks<=0) {
+             ret=endOfSong;
+@@ -2347,7 +2422,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+                   chan[i].volSpeedTarget=-1;
+                 }
+                 dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+-                dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++                dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+                 dispatchCmd(DivCommand(DIV_CMD_HINT_VOL_SLIDE,i,0));
+               }
+             }
+@@ -2360,7 +2435,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+                 chan[i].volSpeedTarget=-1;
+               }
+               dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+               dispatchCmd(DivCommand(DIV_CMD_HINT_VOL_SLIDE,i,0));
+             } else if (chan[i].volume<0) {
+               // COMPAT FLAG: don't stop volume slides after reaching target
+@@ -2377,10 +2452,10 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+               } else {
+                 chan[i].volume=0;
+               }
+-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+               dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+             } else {
+-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+             }
+           } else if (chan[i].tremoloDepth>0) {
+             // tremolo (increase position in look-up table and send a volume change)
+@@ -2459,7 +2534,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+         }
+ 
+         // vibrato
+-        if (chan[i].vibratoDepth>0) {
++        // RG: modo FamiTracker: fase anda mesmo com profundidade 0 e a altura sai da tabela do FamiTracker
++        if (song.compatFlags.rgFamiTracker) {
++          if (chan[i].vibratoRate>0 || chan[i].vibratoDepth>0) {
++            chan[i].vibratoPos=(chan[i].vibratoPos+chan[i].vibratoRate)&63;
++            chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+chan[i].vibratoRate)&511;
++            dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp)));
++          }
++        } else if (chan[i].vibratoDepth>0) {
+           chan[i].vibratoPos+=chan[i].vibratoRate;
+           // clamp vibrato position
+           while (chan[i].vibratoPos>=64) chan[i].vibratoPos-=64;
+@@ -2546,7 +2628,8 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+             // - when disabled, portamento remains active after it has finished
+             // don't use the user-defined multiplier in raw frequency mode
+             int portaSpeedMultiplier=(song.compatFlags.linearPitch && !(chan[i].note&DIV_NOTE_RAW_FLAG))?song.compatFlags.pitchSlideSpeed:1;
+-            if (dispatchCmd(DivCommand(DIV_CMD_NOTE_PORTA,i,chan[i].portaSpeed*portaSpeedMultiplier,chan[i].portaNote))==2 && chan[i].portaStop && song.compatFlags.targetResetsSlides) {
++            if (dispatchCmd(DivCommand(DIV_CMD_NOTE_PORTA,i,chan[i].portaSpeed*portaSpeedMultiplier,chan[i].portaNote))==2 && chan[i].portaStop && song.compatFlags.targetResetsSlides && (!song.compatFlags.rgFamiTracker || chan[i].wasShorthandPorta)) {
++              // RG: no FamiTracker só Qxy/Rxy terminam ao chegar; 3xx continua valendo para as próximas notas
+               // if we are here, it means we reached the target and shall stop
+               chan[i].portaSpeed=0;
+               dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+@@ -2607,7 +2690,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+         if (chan[i].volCut>0) {
+           if (--chan[i].volCut<1) {
+             chan[i].volume=0;
+-            dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
++            dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
+             dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
+           }
+         }
+@@ -2630,19 +2713,35 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+           if (--chan[i].arpTicks<1) {
+             chan[i].arpTicks=chan[i].arpSpeed;
+             // there are three arp stages, corresponding to note, note+x and note+y in the 00xy effect
+-            chan[i].arpStage++;
+-            if (chan[i].arpStage>2) chan[i].arpStage=0;
++            if (song.compatFlags.rgFamiTracker) {
++              // RG: como o FamiTracker: arpStage guarda o PRÓXIMO estado (0, x, y), que continua de um arpejo para outro;
++              // com y=0 o estado 1 pula o 2 (ciclo nota, nota+x)
++              int st=(chan[i].arpStage>2)?0:chan[i].arpStage;
++              int use=st;
++              if (st==1 && (chan[i].arp&15)==0) st++;
++              st=(st+1)%3;
++              chan[i].arpStage=st;
++              chan[i].rgArpUse=use;
++            } else {
++              chan[i].arpStage++;
++              if (chan[i].arpStage>2) chan[i].arpStage=0;
++              chan[i].rgArpUse=chan[i].arpStage;
++            }
+             // arp is sent as legato
+-            switch (chan[i].arpStage) {
+-              case 0:
+-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note));
+-                break;
+-              case 1:
+-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp>>4)));
+-                break;
+-              case 2:
+-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp&15)));
+-                break;
++            // RG: value2=1 marca que é o arpejo do efeito (no modo FamiTracker a sequência de arpejo do instrumento tem prioridade)
++            {
++              int rgArpMark=song.compatFlags.rgFamiTracker?1:0;
++              switch (chan[i].rgArpUse) {
++                case 0:
++                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note,rgArpMark));
++                  break;
++                case 1:
++                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp>>4),rgArpMark));
++                  break;
++                case 2:
++                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp&15),rgArpMark));
++                  break;
++              }
+             }
+           }
+         } else {
+diff --git a/src/engine/song.cpp b/src/engine/song.cpp
+index 5eaef6d..795a632 100644
+--- a/src/engine/song.cpp
++++ b/src/engine/song.cpp
+@@ -52,7 +52,34 @@ DivSongTimestamps::~DivSongTimestamps() {
+   }
+ }
+ 
+-void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat) {
++int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed) {
++  if (speed<1) speed=1;
++  int rate=(int)round(hz);
++  if (rate<1) rate=1;
++  int tempo=(tempoN==tempoD)?0:(int)round((double)tempoN*2.5*hz/(double)MAX(1,tempoD));
++  int inc, dec, rem;
++  if (tempo>0) {
++    inc=60*rate;
++    dec=(tempo*24)/speed;
++    rem=(tempo*24)%speed;
++  } else {
++    inc=speed;
++    dec=1;
++    rem=0;
++  }
++  if (dec<1) dec=1;
++  // quadro da linha: o acumulador está <= 0, então soma e subtrai
++  int a=accum+inc-rem-dec;
++  int len=1;
++  while (a>0 && len<4096) {
++    a-=dec;
++    len++;
++  }
++  accum=a;
++  return len;
++}
++
++void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT) {
+   // reduced version of the playback routine for calculation.
+   std::chrono::high_resolution_clock::time_point timeStart=std::chrono::high_resolution_clock::now();
+ 
+@@ -90,6 +117,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+   double totalMicrosOff=0.0;
+   int ticks=speeds.val[0];
+   int tempoAccum=0;
++  int rgFTAccum=0;
+   int curSpeed=0;
+   int changeOrd=-1;
+   int changePos=0;
+@@ -133,6 +161,8 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+       // cache the next speed for future operations
+       nextSpeed=curSpeeds.val[curSpeed];
+     }
++    // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
++    if (rgFT) ticks=rgFTRowLen(rgFTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks);
+   };
+ 
+   // get the tick counters rolling
+@@ -364,8 +394,11 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+       break;
+     }
+ 
++    // RG: no modo FamiTracker um tick do Furnace é um quadro real
++    const int rgVN=rgFT?1:curVirtualTempoN;
++    const int rgVD=rgFT?1:curVirtualTempoD;
+     // heuristic
+-    int advance=(curVirtualTempoD*ticks)/curVirtualTempoN;
++    int advance=(rgVD*ticks)/rgVN;
+     for (int i=0; i<chans; i++) {
+       if (rowDelay[i]>0) {
+         if (rowDelay[i]<advance) advance=rowDelay[i];
+@@ -387,15 +420,15 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+     }
+ 
+     // run virtual tempo
+-    tempoAccum+=curVirtualTempoN*advance;
+-    while (tempoAccum>=curVirtualTempoD) {
+-      int ticksToRun=tempoAccum/MAX(1,curVirtualTempoD);
+-      tempoAccum%=MAX(1,curVirtualTempoD);
++    tempoAccum+=rgVN*advance;
++    while (tempoAccum>=rgVD) {
++      int ticksToRun=tempoAccum/MAX(1,rgVD);
++      tempoAccum%=MAX(1,rgVD);
+       // tick counter
+       ticks-=ticksToRun;
+       if (ticks<0) {
+         // if ticks is negative, we must call ticks back
+-        tempoAccum+=-ticks*MAX(1,curVirtualTempoD);
++        tempoAccum+=-ticks*MAX(1,rgVD);
+       }
+       if (ticks<=0) {
+         if (shallStopSched) {
+@@ -851,7 +884,7 @@ void DivSong::findSubSongs() {
+     // find possible subsongs
+     logD("finding subsongs...");
+     while (++curStart<i->ordersLen) {
+-      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart);
++      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker);
+       if (!i->ts.isLoopable) break;
+       
+       // make sure we don't pick the same range twice
+@@ -1182,6 +1215,8 @@ void DivCompatFlags::setDefaults() {
+   oldCenterRate=false;
+   noVolSlideReset=false;
+   arpSpeedGlobal=false;
++  rgFamiTracker=false;
++  rgFTVibUp=false;
+ }
+ 
+ bool DivCompatFlags::areDefaults() {
+@@ -1269,6 +1304,8 @@ bool DivCompatFlags::readData(SafeReader& reader) {
+   CHECK_AND_LOAD_BOOL(oldCenterRate);
+   CHECK_AND_LOAD_BOOL(noVolSlideReset);
+   CHECK_AND_LOAD_BOOL(arpSpeedGlobal);
++  CHECK_AND_LOAD_BOOL(rgFamiTracker);
++  CHECK_AND_LOAD_BOOL(rgFTVibUp);
+ 
+   return true;
+ }
+@@ -1345,6 +1382,8 @@ void DivCompatFlags::putData(SafeWriter* w) {
+   CHECK_AND_STORE_BOOL(oldCenterRate);
+   CHECK_AND_STORE_BOOL(noVolSlideReset);
+   CHECK_AND_STORE_BOOL(arpSpeedGlobal);
++  CHECK_AND_STORE_BOOL(rgFamiTracker);
++  CHECK_AND_STORE_BOOL(rgFTVibUp);
+ 
+   String data=c.toString();
+   w->write("CFLG",4);
+diff --git a/src/engine/song.h b/src/engine/song.h
+index 1ec13aa..cb44822 100644
+--- a/src/engine/song.h
++++ b/src/engine/song.h
+@@ -131,7 +131,7 @@ struct DivSubSong {
+   /**
+    * calculate timestamps (loop position, song length and more).
+    */
+-  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0);
++  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false);
+ 
+   /**
+    * read sub-song data.
+@@ -184,6 +184,12 @@ struct DivEffectStorage {
+     storageLen(0) {}
+ };
+ 
++/**
++ * RG: duração (em ticks reais) da próxima linha no modo FamiTracker, com o acumulador de tempo do FamiTracker/0CC.
++ * accum: estado do acumulador (começa em 0); tempoN/tempoD: tempo virtual do Furnace (tempo FT = N*2.5*hz/D, 0 se N==D).
++ */
++int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed);
++
+ struct DivCompatFlags {
+   bool limitSlides;
+   // linear pitch
+@@ -257,6 +263,10 @@ struct DivCompatFlags {
+   bool oldCenterRate;
+   bool noVolSlideReset;
+   bool arpSpeedGlobal;
++  // RG: comportamento do FamiTracker/0CC (slides Qxy/Rxy com velocidade 2x+1, etc.)
++  bool rgFamiTracker;
++  // RG: vibrato no estilo antigo do FamiTracker (só para cima)
++  bool rgFTVibUp;
+ 
+   void setDefaults();
+   bool areDefaults();
+diff --git a/src/engine/sysDef.cpp b/src/engine/sysDef.cpp
+index c596f1c..aa03a0f 100644
+--- a/src/engine/sysDef.cpp
++++ b/src/engine/sysDef.cpp
+@@ -2206,7 +2206,8 @@ void DivEngine::registerSystems() {
+       {0x25, {DIV_CMD_ES5506_ENVELOPE_K1RAMP, _("25xx: Set envelope filter coefficient k1 ramp (signed, slower) (00 to FF)"),effectVal,constVal<1>}},
+       {0x26, {DIV_CMD_ES5506_ENVELOPE_K2RAMP, _("26xx: Set envelope filter coefficient k2 ramp (signed) (00 to FF)"),effectVal,constVal<0>}},
+       {0x27, {DIV_CMD_ES5506_ENVELOPE_K2RAMP, _("27xx: Set envelope filter coefficient k2 ramp (signed, slower) (00 to FF)"),effectVal,constVal<1>}},
+-      {0xdf, {DIV_CMD_SAMPLE_DIR, _("DFxx: Set sample playback direction (0: normal; 1: reverse)")}}
++      {0xdf, {DIV_CMD_SAMPLE_DIR, _("DFxx: Set sample playback direction (0: normal; 1: reverse)")}},
++      {0x1f, {DIV_CMD_ES5506_SURROUND, _("1Fxx: Set surround (phase-inverted right side, as in IT/S3M) (0: off; 1: on)"),effectValAnd<1>}}
+   };
+   EffectHandlerMap es5506PostEffectHandlerMap={
+       {0x12, {DIV_CMD_ES5506_PAUSE, _("120x: Set pause (bit 0)"),effectValAnd<1>}}
+diff --git a/src/gui/compatFlags.cpp b/src/gui/compatFlags.cpp
+index 0cfd8ea..df17d2d 100644
+--- a/src/gui/compatFlags.cpp
++++ b/src/gui/compatFlags.cpp
+@@ -471,6 +471,12 @@ void FurnaceGUI::drawCompatFlags() {
+         if (ImGui::IsItemHovered()) {
+           ImGui::SetTooltip(_("when enabled, the arp speed is shared among all channels."));
+         }
++        if (ImGui::Checkbox(_("FamiTracker effect behavior"),&e->song.compatFlags.rgFamiTracker)) {
++          MARK_MODIFIED;
++        }
++        if (ImGui::IsItemHovered()) {
++          ImGui::SetTooltip(_("when enabled, effects behave like in FamiTracker/0CC-FamiTracker:\n- E1xy/E2xy (Qxy/Rxy) slide speed is 2x+1."));
++        }
+         ImGui::EndTabItem();
+       }
+       ImGui::EndTabBar();
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index 866eece..69cf0cb 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -164,6 +164,11 @@ int main(int argc, char** argv) {
+   rgf_times(t);
+   fprintf(stderr,"tuning %s\n",rgf_info(5));
+   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
++  // RG_SOLO=n: toca só o canal n (para comparar canal a canal)
++  if (getenv("RGF_SOLO")) {
++    int solo=atoi(getenv("RGF_SOLO"));
++    for (int i=0; i<rgf_channels(); i++) rgf_mute(i,i!=solo);
++  }
+   if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
+   FILE* o=fopen(argv[2],"wb");
+   int total=atoi(argv[3])*44100;
+-- 
+2.43.0
+

@@ -116,6 +116,21 @@ Build web: `emcmake cmake` + `emmake make furnace` → copiar `furnace.js` e `fu
   no log quais efeitos do FamiTracker não têm equivalente (FDS volume/auto-FM, Mxy, VRC7 patch etc.); esse arquivo
   não usa nenhum. Sem um NSF exportado pelo próprio 0CC não dá para comparar o som.
 
+## Fidelidade aos trackers originais (24/11) — EM ANDAMENTO, bem avançado
+Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de origem".
+- Módulos (referência OpenMPT, 32 arquivos do acervo): IT/S3M/XM saíam 1,3×–2,5× mais altos e o IT estourava.
+  Agora: volume global/mix volume (IT), master volume (S3M), nível do FT2 (XM), atenuação dentro do ES5506,
+  lei de pan (linear; raiz quadrada no FT2), surround S91/XA4 (efeito novo 1Fxx do ES5506, fase invertida),
+  S8x até 0xFF, Px do XM = x*16. Volume 0,89–1,10 do OpenMPT; largura estéreo igual. Teste: /tmp/modcmp/ratio.sh.
+  Falta: volume global Vxx/Wxx (o Furnace não tem); XM salvos pelo ModPlug com nome de FT2 (nível diferente).
+- FamiTracker/0CC: referência = player do próprio 0CC compilado aqui (tools/ref-0cc). Opção de compatibilidade
+  nova `rgFamiTracker` (song.h, salva no .fur), ligada pelo importador. Comparação quadro a quadro do 2A03:
+  antes "Time To Go Home" tinha >50% dos quadros diferentes; agora 0. Dos 31 módulos do acervo, 2A03 idêntico
+  em ~22, quase idêntico no resto (G00 do driver; Hellpath.dnm; N163 cover; 2 VRC6 com diferenças de altura).
+  Regras implementadas: ver a mensagem do commit 0044.
+- Próximo: mesmas regras nos chips de expansão (VRC6, N163, FDS, MMC5, VRC7, S5B) — hoje só o 2A03 tem o modo
+  FamiTracker; comparar também os registradores das expansões (apucmp.py só lê o 2A03); Hellpath (Dn-FT).
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com

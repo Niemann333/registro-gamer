@@ -2206,7 +2206,8 @@ void DivEngine::registerSystems() {
       {0x25, {DIV_CMD_ES5506_ENVELOPE_K1RAMP, _("25xx: Set envelope filter coefficient k1 ramp (signed, slower) (00 to FF)"),effectVal,constVal<1>}},
       {0x26, {DIV_CMD_ES5506_ENVELOPE_K2RAMP, _("26xx: Set envelope filter coefficient k2 ramp (signed) (00 to FF)"),effectVal,constVal<0>}},
       {0x27, {DIV_CMD_ES5506_ENVELOPE_K2RAMP, _("27xx: Set envelope filter coefficient k2 ramp (signed, slower) (00 to FF)"),effectVal,constVal<1>}},
-      {0xdf, {DIV_CMD_SAMPLE_DIR, _("DFxx: Set sample playback direction (0: normal; 1: reverse)")}}
+      {0xdf, {DIV_CMD_SAMPLE_DIR, _("DFxx: Set sample playback direction (0: normal; 1: reverse)")}},
+      {0x1f, {DIV_CMD_ES5506_SURROUND, _("1Fxx: Set surround (phase-inverted right side, as in IT/S3M) (0: off; 1: on)"),effectValAnd<1>}}
   };
   EffectHandlerMap es5506PostEffectHandlerMap={
       {0x12, {DIV_CMD_ES5506_PAUSE, _("120x: Set pause (bit 0)"),effectValAnd<1>}}

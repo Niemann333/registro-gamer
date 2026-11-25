@@ -341,8 +341,40 @@ const char* cmdName[]={
   "KLATTSCH_BW_SCALE",
   "KLATTSCH_FORMANT_SHIFT",
 
-  "TEST_REG"
+  "TEST_REG",
+
+  "ES5506_SURROUND"
 };
+
+// RG: vibrato do FamiTracker/0CC (tabela de 1/4 de seno com 16 profundidades; fase 0-63)
+static int rgFTVibrato(int depth, int phase, bool up) {
+  static int tab[2][256];
+  static bool init=false;
+  if (!init) {
+    const double NEWD[16]={0.0, 1.5, 2.5, 4.0, 5.0, 7.0, 10.0, 12.0, 14.0, 17.0, 22.0, 30.0, 44.0, 64.0, 96.0, 128.0};
+    const double OLDD[16]={0.0, 1.0, 2.0, 3.0, 4.0, 7.0, 8.0, 15.0, 16.0, 31.0, 32.0, 63.0, 64.0, 127.0, 128.0, 255.0};
+    for (int d=0; d<16; d++) for (int p=0; p<16; p++) {
+      tab[0][d*16+p]=(int)(sin((double)p*M_PI/32.0)*NEWD[d]);
+      tab[1][d*16+p]=(int)((double)p*OLDD[d]/16.0+1.0);
+    }
+    init=true;
+  }
+  const int* t=tab[up?1:0];
+  int D=(depth&15)<<4;
+  phase&=63;
+  int v=0;
+  if ((phase&0x30)==0x00) v=t[D+phase];
+  else if ((phase&0x30)==0x10) v=t[D+15-(phase-16)];
+  else if ((phase&0x30)==0x20) v=-t[D+(phase-32)];
+  else v=-t[D+15-(phase-48)];
+  if (up) {
+    v+=t[D+15]+1;
+    v>>=1;
+  }
+  return v;
+}
+
+#define RG_VIBVAL(i) (song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
 
 // fail build if you forgot to update the array
 static_assert((sizeof(cmdName)/sizeof(void*))==DIV_CMD_MAX,"update cmdName!");
@@ -783,7 +815,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
       if (song.compatFlags.legacyVolumeSlides && chan[i].volume==chan[i].volMax+1) {
         logV("forcing volume");
         chan[i].volume=chan[i].volMax;
-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
       }
     }
@@ -892,7 +924,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
     // ...unless there's a way to trigger keyOn twice
     if (!chan[i].keyOn) {
       // the behavior of arpeggio reset upon note off varies per system
-      if (song.dispatchChanOfChan[i]>=0) if (disCont[song.dispatchOfChan[i]].dispatch->keyOffAffectsArp(song.dispatchChanOfChan[i])) {
+      // RG: no FamiTracker note-off/release não desliga o arpejo
+      if (song.dispatchChanOfChan[i]>=0 && !song.compatFlags.rgFamiTracker) if (disCont[song.dispatchOfChan[i]].dispatch->keyOffAffectsArp(song.dispatchChanOfChan[i])) {
         chan[i].arp=0;
         dispatchCmd(DivCommand(DIV_CMD_HINT_ARPEGGIO,i,chan[i].arp));
       }
@@ -936,7 +969,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
       }
       // set the volume (bottom byte is set to 0)
       chan[i].volume=pat->newData[whatRow][DIV_PAT_VOL]<<8;
-      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
       dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
     }
   }
@@ -963,6 +996,10 @@ void DivEngine::processRow(int i, bool afterDelay) {
 
     // per-system effect
     // if there isn't one, go through normal effects
+    // RG: no FamiTracker o canal tem um só efeito contínuo: portamento/slide (1xx 2xx 3xx Qxy Rxy) substitui o arpejo
+    if (song.compatFlags.rgFamiTracker && (effect==0x01 || effect==0x02 || effect==0x03 || effect==0xe1 || effect==0xe2)) {
+      chan[i].arp=0;
+    }
     if (!perSystemEffect(i,effect,effectVal)) switch (effect) {
       /// PANNING
       case 0x08: // panning (split 4-bit)
@@ -1129,6 +1166,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
           chan[i].inPorta=false;
           dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
         } else {
+          // RG: 3xx é um portamento normal: esquece um slide Qxy/Rxy anterior
+          if (song.compatFlags.rgFamiTracker) chan[i].wasShorthandPorta=false;
           // lastPorta is used for the 06xy effect
           chan[i].lastPorta=effectVal;
           // this here is for a compatibility flag...
@@ -1158,7 +1197,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
           // - ...unless noteOffResetsSlides is disabled
           chan[i].stopOnOff=song.compatFlags.stopPortaOnNoteOff; // what?!
           chan[i].scheduledSlideReset=false;
-          dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,1));
+          // RG: no FamiTracker só uma nota (não o 3xx sozinho) reinicia as sequências do instrumento
+          dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,(song.compatFlags.rgFamiTracker && !chan[i].keyOn)?0:1));
           // this is used to inhibit any other slide commands if the respective compat flag is enabled
           lastSlide=0x1337; // i hate this so much
         }
@@ -1170,8 +1210,14 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].vibratoDepth=effectVal&15;
         chan[i].vibratoRate=effectVal>>4;
         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
+        if (song.compatFlags.rgFamiTracker) {
+          // RG: 400 recomeça a fase (48 no estilo antigo); o resto é feito a cada tick
+          if (effectVal==0) chan[i].vibratoPos=song.compatFlags.rgFTVibUp?48:0;
+          dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp)));
+          break;
+        }
         // update pitch now
-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
+        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
         break;
       /// VOLUME-RELATED
       case 0x05: // vol slide + vibrato
@@ -1186,7 +1232,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
         }
         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
         // update pitch now
-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
+        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
         // TODO: non-0x-or-x0 value should be treated as 00
         if (effectVal!=0) {
           if ((effectVal&15)!=0) {
@@ -1268,7 +1314,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
           chan[i].volSpeedTarget=-1;
         } else {
           // restore the volume if tremolo is disabled
-          dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+          dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
           dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
         }
         break;
@@ -1296,6 +1342,13 @@ void DivEngine::processRow(int i, bool afterDelay) {
         // don't accept simultaneous arp and raw frequency
         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
         chan[i].arp=effectVal;
+        // RG: no FamiTracker o canal tem um só "efeito contínuo": o arpejo substitui portamento/slide
+        // (000 também conta: no FamiTracker ele ocupa o slot e desliga o portamento)
+        if (song.compatFlags.rgFamiTracker && chan[i].portaSpeed>0) {
+          chan[i].portaSpeed=-1;
+          chan[i].inPorta=false;
+          dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,0));
+        }
         // COMPAT FLAG: reset note to base on arp stop (inverted in the GUI)
         // - a 0000 effect resets arpeggio position
         if (chan[i].arp==0 && song.compatFlags.arp0Reset) {
@@ -1396,7 +1449,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
         // it is ignored in raw frequency mode...
         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
         chan[i].portaNote=chan[i].note+(effectVal&15);
-        chan[i].portaSpeed=(effectVal>>4)*4;
+        // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
+        chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
         // these are for compatibility stuff
         chan[i].portaStop=true;
@@ -1427,7 +1481,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
         // it is ignored in raw frequency mode...
         if (chan[i].note&DIV_NOTE_RAW_FLAG) break;
         chan[i].portaNote=chan[i].note-(effectVal&15);
-        chan[i].portaSpeed=(effectVal>>4)*4;
+        // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
+        chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
         chan[i].portaStop=true;
         // COMPAT FLAG: stop portamento on note off
@@ -1460,7 +1515,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
       case 0xe5: // pitch
         chan[i].pitch=effectVal-0x80;
         // send pitch now
-        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
+        dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
         dispatchCmd(DivCommand(DIV_CMD_HINT_PITCH,i,chan[i].pitch));
         break;
       case 0xe6: // delayed legato
@@ -1585,7 +1640,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].volSpeed=0; // add compat flag?
         chan[i].volSpeedTarget=-1;
         chan[i].volume=MIN(chan[i].volume+effectVal*256,chan[i].volMax);
-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
         break;
       case 0xf9: // single volume slide down
@@ -1593,7 +1648,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].volSpeed=0; // add compat flag?
         chan[i].volSpeedTarget=-1;
         chan[i].volume=MAX(chan[i].volume-effectVal*256,0);
-        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+        dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
         dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
         break;
       case 0xfa: // fast volume slide
@@ -1668,7 +1723,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
       chan[i].vibratoPos=0;
     }
     // send pitch now (why? didn't we do that already?)
-    dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15)));
+    dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
     // handle legato
     // COMPAT FLAG: broken portamento during legato
     // - portamento would not occur if legato is on
@@ -1679,6 +1734,14 @@ void DivEngine::processRow(int i, bool afterDelay) {
     } else {
       // this is where we actually send a note on command to the dispatch.
       // this does not occur if portamento is in progress and it is not a shortcut slide (E1xy/E2xy)
+      // RG: no FamiTracker uma nota nova cancela o slide Qxy/Rxy (E1/E2) em andamento e toca normalmente
+      if (song.compatFlags.rgFamiTracker && chan[i].inPorta && chan[i].keyOn && !chan[i].shorthandPorta && chan[i].wasShorthandPorta) {
+        chan[i].portaSpeed=-1;
+        dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,0));
+        dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,false,0));
+        chan[i].wasShorthandPorta=false;
+        chan[i].inPorta=false;
+      }
       if (chan[i].inPorta && chan[i].keyOn && !chan[i].shorthandPorta) {
         // COMPAT FLAG: E1xy/E2xy stop on same note
         // - if there was a shortcut slide, stop it
@@ -1695,6 +1758,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
           // otherwise we change the portamento target
           chan[i].portaNote=chan[i].note;
           dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+          // RG: no FamiTracker a nota nova reinicia as sequências do instrumento mesmo durante o portamento
+          if (song.compatFlags.rgFamiTracker && !calledPorta) dispatchCmd(DivCommand(DIV_CMD_PRE_PORTA,i,true,1));
         }
       } else if (!chan[i].noteOnInhibit) {
         // noteOnInhibit is set during live playback to prevent an extra note from playing
@@ -1731,7 +1796,7 @@ void DivEngine::processRow(int i, bool afterDelay) {
     // cap the volume if it is too high and not key on
     if (!chan[i].keyOn && chan[i].volume>chan[i].volMax) {
       chan[i].volume=chan[i].volMax;
-      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+      dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
       dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
     }
     // now set key on
@@ -1892,6 +1957,11 @@ void DivEngine::nextRow() {
     if (song.compatFlags.delayBehavior!=2) {
       chan[i].rowDelay=0;
     }
+    // RG: no FamiTracker, se a linha nova chega com um Gxx ainda contando, a nota atrasada toca agora
+    if (song.compatFlags.rgFamiTracker && chan[i].rowDelay>0) {
+      chan[i].rowDelay=0;
+      processRow(i,true);
+    }
     processRow(i,false);
   }
 
@@ -1975,6 +2045,8 @@ void DivEngine::nextRow() {
     // cache the next speed for future operations
     nextSpeed=speeds.val[curSpeed];
   }
+  // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
+  if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks);
 
   /*
   if (skipping) {
@@ -2247,11 +2319,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
       // then advance tick counter and then call nextRow()
       if (stepPlay!=1) {
         // increase accumulator by virtual tempo numerator
-        tempoAccum+=virtualTempoN;
+        // RG: no modo FamiTracker um tick do Furnace é um quadro real (o tempo já está na duração da linha)
+        const int rgVN=song.compatFlags.rgFamiTracker?1:virtualTempoN;
+        const int rgVD=song.compatFlags.rgFamiTracker?1:virtualTempoD;
+        tempoAccum+=rgVN;
         // while accumulator is higher than virtual tempo denominator
-        while (tempoAccum>=virtualTempoD) {
+        while (tempoAccum>=rgVD) {
           // wrap the accumulator back
-          tempoAccum-=virtualTempoD;
+          tempoAccum-=rgVD;
           // tick the tick counter
           if (--ticks<=0) {
             ret=endOfSong;
@@ -2347,7 +2422,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
                   chan[i].volSpeedTarget=-1;
                 }
                 dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
-                dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+                dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
                 dispatchCmd(DivCommand(DIV_CMD_HINT_VOL_SLIDE,i,0));
               }
             }
@@ -2360,7 +2435,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
                 chan[i].volSpeedTarget=-1;
               }
               dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
               dispatchCmd(DivCommand(DIV_CMD_HINT_VOL_SLIDE,i,0));
             } else if (chan[i].volume<0) {
               // COMPAT FLAG: don't stop volume slides after reaching target
@@ -2377,10 +2452,10 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
               } else {
                 chan[i].volume=0;
               }
-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
               dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
             } else {
-              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+              dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
             }
           } else if (chan[i].tremoloDepth>0) {
             // tremolo (increase position in look-up table and send a volume change)
@@ -2459,7 +2534,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
         }
 
         // vibrato
-        if (chan[i].vibratoDepth>0) {
+        // RG: modo FamiTracker: fase anda mesmo com profundidade 0 e a altura sai da tabela do FamiTracker
+        if (song.compatFlags.rgFamiTracker) {
+          if (chan[i].vibratoRate>0 || chan[i].vibratoDepth>0) {
+            chan[i].vibratoPos=(chan[i].vibratoPos+chan[i].vibratoRate)&63;
+            chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+chan[i].vibratoRate)&511;
+            dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp)));
+          }
+        } else if (chan[i].vibratoDepth>0) {
           chan[i].vibratoPos+=chan[i].vibratoRate;
           // clamp vibrato position
           while (chan[i].vibratoPos>=64) chan[i].vibratoPos-=64;
@@ -2546,7 +2628,8 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
             // - when disabled, portamento remains active after it has finished
             // don't use the user-defined multiplier in raw frequency mode
             int portaSpeedMultiplier=(song.compatFlags.linearPitch && !(chan[i].note&DIV_NOTE_RAW_FLAG))?song.compatFlags.pitchSlideSpeed:1;
-            if (dispatchCmd(DivCommand(DIV_CMD_NOTE_PORTA,i,chan[i].portaSpeed*portaSpeedMultiplier,chan[i].portaNote))==2 && chan[i].portaStop && song.compatFlags.targetResetsSlides) {
+            if (dispatchCmd(DivCommand(DIV_CMD_NOTE_PORTA,i,chan[i].portaSpeed*portaSpeedMultiplier,chan[i].portaNote))==2 && chan[i].portaStop && song.compatFlags.targetResetsSlides && (!song.compatFlags.rgFamiTracker || chan[i].wasShorthandPorta)) {
+              // RG: no FamiTracker só Qxy/Rxy terminam ao chegar; 3xx continua valendo para as próximas notas
               // if we are here, it means we reached the target and shall stop
               chan[i].portaSpeed=0;
               dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
@@ -2607,7 +2690,7 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
         if (chan[i].volCut>0) {
           if (--chan[i].volCut<1) {
             chan[i].volume=0;
-            dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8));
+            dispatchCmd(DivCommand(DIV_CMD_VOLUME,i,chan[i].volume>>8,(chan[i].volume>0)?1:0));
             dispatchCmd(DivCommand(DIV_CMD_HINT_VOLUME,i,chan[i].volume>>8));
           }
         }
@@ -2630,19 +2713,35 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
           if (--chan[i].arpTicks<1) {
             chan[i].arpTicks=chan[i].arpSpeed;
             // there are three arp stages, corresponding to note, note+x and note+y in the 00xy effect
-            chan[i].arpStage++;
-            if (chan[i].arpStage>2) chan[i].arpStage=0;
+            if (song.compatFlags.rgFamiTracker) {
+              // RG: como o FamiTracker: arpStage guarda o PRÓXIMO estado (0, x, y), que continua de um arpejo para outro;
+              // com y=0 o estado 1 pula o 2 (ciclo nota, nota+x)
+              int st=(chan[i].arpStage>2)?0:chan[i].arpStage;
+              int use=st;
+              if (st==1 && (chan[i].arp&15)==0) st++;
+              st=(st+1)%3;
+              chan[i].arpStage=st;
+              chan[i].rgArpUse=use;
+            } else {
+              chan[i].arpStage++;
+              if (chan[i].arpStage>2) chan[i].arpStage=0;
+              chan[i].rgArpUse=chan[i].arpStage;
+            }
             // arp is sent as legato
-            switch (chan[i].arpStage) {
-              case 0:
-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note));
-                break;
-              case 1:
-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp>>4)));
-                break;
-              case 2:
-                dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp&15)));
-                break;
+            // RG: value2=1 marca que é o arpejo do efeito (no modo FamiTracker a sequência de arpejo do instrumento tem prioridade)
+            {
+              int rgArpMark=song.compatFlags.rgFamiTracker?1:0;
+              switch (chan[i].rgArpUse) {
+                case 0:
+                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note,rgArpMark));
+                  break;
+                case 1:
+                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp>>4),rgArpMark));
+                  break;
+                case 2:
+                  dispatchCmd(DivCommand(DIV_CMD_LEGATO,i,chan[i].note+(chan[i].arp&15),rgArpMark));
+                  break;
+              }
             }
           }
         } else {

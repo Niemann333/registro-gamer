@@ -1,0 +1,271 @@
+diff --git a/0ccft-ext/CMakeLists.txt b/0ccft-ext/CMakeLists.txt
+index 25c0530..3ecb9f6 100644
+--- a/0ccft-ext/CMakeLists.txt
++++ b/0ccft-ext/CMakeLists.txt
+@@ -8,11 +8,12 @@ if(MSVC)
+ 		/wd4100 /wd4244 /wd4245 /wd4389
+ 		/DFT0CC_EXT_BUILD /DWIN32)
+ else()
+-	add_compile_options(-O3 -Wall -Wextra -Wpedantic -Werror
++	add_compile_options(-O3 -w
+ 		-Wno-switch -Wno-sign-compare -Wno-narrowing -Wno-unused-parameter
+ 		-DFT0CC_EXT_BUILD)
+ endif()
+ 
++add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include${CMAKE_SOURCE_DIR}/rgpre.h>)
+ set(FT0CC_ROOT ../Source)
+ set(LIBFT0CC_ROOT ../libft0cc)
+ 
+@@ -158,7 +159,7 @@ set(SRCS
+ #	${FT0CC_ROOT}/PatternComponent.cpp
+ 	${FT0CC_ROOT}/PatternData.cpp
+ #	${FT0CC_ROOT}/PatternEditor.cpp
+-	${FT0CC_ROOT}/PatternEditorTypes.cpp
++#	${FT0CC_ROOT}/PatternEditorTypes.cpp
+ #	${FT0CC_ROOT}/PCMImport.cpp
+ #	${FT0CC_ROOT}/PerformanceDlg.cpp
+ 	${FT0CC_ROOT}/PeriodTables.cpp
+@@ -232,3 +233,11 @@ endif()
+ add_executable(ft0cc-test testMain.cpp)
+ target_include_directories(ft0cc-test PRIVATE ${FT0CC_ROOT} ${LIBFT0CC_ROOT}/include)
+ target_link_libraries(ft0cc-test PRIVATE ft0cc)
++
++add_executable(occnsf occnsf.cpp)
++target_include_directories(occnsf PRIVATE ${FT0CC_ROOT} ${LIBFT0CC_ROOT}/include)
++target_link_libraries(occnsf PRIVATE ft0cc)
++
++add_executable(occrender occrender.cpp)
++target_include_directories(occrender PRIVATE ${FT0CC_ROOT} ${LIBFT0CC_ROOT}/include)
++target_link_libraries(occrender PRIVATE ft0cc)
+diff --git a/Source/FamiTrackerEnv.cpp b/Source/FamiTrackerEnv.cpp
+index 673f511..372f381 100644
+--- a/Source/FamiTrackerEnv.cpp
++++ b/Source/FamiTrackerEnv.cpp
+@@ -1,113 +1,114 @@
+-/*
+-** FamiTracker - NES/Famicom sound tracker
+-** Copyright (C) 2005-2014  Jonathan Liss
+-**
+-** 0CC-FamiTracker is (C) 2014-2018 HertzDevil
+-**
+-** This program is free software; you can redistribute it and/or modify
+-** it under the terms of the GNU General Public License as published by
+-** the Free Software Foundation; either version 2 of the License, or
+-** (at your option) any later version.
+-**
+-** This program is distributed in the hope that it will be useful,
+-** but WITHOUT ANY WARRANTY; without even the implied warranty of
+-** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+-** Library General Public License for more details.  To obtain a
+-** copy of the GNU Library General Public License, write to the Free
+-** Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+-**
+-** Any permitted reproduction of these routines, in whole or in part,
+-** must bear this legend.
+-*/
+-
+-#include "FamiTrackerEnv.h"
+-#include "InstrumentService.h"		// // //
+-#include "SoundChipService.h"		// // //
+-#ifndef FT0CC_EXT_BUILD
+-#include "stdafx.h"
+-#include "FamiTracker.h"
+-#include "FamiTrackerDoc.h"
+-#include "str_conv/str_conv.hpp"
+-#endif
+-
+-CWinApp *CFamiTrackerEnv::GetMainApp() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return &theApp;
+-#endif
+-}
+-
+-CMainFrame *CFamiTrackerEnv::GetMainFrame() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return theApp.GetMainFrame();
+-#endif
+-}
+-
+-CAccelerator *CFamiTrackerEnv::GetAccelerator() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return theApp.GetAccelerator();
+-#endif
+-}
+-
+-CSoundGen *CFamiTrackerEnv::GetSoundGenerator() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return theApp.GetSoundGenerator();
+-#endif
+-}
+-
+-CMIDI *CFamiTrackerEnv::GetMIDI() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return theApp.GetMIDI();
+-#endif
+-}
+-
+-CSettings *CFamiTrackerEnv::GetSettings() {
+-#ifdef FT0CC_EXT_BUILD
+-	return nullptr;
+-#else
+-	return theApp.GetSettings();
+-#endif
+-}
+-
+-CInstrumentService *CFamiTrackerEnv::GetInstrumentService() {
+-	static auto factory = [] {
+-		CInstrumentService f;
+-		f.AddDefaultTypes();
+-		return f;
+-	}();
+-	return &factory;
+-}
+-
+-CSoundChipService *CFamiTrackerEnv::GetSoundChipService() {
+-	static auto factory = [] {
+-		CSoundChipService f;
+-		f.AddDefaultTypes();
+-		return f;
+-	}();
+-	return &factory;
+-}
+-
+-bool CFamiTrackerEnv::IsFileLoaded() {
+-#ifdef FT0CC_EXT_BUILD
+-	return false;
+-#else
+-	return CFamiTrackerDoc::GetDoc()->IsFileLoaded();
+-#endif
+-}
+-
+-std::string CFamiTrackerEnv::GetDocumentTitle() {
+-#ifdef FT0CC_EXT_BUILD
+-	return "Untitled";
+-#else
+-	return conv::to_utf8(CFamiTrackerDoc::GetDoc()->GetTitle());
+-#endif
+-}
++/*
++** FamiTracker - NES/Famicom sound tracker
++** Copyright (C) 2005-2014  Jonathan Liss
++**
++** 0CC-FamiTracker is (C) 2014-2018 HertzDevil
++**
++** This program is free software; you can redistribute it and/or modify
++** it under the terms of the GNU General Public License as published by
++** the Free Software Foundation; either version 2 of the License, or
++** (at your option) any later version.
++**
++** This program is distributed in the hope that it will be useful,
++** but WITHOUT ANY WARRANTY; without even the implied warranty of
++** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++** Library General Public License for more details.  To obtain a
++** copy of the GNU Library General Public License, write to the Free
++** Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++**
++** Any permitted reproduction of these routines, in whole or in part,
++** must bear this legend.
++*/
++
++#include "FamiTrackerEnv.h"
++#include "Settings.h"
++#include "InstrumentService.h"		// // //
++#include "SoundChipService.h"		// // //
++#ifndef FT0CC_EXT_BUILD
++#include "stdafx.h"
++#include "FamiTracker.h"
++#include "FamiTrackerDoc.h"
++#include "str_conv/str_conv.hpp"
++#endif
++
++CWinApp *CFamiTrackerEnv::GetMainApp() {
++#ifdef FT0CC_EXT_BUILD
++	return nullptr;
++#else
++	return &theApp;
++#endif
++}
++
++CMainFrame *CFamiTrackerEnv::GetMainFrame() {
++#ifdef FT0CC_EXT_BUILD
++	return nullptr;
++#else
++	return theApp.GetMainFrame();
++#endif
++}
++
++CAccelerator *CFamiTrackerEnv::GetAccelerator() {
++#ifdef FT0CC_EXT_BUILD
++	return nullptr;
++#else
++	return theApp.GetAccelerator();
++#endif
++}
++
++CSoundGen *CFamiTrackerEnv::GetSoundGenerator() {
++#ifdef FT0CC_EXT_BUILD
++	return nullptr;
++#else
++	return theApp.GetSoundGenerator();
++#endif
++}
++
++CMIDI *CFamiTrackerEnv::GetMIDI() {
++#ifdef FT0CC_EXT_BUILD
++	return nullptr;
++#else
++	return theApp.GetMIDI();
++#endif
++}
++
++CSettings *CFamiTrackerEnv::GetSettings() {
++#ifdef FT0CC_EXT_BUILD
++	return &CSettings::GetInstance(); // RG: valores padrão (tudo falso), para o player funcionar fora do editor
++#else
++	return theApp.GetSettings();
++#endif
++}
++
++CInstrumentService *CFamiTrackerEnv::GetInstrumentService() {
++	static auto factory = [] {
++		CInstrumentService f;
++		f.AddDefaultTypes();
++		return f;
++	}();
++	return &factory;
++}
++
++CSoundChipService *CFamiTrackerEnv::GetSoundChipService() {
++	static auto factory = [] {
++		CSoundChipService f;
++		f.AddDefaultTypes();
++		return f;
++	}();
++	return &factory;
++}
++
++bool CFamiTrackerEnv::IsFileLoaded() {
++#ifdef FT0CC_EXT_BUILD
++	return false;
++#else
++	return CFamiTrackerDoc::GetDoc()->IsFileLoaded();
++#endif
++}
++
++std::string CFamiTrackerEnv::GetDocumentTitle() {
++#ifdef FT0CC_EXT_BUILD
++	return "Untitled";
++#else
++	return conv::to_utf8(CFamiTrackerDoc::GetDoc()->GetTitle());
++#endif
++}
