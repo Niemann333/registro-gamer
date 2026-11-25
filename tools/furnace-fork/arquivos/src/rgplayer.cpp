@@ -57,6 +57,19 @@ RGF_EXPORT int rgf_init(int rate) {
   e->setView(DIV_STATUS_NOTHING);
   e->preInit(true);
   if (!e->init()) return 0;
+  // RG: teste de núcleos de emulação (RGF_CONF=chave=valor,chave=valor), só no binário nativo
+#ifndef __EMSCRIPTEN__
+  if (getenv("RGF_CONF")) {
+    String c=getenv("RGF_CONF");
+    size_t p=0;
+    while (p<c.size()) {
+      size_t q=c.find(',',p); if (q==String::npos) q=c.size();
+      String kv=c.substr(p,q-p); size_t eq=kv.find('=');
+      if (eq!=String::npos) e->setConf(kv.substr(0,eq),atoi(kv.substr(eq+1).c_str()));
+      p=q+1;
+    }
+  }
+#endif
   return 1;
 }
 
@@ -169,9 +182,45 @@ int main(int argc, char** argv) {
     int solo=atoi(getenv("RGF_SOLO"));
     for (int i=0; i<rgf_channels(); i++) rgf_mute(i,i!=solo);
   }
+  // RGF_SYSSOLO=n: toca só os canais do sistema (chip) n da música
+  if (getenv("RGF_SYSSOLO")) {
+    int solo=atoi(getenv("RGF_SYSSOLO"));
+    int sub=getenv("RGF_SYSCH")?atoi(getenv("RGF_SYSCH")):-1;
+    for (int i=0; i<rgf_channels(); i++) rgf_mute(i,e->song.dispatchOfChan[i]!=solo || (sub>=0 && e->song.dispatchChanOfChan[i]!=sub));
+  }
   if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
   FILE* o=fopen(argv[2],"wb");
   int total=atoi(argv[3])*44100;
+  // RGF_REGLOG=arquivo: registra as escritas de registrador de todos os chips ("tempo sistema endereço valor")
+  FILE* rl=NULL;
+  if (getenv("RGF_REGLOG")) {
+    rl=fopen(getenv("RGF_REGLOG"),"w");
+    for (int i=0; i<e->song.systemLen; i++) if (e->getDispatch(i)) e->getDispatch(i)->toggleRegisterDump(true);
+  }
+  if (rl) {
+    float l2[128], r2[128];
+    int ck=getenv("RGF_CHUNK")?CLAMP(atoi(getenv("RGF_CHUNK")),1,128):128;
+    for (int done=0; done<total; done+=ck) {
+      rgf_render(l2,r2,ck);
+      for (int i=0; i<e->song.systemLen; i++) {
+        if (!e->getDispatch(i)) continue;
+        std::vector<DivRegWrite>& w=e->getDispatch(i)->getRegisterWrites();
+        int mask=0xff;
+        for (DivRegWrite& j: w) {
+          if ((j.addr&0xffff0000)==0xfffe0000) { mask=j.addr&0xff; continue; }
+          if (j.addr<0xffff0000) {
+            if (mask!=0xff) fprintf(rl,"%.6f %d %x %d %d\n",done/44100.0,i,j.addr,j.val,mask);
+            else fprintf(rl,"%.6f %d %x %d\n",done/44100.0,i,j.addr,j.val);
+          }
+          mask=0xff;
+        }
+        w.clear();
+      }
+    }
+    fclose(rl);
+    fclose(o);
+    _exit(0);
+  }
   float l[1024], r[1024];
   short s[2048];
   for (int done=0; done<total; done+=1024) {

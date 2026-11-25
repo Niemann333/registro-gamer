@@ -139,8 +139,30 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   que só compila no Windows/MFC — pedir WAV/NSF ao usuário).
 - Exportar áudio (WAV etc.) na web abortava a página: o Furnace usava std::thread, e a build web não tem threads.
   Agora roda numa fiber (ASYNCIFY), ~25 ms por quadro da interface (wavOps.cpp rgExportStep/rgExportYield).
-- Próximo: mesmas regras nos chips de expansão (VRC6, N163, FDS, MMC5, VRC7, S5B) — hoje só o 2A03 tem o modo
-  FamiTracker; comparar também os registradores das expansões (apucmp.py só lê o 2A03); Hellpath (Dn-FT).
+- 25/11 (noite) — chips de expansão (pedido: DJ Maximum, WAV do Furnace x WAV do 0CC):
+  * Mixagem do 0CC (CMixer): todos os chips menos o VRC7 multiplicados pelo produto das atenuações dos chips
+    ligados (VRC6 0,80 · VRC7 0,64 · MMC5 0,83 · FDS 0,90 · N163 0,70 · S5B 0,50) e o N163 pelo "NamcoVolume"
+    (cresce com os canais). O importador põe isso no volume de cada sistema (+ níveis medidos em 20 músicas).
+    O WAV do Furnace saía ~7x mais alto e estourava; agora rms 1021 x 958 do 0CC, cada chip 0,93–1,07 do 0CC.
+  * Triângulo: Sxx>=80 (contador linear), Exx (E00-E1F duração, EE0-EE3 envelope/laço) no 2A03 e no MMC5.
+  * Tabelas de período/frequência do 0CC nota a nota com o detune em todos os chips (pitchTable initFT; N163 em
+    unidades de tabela x4; FDS sem a transposição de 2 oitavas; VRC7 F-num no bloco da oitava).
+  * Regras comuns em platform/rgFT.h (volume instrumento x canal / 15 nunca 0; 5B soma; dente de serra 64 passos;
+    FDS ((i+1)(c+1)-1)/16; arpejo do efeito value2=1; pitch relativo no período; slides até o limite; nota com
+    portamento volta volume/duty). Aplicadas no VRC6, MMC5, N163, FDS, VRC7 (opll) e 5B (ay).
+  * VRC6: o 0CC não desliga o canal no fim da nota (só zera o volume). VRC7: sustain só no quadro da nota e na
+    soltura (===), volume não reescrito com a nota parada, Pxx/vibrato 1 F-num, slide 1/4 F-num, núcleo emu2413
+    com os timbres do 0CC (vrc7tone.h). 5B: ruído padrão (Wxx) volta a cada nota, escrito 1x por quadro.
+    FDS: Hxx/Ixx/Jxx do 0CC (Jxy>=10 = modulação automática x/(y+1)), nota volta a modulação ao instrumento,
+    tabela de modulação = valor do registrador (o importador tirava 3), sequência de pitch com o modo certo,
+    núcleo NSFPlay + passa-baixas de 6 kHz (o 0CC filtra o FDS), volume até 32.
+  * Tempo virtual exato no modo FamiTracker (400 Hz/224 Hz atrasavam ~1,3%: o importador dividia D por 2).
+  * Ferramentas: occwav (áudio do próprio 0CC; OCC_SOLO=chip, OCC_SUB=canal, OCC_REGTEST), rgplayer com
+    RGF_SYSSOLO/RGF_SYSCH/RGF_REGLOG/RGF_CHUNK/RGF_CONF, regcmp.py (registradores de todas as expansões).
+  * Resultado: registradores idênticos ao 0CC no DJ Maximum (VRC6, VRC7, N163, MMC5; 5B e FDS só diferem com a
+    nota parada); semelhança espectral por chip 0,967–0,990 nas 20 músicas com expansão; 2A03 sem regressão.
+  * Falta: VRC7 com nível que muda por música (0,86–1,16: o 0CC usa um emu2413 antigo); atraso de modulação do
+    FDS (o importador ignora); bias do FDS (Zxx); Hellpath.dnm (precisa do Dn-FamiTracker).
 
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"

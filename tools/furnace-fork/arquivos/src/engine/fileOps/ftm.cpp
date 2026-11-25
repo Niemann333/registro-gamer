@@ -890,6 +890,36 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
         }
         ds.systemLen = systemID;
 
+        // RG: mixagem entre chips igual à do 0CC/FamiTracker (CMixer):
+        // - o 0CC dá mais "folga" multiplicando todos os chips (menos o VRC7) pelo produto das atenuações
+        //   dos chips de expansão ligados (VRC6 0.80, VRC7 0.64, MMC5 0.83, FDS 0.90, N163 0.70, S5B 0.50);
+        // - o N163 ainda é multiplicado pelo "NamcoVolume", que cresce com o número de canais;
+        // - o resto são os níveis de cada chip no 0CC medidos contra o Furnace (relativos ao 2A03).
+        if (ds.compatFlags.rgFamiTracker) {
+          float att=1.0f;
+          if (expansions&1) att*=0.80f;
+          if (expansions&2) att*=0.64f;
+          if (expansions&4) att*=0.90f;
+          if (expansions&8) att*=0.83f;
+          if (expansions&16) att*=0.70f;
+          if (expansions&32) att*=0.50f;
+          float namco=(n163Chans<=1)?1.3f:(1.5f+float((int)n163Chans-2)/1.5f);
+          for (int i=0; i<ds.systemLen; i++) {
+            float v=att;
+            switch (ds.system[i]) {
+              case DIV_SYSTEM_VRC6: v=att*1.365f; break;
+              case DIV_SYSTEM_MMC5: v=att*1.327f; break;
+              case DIV_SYSTEM_FDS: v=att*2.33f; break;
+              case DIV_SYSTEM_N163: v=att*0.5f*namco; break;
+              case DIV_SYSTEM_VRC7: v=1.16f; break; // o 0CC não atenua o VRC7
+              case DIV_SYSTEM_AY8910: v=att*2.37f; break;
+              default: break;
+            }
+            // o Furnace toca o 2A03 ~1,42x mais alto que o 0CC (mediana de 20 músicas): iguala o volume geral
+            ds.systemVol[i]=v*0.70f;
+          }
+        }
+
         for (int i = 0; i < curr_chan; i++) {
           logV("map ch: fami ch %d mapped to furnace ch %d", i, map_channels[i]);
         }
@@ -1169,6 +1199,11 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
               }
               for (int j = 0; j < 32; j++) {
                 ins->fds.modTable[j] = reader.readC() - 3;
+                // RG: no modo FamiTracker a tabela é o próprio valor do registrador 4088 (o 0CC escreve direto): -4..3 com o mesmo &7
+                if (ds.compatFlags.rgFamiTracker) {
+                  int rgRaw = (ins->fds.modTable[j] + 3) & 7;
+                  ins->fds.modTable[j] = (rgRaw >= 4) ? (rgRaw - 8) : rgRaw;
+                }
               }
               ins->fds.modSpeed = reader.readI();
               ins->fds.modDepth = reader.readI();
@@ -1226,7 +1261,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                   ins->std.pitchMacro.len = reader.readC();
                   ins->std.pitchMacro.loop = reader.readI();
                   ins->std.pitchMacro.rel = reader.readI();
-                  reader.readI(); // arp mode does not apply here
+                  unsigned int rgPitchMode = reader.readI(); // arp mode does not apply here (RG: é o modo da própria sequência de pitch)
                   for (int j = 0; j < ins->std.pitchMacro.len; j++) {
                     ins->std.pitchMacro.val[j] = reader.readC();
 
@@ -1238,9 +1273,12 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                     } else {
                       ins->std.pitchMacro.val[j] = -1 * (0x100 - temp);
                     }
+                    // RG: no modo FamiTracker o sinal fica igual ao das outras sequências de pitch (o fds.cpp soma o contrário)
+                    if (ds.compatFlags.rgFamiTracker) ins->std.pitchMacro.val[j] = -ins->std.pitchMacro.val[j];
                   }
 
-                  if (mode == 0) // relative
+                  // RG: no modo FamiTracker vale o modo da sequência de pitch (antes usava o do arpejo)
+                  if ((ds.compatFlags.rgFamiTracker ? rgPitchMode : mode) == 0) // relative
                   {
                     ins->std.pitchMacro.mode = 1; // setting relative mode
                   }
@@ -1834,7 +1872,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
               nextOctave += 2;
               nextOctave -= 2;
             }
-            if (blockVersion >= 5 && map_channels[ch] == fds_chan) // FDS transpose
+            if (blockVersion >= 5 && map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) // FDS transpose (RG: no modo FamiTracker o fds.cpp usa a tabela do 0CC na nota certa)
             {
               nextOctave -= 2;
             }
@@ -1865,13 +1903,13 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
             if (map_channels[ch] != 0xff) {
               if (nextVol < 0x10) {
                 pat->newData[row][DIV_PAT_VOL] = nextVol;
-                if (map_channels[ch] == vrc6_saw_chan) // scale volume
+                if (map_channels[ch] == vrc6_saw_chan && !ds.compatFlags.rgFamiTracker) // scale volume (RG: no modo FamiTracker o vrc6.cpp faz como o 0CC)
                 {
                   // TODO: shouldn't it be 32?
                   pat->newData[row][DIV_PAT_VOL] = (pat->newData[row][DIV_PAT_VOL] * 42) / 15;
                 }
 
-                if (map_channels[ch] == fds_chan) {
+                if (map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) { // RG: no modo FamiTracker o fds.cpp faz o volume como o 0CC
                   pat->newData[row][DIV_PAT_VOL] = (pat->newData[row][DIV_PAT_VOL] * 31) / 15;
                 }
               } else {
@@ -1948,7 +1986,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                   }
                 }
                 // FDS pitch effect fix
-                else if (map_channels[ch] == fds_chan) {
+                else if (map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) { // RG: no modo FamiTracker o Pxx já vale como no 0CC
                   switch (nextEffect) {
                     case FT_EF_PITCH:
                       if (nextEffectVal != 0x80)
@@ -2025,6 +2063,24 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                     if (map_channels[ch] == 4 && pat->newData[row][DIV_PAT_FX(j)] == 0x90) {
                       pat->newData[row][DIV_PAT_FX(j)] = 0x91;
                       pat->newData[row][DIV_PAT_FXVAL(j)] = MIN((pat->newData[row][DIV_PAT_FXVAL(j)] & 0x3f) * 2, 255);
+                    }
+                    // RG: Exx do FamiTracker (contador de duração / envelope de hardware do 2A03) e Sxx>=80 no triângulo
+                    // (contador linear). No modo FamiTracker o nes.cpp repete a lógica do 0CC com 16xx/15xx/19xx.
+                    if (!eft && ds.compatFlags.rgFamiTracker && (map_channels[ch] < 4 || map_channels[ch] == mmc5_chans[0] || map_channels[ch] == mmc5_chans[1])) {
+                      if (nextEffect == FT_EF_VOLUME) {
+                        if (nextEffectVal < 0x20) {
+                          pat->newData[row][DIV_PAT_FX(j)] = 0x16;
+                          pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal;
+                          rgUnsupported[nextEffect]--;
+                        } else if (nextEffectVal >= 0xe0 && nextEffectVal < 0xe4) {
+                          pat->newData[row][DIV_PAT_FX(j)] = 0x15;
+                          pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal & 3;
+                          rgUnsupported[nextEffect]--;
+                        }
+                      } else if (nextEffect == FT_EF_NOTE_CUT && map_channels[ch] == 2 && nextEffectVal >= 0x80) {
+                        pat->newData[row][DIV_PAT_FX(j)] = 0x19;
+                        pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal - 0x80;
+                      }
                     }
                     // RG: Axy do FamiTracker vai direto para o 0Axy (no modo FamiTracker ele anda em oitavos, como no original)
                     for (int v = 0; v < 8; v++) {
@@ -2728,7 +2784,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                 DivInstrument* ins = ds.ins[i];
                 bool go_to_end = false;
 
-                if (ins->type != DIV_INS_VRC6_SAW && ii == vrc6_saw_chan) // we encountered non-VRC6-saw instrument on VRC6 saw channel
+                if (ins->type != DIV_INS_VRC6_SAW && ii == vrc6_saw_chan && !ds.compatFlags.rgFamiTracker) // we encountered non-VRC6-saw instrument on VRC6 saw channel (RG: no modo FamiTracker o vrc6.cpp usa o instrumento como está)
                 {
                   DivInstrument* insnew = new DivInstrument;
                   ds.ins.push_back(insnew);
@@ -2875,7 +2931,9 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
 
     // check whether virtual tempo is inside range
     for (DivSubSong* i: ds.subsong) {
-      while (i->virtualTempoD>255) {
+      // RG: no modo FamiTracker o tempo virtual fica exato (D = 2,5 x Hz): dividir por 2 truncava o tempo
+      // (ex.: 400 Hz, tempo 150 virava 37/125 e a música atrasava ~1,3%%) e os Fxx de tempo também usam esse D
+      while (i->virtualTempoD>255 && !ds.compatFlags.rgFamiTracker) {
         i->virtualTempoD>>=1;
         i->virtualTempoN>>=1;
       }
@@ -2971,7 +3029,8 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
           rgDet+=fmt::sprintf("%d",rgDetune[mainChip][i]);
         }
         for (int i=0; i<ds.systemLen; i++) {
-          if (ds.system[i]==DIV_SYSTEM_NES) ds.systemFlags[i].set("rgDetune",rgDet);
+          // RG: a tabela NTSC do 0CC vale também para os pulsos do VRC6, o MMC5 e o 5B
+          if (ds.system[i]==DIV_SYSTEM_NES || ds.system[i]==DIV_SYSTEM_VRC6 || ds.system[i]==DIV_SYSTEM_MMC5 || ds.system[i]==DIV_SYSTEM_AY8910) ds.systemFlags[i].set("rgDetune",rgDet);
         }
         logI("0CC detune: 2A03 table applied per note");
         globalCents=0.0;
@@ -2993,10 +3052,55 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
           }
         }
       };
+      // RG: modo FamiTracker: a tabela do VRC7 (12 notas) vai para o VRC7
+      if (ds.compatFlags.rgFamiTracker && rgHasDetune[3]) {
+        String rgDet;
+        for (int i=0; i<96; i++) {
+          if (i) rgDet+=",";
+          rgDet+=fmt::sprintf("%d",rgDetune[3][i]);
+        }
+        for (int i=0; i<ds.systemLen; i++) {
+          if (ds.system[i]==DIV_SYSTEM_VRC7) ds.systemFlags[i].set("rgDetune",rgDet);
+        }
+      }
+      // RG: modo FamiTracker: a tabela do FDS vai nota a nota para o FDS
+      if (ds.compatFlags.rgFamiTracker && rgHasDetune[4]) {
+        String rgDet;
+        for (int i=0; i<96; i++) {
+          if (i) rgDet+=",";
+          rgDet+=fmt::sprintf("%d",rgDetune[4][i]);
+        }
+        for (int i=0; i<ds.systemLen; i++) {
+          if (ds.system[i]==DIV_SYSTEM_FDS) ds.systemFlags[i].set("rgDetune",rgDet);
+        }
+      }
+      // RG: modo FamiTracker: a tabela do N163 vai nota a nota para o N163
+      if (ds.compatFlags.rgFamiTracker && rgHasDetune[5]) {
+        String rgDet;
+        for (int i=0; i<96; i++) {
+          if (i) rgDet+=",";
+          rgDet+=fmt::sprintf("%d",rgDetune[5][i]);
+        }
+        for (int i=0; i<ds.systemLen; i++) {
+          if (ds.system[i]==DIV_SYSTEM_N163) ds.systemFlags[i].set("rgDetune",rgDet);
+        }
+      }
+      // RG: modo FamiTracker: a tabela do dente de serra vai nota a nota para o VRC6
+      if (ds.compatFlags.rgFamiTracker && rgHasDetune[2]) {
+        String rgDet;
+        for (int i=0; i<96; i++) {
+          if (i) rgDet+=",";
+          rgDet+=fmt::sprintf("%d",rgDetune[2][i]);
+        }
+        for (int i=0; i<ds.systemLen; i++) {
+          if (ds.system[i]==DIV_SYSTEM_VRC6) ds.systemFlags[i].set("rgDetuneSaw",rgDet);
+        }
+      }
       const int chipOf[4]={2,3,4,5};
       for (int k=0; k<4; k++) {
         int chip=chipOf[k];
         if (!rgHasDetune[chip]) continue;
+        if (ds.compatFlags.rgFamiTracker) continue; // RG: no modo FamiTracker todos os chips usam a tabela do 0CC nota a nota
         double res=centsOf(chip)-globalCents;
         int semis=(int)round(res/100.0);
         if (semis==0) continue;

@@ -38,12 +38,20 @@ class DivPlatformNES: public DivDispatch {
     unsigned char rgDefDuty;
     // RG: sweep de hardware acabou de ser (re)aplicado: só então o FamiTracker escreve a altura
     bool rgSweepPend;
+    // RG: Exx/Sxx do FamiTracker: laço do envelope (halt do contador de duração), envelope de hardware,
+    // pedido de reescrever o registrador de duração (m_bResetEnvelope) e contador linear do triângulo
+    bool rgEnvLoop, rgHwEnv, rgResetEnv;
+    signed char rgLinear;
     Channel(bool linear=true):
       SharedChannel(15,linear),
       rgVolNZ(true),
       rgMacVol(15),
       rgDefDuty(0),
       rgSweepPend(false),
+      rgEnvLoop(true),
+      rgHwEnv(false),
+      rgResetEnv(false),
+      rgLinear(-1),
       prevFreq(65535),
       duty(0),
       sweep(8),
@@ -102,6 +110,7 @@ class DivPlatformNES: public DivDispatch {
   friend void putDispatchChan(void*,int,int);
   // RG: volume de saída como no FamiTracker: (instrumento*canal)/15, nunca 0 se os dois forem > 0
   int rgFTVol(int ch);
+  void rgUpdEnv(int ch);
   // RG: tabela de detune do 0CC (deslocamento do registrador por nota, notas 0-95 do FamiTracker)
   int rgDetune[96];
 

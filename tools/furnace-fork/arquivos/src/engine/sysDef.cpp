@@ -1294,6 +1294,8 @@ void DivEngine::registerSystems() {
     }),
     {
       {0x12, {DIV_CMD_STD_NOISE_MODE, _("12xx: Set duty cycle/noise mode (pulse: 0 to 3; noise: 0 or 1)")}},
+      {0x15, {DIV_CMD_NES_ENV_MODE, _("15xx: Set envelope mode (0: envelope, 1: length, 2: looping, 3: constant)")}},
+      {0x16, {DIV_CMD_NES_LENGTH, _("16xx: Set length counter (refer to manual for a list of values)")}},
     }
   );
 

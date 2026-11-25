@@ -301,6 +301,15 @@ int DivPlatformNES::rgFTVol(int ch) {
   return v;
 }
 
+// RG: refaz os bits de envelope/laço (e o contador linear do triângulo) como o 0CC escreve
+void DivPlatformNES::rgUpdEnv(int ch) {
+  if (ch==2) {
+    linearCount=(chan[2].rgEnvLoop?0x80:0)|(chan[2].rgLinear&0x7f);
+  } else {
+    chan[ch].envMode=(chan[ch].rgEnvLoop?2:0)|(chan[ch].rgHwEnv?0:1);
+  }
+}
+
 void DivPlatformNES::tick(bool sysTick) {
   for (int i=0; i<4; i++) {
     chan[i].std.next();
@@ -426,13 +435,22 @@ void DivPlatformNES::tick(bool sysTick) {
       }
       if (i==3) { // noise
         rWrite(0x4002+i*4,(chan[i].duty<<7)|chan[i].freq);
-        rWrite(0x4003+i*4,(chan[i].len<<3));
+        if (!parent->song.compatFlags.rgFamiTracker || chan[i].rgEnvLoop || chan[i].rgResetEnv) {
+          rWrite(0x4003+i*4,(chan[i].len<<3));
+        }
+        chan[i].rgResetEnv=false;
       } else if (parent->song.compatFlags.rgFamiTracker && i<2 && chan[i].sweep!=0x08 && !chan[i].rgSweepPend && !chan[i].keyOn) {
         // RG: com o sweep de hardware ligado o FamiTracker deixa o chip mudar a altura sozinho
       } else {
         chan[i].rgSweepPend=false;
         rWrite(0x4002+i*4,chan[i].freq&0xff);
-        if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || i==2) {
+        if (parent->song.compatFlags.rgFamiTracker) {
+          // RG: o 0CC só reescreve o byte alto (e recarrega a duração) quando muda, ou em Exx/nota com envelope sem laço;
+          // no triângulo, com o laço ligado, ele escreve todo quadro
+          bool w=(i==2)?(chan[i].rgEnvLoop || chan[i].rgResetEnv):((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || chan[i].rgResetEnv);
+          if (w) rWrite(0x4003+i*4,(chan[i].len<<3)|(chan[i].freq>>8));
+          chan[i].rgResetEnv=false;
+        } else if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || i==2) {
           rWrite(0x4003+i*4,(chan[i].len<<3)|(chan[i].freq>>8));
         }
         if (chan[i].freq!=65535 && chan[i].freq!=0) {
@@ -622,6 +640,13 @@ int DivPlatformNES::dispatch(DivCommand c) {
       chan[c.chan].active=true;
       chan[c.chan].keyOn=true;
       // RG: modo FamiTracker: nota nova volta ao duty padrão (a macro de duty, se houver, sobrescreve no tick)
+      if (parent->song.compatFlags.rgFamiTracker && c.value!=DIV_NOTE_NULL && c.chan<4) {
+        // RG: no 0CC uma nota com o envelope sem laço (ou de hardware) recarrega o contador de duração
+        if (!chan[c.chan].rgEnvLoop || chan[c.chan].rgHwEnv) {
+          chan[c.chan].rgResetEnv=true;
+          chan[c.chan].freqChanged=true;
+        }
+      }
       if (parent->song.compatFlags.rgFamiTracker && c.value!=DIV_NOTE_NULL && c.chan!=2) {
         chan[c.chan].duty=chan[c.chan].rgDefDuty;
         if (c.chan==3) chan[c.chan].freqChanged=true;
@@ -766,6 +791,26 @@ int DivPlatformNES::dispatch(DivCommand c) {
       if (parent->song.compatFlags.rgFamiTracker && chan[c.chan].sweep!=0x08) chan[c.chan].freqChanged=true;
       break;
     case DIV_CMD_NES_ENV_MODE:
+      if (parent->song.compatFlags.rgFamiTracker && c.chan<4) {
+        // RG: EE0-EE3 do FamiTracker (bit 0: envelope de hardware; bit 1: sem laço). No triângulo só o bit 0 (sem laço).
+        if (c.chan==2) {
+          if (!chan[2].rgEnvLoop) chan[2].rgResetEnv=true;
+          chan[2].rgEnvLoop=!(c.value&1);
+          rgUpdEnv(2);
+          if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
+          chan[2].freqChanged=true;
+          break;
+        }
+        if (!chan[c.chan].rgEnvLoop || !chan[c.chan].rgHwEnv) chan[c.chan].rgResetEnv=true;
+        chan[c.chan].rgHwEnv=(c.value&1);
+        chan[c.chan].rgEnvLoop=!(c.value&2);
+        rgUpdEnv(c.chan);
+        chan[c.chan].freqChanged=true;
+        if (c.chan<2) {
+          rWrite(0x4000+c.chan*4,(chan[c.chan].active?((chan[c.chan].envMode<<4)|chan[c.chan].outVol):0x30)|((chan[c.chan].duty&3)<<6));
+        }
+        break;
+      }
       chan[c.chan].envMode=c.value&3;
       if (c.chan==3) { // noise
         chan[c.chan].freqChanged=true;
@@ -775,6 +820,21 @@ int DivPlatformNES::dispatch(DivCommand c) {
       break;
     case DIV_CMD_NES_LENGTH:
       if (c.chan>=4) break;
+      if (parent->song.compatFlags.rgFamiTracker) {
+        // RG: E00-E1F do FamiTracker: valor do contador de duração e desliga o laço
+        chan[c.chan].len=c.value&0x1f;
+        chan[c.chan].rgEnvLoop=false;
+        chan[c.chan].rgResetEnv=true;
+        if (c.chan==2 && chan[2].rgLinear==-1) chan[2].rgLinear=0x7f;
+        rgUpdEnv(c.chan);
+        if (c.chan==2) {
+          if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
+        } else if (c.chan<2) {
+          rWrite(0x4000+c.chan*4,(chan[c.chan].active?((chan[c.chan].envMode<<4)|chan[c.chan].outVol):0x30)|((chan[c.chan].duty&3)<<6));
+        }
+        chan[c.chan].freqChanged=true;
+        break;
+      }
       chan[c.chan].len=c.value&0x1f;
       chan[c.chan].freqChanged=true;
       chan[c.chan].prevFreq=-1;
@@ -784,6 +844,16 @@ int DivPlatformNES::dispatch(DivCommand c) {
       rWrite(0x4017,countMode?0x80:0);
       break;
     case DIV_CMD_NES_LINEAR_LENGTH:
+      if (c.chan==2 && parent->song.compatFlags.rgFamiTracker) {
+        // RG: S80-SFF do FamiTracker no triângulo: contador linear = xx-80, sem laço
+        chan[2].rgLinear=c.value&0x7f;
+        chan[2].rgEnvLoop=false;
+        chan[2].rgResetEnv=true;
+        rgUpdEnv(2);
+        if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
+        chan[2].freqChanged=true;
+        break;
+      }
       if (c.chan==2) {
         linearCount=c.value;
         if (chan[c.chan].active) {
@@ -969,6 +1039,10 @@ void DivPlatformNES::reset() {
   nextDPCMDelta=-1;
   lastDPCMFreq=15;
   linearCount=255;
+  // RG: o FamiTracker começa com o contador de duração em 1 (só importa quando o laço é desligado por Exx/Sxx)
+  if (parent->song.compatFlags.rgFamiTracker) {
+    for (int i=0; i<4; i++) chan[i].len=1;
+  }
 
   if (useNP) {
     if (isE) {

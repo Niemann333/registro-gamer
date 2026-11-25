@@ -438,6 +438,11 @@ struct DivPitchTable {
    * só vale em modo período e pitch não linear; chame depois de init().
    */
   void initExact(float tuning, double clock, double divider, int minimum, int maximum);
+  // RG: tabela de períodos do FamiTracker/0CC: floor(clock/f/divider-0.5) menos o detune da nota (lista de 96 ou NULL),
+  // limitada a 0..maximum, notas fora de C-0..B-7 presas nas pontas (guarda +1 porque o Furnace subtrai 1 ao escrever)
+  void initFT(float tuning, double clock, double divider, int maximum, const int* detune);
+  // RG: lê uma lista "a,b,c..." de até 96 inteiros (tabela de detune do 0CC)
+  static void rgParseDetune(const String& str, int* out);
 
   DivPitchTable():
     maxFreq(0xffffffff),

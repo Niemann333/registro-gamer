@@ -231,6 +231,28 @@ void DivPitchTable::initExact(float tuning, double clock, double divider, int mi
   }
 }
 
+void DivPitchTable::initFT(float tuning, double clock, double divider, int maximum, const int* detune) {
+  initExact(tuning,clock,divider,0,0x7fffffff);
+  for (int i=0; i<96; i++) {
+    int n=i+60;
+    int d=detune?detune[i]:0;
+    rgExactTab[n]=CLAMP(rgExactTab[n]-1-d,0,maximum)+1;
+  }
+  for (int i=0; i<60; i++) rgExactTab[i]=rgExactTab[60];
+  for (int i=156; i<192; i++) rgExactTab[i]=rgExactTab[155];
+}
+
+void DivPitchTable::rgParseDetune(const String& str, int* out) {
+  memset(out,0,96*sizeof(int));
+  int idx=0;
+  const char* p=str.c_str();
+  while (*p && idx<96) {
+    out[idx++]=strtol(p,(char**)&p,10);
+    if (*p==',') p++;
+    else if (*p) break;
+  }
+}
+
 // DivPitchTableFNum
 
 int DivPitchTableFNum::get(int base, int pitch1, int pitch2) {

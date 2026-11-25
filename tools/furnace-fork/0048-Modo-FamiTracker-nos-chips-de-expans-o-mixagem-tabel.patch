@@ -1,0 +1,2168 @@
+From fe20903a558c91367bde82c057baf08e4a813bef Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 18:48:58 -0300
+Subject: [PATCH 48/48] =?UTF-8?q?Modo=20FamiTracker=20nos=20chips=20de=20e?=
+ =?UTF-8?q?xpans=C3=A3o:=20mixagem,=20tabelas=20e=20regras=20do=200CC?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Referência: o áudio e as escritas de registrador do próprio 0CC-FamiTracker (occwav/occrender).
+
+- Mixagem do 0CC: atenuação pelo produto dos chips ligados (menos o VRC7), NamcoVolume do N163,
+  níveis por chip medidos em 20 músicas; volume geral igual ao do 0CC (antes ~7x e estourava).
+- 2A03/MMC5: Exx (duração, envelope de hardware, laço) e Sxx>=80 no triângulo (contador linear).
+- Tabelas de período/frequência do 0CC nota a nota com o detune em VRC6 (pulso e dente de serra),
+  MMC5, 5B, N163, FDS e VRC7 (DivPitchTable::initFT, rgParseDetune).
+- Regras comuns em platform/rgFT.h: volume instrumento x canal / 15 que nunca zera, arpejo do efeito
+  sem mexer na nota base, pitch relativo no período, slides até o limite, nota com portamento.
+- VRC6: fim de nota só zera o volume; dente de serra com o volume do 0CC (normal e 64 passos).
+- VRC7: sustain como o 0CC, volume não reescrito com a nota parada, escala de Pxx/vibrato/slide,
+  emu2413 com os timbres do 0CC.
+- 5B: volume somado do 0CC, ruído padrão a cada nota, uma escrita por quadro.
+- N163: frequência em unidades de tabela x4, passo do slide do 0CC.
+- FDS: Hxx/Ixx/Jxx com a modulação automática do 0CC, modulação volta ao instrumento a cada nota,
+  tabela de modulação = valor do registrador, modo certo da sequência de pitch, NSFPlay + passa-baixas
+  de 6 kHz, volume até 32, sem a transposição de 2 oitavas.
+- Tempo virtual exato no modo FamiTracker (músicas de 224/400 Hz atrasavam ~1,3%).
+- Tocador nativo: RGF_SYSCH, RGF_REGLOG (com máscara do N163), RGF_CHUNK, RGF_CONF.
+---
+ src/engine/dispatch.h        |   5 ++
+ src/engine/fileOps/ftm.cpp   | 122 +++++++++++++++++++++++--
+ src/engine/pitchTable.cpp    |  22 +++++
+ src/engine/platform/ay.cpp   |  69 +++++++++++++-
+ src/engine/platform/ay.h     |   9 ++
+ src/engine/platform/fds.cpp  | 169 +++++++++++++++++++++++++++++++++--
+ src/engine/platform/fds.h    |  15 ++++
+ src/engine/platform/mmc5.cpp |  91 +++++++++++++++++--
+ src/engine/platform/mmc5.h   |  12 +++
+ src/engine/platform/n163.cpp | 101 +++++++++++++++++++--
+ src/engine/platform/n163.h   |   6 ++
+ src/engine/platform/nes.cpp  |  78 +++++++++++++++-
+ src/engine/platform/nes.h    |   9 ++
+ src/engine/platform/opll.cpp |  93 +++++++++++++++++--
+ src/engine/platform/opll.h   |   9 ++
+ src/engine/platform/rgFT.h   |  85 ++++++++++++++++++
+ src/engine/platform/vrc6.cpp |  89 ++++++++++++++++--
+ src/engine/platform/vrc6.h   |   9 ++
+ src/engine/sysDef.cpp        |   2 +
+ src/rgplayer.cpp             |  49 ++++++++++
+ 20 files changed, 999 insertions(+), 45 deletions(-)
+ create mode 100644 src/engine/platform/rgFT.h
+
+diff --git a/src/engine/dispatch.h b/src/engine/dispatch.h
+index 80216f5..3938359 100644
+--- a/src/engine/dispatch.h
++++ b/src/engine/dispatch.h
+@@ -438,6 +438,11 @@ struct DivPitchTable {
+    * só vale em modo período e pitch não linear; chame depois de init().
+    */
+   void initExact(float tuning, double clock, double divider, int minimum, int maximum);
++  // RG: tabela de períodos do FamiTracker/0CC: floor(clock/f/divider-0.5) menos o detune da nota (lista de 96 ou NULL),
++  // limitada a 0..maximum, notas fora de C-0..B-7 presas nas pontas (guarda +1 porque o Furnace subtrai 1 ao escrever)
++  void initFT(float tuning, double clock, double divider, int maximum, const int* detune);
++  // RG: lê uma lista "a,b,c..." de até 96 inteiros (tabela de detune do 0CC)
++  static void rgParseDetune(const String& str, int* out);
+ 
+   DivPitchTable():
+     maxFreq(0xffffffff),
+diff --git a/src/engine/fileOps/ftm.cpp b/src/engine/fileOps/ftm.cpp
+index 0de9433..9bf4f3e 100644
+--- a/src/engine/fileOps/ftm.cpp
++++ b/src/engine/fileOps/ftm.cpp
+@@ -890,6 +890,36 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+         }
+         ds.systemLen = systemID;
+ 
++        // RG: mixagem entre chips igual à do 0CC/FamiTracker (CMixer):
++        // - o 0CC dá mais "folga" multiplicando todos os chips (menos o VRC7) pelo produto das atenuações
++        //   dos chips de expansão ligados (VRC6 0.80, VRC7 0.64, MMC5 0.83, FDS 0.90, N163 0.70, S5B 0.50);
++        // - o N163 ainda é multiplicado pelo "NamcoVolume", que cresce com o número de canais;
++        // - o resto são os níveis de cada chip no 0CC medidos contra o Furnace (relativos ao 2A03).
++        if (ds.compatFlags.rgFamiTracker) {
++          float att=1.0f;
++          if (expansions&1) att*=0.80f;
++          if (expansions&2) att*=0.64f;
++          if (expansions&4) att*=0.90f;
++          if (expansions&8) att*=0.83f;
++          if (expansions&16) att*=0.70f;
++          if (expansions&32) att*=0.50f;
++          float namco=(n163Chans<=1)?1.3f:(1.5f+float((int)n163Chans-2)/1.5f);
++          for (int i=0; i<ds.systemLen; i++) {
++            float v=att;
++            switch (ds.system[i]) {
++              case DIV_SYSTEM_VRC6: v=att*1.365f; break;
++              case DIV_SYSTEM_MMC5: v=att*1.327f; break;
++              case DIV_SYSTEM_FDS: v=att*2.33f; break;
++              case DIV_SYSTEM_N163: v=att*0.5f*namco; break;
++              case DIV_SYSTEM_VRC7: v=1.16f; break; // o 0CC não atenua o VRC7
++              case DIV_SYSTEM_AY8910: v=att*2.37f; break;
++              default: break;
++            }
++            // o Furnace toca o 2A03 ~1,42x mais alto que o 0CC (mediana de 20 músicas): iguala o volume geral
++            ds.systemVol[i]=v*0.70f;
++          }
++        }
++
+         for (int i = 0; i < curr_chan; i++) {
+           logV("map ch: fami ch %d mapped to furnace ch %d", i, map_channels[i]);
+         }
+@@ -1169,6 +1199,11 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+               }
+               for (int j = 0; j < 32; j++) {
+                 ins->fds.modTable[j] = reader.readC() - 3;
++                // RG: no modo FamiTracker a tabela é o próprio valor do registrador 4088 (o 0CC escreve direto): -4..3 com o mesmo &7
++                if (ds.compatFlags.rgFamiTracker) {
++                  int rgRaw = (ins->fds.modTable[j] + 3) & 7;
++                  ins->fds.modTable[j] = (rgRaw >= 4) ? (rgRaw - 8) : rgRaw;
++                }
+               }
+               ins->fds.modSpeed = reader.readI();
+               ins->fds.modDepth = reader.readI();
+@@ -1226,7 +1261,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                   ins->std.pitchMacro.len = reader.readC();
+                   ins->std.pitchMacro.loop = reader.readI();
+                   ins->std.pitchMacro.rel = reader.readI();
+-                  reader.readI(); // arp mode does not apply here
++                  unsigned int rgPitchMode = reader.readI(); // arp mode does not apply here (RG: é o modo da própria sequência de pitch)
+                   for (int j = 0; j < ins->std.pitchMacro.len; j++) {
+                     ins->std.pitchMacro.val[j] = reader.readC();
+ 
+@@ -1238,9 +1273,12 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                     } else {
+                       ins->std.pitchMacro.val[j] = -1 * (0x100 - temp);
+                     }
++                    // RG: no modo FamiTracker o sinal fica igual ao das outras sequências de pitch (o fds.cpp soma o contrário)
++                    if (ds.compatFlags.rgFamiTracker) ins->std.pitchMacro.val[j] = -ins->std.pitchMacro.val[j];
+                   }
+ 
+-                  if (mode == 0) // relative
++                  // RG: no modo FamiTracker vale o modo da sequência de pitch (antes usava o do arpejo)
++                  if ((ds.compatFlags.rgFamiTracker ? rgPitchMode : mode) == 0) // relative
+                   {
+                     ins->std.pitchMacro.mode = 1; // setting relative mode
+                   }
+@@ -1834,7 +1872,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+               nextOctave += 2;
+               nextOctave -= 2;
+             }
+-            if (blockVersion >= 5 && map_channels[ch] == fds_chan) // FDS transpose
++            if (blockVersion >= 5 && map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) // FDS transpose (RG: no modo FamiTracker o fds.cpp usa a tabela do 0CC na nota certa)
+             {
+               nextOctave -= 2;
+             }
+@@ -1865,13 +1903,13 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+             if (map_channels[ch] != 0xff) {
+               if (nextVol < 0x10) {
+                 pat->newData[row][DIV_PAT_VOL] = nextVol;
+-                if (map_channels[ch] == vrc6_saw_chan) // scale volume
++                if (map_channels[ch] == vrc6_saw_chan && !ds.compatFlags.rgFamiTracker) // scale volume (RG: no modo FamiTracker o vrc6.cpp faz como o 0CC)
+                 {
+                   // TODO: shouldn't it be 32?
+                   pat->newData[row][DIV_PAT_VOL] = (pat->newData[row][DIV_PAT_VOL] * 42) / 15;
+                 }
+ 
+-                if (map_channels[ch] == fds_chan) {
++                if (map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) { // RG: no modo FamiTracker o fds.cpp faz o volume como o 0CC
+                   pat->newData[row][DIV_PAT_VOL] = (pat->newData[row][DIV_PAT_VOL] * 31) / 15;
+                 }
+               } else {
+@@ -1948,7 +1986,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                   }
+                 }
+                 // FDS pitch effect fix
+-                else if (map_channels[ch] == fds_chan) {
++                else if (map_channels[ch] == fds_chan && !ds.compatFlags.rgFamiTracker) { // RG: no modo FamiTracker o Pxx já vale como no 0CC
+                   switch (nextEffect) {
+                     case FT_EF_PITCH:
+                       if (nextEffectVal != 0x80)
+@@ -2026,6 +2064,24 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                       pat->newData[row][DIV_PAT_FX(j)] = 0x91;
+                       pat->newData[row][DIV_PAT_FXVAL(j)] = MIN((pat->newData[row][DIV_PAT_FXVAL(j)] & 0x3f) * 2, 255);
+                     }
++                    // RG: Exx do FamiTracker (contador de duração / envelope de hardware do 2A03) e Sxx>=80 no triângulo
++                    // (contador linear). No modo FamiTracker o nes.cpp repete a lógica do 0CC com 16xx/15xx/19xx.
++                    if (!eft && ds.compatFlags.rgFamiTracker && (map_channels[ch] < 4 || map_channels[ch] == mmc5_chans[0] || map_channels[ch] == mmc5_chans[1])) {
++                      if (nextEffect == FT_EF_VOLUME) {
++                        if (nextEffectVal < 0x20) {
++                          pat->newData[row][DIV_PAT_FX(j)] = 0x16;
++                          pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal;
++                          rgUnsupported[nextEffect]--;
++                        } else if (nextEffectVal >= 0xe0 && nextEffectVal < 0xe4) {
++                          pat->newData[row][DIV_PAT_FX(j)] = 0x15;
++                          pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal & 3;
++                          rgUnsupported[nextEffect]--;
++                        }
++                      } else if (nextEffect == FT_EF_NOTE_CUT && map_channels[ch] == 2 && nextEffectVal >= 0x80) {
++                        pat->newData[row][DIV_PAT_FX(j)] = 0x19;
++                        pat->newData[row][DIV_PAT_FXVAL(j)] = nextEffectVal - 0x80;
++                      }
++                    }
+                     // RG: Axy do FamiTracker vai direto para o 0Axy (no modo FamiTracker ele anda em oitavos, como no original)
+                     for (int v = 0; v < 8; v++) {
+                       if (map_channels[ch] == n163_chans[v]) {
+@@ -2728,7 +2784,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+                 DivInstrument* ins = ds.ins[i];
+                 bool go_to_end = false;
+ 
+-                if (ins->type != DIV_INS_VRC6_SAW && ii == vrc6_saw_chan) // we encountered non-VRC6-saw instrument on VRC6 saw channel
++                if (ins->type != DIV_INS_VRC6_SAW && ii == vrc6_saw_chan && !ds.compatFlags.rgFamiTracker) // we encountered non-VRC6-saw instrument on VRC6 saw channel (RG: no modo FamiTracker o vrc6.cpp usa o instrumento como está)
+                 {
+                   DivInstrument* insnew = new DivInstrument;
+                   ds.ins.push_back(insnew);
+@@ -2875,7 +2931,9 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+ 
+     // check whether virtual tempo is inside range
+     for (DivSubSong* i: ds.subsong) {
+-      while (i->virtualTempoD>255) {
++      // RG: no modo FamiTracker o tempo virtual fica exato (D = 2,5 x Hz): dividir por 2 truncava o tempo
++      // (ex.: 400 Hz, tempo 150 virava 37/125 e a música atrasava ~1,3%%) e os Fxx de tempo também usam esse D
++      while (i->virtualTempoD>255 && !ds.compatFlags.rgFamiTracker) {
+         i->virtualTempoD>>=1;
+         i->virtualTempoN>>=1;
+       }
+@@ -2971,7 +3029,8 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+           rgDet+=fmt::sprintf("%d",rgDetune[mainChip][i]);
+         }
+         for (int i=0; i<ds.systemLen; i++) {
+-          if (ds.system[i]==DIV_SYSTEM_NES) ds.systemFlags[i].set("rgDetune",rgDet);
++          // RG: a tabela NTSC do 0CC vale também para os pulsos do VRC6, o MMC5 e o 5B
++          if (ds.system[i]==DIV_SYSTEM_NES || ds.system[i]==DIV_SYSTEM_VRC6 || ds.system[i]==DIV_SYSTEM_MMC5 || ds.system[i]==DIV_SYSTEM_AY8910) ds.systemFlags[i].set("rgDetune",rgDet);
+         }
+         logI("0CC detune: 2A03 table applied per note");
+         globalCents=0.0;
+@@ -2993,10 +3052,55 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
+           }
+         }
+       };
++      // RG: modo FamiTracker: a tabela do VRC7 (12 notas) vai para o VRC7
++      if (ds.compatFlags.rgFamiTracker && rgHasDetune[3]) {
++        String rgDet;
++        for (int i=0; i<96; i++) {
++          if (i) rgDet+=",";
++          rgDet+=fmt::sprintf("%d",rgDetune[3][i]);
++        }
++        for (int i=0; i<ds.systemLen; i++) {
++          if (ds.system[i]==DIV_SYSTEM_VRC7) ds.systemFlags[i].set("rgDetune",rgDet);
++        }
++      }
++      // RG: modo FamiTracker: a tabela do FDS vai nota a nota para o FDS
++      if (ds.compatFlags.rgFamiTracker && rgHasDetune[4]) {
++        String rgDet;
++        for (int i=0; i<96; i++) {
++          if (i) rgDet+=",";
++          rgDet+=fmt::sprintf("%d",rgDetune[4][i]);
++        }
++        for (int i=0; i<ds.systemLen; i++) {
++          if (ds.system[i]==DIV_SYSTEM_FDS) ds.systemFlags[i].set("rgDetune",rgDet);
++        }
++      }
++      // RG: modo FamiTracker: a tabela do N163 vai nota a nota para o N163
++      if (ds.compatFlags.rgFamiTracker && rgHasDetune[5]) {
++        String rgDet;
++        for (int i=0; i<96; i++) {
++          if (i) rgDet+=",";
++          rgDet+=fmt::sprintf("%d",rgDetune[5][i]);
++        }
++        for (int i=0; i<ds.systemLen; i++) {
++          if (ds.system[i]==DIV_SYSTEM_N163) ds.systemFlags[i].set("rgDetune",rgDet);
++        }
++      }
++      // RG: modo FamiTracker: a tabela do dente de serra vai nota a nota para o VRC6
++      if (ds.compatFlags.rgFamiTracker && rgHasDetune[2]) {
++        String rgDet;
++        for (int i=0; i<96; i++) {
++          if (i) rgDet+=",";
++          rgDet+=fmt::sprintf("%d",rgDetune[2][i]);
++        }
++        for (int i=0; i<ds.systemLen; i++) {
++          if (ds.system[i]==DIV_SYSTEM_VRC6) ds.systemFlags[i].set("rgDetuneSaw",rgDet);
++        }
++      }
+       const int chipOf[4]={2,3,4,5};
+       for (int k=0; k<4; k++) {
+         int chip=chipOf[k];
+         if (!rgHasDetune[chip]) continue;
++        if (ds.compatFlags.rgFamiTracker) continue; // RG: no modo FamiTracker todos os chips usam a tabela do 0CC nota a nota
+         double res=centsOf(chip)-globalCents;
+         int semis=(int)round(res/100.0);
+         if (semis==0) continue;
+diff --git a/src/engine/pitchTable.cpp b/src/engine/pitchTable.cpp
+index 19234ff..cc29716 100644
+--- a/src/engine/pitchTable.cpp
++++ b/src/engine/pitchTable.cpp
+@@ -231,6 +231,28 @@ void DivPitchTable::initExact(float tuning, double clock, double divider, int mi
+   }
+ }
+ 
++void DivPitchTable::initFT(float tuning, double clock, double divider, int maximum, const int* detune) {
++  initExact(tuning,clock,divider,0,0x7fffffff);
++  for (int i=0; i<96; i++) {
++    int n=i+60;
++    int d=detune?detune[i]:0;
++    rgExactTab[n]=CLAMP(rgExactTab[n]-1-d,0,maximum)+1;
++  }
++  for (int i=0; i<60; i++) rgExactTab[i]=rgExactTab[60];
++  for (int i=156; i<192; i++) rgExactTab[i]=rgExactTab[155];
++}
++
++void DivPitchTable::rgParseDetune(const String& str, int* out) {
++  memset(out,0,96*sizeof(int));
++  int idx=0;
++  const char* p=str.c_str();
++  while (*p && idx<96) {
++    out[idx++]=strtol(p,(char**)&p,10);
++    if (*p==',') p++;
++    else if (*p) break;
++  }
++}
++
+ // DivPitchTableFNum
+ 
+ int DivPitchTableFNum::get(int base, int pitch1, int pitch2) {
+diff --git a/src/engine/platform/ay.cpp b/src/engine/platform/ay.cpp
+index a48cf7e..e316dd2 100644
+--- a/src/engine/platform/ay.cpp
++++ b/src/engine/platform/ay.cpp
+@@ -466,9 +466,19 @@ void DivPlatformAY8910::tick(bool sysTick) {
+   // PSG
+   for (int i=0; i<3; i++) {
+     chan[i].std.next();
++    // RG: 5B no modo FamiTracker: uma nota nova volta o ruído ao padrão (Wxx), na ordem dos canais como no 0CC
++    if ((parent->song.compatFlags.rgFamiTracker && sunsoft) && chan[i].rgNoteNoise) {
++      chan[i].rgNoteNoise=false;
++      rgNoise=rgNoiseDef;
++    }
+     if (chan[i].std.vol.had) {
+       chan[i].outVol=MIN(15,chan[i].std.vol.val)-(15-(chan[i].vol&15));
+       if (chan[i].outVol<0) chan[i].outVol=0;
++      if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++        // RG: volume do 0CC no 5B: canal + instrumento - 15, nunca 0 se os dois forem > 0
++        chan[i].rg.macVol=CLAMP(chan[i].std.vol.val,0,15);
++        chan[i].outVol=rgFTVolAdd(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ);
++      }
+       if (!(chan[i].nextPSGMode.val&8) || !(chan[i].nextPSGMode.val&16)) {
+         if (isMuted[i]) {
+           rWrite(0x08+i,0);
+@@ -482,12 +492,16 @@ void DivPlatformAY8910::tick(bool sysTick) {
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine o período, mesmo durante portamento
++      if (!chan[i].inPorta || (parent->song.compatFlags.rgFamiTracker && sunsoft)) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+     }
+-    if (chan[i].std.duty.had) {
++    if (chan[i].std.duty.had && (parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++      // RG: o 0CC escreve o ruído uma vez por quadro com o valor do último canal que mexeu nele
++      rgNoise=chan[i].std.duty.val&31;
++    } else if (chan[i].std.duty.had) {
+       rWrite(0x06,31-chan[i].std.duty.val);
+     }
+     if (chan[i].std.wave.had) {
+@@ -507,7 +521,9 @@ void DivPlatformAY8910::tick(bool sysTick) {
+       }
+     }
+     if (chan[i].std.pitch.had) {
+-      if (chan[i].std.pitch.mode) {
++      if (rgFTPitchMacro((parent->song.compatFlags.rgFamiTracker && sunsoft),chan[i],0x1000)) {
++        // RG: pitch relativo no próprio período
++      } else if (chan[i].std.pitch.mode) {
+         chan[i].pitch2+=chan[i].std.pitch.val;
+         CLAMP_VAR(chan[i].pitch2,-32768,32767);
+       } else {
+@@ -650,6 +666,8 @@ void DivPlatformAY8910::tick(bool sysTick) {
+     }
+   }
+ 
++  if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) rWrite(0x06,31-rgNoise);
++
+   updateOutSel();
+ 
+   if (ayEnvSlide!=0) {
+@@ -745,6 +763,20 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+       if (!parent->song.compatFlags.brokenOutVol && !chan[c.chan].std.vol.will) {
+         chan[c.chan].outVol=chan[c.chan].vol;
+       }
++      if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++        // RG: nota nova: volume do instrumento do começo e o ruído volta ao padrão
++        chan[c.chan].rg.macVol=15;
++        chan[c.chan].outVol=rgFTVolAdd(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++        if (c.value!=DIV_NOTE_NULL) chan[c.chan].rgNoteNoise=true;
++        if (!(chan[c.chan].nextPSGMode.val&8)) {
++          if (isMuted[c.chan]) {
++            rWrite(0x08+c.chan,0);
++          } else {
++            rWrite(0x08+c.chan,(chan[c.chan].outVol&15)|((chan[c.chan].nextPSGMode.getEnvelope())<<2));
++          }
++        }
++        break;
++      }
+       if (!(chan[c.chan].nextPSGMode.val&8)) {
+         if (isMuted[c.chan]) {
+           rWrite(0x08+c.chan,0);
+@@ -769,6 +801,16 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+       chan[c.chan].std.release();
+       break;
+     case DIV_CMD_VOLUME: {
++      if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rg.volNZ=(c.value2!=0);
++        chan[c.chan].outVol=rgFTVolAdd(chan[c.chan].vol&15,chan[c.chan].rg.macVol,chan[c.chan].rg.volNZ);
++        if (!(chan[c.chan].nextPSGMode.val&8) && chan[c.chan].active) {
++          rWrite(0x08+c.chan,isMuted[c.chan]?0:((chan[c.chan].outVol&15)|((chan[c.chan].nextPSGMode.getEnvelope())<<2)));
++        }
++        break;
++      }
+       chan[c.chan].vol=c.value;
+       if (!chan[c.chan].std.vol.has) {
+         chan[c.chan].outVol=c.value;
+@@ -805,6 +847,8 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+     }
+     case DIV_CMD_NOTE_PORTA: {
+       int destFreq=chan[c.chan].calcBaseFreq(c.value2+chan[c.chan].sampleNoteDelta);
++      // RG: no FamiTracker os slides 1xx/2xx só param no limite do registrador
++      destFreq=rgFTPortaDest((parent->song.compatFlags.rgFamiTracker && sunsoft),c.value2+chan[c.chan].sampleNoteDelta,destFreq,0x1000);
+       bool return2=false;
+       if (destFreq>chan[c.chan].baseFreq) {
+         chan[c.chan].baseFreq+=c.value;
+@@ -827,6 +871,7 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+       break;
+     }
+     case DIV_CMD_LEGATO: {
++      if (rgFTLegato((parent->song.compatFlags.rgFamiTracker && sunsoft),chan[c.chan],c,chan[c.chan].sampleNoteDelta)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+chan[c.chan].sampleNoteDelta);
+       chan[c.chan].freqChanged=true;
+       break;
+@@ -854,6 +899,10 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_STD_NOISE_FREQ:
++      // RG: Wxx do FamiTracker: vira o ruído padrão das notas seguintes
++      if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++        rgNoiseDef=rgNoise=c.value&31;
++      }
+       rWrite(0x06,31-c.value);
+       break;
+     case DIV_CMD_AY_ENVELOPE_SET:
+@@ -950,8 +999,14 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
+     case DIV_CMD_PRE_PORTA:
+       if (chan[c.chan].active && c.value2) {
+         if (parent->song.compatFlags.resetMacroOnPorta) chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_AY));
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento
++        if ((parent->song.compatFlags.rgFamiTracker && sunsoft)) {
++          chan[c.chan].rg.macVol=15;
++          chan[c.chan].outVol=rgFTVolAdd(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !(parent->song.compatFlags.rgFamiTracker && sunsoft)) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_PRE_NOTE:
+@@ -1053,6 +1108,8 @@ void DivPlatformAY8910::reset() {
+     chan[i].std.setEngine(parent);
+     chan[i].vol=0x0f;
+   }
++  rgNoiseDef=0;
++  rgNoise=0;
+   if (dumpWrites) {
+     softReset();
+   }
+@@ -1111,6 +1168,9 @@ void DivPlatformAY8910::notifyPitchTable(int sample) {
+   samplePitchTable.update<Channel>(chan,3,parent->song.tuning,chipClock,CHIP_DIVIDER,0xfff,true,parent->song.compatFlags.linearPitch,sample);
+   if (sample==-1) {
+     pitchTable.init(parent->song.tuning,chipClock,CHIP_DIVIDER,0xfff,true,parent->song.compatFlags.linearPitch);
++    // RG: modo FamiTracker: o 5B usa a tabela NTSC do 0CC +1 (o AY não subtrai 1, então é a mesma tabela guardada com +1)
++    pitchTable.rgExact=false;
++    if (parent->song.compatFlags.rgFamiTracker && sunsoft) pitchTable.initFT(parent->song.tuning,chipClock,CHIP_DIVIDER,0xffe,rgDetune);
+   }
+ }
+ 
+@@ -1139,6 +1199,7 @@ void DivPlatformAY8910::setCore(unsigned char core) {
+ }
+ 
+ void DivPlatformAY8910::setFlags(const DivConfig& flags) {
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
+   if (extMode) {
+     chipClock=extClock;
+     rate=chipClock/extDiv;
+diff --git a/src/engine/platform/ay.h b/src/engine/platform/ay.h
+index f73687c..45fac51 100644
+--- a/src/engine/platform/ay.h
++++ b/src/engine/platform/ay.h
+@@ -20,6 +20,7 @@
+ #ifndef _AY_H
+ #define _AY_H
+ #include "../dispatch.h"
++#include "rgFT.h"
+ #include "../../fixedQueue.h"
+ #include "sound/ay8910.h"
+ extern "C" {
+@@ -94,8 +95,12 @@ class DivPlatformAY8910: public DivDispatch {
+       unsigned char autoEnvNum, autoEnvDen;
+       signed char konCycles;
+       unsigned short fixedFreq;
++      // RG: regras do FamiTracker (5B); nota nova neste quadro (volta o ruído ao padrão Wxx)
++      DivRGFTChan rg;
++      bool rgNoteNoise;
+       Channel(bool linear=true):
+         SharedChannel(15,linear),
++        rgNoteNoise(false),
+         curPSGMode(PSGMode(0)),
+         nextPSGMode(PSGMode(1)),
+         dac(DAC()),
+@@ -118,6 +123,10 @@ class DivPlatformAY8910: public DivDispatch {
+     ay8910_device* ay;
+     DivDispatchOscBuffer* oscBuf[3];
+     DivPitchTable pitchTable;
++    // RG: tabela de detune do 0CC (o 5B usa a NTSC)
++    int rgDetune[96];
++    // RG: 5B no modo FamiTracker: período de ruído padrão (Wxx) e o atual (a sequência "duty" de cada canal escreve nele)
++    int rgNoiseDef, rgNoise;
+     DivPitchTableManager samplePitchTable;
+     unsigned char regPool[16];
+     unsigned char lastBusy;
+diff --git a/src/engine/platform/fds.cpp b/src/engine/platform/fds.cpp
+index b87c56a..fc0c120 100644
+--- a/src/engine/platform/fds.cpp
++++ b/src/engine/platform/fds.cpp
+@@ -71,6 +71,16 @@ void DivPlatformFDS::acquire_puNES(short* buf, size_t len) {
+   oscBuf->end(len);
+ }
+ 
++// RG: filtro do modo FamiTracker (um polo real + um par de polos com Q=1 = Butterworth de 3ª ordem)
++int DivPlatformFDS::rgLowPass(int s) {
++  double x=s;
++  rgLPz=rgLPp*x+rgLPq*rgLPz;
++  double y=rgLPb0*rgLPz+rgLPb1*rgLPx1+rgLPb2*rgLPx2-rgLPa1*rgLPy1-rgLPa2*rgLPy2;
++  rgLPx2=rgLPx1; rgLPx1=rgLPz;
++  rgLPy2=rgLPy1; rgLPy1=y;
++  return (int)y;
++}
++
+ void DivPlatformFDS::acquire_NSFPlay(short* buf, size_t len) {
+   int out[2];
+   oscBuf->begin(len);
+@@ -78,6 +88,7 @@ void DivPlatformFDS::acquire_NSFPlay(short* buf, size_t len) {
+     fds_NP->Tick(16);
+     fds_NP->Render(out);
+     int sample=isMuted[0]?0:(out[0]<<1);
++    if (rgLPOn) sample=rgLowPass(sample);
+     if (sample>32767) sample=32767;
+     if (sample<-32768) sample=-32768;
+     buf[i]=sample;
+@@ -111,6 +122,21 @@ void DivPlatformFDS::updateWave() {
+   rWrite(0x4089,0);
+ }
+ 
++// RG: registrador 4084 (profundidade da modulação): o 0CC sempre desliga o envelope de modulação (bit 7) e usa a profundidade direta
++unsigned char DivPlatformFDS::rgMod4084(int i) {
++  if (parent->song.compatFlags.rgFamiTracker) return 0x80|chan[i].modDepth;
++  return (chan[i].modOn<<7)|0x40|chan[i].modDepth;
++}
++
++// RG: volume do FDS no 0CC: ((instrumento+1)*(canal+1)-1)/16, até 32, nunca 0 se os dois forem > 0
++int DivPlatformFDS::rgOutVol(int i) {
++  int v=((chan[i].rg.macVol+1)*((chan[i].vol&15)+1)-1)/16;
++  if (v<0) v=0;
++  if (v>32) v=32;
++  if (v==0 && chan[i].rg.macVol>0 && ((chan[i].vol&15)>0 || chan[i].rg.volNZ)) v=1;
++  return v;
++}
++
+ void DivPlatformFDS::tick(bool sysTick) {
+   for (int i=0; i<1; i++) {
+     chan[i].std.next();
+@@ -118,12 +144,17 @@ void DivPlatformFDS::tick(bool sysTick) {
+       // ok, why are the volumes like that?
+       chan[i].outVol=VOL_SCALE_LINEAR_BROKEN(chan[i].vol,chan[i].std.vol.val,32);
+       if (chan[i].outVol<0) chan[i].outVol=0;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        chan[i].rg.macVol=CLAMP(chan[i].std.vol.val,0,32);
++        chan[i].outVol=rgOutVol(i);
++      }
+       rWrite(0x4080,0x80|chan[i].outVol);
+     }
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine a frequência, mesmo durante portamento
++      if (!chan[i].inPorta || parent->song.compatFlags.rgFamiTracker) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+@@ -153,7 +184,9 @@ void DivPlatformFDS::tick(bool sysTick) {
+       }
+     }
+     if (chan[i].std.pitch.had) {
+-      if (chan[i].std.pitch.mode) {
++      if (rgFTPitchMacro(parent->song.compatFlags.rgFamiTracker,chan[i],0xfff)) {
++        // RG: pitch relativo na própria frequência
++      } else if (chan[i].std.pitch.mode) {
+         chan[i].pitch2+=chan[i].std.pitch.val;
+         CLAMP_VAR(chan[i].pitch2,-32768,32767);
+       } else {
+@@ -170,7 +203,7 @@ void DivPlatformFDS::tick(bool sysTick) {
+     if (chan[i].std.ex1.had) { // mod depth
+       chan[i].modOn=chan[i].std.ex1.val;
+       chan[i].modDepth=chan[i].std.ex1.val;
+-      rWrite(0x4084,(chan[i].modOn<<7)|0x40|chan[i].modDepth);
++      rWrite(0x4084,rgMod4084(i));
+     }
+     if (chan[i].std.ex2.had) { // mod speed
+       chan[i].modFreq=chan[i].std.ex2.val;
+@@ -217,6 +250,9 @@ void DivPlatformFDS::tick(bool sysTick) {
+       chan[i].freqChanged=false;
+     }
+   }
++  // RG: as marcas de Hxx/Ixx/Jxx valem só para a linha deste quadro
++  chan[0].rgFxDepth=false;
++  chan[0].rgFxSpeed=false;
+ }
+ 
+ int DivPlatformFDS::dispatch(DivCommand c) {
+@@ -252,7 +288,7 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+           chan[c.chan].modDepth=ins->fds.modDepth;
+           chan[c.chan].modOn=ins->fds.modDepth;
+           chan[c.chan].modFreq=ins->fds.modSpeed;
+-          rWrite(0x4084,(chan[c.chan].modOn<<7)|0x40|chan[c.chan].modDepth);
++          rWrite(0x4084,rgMod4084(c.chan));
+           rWrite(0x4086,chan[c.chan].modFreq&0xff);
+ 
+           rWrite(0x4087,0x80|chan[c.chan].modFreq>>8);
+@@ -274,6 +310,24 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+         ws.changeWave1(chan[c.chan].wave);
+       }
+       ws.init(ins,64,63,chan[c.chan].insChanged);
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: no 0CC cada nota volta a modulação (velocidade e profundidade) à do instrumento, menos o que a linha mudou
++        if (c.value!=DIV_NOTE_NULL && ins->type==DIV_INS_FDS && !ins->fds.initModTableWithFirstWave) {
++          if (!chan[c.chan].rgFxDepth) chan[c.chan].modDepth=ins->fds.modDepth;
++          if (!chan[c.chan].rgFxSpeed) chan[c.chan].modFreq=ins->fds.modSpeed;
++          rWrite(0x4084,rgMod4084(c.chan));
++          if (!(chan[c.chan].autoModNum>0 && chan[c.chan].autoModDen>0)) {
++            rWrite(0x4086,chan[c.chan].modFreq&0xff);
++            rWrite(0x4087,(chan[c.chan].modFreq>>8)&15);
++          }
++        }
++        // RG: nota nova: volume do instrumento do começo (31 sem sequência)
++        chan[c.chan].rg.macVol=31;
++        chan[c.chan].outVol=rgOutVol(c.chan);
++        rWrite(0x4080,0x80|chan[c.chan].outVol);
++        chan[c.chan].insChanged=false;
++        break;
++      }
+       rWrite(0x4080,0x80|chan[c.chan].vol);
+       chan[c.chan].insChanged=false;
+       break;
+@@ -294,6 +348,14 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_VOLUME:
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rg.volNZ=(c.value2!=0);
++        chan[c.chan].outVol=rgOutVol(c.chan);
++        if (chan[c.chan].active) rWrite(0x4080,0x80|chan[c.chan].outVol);
++        break;
++      }
+       if (chan[c.chan].vol!=c.value) {
+         chan[c.chan].vol=c.value;
+         if (!chan[c.chan].std.vol.has) {
+@@ -316,16 +378,58 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_FDS_MOD_DEPTH:
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: Hxx do 0CC: 00-3F profundidade; 80-FF com a modulação automática é o numerador
++        if (c.value<0x40) {
++          chan[c.chan].modDepth=c.value;
++          chan[c.chan].rgFxDepth=true;
++          rWrite(0x4084,rgMod4084(c.chan));
++        } else if (c.value>=0x80 && chan[c.chan].autoModNum>0 && chan[c.chan].autoModDen>0) {
++          chan[c.chan].autoModNum=c.value-0x80;
++          chan[c.chan].freqChanged=true;
++        }
++        break;
++      }
+       chan[c.chan].modDepth=c.value;
+-      rWrite(0x4084,(chan[c.chan].modOn<<7)|0x40|chan[c.chan].modDepth);
++      rWrite(0x4084,rgMod4084(c.chan));
+       break;
+     case DIV_CMD_FDS_MOD_HIGH:
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: Jxy do 0CC: >= 10 é a modulação automática (frequência x / (y+1)); senão o byte alto da velocidade
++        chan[c.chan].rgFxSpeed=true;
++        if (c.value>=0x10) {
++          chan[c.chan].autoModNum=c.value>>4;
++          chan[c.chan].autoModDen=(c.value&15)+1;
++          chan[c.chan].freqChanged=true;
++        } else {
++          bool wasAuto=(chan[c.chan].autoModNum>0 && chan[c.chan].autoModDen>0);
++          chan[c.chan].modFreq=((c.value&15)<<8)|(wasAuto?0:(chan[c.chan].modFreq&0xff));
++          chan[c.chan].autoModNum=0;
++          chan[c.chan].autoModDen=0;
++          rWrite(0x4086,chan[c.chan].modFreq&0xff);
++          rWrite(0x4087,chan[c.chan].modFreq>>8);
++        }
++        break;
++      }
+       chan[c.chan].modOn=c.value>>4;
+       chan[c.chan].modFreq=((c.value&15)<<8)|(chan[c.chan].modFreq&0xff);
+-      rWrite(0x4084,(chan[c.chan].modOn<<7)|0x40|chan[c.chan].modDepth);
++      rWrite(0x4084,rgMod4084(c.chan));
+       rWrite(0x4087,chan[c.chan].modFreq>>8);
+       break;
+     case DIV_CMD_FDS_MOD_LOW:
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: Ixx do 0CC: byte baixo da velocidade e desliga a modulação automática
++        chan[c.chan].rgFxSpeed=true;
++        {
++          bool wasAuto=(chan[c.chan].autoModNum>0 && chan[c.chan].autoModDen>0);
++          chan[c.chan].modFreq=(wasAuto?0:(chan[c.chan].modFreq&0xf00))|c.value;
++        }
++        chan[c.chan].autoModNum=0;
++        chan[c.chan].autoModDen=0;
++        rWrite(0x4086,chan[c.chan].modFreq&0xff);
++        rWrite(0x4087,chan[c.chan].modFreq>>8);
++        break;
++      }
+       chan[c.chan].modFreq=(chan[c.chan].modFreq&0xf00)|c.value;
+       rWrite(0x4086,chan[c.chan].modFreq&0xff);
+       break;
+@@ -359,11 +463,16 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+       chan[c.chan].autoModDen=c.value&15;
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].modOn=(chan[c.chan].autoModNum && chan[c.chan].autoModDen);
+-      rWrite(0x4084,(chan[c.chan].modOn<<7)|0x40|chan[c.chan].modDepth);
++      rWrite(0x4084,rgMod4084(c.chan));
+       break;
+     case DIV_CMD_NOTE_PORTA: {
+       int destFreq=chan[c.chan].calcBaseFreq(c.value2);
+       bool return2=false;
++      // RG: no FamiTracker os slides 1xx/2xx só param no limite do registrador
++      if (parent->song.compatFlags.rgFamiTracker) {
++        if (c.value2>155) destFreq=0xfff;
++        else if (c.value2<60) destFreq=0;
++      }
+       if (destFreq>chan[c.chan].baseFreq) {
+         chan[c.chan].baseFreq+=c.value;
+         if (chan[c.chan].baseFreq>=destFreq) {
+@@ -386,6 +495,7 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+     }
+     case DIV_CMD_LEGATO:
+       if (c.chan==3) break;
++      if (rgFTLegato(parent->song.compatFlags.rgFamiTracker,chan[c.chan],c)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+((HACKY_LEGATO_MESS)?(chan[c.chan].std.arp.val):(0)));
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].note=c.value;
+@@ -393,11 +503,18 @@ int DivPlatformFDS::dispatch(DivCommand c) {
+     case DIV_CMD_PRE_PORTA:
+       if (chan[c.chan].active && c.value2) {
+         if (parent->song.compatFlags.resetMacroOnPorta) chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_FDS));
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento
++        if (parent->song.compatFlags.rgFamiTracker) {
++          chan[c.chan].rg.macVol=31;
++          chan[c.chan].outVol=rgOutVol(c.chan);
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !parent->song.compatFlags.rgFamiTracker) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_GET_VOLMAX:
++      if (parent->song.compatFlags.rgFamiTracker) return 15; // RG: no FamiTracker o volume do canal é 0-15
+       return 32;
+       break;
+     case DIV_CMD_MACRO_OFF:
+@@ -480,6 +597,7 @@ void DivPlatformFDS::setNSFPlay(bool use) {
+ }
+ 
+ void DivPlatformFDS::setFlags(const DivConfig& flags) {
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
+   int clockSel=flags.getInt("clockSel",0);
+   if (clockSel==2) { // Dendy
+     chipClock=COLOR_PAL*2.0/5.0;
+@@ -499,6 +617,25 @@ void DivPlatformFDS::setFlags(const DivConfig& flags) {
+     oscBuf->setRate(rate);
+   }
+ 
++  // RG: modo FamiTracker: passa-baixas de 6 kHz (medido contra o 0CC, que filtra o FDS com -48 dB a partir de 1 kHz no blip)
++  rgLPOn=parent->song.compatFlags.rgFamiTracker && useNP;
++  rgLPx1=rgLPx2=rgLPy1=rgLPy2=rgLPz=0;
++  {
++    double fc=6000.0;
++    double k=tan(M_PI*fc/(double)rate);
++    // um polo (z = p*x + q*z, ganho 1 em DC)
++    rgLPq=(1.0-k)/(1.0+k);
++    rgLPp=1.0-rgLPq;
++    // par de polos, Q=1
++    double Q=1.0;
++    double n=1.0/(1.0+k/Q+k*k);
++    rgLPb0=k*k*n;
++    rgLPb1=2.0*rgLPb0;
++    rgLPb2=rgLPb0;
++    rgLPa1=2.0*(k*k-1.0)*n;
++    rgLPa2=(1.0-k/Q+k*k)*n;
++  }
++
+   notifyPitchTable();
+ }
+ 
+@@ -510,6 +647,20 @@ void DivPlatformFDS::notifyInsDeletion(void* ins) {
+ 
+ void DivPlatformFDS::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,CHIP_FREQBASE,0xffff,false,parent->song.compatFlags.linearPitch);
++  // RG: modo FamiTracker: tabela do 0CC nota a nota: f*65536/(clock/16)+0.5+detune
++  pitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker && !parent->song.compatFlags.linearPitch) {
++    double clk=1789772.7272/16.0;
++    for (int i=0; i<96; i++) {
++      double f=parent->song.tuning*pow(2.0,(double)(i-45)/12.0);
++      int v=(int)((f*65536.0)/clk+0.5+rgDetune[i]);
++      if (v<0) v=0;
++      pitchTable.rgExactTab[i+60]=v;
++    }
++    for (int i=0; i<60; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[60];
++    for (int i=156; i<192; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[155];
++    pitchTable.rgExact=true;
++  }
+ }
+ 
+ unsigned int DivPlatformFDS::getMaxFreq(int ch) {
+@@ -533,6 +684,8 @@ int DivPlatformFDS::init(DivEngine* p, int channels, int sugRate, const DivConfi
+   dumpWrites=false;
+   skipRegisterWrites=false;
+   writeOscBuf=0;
++  // RG: modo FamiTracker: sempre o núcleo NSFPlay (o filtro do 0CC foi medido nele)
++  if (parent->song.compatFlags.rgFamiTracker) useNP=true;
+   if (useNP) {
+     fds_NP=new xgm::NES_FDS;
+   } else {
+diff --git a/src/engine/platform/fds.h b/src/engine/platform/fds.h
+index 157d1ed..659ee35 100644
+--- a/src/engine/platform/fds.h
++++ b/src/engine/platform/fds.h
+@@ -22,6 +22,7 @@
+ 
+ #include "../dispatch.h"
+ #include "../waveSynth.h"
++#include "rgFT.h"
+ 
+ #include "sound/nes_nsfplay/nes_fds.h"
+ 
+@@ -33,8 +34,13 @@ class DivPlatformFDS: public DivDispatch {
+     bool sweepChanged, modOn;
+     signed short wave;
+     signed char modTable[32];
++    // RG: regras do FamiTracker; Hxx/Ixx/Jxx desta linha (a nota nova não volta a modulação ao instrumento)
++    DivRGFTChan rg;
++    bool rgFxDepth, rgFxSpeed;
+     Channel(bool linear=true):
+       SharedChannel(32,linear),
++      rgFxDepth(false),
++      rgFxSpeed(false),
+       prevFreq(65535),
+       modFreq(0),
+       duty(0),
+@@ -50,6 +56,15 @@ class DivPlatformFDS: public DivDispatch {
+     }
+   };
+   Channel chan[1];
++  // RG: tabela de detune do 0CC (FDS) e o volume do 0CC
++  int rgDetune[96];
++  int rgOutVol(int i);
++  unsigned char rgMod4084(int i);
++  // RG: modo FamiTracker: passa-baixas do 0CC no FDS (o mixer dele corta os agudos do FDS); Butterworth de 3ª ordem
++  bool rgLPOn;
++  double rgLPb0, rgLPb1, rgLPb2, rgLPa1, rgLPa2, rgLPp, rgLPq;
++  double rgLPx1, rgLPx2, rgLPy1, rgLPy2, rgLPz;
++  int rgLowPass(int s);
+   DivDispatchOscBuffer* oscBuf;
+   bool isMuted[1];
+   DivWaveSynth ws;
+diff --git a/src/engine/platform/mmc5.cpp b/src/engine/platform/mmc5.cpp
+index 24d93b5..62a6fef 100644
+--- a/src/engine/platform/mmc5.cpp
++++ b/src/engine/platform/mmc5.cpp
+@@ -106,6 +106,13 @@ void DivPlatformMMC5::acquireDirect(blip_buffer_t** bb, size_t len) {
+   }
+ }
+ 
++// RG: registrador 0 do pulso (duty, laço, envelope constante, volume); fora do modo FamiTracker é sempre 0x30
++unsigned char DivPlatformMMC5::rgReg0(int i) {
++  unsigned char env=0x30;
++  if (parent->song.compatFlags.rgFamiTracker) env=(chan[i].rgEnvLoop?0x20:0)|(chan[i].rgHwEnv?0:0x10);
++  return env|chan[i].outVol|((chan[i].duty&3)<<6);
++}
++
+ void DivPlatformMMC5::tick(bool sysTick) {
+   for (int i=0; i<2; i++) {
+     chan[i].std.next();
+@@ -113,23 +120,30 @@ void DivPlatformMMC5::tick(bool sysTick) {
+       // ok, why are the volumes like that?
+       chan[i].outVol=VOL_SCALE_LINEAR_BROKEN(chan[i].vol&15,MIN(15,chan[i].std.vol.val),15);
+       if (chan[i].outVol<0) chan[i].outVol=0;
+-      rWrite(0x5000+i*4,0x30|chan[i].outVol|((chan[i].duty&3)<<6));
++      if (parent->song.compatFlags.rgFamiTracker) {
++        chan[i].rg.macVol=CLAMP(chan[i].std.vol.val,0,15);
++        chan[i].outVol=rgFTVolMul(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ);
++      }
++      rWrite(0x5000+i*4,rgReg0(i));
+     }
+     // TODO: arp macros on NES PCM?
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine o período, mesmo durante portamento
++      if (!chan[i].inPorta || parent->song.compatFlags.rgFamiTracker) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+     }
+     if (chan[i].std.duty.had) {
+       chan[i].duty=chan[i].std.duty.val;
+-      rWrite(0x5000+i*4,0x30|chan[i].outVol|((chan[i].duty&3)<<6));
++      rWrite(0x5000+i*4,rgReg0(i));
+     }
+     if (chan[i].std.pitch.had) {
+-      if (chan[i].std.pitch.mode) {
++      if (rgFTPitchMacro(parent->song.compatFlags.rgFamiTracker,chan[i],0x800)) {
++        // RG: pitch relativo no próprio período
++      } else if (chan[i].std.pitch.mode) {
+         chan[i].pitch2+=chan[i].std.pitch.val;
+         CLAMP_VAR(chan[i].pitch2,-32768,32767);
+       } else {
+@@ -159,7 +173,13 @@ void DivPlatformMMC5::tick(bool sysTick) {
+         rWrite(0x5000+i*4,0x30);
+       }
+       rWrite(0x5002+i*4,chan[i].freq&0xff);
+-      if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8)) {
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: como o 0CC: byte alto (com a duração) só quando muda ou num Exx/nota com envelope sem laço
++        if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || chan[i].rgResetEnv) {
++          rWrite(0x5003+i*4,(chan[i].rgLen<<3)|(chan[i].freq>>8));
++        }
++        chan[i].rgResetEnv=false;
++      } else if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8)) {
+         rWrite(0x5003+i*4,0xf8|(chan[i].freq>>8));
+       }
+       if (chan[i].freq!=65535 && chan[i].freq!=0) {
+@@ -232,6 +252,17 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
+       if (!parent->song.compatFlags.brokenOutVol && !chan[c.chan].std.vol.will) {
+         chan[c.chan].outVol=chan[c.chan].vol;
+       }
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: nota nova: volume do instrumento do começo, duty padrão (Vxx) e, com envelope sem laço, recarrega a duração
++        chan[c.chan].rg.macVol=15;
++        chan[c.chan].outVol=rgFTVolMul(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++        if (c.value!=DIV_NOTE_NULL) {
++          chan[c.chan].duty=chan[c.chan].rg.defDuty;
++          if (!chan[c.chan].rgEnvLoop || chan[c.chan].rgHwEnv) chan[c.chan].rgResetEnv=true;
++        }
++        rWrite(0x5000+c.chan*4,rgReg0(c.chan));
++        break;
++      }
+       rWrite(0x5000+c.chan*4,0x30|chan[c.chan].vol|((chan[c.chan].duty&3)<<6));
+       break;
+     case DIV_CMD_NOTE_OFF:
+@@ -253,6 +284,17 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_VOLUME:
++      if (parent->song.compatFlags.rgFamiTracker && c.chan<2) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rg.volNZ=(c.value2!=0);
++        int nv=rgFTVolMul(chan[c.chan].vol&15,chan[c.chan].rg.macVol,chan[c.chan].rg.volNZ);
++        if (nv!=chan[c.chan].outVol || !chan[c.chan].active) {
++          chan[c.chan].outVol=nv;
++          if (chan[c.chan].active) rWrite(0x5000+c.chan*4,rgReg0(c.chan));
++        }
++        break;
++      }
+       if (chan[c.chan].vol!=c.value) {
+         chan[c.chan].vol=c.value;
+         if (!chan[c.chan].std.vol.has) {
+@@ -272,6 +314,8 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_NOTE_PORTA: {
+       int destFreq=chan[c.chan].calcBaseFreq(c.value2+chan[c.chan].sampleNoteDelta);
++      // RG: no FamiTracker os slides 1xx/2xx só param no limite do registrador
++      if (c.chan<2) destFreq=rgFTPortaDest(parent->song.compatFlags.rgFamiTracker,c.value2+chan[c.chan].sampleNoteDelta,destFreq,0x800);
+       bool return2=false;
+       if (destFreq>chan[c.chan].baseFreq) {
+         chan[c.chan].baseFreq+=c.value;
+@@ -295,14 +339,38 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
+     }
+     case DIV_CMD_STD_NOISE_MODE:
+       chan[c.chan].duty=c.value;
++      chan[c.chan].rg.defDuty=c.value;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        if (chan[c.chan].active) rWrite(0x5000+c.chan*4,rgReg0(c.chan));
++        break;
++      }
+       rWrite(0x5000+c.chan*4,0x30|(chan[c.chan].active?chan[c.chan].outVol:0)|((chan[c.chan].duty&3)<<6));
+       break;
++    case DIV_CMD_NES_ENV_MODE:
++      // RG: EE0-EE3 do FamiTracker (bit 0: envelope de hardware; bit 1: sem laço)
++      if (c.chan>=2) break;
++      if (!chan[c.chan].rgEnvLoop || !chan[c.chan].rgHwEnv) chan[c.chan].rgResetEnv=true;
++      chan[c.chan].rgHwEnv=(c.value&1);
++      chan[c.chan].rgEnvLoop=!(c.value&2);
++      chan[c.chan].freqChanged=true;
++      if (chan[c.chan].active) rWrite(0x5000+c.chan*4,rgReg0(c.chan));
++      break;
++    case DIV_CMD_NES_LENGTH:
++      // RG: E00-E1F do FamiTracker: valor da duração e desliga o laço
++      if (c.chan>=2) break;
++      chan[c.chan].rgLen=c.value&0x1f;
++      chan[c.chan].rgEnvLoop=false;
++      chan[c.chan].rgResetEnv=true;
++      chan[c.chan].freqChanged=true;
++      if (chan[c.chan].active) rWrite(0x5000+c.chan*4,rgReg0(c.chan));
++      break;
+     case DIV_CMD_SAMPLE_POS:
+       if (c.chan!=2) break;
+       dacPos=c.value;
+       chan[c.chan].setPos=true;
+       break;
+     case DIV_CMD_LEGATO:
++      if (rgFTLegato(parent->song.compatFlags.rgFamiTracker,chan[c.chan],c)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+((HACKY_LEGATO_MESS)?(chan[c.chan].std.arp.val):(0)));
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].note=c.value;
+@@ -310,8 +378,15 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
+     case DIV_CMD_PRE_PORTA:
+       if (chan[c.chan].active && c.value2) {
+         if (parent->song.compatFlags.resetMacroOnPorta) chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_STD));
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento e ao duty padrão
++        if (parent->song.compatFlags.rgFamiTracker && c.chan<2) {
++          chan[c.chan].rg.macVol=15;
++          chan[c.chan].outVol=rgFTVolMul(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++          chan[c.chan].duty=chan[c.chan].rg.defDuty;
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !parent->song.compatFlags.rgFamiTracker) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_GET_VOLMAX:
+@@ -415,6 +490,7 @@ bool DivPlatformMMC5::hasAcquireDirect() {
+ }
+ 
+ void DivPlatformMMC5::setFlags(const DivConfig& flags) {
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
+   int clockSel=flags.getInt("clockSel",0);
+   if (clockSel==2) { // Dendy
+     chipClock=COLOR_PAL*2.0/5.0;
+@@ -440,6 +516,9 @@ void DivPlatformMMC5::notifyInsDeletion(void* ins) {
+ 
+ void DivPlatformMMC5::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,CHIP_DIVIDER,0x800,true,parent->song.compatFlags.linearPitch);
++  // RG: modo FamiTracker: tabela de períodos do 0CC nota a nota (com o detune)
++  pitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker) pitchTable.initFT(parent->song.tuning,chipClock,CHIP_DIVIDER,0x7ff,rgDetune);
+   samplePitchTable.update<Channel>(chan,3,parent->song.tuning,1,1,32000,false,parent->song.compatFlags.linearPitch,sample);
+ }
+ 
+diff --git a/src/engine/platform/mmc5.h b/src/engine/platform/mmc5.h
+index 090540c..cc852c8 100644
+--- a/src/engine/platform/mmc5.h
++++ b/src/engine/platform/mmc5.h
+@@ -21,14 +21,23 @@
+ #define _MMC5_H
+ 
+ #include "../dispatch.h"
++#include "rgFT.h"
+ 
+ class DivPlatformMMC5: public DivDispatch {
+   struct Channel: public SharedChannel {
+     int prevFreq;
+     unsigned char duty, sweep;
+     bool sweepChanged, setPos;
++    // RG: regras do FamiTracker; Exx: laço do envelope, envelope de hardware, recarregar duração, valor da duração
++    DivRGFTChan rg;
++    bool rgEnvLoop, rgHwEnv, rgResetEnv;
++    unsigned char rgLen;
+     Channel(bool linear=true):
+       SharedChannel(15,linear),
++      rgEnvLoop(true),
++      rgHwEnv(false),
++      rgResetEnv(false),
++      rgLen(1),
+       prevFreq(65535),
+       duty(0),
+       sweep(8),
+@@ -45,7 +54,10 @@ class DivPlatformMMC5: public DivDispatch {
+       QueuedWrite(unsigned short a, unsigned char v): addr(a), val(v) {}
+   };
+   FixedQueue<QueuedWrite,128> writes;
++  unsigned char rgReg0(int i);
+   DivPitchTable pitchTable;
++  // RG: tabela de detune do 0CC (NTSC)
++  int rgDetune[96];
+   DivPitchTableManager samplePitchTable;
+   int dacPeriod, dacRate;
+   unsigned int dacPos;
+diff --git a/src/engine/platform/n163.cpp b/src/engine/platform/n163.cpp
+index 7608799..101cf10 100644
+--- a/src/engine/platform/n163.cpp
++++ b/src/engine/platform/n163.cpp
+@@ -24,7 +24,9 @@
+ #include <math.h>
+ 
+ #define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} }
+-#define rWriteMask(a,v,m) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v,m)); if (dumpWrites) {addWrite(a,v);} }
++// RG: com RGF_REGLOG (rgplayer) a máscara vai junto numa escrita falsa 0xfffe00mm antes da escrita real
++static int rgLogMask=-1;
++#define rWriteMask(a,v,m) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v,m)); if (dumpWrites) {if (rgLogMask<0) rgLogMask=getenv("RGF_REGLOG")?1:0; if (rgLogMask) addWrite(0xfffe0000|((m)&0xff),0); addWrite(a,v);} }
+ #define chWrite(c,a,v) \
+   if (c<=chanMax) { \
+     rWrite(0x78-(c<<3)+(a&7),v) \
+@@ -185,6 +187,14 @@ void DivPlatformN163::updateWaveCh(int ch) {
+   }
+ }
+ 
++// RG: frequência do 0CC: tabela + (vibrato - Pxx)<<4 (+ pitch absoluto), limitada a 0xFFFF; o registrador é x4
++int DivPlatformN163::rgFTFreq(int i) {
++  int p=chan[i].baseFreq+chan[i].pitch*16+chan[i].pitch2;
++  if (p<0) p=0;
++  if (p>0xffff) p=0xffff;
++  return p<<2;
++}
++
+ void DivPlatformN163::tick(bool sysTick) {
+   for (int i=0; i<=chanMax; i++) {
+     chan[i].std.next();
+@@ -192,6 +202,11 @@ void DivPlatformN163::tick(bool sysTick) {
+       chan[i].outVol=(MIN(15,chan[i].std.vol.val)*(chan[i].vol&15))/15;
+       if (chan[i].outVol<0) chan[i].outVol=0;
+       if (chan[i].outVol>15) chan[i].outVol=15;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: volume do 0CC (instrumento x canal / 15, nunca 0)
++        chan[i].rg.macVol=CLAMP(chan[i].std.vol.val,0,15);
++        chan[i].outVol=rgFTVolMul(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ);
++      }
+       if (chan[i].resVol!=chan[i].outVol) {
+         chan[i].resVol=chan[i].outVol;
+         if (!isMuted[i]) {
+@@ -202,7 +217,8 @@ void DivPlatformN163::tick(bool sysTick) {
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine a frequência, mesmo durante portamento
++      if (!chan[i].inPorta || parent->song.compatFlags.rgFamiTracker) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+@@ -223,7 +239,11 @@ void DivPlatformN163::tick(bool sysTick) {
+       }
+     }
+     if (chan[i].std.pitch.had) {
+-      if (chan[i].std.pitch.mode) {
++      if (parent->song.compatFlags.rgFamiTracker && chan[i].std.pitch.mode) {
++        // RG: no FamiTracker a sequência de pitch relativa soma na própria frequência (unidades de tabela)
++        chan[i].baseFreq+=chan[i].std.pitch.val;
++        CLAMP_VAR(chan[i].baseFreq,0,0xffff);
++      } else if (chan[i].std.pitch.mode) {
+         chan[i].pitch2+=chan[i].std.pitch.val;
+         CLAMP_VAR(chan[i].pitch2,-32768,32767);
+       } else {
+@@ -267,7 +287,9 @@ void DivPlatformN163::tick(bool sysTick) {
+     if (chan[i].freqChanged || chan[i].keyOn || chan[i].keyOff) {
+       // TODO: what is this mess?
+       chan[i].freq=chan[i].calcFreq();
+-      if (!chan[i].rawFreq) {
++      if (parent->song.compatFlags.rgFamiTracker && !chan[i].rawFreq) {
++        chan[i].freq=rgFTFreq(i);
++      } else if (!chan[i].rawFreq) {
+         if (lenCompensate) {
+           chan[i].freq=(((chan[i].freq*chan[i].curWaveLen)*(chanMax+1))/256);
+         } else {
+@@ -339,6 +361,11 @@ int DivPlatformN163::dispatch(DivCommand c) {
+       chan[c.chan].active=true;
+       chan[c.chan].keyOn=true;
+       chan[c.chan].resVol=chan[c.chan].vol;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: nota nova: volume do instrumento do começo
++        chan[c.chan].rg.macVol=15;
++        chan[c.chan].outVol=chan[c.chan].resVol=rgFTVolMul(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++      }
+       if (!isMuted[c.chan]) {
+         chan[c.chan].volumeChanged=true;
+       }
+@@ -366,6 +393,17 @@ int DivPlatformN163::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_VOLUME:
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rg.volNZ=(c.value2!=0);
++        int nv=rgFTVolMul(chan[c.chan].vol&15,chan[c.chan].rg.macVol,chan[c.chan].rg.volNZ);
++        if (nv!=chan[c.chan].resVol) {
++          chan[c.chan].outVol=chan[c.chan].resVol=nv;
++          if (!isMuted[c.chan]) chan[c.chan].volumeChanged=true;
++        }
++        break;
++      }
+       if (chan[c.chan].vol!=c.value) {
+         chan[c.chan].vol=c.value;
+         if (!chan[c.chan].std.vol.has) {
+@@ -391,6 +429,30 @@ int DivPlatformN163::dispatch(DivCommand c) {
+       if (destFreqD>2000000000.0) destFreqD=2000000000.0;
+       int destFreq=destFreqD;
+       bool return2=false;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: no FamiTracker o passo do N163 é velocidade<<2 (em unidades de tabela) e os slides 1xx/2xx vão até o limite
++        if (c.value2>155) destFreq=0xffff;
++        else if (c.value2<60) destFreq=0;
++        if (destFreq>chan[c.chan].baseFreq) {
++          chan[c.chan].baseFreq+=c.value*4;
++          if (chan[c.chan].baseFreq>=destFreq) {
++            chan[c.chan].baseFreq=destFreq;
++            return2=true;
++          }
++        } else {
++          chan[c.chan].baseFreq-=c.value*4;
++          if (chan[c.chan].baseFreq<=destFreq) {
++            chan[c.chan].baseFreq=destFreq;
++            return2=true;
++          }
++        }
++        chan[c.chan].freqChanged=true;
++        if (return2) {
++          chan[c.chan].inPorta=false;
++          return 2;
++        }
++        break;
++      }
+       if (destFreq>chan[c.chan].baseFreq) {
+         chan[c.chan].baseFreq+=c.value*((parent->song.compatFlags.linearPitch)?1:16);
+         if (chan[c.chan].baseFreq>=destFreq) {
+@@ -480,6 +542,7 @@ int DivPlatformN163::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_LEGATO:
++      if (rgFTLegato(parent->song.compatFlags.rgFamiTracker,chan[c.chan],c)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+((HACKY_LEGATO_MESS)?(chan[c.chan].std.arp.val):(0)));
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].note=c.value;
+@@ -490,8 +553,18 @@ int DivPlatformN163::dispatch(DivCommand c) {
+           chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_N163));
+           chan[c.chan].keyOn=true;
+         }
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento
++        if (parent->song.compatFlags.rgFamiTracker) {
++          chan[c.chan].rg.macVol=15;
++          int nv=rgFTVolMul(chan[c.chan].vol&15,15,chan[c.chan].rg.volNZ);
++          if (nv!=chan[c.chan].resVol) {
++            chan[c.chan].outVol=chan[c.chan].resVol=nv;
++            if (!isMuted[c.chan]) chan[c.chan].volumeChanged=true;
++          }
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !parent->song.compatFlags.rgFamiTracker) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_GET_VOLMAX:
+@@ -557,6 +630,23 @@ void DivPlatformN163::notifyInsDeletion(void* ins) {
+ 
+ void DivPlatformN163::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,CHIP_FREQBASE,0x7ffffff,false,parent->song.compatFlags.linearPitch);
++  // RG: modo FamiTracker: tabela do 0CC nota a nota: ((f*canais*983040/(clock/16)+0.5)/4 + detune), até 0xFFFF
++  pitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker && !parent->song.compatFlags.linearPitch) {
++    double clk=1789772.7272/16.0;
++    int n=initChanMax+1;
++    for (int i=0; i<96; i++) {
++      double f=parent->song.tuning*pow(2.0,(double)(i-45)/12.0);
++      double p=((f*n*983040.0)/clk+0.5)/4.0;
++      int v=(int)(p+rgDetune[i]);
++      if (v<0) v=0;
++      if (v>0xffff) v=0xffff;
++      pitchTable.rgExactTab[i+60]=v;
++    }
++    for (int i=0; i<60; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[60];
++    for (int i=156; i<192; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[155];
++    pitchTable.rgExact=true;
++  }
+ }
+ 
+ unsigned int DivPlatformN163::getMaxFreq(int ch) {
+@@ -647,6 +737,7 @@ void DivPlatformN163::setFlags(const DivConfig& flags) {
+   }
+   CHECK_CUSTOM_CLOCK;
+   initChanMax=chanMax=flags.getInt("channels",7)&7;
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
+   multiplex=!flags.getBool("multiplex",false); // not accurate in real hardware
+   posLatch=flags.getBool("posLatch",true);
+   rate=chipClock;
+diff --git a/src/engine/platform/n163.h b/src/engine/platform/n163.h
+index c7c9cfa..b5573d9 100644
+--- a/src/engine/platform/n163.h
++++ b/src/engine/platform/n163.h
+@@ -21,6 +21,7 @@
+ #define _N163_H
+ 
+ #include "../dispatch.h"
++#include "rgFT.h"
+ #include "../../fixedQueue.h"
+ #include "../waveSynth.h"
+ #include "vgsound_emu/src/n163/n163.hpp"
+@@ -35,6 +36,8 @@ class DivPlatformN163: public DivDispatch {
+     bool volumeChanged;
+     bool waveChanged, waveUpdated;
+     DivWaveSynth ws;    
++    // RG: regras do FamiTracker
++    DivRGFTChan rg;
+     Channel(bool linear=true):
+       SharedChannel(15,linear),
+       resVol(15),
+@@ -50,6 +53,9 @@ class DivPlatformN163: public DivDispatch {
+       waveUpdated(false) {}
+   };
+   Channel chan[8];
++  // RG: modo FamiTracker: tabela de frequências do 0CC (em "unidades de tabela": o registrador é isso x4) e o detune
++  int rgDetune[96];
++  int rgFTFreq(int i);
+   DivDispatchOscBuffer* oscBuf[8];
+   bool isMuted[8];
+   struct QueuedWrite {
+diff --git a/src/engine/platform/nes.cpp b/src/engine/platform/nes.cpp
+index 906cf92..d53377f 100644
+--- a/src/engine/platform/nes.cpp
++++ b/src/engine/platform/nes.cpp
+@@ -301,6 +301,15 @@ int DivPlatformNES::rgFTVol(int ch) {
+   return v;
+ }
+ 
++// RG: refaz os bits de envelope/laço (e o contador linear do triângulo) como o 0CC escreve
++void DivPlatformNES::rgUpdEnv(int ch) {
++  if (ch==2) {
++    linearCount=(chan[2].rgEnvLoop?0x80:0)|(chan[2].rgLinear&0x7f);
++  } else {
++    chan[ch].envMode=(chan[ch].rgEnvLoop?2:0)|(chan[ch].rgHwEnv?0:1);
++  }
++}
++
+ void DivPlatformNES::tick(bool sysTick) {
+   for (int i=0; i<4; i++) {
+     chan[i].std.next();
+@@ -426,13 +435,22 @@ void DivPlatformNES::tick(bool sysTick) {
+       }
+       if (i==3) { // noise
+         rWrite(0x4002+i*4,(chan[i].duty<<7)|chan[i].freq);
+-        rWrite(0x4003+i*4,(chan[i].len<<3));
++        if (!parent->song.compatFlags.rgFamiTracker || chan[i].rgEnvLoop || chan[i].rgResetEnv) {
++          rWrite(0x4003+i*4,(chan[i].len<<3));
++        }
++        chan[i].rgResetEnv=false;
+       } else if (parent->song.compatFlags.rgFamiTracker && i<2 && chan[i].sweep!=0x08 && !chan[i].rgSweepPend && !chan[i].keyOn) {
+         // RG: com o sweep de hardware ligado o FamiTracker deixa o chip mudar a altura sozinho
+       } else {
+         chan[i].rgSweepPend=false;
+         rWrite(0x4002+i*4,chan[i].freq&0xff);
+-        if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || i==2) {
++        if (parent->song.compatFlags.rgFamiTracker) {
++          // RG: o 0CC só reescreve o byte alto (e recarrega a duração) quando muda, ou em Exx/nota com envelope sem laço;
++          // no triângulo, com o laço ligado, ele escreve todo quadro
++          bool w=(i==2)?(chan[i].rgEnvLoop || chan[i].rgResetEnv):((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || chan[i].rgResetEnv);
++          if (w) rWrite(0x4003+i*4,(chan[i].len<<3)|(chan[i].freq>>8));
++          chan[i].rgResetEnv=false;
++        } else if ((chan[i].prevFreq>>8)!=(chan[i].freq>>8) || i==2) {
+           rWrite(0x4003+i*4,(chan[i].len<<3)|(chan[i].freq>>8));
+         }
+         if (chan[i].freq!=65535 && chan[i].freq!=0) {
+@@ -622,6 +640,13 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       chan[c.chan].active=true;
+       chan[c.chan].keyOn=true;
+       // RG: modo FamiTracker: nota nova volta ao duty padrão (a macro de duty, se houver, sobrescreve no tick)
++      if (parent->song.compatFlags.rgFamiTracker && c.value!=DIV_NOTE_NULL && c.chan<4) {
++        // RG: no 0CC uma nota com o envelope sem laço (ou de hardware) recarrega o contador de duração
++        if (!chan[c.chan].rgEnvLoop || chan[c.chan].rgHwEnv) {
++          chan[c.chan].rgResetEnv=true;
++          chan[c.chan].freqChanged=true;
++        }
++      }
+       if (parent->song.compatFlags.rgFamiTracker && c.value!=DIV_NOTE_NULL && c.chan!=2) {
+         chan[c.chan].duty=chan[c.chan].rgDefDuty;
+         if (c.chan==3) chan[c.chan].freqChanged=true;
+@@ -766,6 +791,26 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       if (parent->song.compatFlags.rgFamiTracker && chan[c.chan].sweep!=0x08) chan[c.chan].freqChanged=true;
+       break;
+     case DIV_CMD_NES_ENV_MODE:
++      if (parent->song.compatFlags.rgFamiTracker && c.chan<4) {
++        // RG: EE0-EE3 do FamiTracker (bit 0: envelope de hardware; bit 1: sem laço). No triângulo só o bit 0 (sem laço).
++        if (c.chan==2) {
++          if (!chan[2].rgEnvLoop) chan[2].rgResetEnv=true;
++          chan[2].rgEnvLoop=!(c.value&1);
++          rgUpdEnv(2);
++          if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
++          chan[2].freqChanged=true;
++          break;
++        }
++        if (!chan[c.chan].rgEnvLoop || !chan[c.chan].rgHwEnv) chan[c.chan].rgResetEnv=true;
++        chan[c.chan].rgHwEnv=(c.value&1);
++        chan[c.chan].rgEnvLoop=!(c.value&2);
++        rgUpdEnv(c.chan);
++        chan[c.chan].freqChanged=true;
++        if (c.chan<2) {
++          rWrite(0x4000+c.chan*4,(chan[c.chan].active?((chan[c.chan].envMode<<4)|chan[c.chan].outVol):0x30)|((chan[c.chan].duty&3)<<6));
++        }
++        break;
++      }
+       chan[c.chan].envMode=c.value&3;
+       if (c.chan==3) { // noise
+         chan[c.chan].freqChanged=true;
+@@ -775,6 +820,21 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_NES_LENGTH:
+       if (c.chan>=4) break;
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: E00-E1F do FamiTracker: valor do contador de duração e desliga o laço
++        chan[c.chan].len=c.value&0x1f;
++        chan[c.chan].rgEnvLoop=false;
++        chan[c.chan].rgResetEnv=true;
++        if (c.chan==2 && chan[2].rgLinear==-1) chan[2].rgLinear=0x7f;
++        rgUpdEnv(c.chan);
++        if (c.chan==2) {
++          if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
++        } else if (c.chan<2) {
++          rWrite(0x4000+c.chan*4,(chan[c.chan].active?((chan[c.chan].envMode<<4)|chan[c.chan].outVol):0x30)|((chan[c.chan].duty&3)<<6));
++        }
++        chan[c.chan].freqChanged=true;
++        break;
++      }
+       chan[c.chan].len=c.value&0x1f;
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].prevFreq=-1;
+@@ -784,6 +844,16 @@ int DivPlatformNES::dispatch(DivCommand c) {
+       rWrite(0x4017,countMode?0x80:0);
+       break;
+     case DIV_CMD_NES_LINEAR_LENGTH:
++      if (c.chan==2 && parent->song.compatFlags.rgFamiTracker) {
++        // RG: S80-SFF do FamiTracker no triângulo: contador linear = xx-80, sem laço
++        chan[2].rgLinear=c.value&0x7f;
++        chan[2].rgEnvLoop=false;
++        chan[2].rgResetEnv=true;
++        rgUpdEnv(2);
++        if (chan[2].active) rWrite(0x4008,(chan[2].outVol==0)?0:linearCount);
++        chan[2].freqChanged=true;
++        break;
++      }
+       if (c.chan==2) {
+         linearCount=c.value;
+         if (chan[c.chan].active) {
+@@ -969,6 +1039,10 @@ void DivPlatformNES::reset() {
+   nextDPCMDelta=-1;
+   lastDPCMFreq=15;
+   linearCount=255;
++  // RG: o FamiTracker começa com o contador de duração em 1 (só importa quando o laço é desligado por Exx/Sxx)
++  if (parent->song.compatFlags.rgFamiTracker) {
++    for (int i=0; i<4; i++) chan[i].len=1;
++  }
+ 
+   if (useNP) {
+     if (isE) {
+diff --git a/src/engine/platform/nes.h b/src/engine/platform/nes.h
+index f4dc1c5..27279f6 100644
+--- a/src/engine/platform/nes.h
++++ b/src/engine/platform/nes.h
+@@ -38,12 +38,20 @@ class DivPlatformNES: public DivDispatch {
+     unsigned char rgDefDuty;
+     // RG: sweep de hardware acabou de ser (re)aplicado: só então o FamiTracker escreve a altura
+     bool rgSweepPend;
++    // RG: Exx/Sxx do FamiTracker: laço do envelope (halt do contador de duração), envelope de hardware,
++    // pedido de reescrever o registrador de duração (m_bResetEnvelope) e contador linear do triângulo
++    bool rgEnvLoop, rgHwEnv, rgResetEnv;
++    signed char rgLinear;
+     Channel(bool linear=true):
+       SharedChannel(15,linear),
+       rgVolNZ(true),
+       rgMacVol(15),
+       rgDefDuty(0),
+       rgSweepPend(false),
++      rgEnvLoop(true),
++      rgHwEnv(false),
++      rgResetEnv(false),
++      rgLinear(-1),
+       prevFreq(65535),
+       duty(0),
+       sweep(8),
+@@ -102,6 +110,7 @@ class DivPlatformNES: public DivDispatch {
+   friend void putDispatchChan(void*,int,int);
+   // RG: volume de saída como no FamiTracker: (instrumento*canal)/15, nunca 0 se os dois forem > 0
+   int rgFTVol(int ch);
++  void rgUpdEnv(int ch);
+   // RG: tabela de detune do 0CC (deslocamento do registrador por nota, notas 0-95 do FamiTracker)
+   int rgDetune[96];
+ 
+diff --git a/src/engine/platform/opll.cpp b/src/engine/platform/opll.cpp
+index 571ea0b..3b15425 100644
+--- a/src/engine/platform/opll.cpp
++++ b/src/engine/platform/opll.cpp
+@@ -173,7 +173,8 @@ void DivPlatformOPLL::tick(bool sysTick) {
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine a frequência, mesmo durante portamento
++      if (!chan[i].inPorta || (parent->song.compatFlags.rgFamiTracker && vrc7)) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+@@ -321,7 +322,7 @@ void DivPlatformOPLL::tick(bool sysTick) {
+         //logV("drums %d",i);
+       } else {
+         if (i<9) {
+-          immWrite(0x20+i,(chan[i].freqH)|(chan[i].state.alg?0x20:0));
++          immWrite(0x20+i,(chan[i].freqH)|rgSus(i));
+         }
+         //logV("normal %d",i);
+       }
+@@ -338,11 +339,18 @@ void DivPlatformOPLL::tick(bool sysTick) {
+   }
+ 
+   for (int i=0; i<11; i++) {
++    // RG: VRC7 do 0CC: um quadro depois da nota nova reescreve o 0x20 sem o sustain
++    if (chan[i].rgSusNext) {
++      chan[i].rgSusNext=false;
++      if (chan[i].active) chan[i].freqChanged=true;
++    }
+     if (chan[i].freqChanged) {
+       int mul=2;
+       int fixedBlock=chan[i].state.block;
+       if (!parent->song.compatFlags.linearPitch) {
+         mul=octave(chan[i].baseFreq,fixedBlock)*2;
++        // RG: VRC7 do 0CC: vibrato/Pxx mexem 1 F-num por unidade (metade da escala do Furnace)
++        if (parent->song.compatFlags.rgFamiTracker && vrc7) mul=octave(chan[i].baseFreq,fixedBlock);
+       }
+       chan[i].freq=chan[i].calcFreq(mul);
+       if (chan[i].fixedFreq>0 && properDrums) chan[i].freq=chan[i].fixedFreq;
+@@ -394,7 +402,12 @@ void DivPlatformOPLL::tick(bool sysTick) {
+       //immWrite(0x28,0xf0|konOffs[i]);
+       if (!(i>=6 && properDrums)) {
+         if (i<9) {
+-          immWrite(0x20+i,(chan[i].freqH)|(chan[i].active<<4)|(chan[i].state.alg?0x20:0));
++          immWrite(0x20+i,(chan[i].freqH)|(chan[i].active<<4)|rgSus(i));
++          // RG: no quadro seguinte à nota nova o 0CC tira o sustain
++          if (chan[i].rgTrig) {
++            chan[i].rgTrig=false;
++            if ((parent->song.compatFlags.rgFamiTracker && vrc7)) chan[i].rgSusNext=true;
++          }
+         }
+       }
+       chan[i].keyOn=false;
+@@ -405,6 +418,14 @@ void DivPlatformOPLL::tick(bool sysTick) {
+ 
+ #define OPLL_C_NUM 343
+ 
++// RG: bit de sustain do registrador 0x20: fora do modo FamiTracker vem do instrumento; no VRC7 do 0CC
++// ele liga no quadro da nota nova (nota + sustain) e na soltura (===), e fica desligado no resto
++unsigned char DivPlatformOPLL::rgSus(int i) {
++  if (!(parent->song.compatFlags.rgFamiTracker && vrc7)) return chan[i].state.alg?0x20:0;
++  if (chan[i].active) return chan[i].rgTrig?0x20:0;
++  return chan[i].rgRel?0x20:0;
++}
++
+ int DivPlatformOPLL::octave(int freq, int fixedBlock) {
+   if (fixedBlock>0) {
+     return 1<<(fixedBlock-1);
+@@ -625,10 +646,17 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+       }
+       chan[c.chan].keyOn=true;
+       chan[c.chan].active=true;
++      // RG: VRC7 do 0CC: nota nova liga o sustain neste quadro e escreve o volume (que não foi escrito com a nota parada)
++      chan[c.chan].rgTrig=true;
++      chan[c.chan].rgRel=false;
++      if (parent->song.compatFlags.rgFamiTracker && vrc7 && c.chan<6) {
++        rWrite(0x30+c.chan,((15-VOL_SCALE_LOG_BROKEN(chan[c.chan].outVol,15-chan[c.chan].state.op[1].tl,15))&15)|(chan[c.chan].state.opllPreset<<4));
++      }
+       break;
+     }
+     case DIV_CMD_NOTE_OFF:
+       if (c.chan>=9 && !properDrums) return 0;
++      chan[c.chan].rgRel=false;
+       chan[c.chan].keyOff=true;
+       chan[c.chan].keyOn=false;
+       chan[c.chan].freqChanged=true;
+@@ -636,6 +664,8 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_NOTE_OFF_ENV:
+       if (c.chan>=9 && !properDrums) return 0;
++      // RG: VRC7 do 0CC: a soltura (===) desliga a nota com o sustain ligado
++      chan[c.chan].rgRel=true;
+       chan[c.chan].keyOff=true;
+       chan[c.chan].keyOn=false;
+       chan[c.chan].freqChanged=true;
+@@ -659,7 +689,8 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+         rWrite(0x38,DRUM_VOL(3)|(DRUM_VOL(2)<<4));
+         break;
+       } else if (c.chan<6 || !crapDrums) {
+-        if (c.chan<9) {
++        // RG: VRC7 do 0CC: com a nota cortada/solta o volume não é reescrito (a cauda da soltura continua no volume antigo)
++        if (c.chan<9 && !(parent->song.compatFlags.rgFamiTracker && vrc7 && !chan[c.chan].active)) {
+           rWrite(0x30+c.chan,((15-VOL_SCALE_LOG_BROKEN(chan[c.chan].outVol,15-chan[c.chan].state.op[1].tl,15))&15)|(chan[c.chan].state.opllPreset<<4));
+         }
+       }
+@@ -692,6 +723,13 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+         fixedBlock=chan[c.chan].state.block;
+         mul=octave(chan[c.chan].baseFreq,fixedBlock);
+       }
++      // RG: VRC7 do 0CC: o período interno tem 2 bits a mais (o passo do slide vale 1/4 de F-num no bloco da nota)
++      // e os slides 1xx/2xx só param no limite
++      if ((parent->song.compatFlags.rgFamiTracker && vrc7)) {
++        mul=MAX(1,mul/4);
++        if (c.value2>155) destFreq=0x1ff<<7;
++        else if (c.value2<60) destFreq=0;
++      }
+       if (destFreq>chan[c.chan].baseFreq) {
+         newFreq=chan[c.chan].baseFreq+c.value*mul;
+         if (newFreq>=destFreq) {
+@@ -729,6 +767,7 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+           chan[c.chan].insChanged=false;
+         }
+       }
++      if (rgFTLegato((parent->song.compatFlags.rgFamiTracker && vrc7),chan[c.chan],c)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value);
+       chan[c.chan].note=c.value;
+       chan[c.chan].freqChanged=true;
+@@ -963,7 +1002,8 @@ int DivPlatformOPLL::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_PRE_PORTA:
+       if (c.chan>=9 && !properDrums) return 0;
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !(parent->song.compatFlags.rgFamiTracker && vrc7)) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_PRE_NOTE:
+@@ -1125,6 +1165,31 @@ void DivPlatformOPLL::reset() {
+     OPLL_reset(fm_emu);
+     OPLL_setChipType(fm_emu,vrc7?1:0);
+     OPLL_resetPatch(fm_emu,vrc7?1:nukedToEmuPatch[patchSet&3]);
++    // RG: VRC7 no modo FamiTracker: timbres fixos do 0CC (vrc7tone.h); a bateria fica a do emu2413
++    if (vrc7 && parent->song.compatFlags.rgFamiTracker) {
++      static const unsigned char rg0ccVRC7[16][8]={
++        {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
++        {0x03,0x21,0x05,0x06,0xb8,0x82,0x42,0x27},
++        {0x13,0x41,0x13,0x0d,0xd8,0xd6,0x23,0x12},
++        {0x31,0x11,0x08,0x08,0xfa,0x9a,0x22,0x02},
++        {0x31,0x61,0x18,0x07,0x78,0x64,0x30,0x27},
++        {0x22,0x21,0x1e,0x06,0xf0,0x76,0x08,0x28},
++        {0x02,0x01,0x06,0x00,0xf0,0xf2,0x03,0xf5},
++        {0x21,0x61,0x1d,0x07,0x82,0x81,0x16,0x07},
++        {0x23,0x21,0x1a,0x17,0xcf,0x72,0x25,0x17},
++        {0x15,0x11,0x25,0x00,0x4f,0x71,0x00,0x11},
++        {0x85,0x01,0x12,0x0f,0x99,0xa2,0x40,0x02},
++        {0x07,0xc1,0x69,0x07,0xf3,0xf5,0xa7,0x12},
++        {0x71,0x23,0x0d,0x06,0x66,0x75,0x23,0x16},
++        {0x01,0x02,0xd3,0x05,0xa3,0x92,0xf7,0x52},
++        {0x61,0x63,0x0c,0x00,0x94,0xaf,0x34,0x06},
++        {0x21,0x62,0x0d,0x00,0xb1,0xa0,0x54,0x17}
++      };
++      unsigned char dump[19*8];
++      for (int j=0; j<19; j++) OPLL_patchToDump(&fm_emu->patch[j*2],&dump[j*8]);
++      for (int j=0; j<16; j++) memcpy(&dump[j*8],rg0ccVRC7[j],8);
++      OPLL_setPatch(fm_emu,dump);
++    }
+     OPLL_setMask(fm_emu,
+       (isMuted[0]?1:0)|
+       (isMuted[1]?2:0)|
+@@ -1199,6 +1264,21 @@ void DivPlatformOPLL::notifyInsDeletion(void* ins) {
+ 
+ void DivPlatformOPLL::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,CHIP_FREQBASE,0xffff,false,parent->song.compatFlags.linearPitch);
++  // RG: VRC7 no modo FamiTracker: F-num do 0CC por nota (f*262144/49716+0.5+detune, 12 notas) no bloco = oitava da nota
++  pitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker && vrc7 && !parent->song.compatFlags.linearPitch) {
++    int tab[12];
++    for (int i=0; i<12; i++) {
++      double f=parent->song.tuning*pow(2.0,(double)(i-45)/12.0);
++      tab[i]=(int)(f*262144.0/49716.0+0.5+rgDetune[i]);
++      if (tab[i]<0) tab[i]=0;
++      if (tab[i]>0x1ff) tab[i]=0x1ff;
++    }
++    for (int i=0; i<96; i++) pitchTable.rgExactTab[i+60]=tab[i%12]<<(i/12);
++    for (int i=0; i<60; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[60];
++    for (int i=156; i<192; i++) pitchTable.rgExactTab[i]=pitchTable.rgExactTab[155];
++    pitchTable.rgExact=true;
++  }
+ }
+ 
+ unsigned int DivPlatformOPLL::getMaxFreq(int ch) {
+@@ -1226,6 +1306,7 @@ float DivPlatformOPLL::getPostAmp() {
+ }
+ 
+ void DivPlatformOPLL::setFlags(const DivConfig& flags) {
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
+   int clockSel=flags.getInt("clockSel",0);
+   if (clockSel==3) {
+     chipClock=COLOR_NTSC/2.0;
+@@ -1258,6 +1339,8 @@ int DivPlatformOPLL::init(DivEngine* p, int channels, int sugRate, const DivConf
+   skipRegisterWrites=false;
+   patchSet=0;
+   fm_emu=NULL;
++  // RG: VRC7 no modo FamiTracker: usa o emu2413 (o mesmo núcleo do 0CC) com os timbres do 0CC
++  if (vrc7 && parent->song.compatFlags.rgFamiTracker) selCore=1;
+   if (selCore==1) {
+     fm_emu=OPLL_new(72,1);
+     OPLL_setChipType(fm_emu,vrc7?1:0);
+diff --git a/src/engine/platform/opll.h b/src/engine/platform/opll.h
+index b1757a2..fe9e615 100644
+--- a/src/engine/platform/opll.h
++++ b/src/engine/platform/opll.h
+@@ -21,6 +21,7 @@
+ #define _OPLL_H
+ 
+ #include "../dispatch.h"
++#include "rgFT.h"
+ #include "../../fixedQueue.h"
+ 
+ extern "C" {
+@@ -35,14 +36,22 @@ class DivPlatformOPLL: public DivDispatch {
+       unsigned char freqH, freqL;
+       int fixedFreq;
+       unsigned char pan;
++      // RG: VRC7 no modo FamiTracker: quadro da nota nova (o 0CC liga o sustain só nele) e soltura com sustain (===)
++      bool rgTrig, rgSusNext, rgRel;
+       Channel(bool linear=true):
+         SharedChannel(0,linear),
++        rgTrig(false),
++        rgSusNext(false),
++        rgRel(false),
+         freqH(0),
+         freqL(0),
+         fixedFreq(0),
+         pan(3) {}
+     };
+     Channel chan[11];
++    // RG: tabela de detune do 0CC (VRC7, 12 notas) e o bit de sustain como o 0CC escreve
++    int rgDetune[96];
++    unsigned char rgSus(int i);
+     bool isMuted[11];
+     DivDispatchOscBuffer* oscBuf[11];
+     struct QueuedWrite {
+diff --git a/src/engine/platform/rgFT.h b/src/engine/platform/rgFT.h
+new file mode 100644
+index 0000000..61c648a
+--- /dev/null
++++ b/src/engine/platform/rgFT.h
+@@ -0,0 +1,85 @@
++/**
++ * Registro Gamer: regras do FamiTracker/0CC usadas pelos chips de expansão no modo FamiTracker
++ * (compatFlags.rgFamiTracker). O 2A03 (nes.cpp) tem a versão original destas regras.
++ *
++ * Cada chip guarda um DivRGFTChan junto do seu canal e chama estas funções nos mesmos pontos
++ * onde o nes.cpp aplica as regras (nota, volume, macro de volume, arpejo, pitch, portamento).
++ */
++
++#ifndef _RG_FT_H
++#define _RG_FT_H
++
++#include "../dispatch.h"
++
++struct DivRGFTChan {
++  // último valor da macro (sequência) de volume do instrumento; 15 = sem sequência
++  int macVol;
++  // o volume do canal tem fração (> 0 mesmo com a parte inteira 0): vem do value2 de DIV_CMD_VOLUME
++  bool volNZ;
++  // duty padrão (último Vxx): cada nota nova volta a ele
++  int defDuty;
++  DivRGFTChan():
++    macVol(15),
++    volNZ(true),
++    defDuty(0) {}
++};
++
++// volume do 0CC (CChannelHandler::CalculateVolume + LimitVolume): instrumento x canal / 15,
++// nunca 0 se os dois forem > 0 (o "volume" do canal conta a fração dos slides)
++static inline int rgFTVolMul(int chanVol, int macVol, bool volNZ, int maxVol=15) {
++  int v=(chanVol*macVol)/15;
++  if (v<0) v=0;
++  if (v>maxVol) v=maxVol;
++  if (v==0 && macVol>0 && (chanVol>0 || volNZ)) v=1;
++  return v;
++}
++
++// volume do 0CC no Sunsoft 5B: canal + instrumento - 15 (mesma regra do "nunca 0")
++static inline int rgFTVolAdd(int chanVol, int macVol, bool volNZ, int maxVol=15) {
++  int v=chanVol+macVol-15;
++  if (v<0) v=0;
++  if (v>maxVol) v=maxVol;
++  if (v==0 && macVol>0 && (chanVol>0 || volNZ)) v=1;
++  return v;
++}
++
++// volume do dente de serra do VRC6 com sequência de 64 passos (CVRC6Sawtooth::CalculateVolume)
++static inline int rgFTVolSaw64(int chanVol, int macVol, bool volNZ) {
++  int v=((macVol+1)*(chanVol+1)-1)/16;
++  if (v<0) v=0;
++  if (v>63) v=63;
++  if (v==0 && macVol>0 && (chanVol>0 || volNZ)) v=1;
++  return v;
++}
++
++// DIV_CMD_LEGATO com value2=1 (arpejo do efeito 0xy): não mexe na nota base e é ignorado
++// enquanto a sequência de arpejo do instrumento roda. devolve true se tratou o comando.
++template<typename T> static inline bool rgFTLegato(bool ft, T& ch, const DivCommand& c, int delta=0) {
++  if (!ft || c.value2!=1) return false;
++  if (!ch.std.arp.has) {
++    ch.baseFreq=ch.calcBaseFreq(c.value+delta);
++    ch.freqChanged=true;
++  }
++  return true;
++}
++
++// sequência de pitch relativa: no FamiTracker mexe no próprio período (portamento, arpejo e nota nova absorvem).
++// devolve true se tratou. o importador já inverte o sinal para os chips de período.
++template<typename T> static inline bool rgFTPitchMacro(bool ft, T& ch, int maxBase) {
++  if (!ft || !ch.std.pitch.mode) return false;
++  ch.baseFreq-=ch.std.pitch.val;
++  if (ch.baseFreq<0) ch.baseFreq=0;
++  if (ch.baseFreq>maxBase) ch.baseFreq=maxBase;
++  ch.freqChanged=true;
++  return true;
++}
++
++// slides 1xx/2xx (NOTE_PORTA para notas fora da faixa): no FamiTracker só param no limite do registrador
++static inline int rgFTPortaDest(bool ft, int note, int destFreq, int maxBase) {
++  if (!ft) return destFreq;
++  if (note>155) return 1;
++  if (note<60) return maxBase;
++  return destFreq;
++}
++
++#endif
+diff --git a/src/engine/platform/vrc6.cpp b/src/engine/platform/vrc6.cpp
+index 32a1832..4ec7d7c 100644
+--- a/src/engine/platform/vrc6.cpp
++++ b/src/engine/platform/vrc6.cpp
+@@ -148,10 +148,26 @@ void DivPlatformVRC6::acquireDirect(blip_buffer_t** bb, size_t len) {
+   }
+ }
+ 
++int DivPlatformVRC6::rgOutVol(int i) {
++  if (i==2) {
++    if (chan[i].rgSaw64) return rgFTVolSaw64(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ);
++    // sequência normal: volume x2 e o bit 5 vem do "duty" do instrumento
++    return (rgFTVolMul(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ)<<1)|((chan[i].duty&1)<<5);
++  }
++  return rgFTVolMul(chan[i].vol&15,chan[i].rg.macVol,chan[i].rg.volNZ);
++}
++
+ void DivPlatformVRC6::tick(bool sysTick) {
+   for (int i=0; i<3; i++) {
+     chan[i].std.next();
+-    if (chan[i].std.vol.had) {
++    if (chan[i].std.vol.had && parent->song.compatFlags.rgFamiTracker) {
++      // RG: volume como o 0CC (instrumento x canal / 15, nunca 0)
++      chan[i].rg.macVol=CLAMP(chan[i].std.vol.val,0,chan[i].rgSaw64?63:15);
++      chan[i].outVol=rgOutVol(i);
++      if (!isMuted[i] && !chan[i].pcm) {
++        chWrite(i,0,(i==2)?chan[i].outVol:((chan[i].outVol&0xf)|((chan[i].duty&7)<<4)));
++      }
++    } else if (chan[i].std.vol.had) {
+       if (i==2) { // sawtooth
+         chan[i].outVol=((chan[i].vol&63)*MIN(63,chan[i].std.vol.val))/63;
+         if (chan[i].outVol<0) chan[i].outVol=0;
+@@ -171,7 +187,8 @@ void DivPlatformVRC6::tick(bool sysTick) {
+     if (NEW_ARP_STRAT) {
+       chan[i].handleArp();
+     } else if (chan[i].std.arp.had && !chan[i].rawFreq) {
+-      if (!chan[i].inPorta) {
++      // RG: no FamiTracker cada passo da sequência de arpejo redefine o período, mesmo durante portamento
++      if (!chan[i].inPorta || parent->song.compatFlags.rgFamiTracker) {
+         chan[i].baseFreq=chan[i].calcBaseFreq(parent->calcArp(chan[i].note,chan[i].std.arp.val));
+       }
+       chan[i].freqChanged=true;
+@@ -181,9 +198,16 @@ void DivPlatformVRC6::tick(bool sysTick) {
+       if ((!isMuted[i]) && (i!=2) && (!chan[i].pcm)) { // pulse
+         chWrite(i,0,(chan[i].outVol&0xf)|((chan[i].duty&7)<<4));
+       }
++      // RG: no dente de serra o "duty" é o bit 5 do volume
++      if (i==2 && parent->song.compatFlags.rgFamiTracker) {
++        chan[i].outVol=rgOutVol(i);
++        if (!isMuted[i]) chWrite(i,0,chan[i].outVol);
++      }
+     }
+     if (chan[i].std.pitch.had) {
+-      if (chan[i].std.pitch.mode) {
++      if (rgFTPitchMacro(parent->song.compatFlags.rgFamiTracker,chan[i],0x1000)) {
++        // RG: pitch relativo no próprio período
++      } else if (chan[i].std.pitch.mode) {
+         chan[i].pitch2+=chan[i].std.pitch.val;
+         CLAMP_VAR(chan[i].pitch2,-32768,32767);
+       } else {
+@@ -237,7 +261,10 @@ void DivPlatformVRC6::tick(bool sysTick) {
+         if (chan[i].freq>4095) chan[i].freq=4095;
+         if (chan[i].freq<0) chan[i].freq=0;
+       }
+-      if (chan[i].keyOff) {
++      if (chan[i].keyOff && parent->song.compatFlags.rgFamiTracker && !chan[i].pcm) {
++        // RG: o 0CC não desliga o canal no corte/fim da nota: só zera o volume (a fase continua)
++        if (!isMuted[i]) chWrite(i,0,(i==2)?0:((chan[i].duty&7)<<4));
++      } else if (chan[i].keyOff) {
+         chWrite(i,2,0);
+       } else if (chan[i].active) {
+         chWrite(i,1,chan[i].freq&0xff);
+@@ -313,6 +340,15 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+       chan[c.chan].active=true;
+       chan[c.chan].keyOn=true;
+       chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_VRC6));
++      if (parent->song.compatFlags.rgFamiTracker) {
++        // RG: nota nova: volume do instrumento do começo e duty padrão (Vxx)
++        chan[c.chan].rgSaw64=(c.chan==2 && parent->getIns(chan[c.chan].ins,DIV_INS_VRC6)->type==DIV_INS_VRC6_SAW);
++        chan[c.chan].rg.macVol=chan[c.chan].rgSaw64?63:15;
++        if (c.value!=DIV_NOTE_NULL) chan[c.chan].duty=chan[c.chan].rg.defDuty;
++        chan[c.chan].outVol=rgOutVol(c.chan);
++        if (!isMuted[c.chan]) chWrite(c.chan,0,(c.chan==2)?chan[c.chan].outVol:((chan[c.chan].outVol&0xf)|((chan[c.chan].duty&7)<<4)));
++        break;
++      }
+       if (!isMuted[c.chan]) {
+         if (c.chan==2) { // sawtooth
+           chWrite(c.chan,0,chan[c.chan].vol);
+@@ -341,6 +377,17 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+       }
+       break;
+     case DIV_CMD_VOLUME:
++      if (parent->song.compatFlags.rgFamiTracker && !chan[c.chan].pcm) {
++        // RG: recalcula a saída com a macro (o FamiTracker refaz isso todo quadro)
++        chan[c.chan].vol=c.value;
++        chan[c.chan].rg.volNZ=(c.value2!=0);
++        int nv=rgOutVol(c.chan);
++        if (nv!=chan[c.chan].outVol || !chan[c.chan].active) {
++          chan[c.chan].outVol=nv;
++          if (chan[c.chan].active && !isMuted[c.chan]) chWrite(c.chan,0,(c.chan==2)?nv:((nv&0xf)|((chan[c.chan].duty&7)<<4)));
++        }
++        break;
++      }
+       if (chan[c.chan].vol!=c.value) {
+         chan[c.chan].vol=c.value;
+         if (!chan[c.chan].std.vol.has) {
+@@ -366,6 +413,8 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+       break;
+     case DIV_CMD_NOTE_PORTA: {
+       int destFreq=chan[c.chan].calcBaseFreq(c.value2+chan[c.chan].sampleNoteDelta);
++      // RG: no FamiTracker os slides 1xx/2xx só param no limite do registrador
++      destFreq=rgFTPortaDest(parent->song.compatFlags.rgFamiTracker,c.value2+chan[c.chan].sampleNoteDelta,destFreq,0x1000);
+       bool return2=false;
+       if (destFreq>chan[c.chan].baseFreq) {
+         chan[c.chan].baseFreq+=c.value;
+@@ -388,6 +437,13 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+       break;
+     }
+     case DIV_CMD_STD_NOISE_MODE:
++      // RG: Vxx é o duty padrão das notas seguintes; no dente de serra é o bit 5 do volume
++      chan[c.chan].rg.defDuty=c.value;
++      if (c.chan==2 && parent->song.compatFlags.rgFamiTracker) {
++        chan[c.chan].duty=c.value;
++        chan[c.chan].outVol=rgOutVol(2);
++        if (chan[c.chan].active && !isMuted[2]) chWrite(2,0,chan[2].outVol);
++      }
+       if ((c.chan!=2) && (!chan[c.chan].pcm)) { // pulse
+         chan[c.chan].duty=c.value;
+         if (!isMuted[c.chan]) { // pulse
+@@ -409,6 +465,7 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+       chan[c.chan].setPos=true;
+       break;
+     case DIV_CMD_LEGATO:
++      if (rgFTLegato(parent->song.compatFlags.rgFamiTracker,chan[c.chan],c,chan[c.chan].sampleNoteDelta)) break;
+       chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(c.value+chan[c.chan].sampleNoteDelta+((HACKY_LEGATO_MESS)?(chan[c.chan].std.arp.val):(0)));
+       chan[c.chan].freqChanged=true;
+       chan[c.chan].note=c.value;
+@@ -416,12 +473,19 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
+     case DIV_CMD_PRE_PORTA:
+       if (chan[c.chan].active && c.value2) {
+         if (parent->song.compatFlags.resetMacroOnPorta) chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_VRC6));
++        // RG: no FamiTracker a nota com portamento também volta ao volume do instrumento e ao duty padrão
++        if (parent->song.compatFlags.rgFamiTracker) {
++          chan[c.chan].rg.macVol=chan[c.chan].rgSaw64?63:15;
++          chan[c.chan].duty=chan[c.chan].rg.defDuty;
++          chan[c.chan].outVol=rgOutVol(c.chan);
++        }
+       }
+-      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
++      // RG: no FamiTracker o slide parte da altura atual (inclusive a do arpejo)
++      if (!chan[c.chan].inPorta && c.value && !parent->song.compatFlags.brokenPortaArp && chan[c.chan].std.arp.will && !NEW_ARP_STRAT && !parent->song.compatFlags.rgFamiTracker) chan[c.chan].baseFreq=chan[c.chan].calcBaseFreq(chan[c.chan].note);
+       chan[c.chan].inPorta=c.value;
+       break;
+     case DIV_CMD_GET_VOLMAX:
+-      if (c.chan==2) return 63; // sawtooth has 6 bit volume
++      if (c.chan==2 && !parent->song.compatFlags.rgFamiTracker) return 63; // sawtooth has 6 bit volume (RG: no modo FamiTracker o volume do canal é 0-15)
+       return 15; // pulse has 4 bit volume
+       break;
+     case DIV_CMD_MACRO_OFF:
+@@ -502,6 +566,10 @@ void DivPlatformVRC6::reset() {
+   // HELP
+   chan[2].vol=63;
+   chan[2].outVol=63;
++  if (parent->song.compatFlags.rgFamiTracker) {
++    chan[2].vol=15;
++    chan[2].outVol=30;
++  }
+   if (dumpWrites) {
+     softReset();
+   }
+@@ -526,6 +594,8 @@ bool DivPlatformVRC6::hasAcquireDirect() {
+ }
+ 
+ void DivPlatformVRC6::setFlags(const DivConfig& flags) {
++  DivPitchTable::rgParseDetune(flags.getString("rgDetune",""),rgDetune);
++  DivPitchTable::rgParseDetune(flags.getString("rgDetuneSaw",""),rgDetuneSaw);
+   int clockSel=flags.getInt("clockSel",0);
+   if (clockSel==2) { // Dendy
+     chipClock=COLOR_PAL*2.0/5.0;
+@@ -552,6 +622,13 @@ void DivPlatformVRC6::notifyInsDeletion(void* ins) {
+ void DivPlatformVRC6::notifyPitchTable(int sample) {
+   pitchTable.init(parent->song.tuning,chipClock,16,0x1000,true,parent->song.compatFlags.linearPitch);
+   sawPitchTable.init(parent->song.tuning,chipClock,14,0x1000,true,parent->song.compatFlags.linearPitch);
++  // RG: modo FamiTracker: tabelas de períodos do 0CC nota a nota (com o detune)
++  pitchTable.rgExact=false;
++  sawPitchTable.rgExact=false;
++  if (parent->song.compatFlags.rgFamiTracker) {
++    pitchTable.initFT(parent->song.tuning,chipClock,16,0xfff,rgDetune);
++    sawPitchTable.initFT(parent->song.tuning,chipClock,14,0xfff,rgDetuneSaw);
++  }
+   samplePitchTable.update<Channel>(chan,3,parent->song.tuning,1,1,0xffff,false,parent->song.compatFlags.linearPitch,sample);
+ }
+ 
+diff --git a/src/engine/platform/vrc6.h b/src/engine/platform/vrc6.h
+index 415bf9c..d259c1f 100644
+--- a/src/engine/platform/vrc6.h
++++ b/src/engine/platform/vrc6.h
+@@ -22,6 +22,7 @@
+ 
+ #include "../../fixedQueue.h"
+ #include "../dispatch.h"
++#include "rgFT.h"
+ #include "vgsound_emu/src/vrcvi/vrcvi.hpp"
+ 
+ 
+@@ -32,8 +33,12 @@ class DivPlatformVRC6: public DivDispatch, public vrcvi_intf {
+     int dacSample;
+     unsigned char duty;
+     bool pcm, setPos;
++    // RG: regras do FamiTracker; o dente de serra com sequência de volume de 64 passos (instrumento VRC6 saw)
++    DivRGFTChan rg;
++    bool rgSaw64;
+     Channel(bool linear=true):
+       SharedChannel(15,linear),
++      rgSaw64(false),
+       dacPeriod(0),
+       dacRate(0),
+       dacOut(0),
+@@ -53,7 +58,11 @@ class DivPlatformVRC6: public DivDispatch, public vrcvi_intf {
+     QueuedWrite(unsigned short a, unsigned char v): addr(a), val(v) {}
+   };
+   FixedQueue<QueuedWrite,64> writes;
++  // RG: valor do registrador de volume no modo FamiTracker (pulso: volume; dente de serra: 0CC)
++  int rgOutVol(int i);
+   DivPitchTable pitchTable, sawPitchTable;
++  // RG: tabelas de detune do 0CC (pulsos: NTSC; dente de serra: Saw)
++  int rgDetune[96], rgDetuneSaw[96];
+   DivPitchTableManager samplePitchTable;
+   vrcvi_core vrc6;
+   int prevSample;
+diff --git a/src/engine/sysDef.cpp b/src/engine/sysDef.cpp
+index aa03a0f..da32313 100644
+--- a/src/engine/sysDef.cpp
++++ b/src/engine/sysDef.cpp
+@@ -1294,6 +1294,8 @@ void DivEngine::registerSystems() {
+     }),
+     {
+       {0x12, {DIV_CMD_STD_NOISE_MODE, _("12xx: Set duty cycle/noise mode (pulse: 0 to 3; noise: 0 or 1)")}},
++      {0x15, {DIV_CMD_NES_ENV_MODE, _("15xx: Set envelope mode (0: envelope, 1: length, 2: looping, 3: constant)")}},
++      {0x16, {DIV_CMD_NES_LENGTH, _("16xx: Set length counter (refer to manual for a list of values)")}},
+     }
+   );
+ 
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index 69cf0cb..e4fb74e 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -57,6 +57,19 @@ RGF_EXPORT int rgf_init(int rate) {
+   e->setView(DIV_STATUS_NOTHING);
+   e->preInit(true);
+   if (!e->init()) return 0;
++  // RG: teste de núcleos de emulação (RGF_CONF=chave=valor,chave=valor), só no binário nativo
++#ifndef __EMSCRIPTEN__
++  if (getenv("RGF_CONF")) {
++    String c=getenv("RGF_CONF");
++    size_t p=0;
++    while (p<c.size()) {
++      size_t q=c.find(',',p); if (q==String::npos) q=c.size();
++      String kv=c.substr(p,q-p); size_t eq=kv.find('=');
++      if (eq!=String::npos) e->setConf(kv.substr(0,eq),atoi(kv.substr(eq+1).c_str()));
++      p=q+1;
++    }
++  }
++#endif
+   return 1;
+ }
+ 
+@@ -169,9 +182,45 @@ int main(int argc, char** argv) {
+     int solo=atoi(getenv("RGF_SOLO"));
+     for (int i=0; i<rgf_channels(); i++) rgf_mute(i,i!=solo);
+   }
++  // RGF_SYSSOLO=n: toca só os canais do sistema (chip) n da música
++  if (getenv("RGF_SYSSOLO")) {
++    int solo=atoi(getenv("RGF_SYSSOLO"));
++    int sub=getenv("RGF_SYSCH")?atoi(getenv("RGF_SYSCH")):-1;
++    for (int i=0; i<rgf_channels(); i++) rgf_mute(i,e->song.dispatchOfChan[i]!=solo || (sub>=0 && e->song.dispatchChanOfChan[i]!=sub));
++  }
+   if (argc>4) fprintf(stderr,"seek -> %.3f s\n",rgf_seek(atof(argv[4])*1000.0)/1000.0);
+   FILE* o=fopen(argv[2],"wb");
+   int total=atoi(argv[3])*44100;
++  // RGF_REGLOG=arquivo: registra as escritas de registrador de todos os chips ("tempo sistema endereço valor")
++  FILE* rl=NULL;
++  if (getenv("RGF_REGLOG")) {
++    rl=fopen(getenv("RGF_REGLOG"),"w");
++    for (int i=0; i<e->song.systemLen; i++) if (e->getDispatch(i)) e->getDispatch(i)->toggleRegisterDump(true);
++  }
++  if (rl) {
++    float l2[128], r2[128];
++    int ck=getenv("RGF_CHUNK")?CLAMP(atoi(getenv("RGF_CHUNK")),1,128):128;
++    for (int done=0; done<total; done+=ck) {
++      rgf_render(l2,r2,ck);
++      for (int i=0; i<e->song.systemLen; i++) {
++        if (!e->getDispatch(i)) continue;
++        std::vector<DivRegWrite>& w=e->getDispatch(i)->getRegisterWrites();
++        int mask=0xff;
++        for (DivRegWrite& j: w) {
++          if ((j.addr&0xffff0000)==0xfffe0000) { mask=j.addr&0xff; continue; }
++          if (j.addr<0xffff0000) {
++            if (mask!=0xff) fprintf(rl,"%.6f %d %x %d %d\n",done/44100.0,i,j.addr,j.val,mask);
++            else fprintf(rl,"%.6f %d %x %d\n",done/44100.0,i,j.addr,j.val);
++          }
++          mask=0xff;
++        }
++        w.clear();
++      }
++    }
++    fclose(rl);
++    fclose(o);
++    _exit(0);
++  }
+   float l[1024], r[1024];
+   short s[2048];
+   for (int done=0; done<total; done+=1024) {
+-- 
+2.43.0
+

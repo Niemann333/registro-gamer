@@ -16,6 +16,10 @@ while p<len(d):
     if a<0x20: out.append('%.6f 1 %x %d'%(t/44100,0x4000+a,v))
     elif a==0x3f: out.append('%.6f 1 %x %d'%(t/44100,0x4023,v))
     else: out.append('%.6f 2 %x %d'%(t/44100,0x4040+a-0x20 if a<0x60 else 0x4080+a-0x60,v))
+  elif c==0xa0:
+    out.append('%.6f 3 %x %d'%(t/44100,d[p+1]&0x7f,d[p+2]));p+=3
+  elif c==0x51:
+    out.append('%.6f 4 %x %d'%(t/44100,d[p+1],d[p+2]));p+=3
   elif c==0x67:
     sz=struct.unpack('<I',d[p+3:p+7])[0];p+=7+sz
   elif c in (0x90,0x91,0x95): p+=5
@@ -23,7 +27,7 @@ while p<len(d):
   elif c==0x93: p+=11
   elif c==0x94: p+=2
   elif 0x30<=c<=0x3f or c==0x4f or c==0x50: p+=2
-  elif 0x40<=c<=0x4e or 0x51<=c<=0x5f or 0xa0<=c<=0xbf: p+=3
+  elif 0x40<=c<=0x4e or 0x52<=c<=0x5f or 0xa1<=c<=0xbf: p+=3
   elif 0xc0<=c<=0xdf: p+=4
   elif 0xe0<=c<=0xff: p+=5
   elif 0x80<=c<=0x8f: t+=c&15;p+=1
