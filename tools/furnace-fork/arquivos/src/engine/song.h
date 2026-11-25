@@ -131,7 +131,7 @@ struct DivSubSong {
   /**
    * calculate timestamps (loop position, song length and more).
    */
-  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false);
+  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false, bool rgFTTempo0=false);
 
   /**
    * read sub-song data.
@@ -186,9 +186,10 @@ struct DivEffectStorage {
 
 /**
  * RG: duração (em ticks reais) da próxima linha no modo FamiTracker, com o acumulador de tempo do FamiTracker/0CC.
- * accum: estado do acumulador (começa em 0); tempoN/tempoD: tempo virtual do Furnace (tempo FT = N*2.5*hz/D, 0 se N==D).
+ * accum: estado do acumulador (começa em 0); tempoN/tempoD: tempo virtual do Furnace (tempo FT = N*2.5*hz/D);
+ * noTempo: a música do FamiTracker tem tempo 0 (linhas duram o speed).
  */
-int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed);
+int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool noTempo);
 
 struct DivCompatFlags {
   bool limitSlides;
@@ -267,6 +268,8 @@ struct DivCompatFlags {
   bool rgFamiTracker;
   // RG: vibrato no estilo antigo do FamiTracker (só para cima)
   bool rgFTVibUp;
+  // RG: FamiTracker com tempo 0 (as linhas duram só o speed)
+  bool rgFTTempo0;
 
   void setDefaults();
   bool areDefaults();

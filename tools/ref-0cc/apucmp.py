@@ -43,7 +43,9 @@ def first(F):
 oa,ob=first(A),first(B)
 best=(1e9,0)
 for d in range(-min(ob,3),4):
-  m=sum(view(A[oa+i])!=view(B[ob+d+i]) for i in range(0,300) if oa+i<len(A) and 0<=ob+d+i<len(B))
+  def nv(x):
+    v=view(x);v['DMC']=v['DMC'][:2]+v['DMC'][3:];return v
+  m=sum(nv(A[oa+i])!=nv(B[ob+d+i]) for i in range(0,300) if oa+i<len(A) and 0<=ob+d+i<len(B))
   best=min(best,(m,d))
 ob+=best[1]
 if len(sys.argv)>4:

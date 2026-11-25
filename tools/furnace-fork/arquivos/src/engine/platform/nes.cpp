@@ -354,7 +354,11 @@ void DivPlatformNES::tick(bool sysTick) {
       }
     }
     if (chan[i].std.pitch.had) {
-      if (chan[i].std.pitch.mode) {
+      // RG: no FamiTracker a sequência de pitch relativa mexe no próprio período (portamento, arpejo e nota nova absorvem)
+      if (parent->song.compatFlags.rgFamiTracker && chan[i].std.pitch.mode && i<4) {
+        chan[i].baseFreq-=chan[i].std.pitch.val;
+        if (i<3) CLAMP_VAR(chan[i].baseFreq,0,0x800);
+      } else if (chan[i].std.pitch.mode) {
         chan[i].pitch2+=chan[i].std.pitch.val;
         CLAMP_VAR(chan[i].pitch2,-32768,32767);
       } else {

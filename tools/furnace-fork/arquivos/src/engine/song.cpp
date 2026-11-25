@@ -52,11 +52,11 @@ DivSongTimestamps::~DivSongTimestamps() {
   }
 }
 
-int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed) {
+int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool noTempo) {
   if (speed<1) speed=1;
   int rate=(int)round(hz);
   if (rate<1) rate=1;
-  int tempo=(tempoN==tempoD)?0:(int)round((double)tempoN*2.5*hz/(double)MAX(1,tempoD));
+  int tempo=noTempo?0:MAX(1,(int)round((double)tempoN*2.5*hz/(double)MAX(1,tempoD)));
   int inc, dec, rem;
   if (tempo>0) {
     inc=60*rate;
@@ -79,7 +79,7 @@ int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed) {
   return len;
 }
 
-void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT) {
+void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT, bool rgFTTempo0) {
   // reduced version of the playback routine for calculation.
   std::chrono::high_resolution_clock::time_point timeStart=std::chrono::high_resolution_clock::now();
 
@@ -162,7 +162,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
       nextSpeed=curSpeeds.val[curSpeed];
     }
     // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
-    if (rgFT) ticks=rgFTRowLen(rgFTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks);
+    if (rgFT) ticks=rgFTRowLen(rgFTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks,rgFTTempo0);
   };
 
   // get the tick counters rolling
@@ -884,7 +884,7 @@ void DivSong::findSubSongs() {
     // find possible subsongs
     logD("finding subsongs...");
     while (++curStart<i->ordersLen) {
-      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker);
+      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker,compatFlags.rgFTTempo0);
       if (!i->ts.isLoopable) break;
       
       // make sure we don't pick the same range twice
@@ -1217,6 +1217,7 @@ void DivCompatFlags::setDefaults() {
   arpSpeedGlobal=false;
   rgFamiTracker=false;
   rgFTVibUp=false;
+  rgFTTempo0=false;
 }
 
 bool DivCompatFlags::areDefaults() {
@@ -1306,6 +1307,7 @@ bool DivCompatFlags::readData(SafeReader& reader) {
   CHECK_AND_LOAD_BOOL(arpSpeedGlobal);
   CHECK_AND_LOAD_BOOL(rgFamiTracker);
   CHECK_AND_LOAD_BOOL(rgFTVibUp);
+  CHECK_AND_LOAD_BOOL(rgFTTempo0);
 
   return true;
 }
@@ -1384,6 +1386,7 @@ void DivCompatFlags::putData(SafeWriter* w) {
   CHECK_AND_STORE_BOOL(arpSpeedGlobal);
   CHECK_AND_STORE_BOOL(rgFamiTracker);
   CHECK_AND_STORE_BOOL(rgFTVibUp);
+  CHECK_AND_STORE_BOOL(rgFTTempo0);
 
   String data=c.toString();
   w->write("CFLG",4);

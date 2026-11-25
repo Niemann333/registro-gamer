@@ -1321,6 +1321,13 @@ void DivEngine::processRow(int i, bool afterDelay) {
       case 0x0a: // volume slide
         // the speed multipler is 64, which means 4 ticks between volume changes with a value of 1
         // TODO: non-0x-or-x0 value should be treated as 00
+        // RG: modo FamiTracker: Axy sobe x/8 e desce y/8 de volume por quadro (32/256 por unidade)
+        if (song.compatFlags.rgFamiTracker) {
+          chan[i].volSpeed=((effectVal>>4)-(effectVal&15))*32;
+          chan[i].volSpeedTarget=-1;
+          dispatchCmd(DivCommand(DIV_CMD_HINT_VOL_SLIDE,i,chan[i].volSpeed));
+          break;
+        }
         if (effectVal!=0) {
           if ((effectVal&15)!=0) {
             chan[i].volSpeed=-(effectVal&15)*64;
@@ -2046,7 +2053,7 @@ void DivEngine::nextRow() {
     nextSpeed=speeds.val[curSpeed];
   }
   // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
-  if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks);
+  if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks,song.compatFlags.rgFTTempo0);
 
   /*
   if (skipping) {

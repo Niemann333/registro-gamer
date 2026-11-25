@@ -1712,6 +1712,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
 
             if (tempo == 0) {
               s->virtualTempoN = s->virtualTempoD;
+              if (i == 0) ds.compatFlags.rgFTTempo0 = true; // RG: tempo 0 no FamiTracker = linhas duram o speed
             } else {
               s->virtualTempoN = tempo;
             }
@@ -2025,24 +2026,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
                       pat->newData[row][DIV_PAT_FX(j)] = 0x91;
                       pat->newData[row][DIV_PAT_FXVAL(j)] = MIN((pat->newData[row][DIV_PAT_FXVAL(j)] & 0x3f) * 2, 255);
                     }
-                    // RG: Axy do FamiTracker desce y/8 e sobe x/8 de volume por quadro;
-                    // o 0Axy do Furnace anda y/4 (64/256) e o F3xx/F4xx anda xx/256 por tick
-                    if (pat->newData[row][DIV_PAT_FX(j)] == 0x0a && pat->newData[row][DIV_PAT_FXVAL(j)] > 0) {
-                      int rgV = pat->newData[row][DIV_PAT_FXVAL(j)];
-                      int rgNet = (rgV >> 4) - (rgV & 15);
-                      int rgA = rgNet < 0 ? -rgNet : rgNet;
-                      if (rgNet == 0) {
-                        pat->newData[row][DIV_PAT_FXVAL(j)] = 0;
-                      } else if ((rgA & 1) == 0) {
-                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? ((rgA >> 1) << 4) : (rgA >> 1);
-                      } else if (rgA * 32 <= 255) {
-                        pat->newData[row][DIV_PAT_FX(j)] = rgNet > 0 ? 0xf3 : 0xf4;
-                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgA * 32;
-                      } else {
-                        int rgH = MIN((rgA + 1) >> 1, 15);
-                        pat->newData[row][DIV_PAT_FXVAL(j)] = rgNet > 0 ? (rgH << 4) : rgH;
-                      }
-                    }
+                    // RG: Axy do FamiTracker vai direto para o 0Axy (no modo FamiTracker ele anda em oitavos, como no original)
                     for (int v = 0; v < 8; v++) {
                       if (map_channels[ch] == n163_chans[v]) {
                         if (pat->newData[row][DIV_PAT_FX(j)] == 0x12) {

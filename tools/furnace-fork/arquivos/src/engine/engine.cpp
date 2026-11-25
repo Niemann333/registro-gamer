@@ -205,7 +205,7 @@ const char* DivEngine::getEffectDesc(unsigned char effect, int chan, bool notNul
 
 void DivEngine::calcSongTimestamps() {
   if (curSubSong!=NULL) {
-    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker);
+    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0);
   }
 }
 
@@ -2215,6 +2215,8 @@ void DivEngine::reset() {
     chan[i].volume=chan[i].volMax;
     if (!song.compatFlags.linearPitch) chan[i].vibratoFine=4;
     chan[i].arpSpeed=MAX(1,curSubSong->arpLen);
+    // RG: no vibrato antigo do FamiTracker a fase começa em 48 (vibrato parado = 0)
+    if (song.compatFlags.rgFamiTracker && song.compatFlags.rgFTVibUp) chan[i].vibratoPos=48;
   }
   extValue=0;
   extValuePresent=0;

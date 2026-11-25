@@ -128,6 +128,11 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   antes "Time To Go Home" tinha >50% dos quadros diferentes; agora 0. Dos 31 módulos do acervo, 2A03 idêntico
   em ~22, quase idêntico no resto (G00 do driver; Hellpath.dnm; N163 cover; 2 VRC6 com diferenças de altura).
   Regras implementadas: ver a mensagem do commit 0044.
+- 25/11: Axy exato (0Axy em oitavos no modo FamiTracker), sequência de pitch relativa no próprio período,
+  vibrato antigo na fase 48, tempo 0 ≠ tempo 150 (flag rgFTTempo0). Agora 26 dos 31 módulos com o 2A03 idêntico;
+  restam: penguins 3 quadros, Strut 27, gastly 3 (G00 do driver), Captain Houkin 304 (ruído não reescrito em
+  algumas notas — investigar prevFreq do canal de ruído), Hellpath.dnm (o 0CC não é referência certa para .dnm:
+  precisa do Dn-FamiTracker), laser.ftm (o 0CC não abre).
 - Próximo: mesmas regras nos chips de expansão (VRC6, N163, FDS, MMC5, VRC7, S5B) — hoje só o 2A03 tem o modo
   FamiTracker; comparar também os registradores das expansões (apucmp.py só lê o 2A03); Hellpath (Dn-FT).
 
