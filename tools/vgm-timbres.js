@@ -2600,14 +2600,14 @@ var RGVGM = (function () {
           p += 11; continue;
         }
         if (c === 0x95) {
-          var sid = b[p + 1], bid = b[p + 2] | (b[p + 3] << 8);
-          if (streamChip[sid] === 2) {
+          var stid = b[p + 1], bid = b[p + 2] | (b[p + 3] << 8);
+          if (streamChip[stid] === 2) {
             dacHit('b' + bid);
             if (DS && PCM.blocks[bid]) {
               dsFlushStream(t); DS.seeks.push(t);
-              DS.st = { t0: t, f: PCM.streamFreq[sid] || 8000, off: PCM.blocks[bid].start, len: PCM.blocks[bid].len, i: 0 };
+              DS.st = { t0: t, f: PCM.streamFreq[stid] || 8000, off: PCM.blocks[bid].start, len: PCM.blocks[bid].len, i: 0 };
             }
-            if (PCM && !PCM.ids['b' + bid]) PCM.ids['b' + bid] = { block: bid, rates: [PCM.streamFreq[sid] || 0] };
+            if (PCM && !PCM.ids['b' + bid]) PCM.ids['b' + bid] = { block: bid, rates: [PCM.streamFreq[stid] || 0] };
           }
           p += 5; continue;
         }

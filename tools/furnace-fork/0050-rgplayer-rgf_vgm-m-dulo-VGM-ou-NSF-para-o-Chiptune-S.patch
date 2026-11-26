@@ -1,0 +1,95 @@
+From d99160966e79fcd435e7588d245f4eda948e12c3 Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Thu, 26 Nov 2026 15:09:15 -0300
+Subject: [PATCH 50/50] =?UTF-8?q?rgplayer:=20rgf=5Fvgm=20(m=C3=B3dulo=20?=
+ =?UTF-8?q?=E2=86=92=20VGM=20ou=20NSF)=20para=20o=20Chiptune=20Studio?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/rgplayer.cpp | 61 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 61 insertions(+)
+
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index e4fb74e..7ee4f04 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -153,6 +153,59 @@ RGF_EXPORT void rgf_mute(int c, int mute) {
+   if (e!=NULL && c>=0 && c<e->getTotalChannelCount()) e->muteChannel(c,mute!=0);
+ }
+ 
++// RG: converte a música carregada (subfaixa atual) em VGM, para o Chiptune Studio abrir módulos.
++// Devolve o tamanho; o ponteiro sai por rgf_vgm_data(). Depois disso o tocador precisa de rgf_restart().
++static unsigned char* vgmBuf=NULL;
++static int vgmLen=0;
++static int vgmKind=0; // 0 = VGM, 1 = NSF
++RGF_EXPORT int rgf_vgm() {
++  if (e==NULL) return 0;
++  if (vgmBuf) { delete[] vgmBuf; vgmBuf=NULL; vgmLen=0; }
++  vgmKind=0;
++  // VRC6, N163 e MMC5 não existem no formato VGM: a música vira NSF (o Studio já abre NSF com as expansões)
++  bool nesExp=false;
++  for (int i=0; i<e->song.systemLen; i++) {
++    DivSystem s=e->song.system[i];
++    if (s==DIV_SYSTEM_VRC6 || s==DIV_SYSTEM_N163 || s==DIV_SYSTEM_MMC5) nesExp=true;
++  }
++  if (nesExp) {
++    DivROMExport* x=e->buildROM(DIV_ROM_NSF);
++    if (x!=NULL) {
++      if (x->go(e)) {
++        x->wait();
++        if (!x->hasFailed() && !x->getResult().empty()) {
++          SafeWriter* nw=x->getResult()[0].data;
++          vgmLen=(int)nw->size();
++          vgmBuf=new unsigned char[vgmLen];
++          memcpy(vgmBuf,nw->getFinalBuf(),vgmLen);
++          vgmKind=1;
++        }
++      }
++      delete x;
++      if (vgmKind==1) return vgmLen;
++    }
++  }
++  SafeWriter* w=e->saveVGM(NULL,true,0x171,false,false);
++  if (w==NULL) return 0;
++  vgmLen=(int)w->size();
++  vgmBuf=new unsigned char[vgmLen];
++  memcpy(vgmBuf,w->getFinalBuf(),vgmLen);
++  w->finish();
++  delete w;
++  return vgmLen;
++}
++RGF_EXPORT int rgf_vgm_kind() {
++  return vgmKind;
++}
++RGF_EXPORT unsigned char* rgf_vgm_data() {
++  return vgmBuf;
++}
++// avisos da última conversão (chips que o VGM não comporta etc.)
++RGF_EXPORT const char* rgf_warnings() {
++  strBuf=(e==NULL)?String(""):e->getWarnings();
++  return strBuf.c_str();
++}
++
+ #ifndef __EMSCRIPTEN__
+ // native test: rgplayer file.ftm out.raw seconds
+ #include <stdio.h>
+@@ -174,6 +227,14 @@ int main(int argc, char** argv) {
+     return 2;
+   }
+   double t[3];
++  if (getenv("RGF_VGM")) {
++    int n=rgf_vgm();
++    FILE* vf=fopen(getenv("RGF_VGM"),"wb");
++    if (vf) { fwrite(rgf_vgm_data(),1,n,vf); fclose(vf); }
++    fprintf(stderr,"vgm %d bytes (tipo %d); avisos: %s\n",n,rgf_vgm_kind(),rgf_warnings());
++    fflush(stderr);
++    _exit(0);
++  }
+   rgf_times(t);
+   fprintf(stderr,"tuning %s\n",rgf_info(5));
+   fprintf(stderr,"%s / %s / %s: %.1fs, loop %.1fs (%d), %d channels, %d subsongs\n",rgf_info(0),rgf_info(1),rgf_info(3),t[0]/1000,t[1]/1000,(int)t[2],rgf_channels(),rgf_subsongs());
+-- 
+2.43.0
+

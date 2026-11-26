@@ -730,8 +730,8 @@
   // Toca tudo o que o Furnace abre; cada chip é emulado como no Tracker do blog.
   var furPromise = null;
   function loadFur() {
-    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=7').then(function () {
-      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=6'; } });
+    if (!furPromise) furPromise = loadScript(BASE + 'rg-furnace.js?v=8').then(function () {
+      return RGFUR({ print: function () {}, printErr: function () {}, locateFile: function (f) { return BASE + (f === 'furnace.wasm' ? 'rg-furnace.wasm' : f) + '?v=8'; } });
     }).then(function (M) {
       if (!M._rgf_init(SR)) throw new Error('Furnace: não iniciou');
       return M;

@@ -182,6 +182,16 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
 - Falta: efeitos novos do Dn (Kxx harmônico, =xx reinício de fase, Nxy volume-alvo) — nenhum módulo do acervo usa;
   Mxy (volume atrasado, 3 vezes no DJ Maximum) ainda sem equivalente; caixa no diálogo de compatibilidade.
 
+## Módulos no Chiptune Studio (26/11) — PRONTO
+- O Studio agora abre .fur/.dmf/.ftm/.0cc/.dnm/.eft/.tfm/.tfe/.fc/.smod (acervo e arquivos locais). O rg-furnace.wasm
+  ganhou `rgf_vgm()` / `rgf_vgm_data()` / `rgf_vgm_kind()`: grava a música carregada em VGM; com VRC6, N163 ou MMC5
+  (que o VGM não tem) grava NSF pelo exportador do fork, e o Studio lê pelo caminho de NSF que já existia.
+  Roda num Worker (o rg-furnace.js também se chama RGFUR, o mesmo nome do conversor de .fur da página).
+- Lista do acervo do Studio: módulo com chiptune do mesmo nome na pasta fica escondido (mesma regra do player).
+- Conserto no leitor de VGM: o comando 0x95 (início rápido de stream do DAC) usava `var sid` e apagava o SID
+  (erro "reading '24'" em VGMs com stream do DAC, ex.: Obvious Hut).
+- Testado: as 71 músicas de módulo do acervo convertem (só o Kaminari, Snoozetracker, o Furnace não abre).
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com
