@@ -1,7 +1,7 @@
 From 47a76fea72ff9b57fc02483415b8e2ac9759e10f Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Tue, 24 Nov 2026 04:13:59 -0300
-Subject: [PATCH 41/50] Tocador sem interface (RG_PLAYER) para o Chiptune
+Subject: [PATCH 41/51] Tocador sem interface (RG_PLAYER) para o Chiptune
  Player: toca .fur, .dmf, .ftm, .0cc, .dnm, .eft, .tfm/.tfe, .fc com o motor
  do Furnace
 

@@ -65,7 +65,7 @@ static void putStr(SafeWriter* w, const String& str) {
 }
 
 void DivExportNSF::run() {
-  int sysNES=-1, sysFDS=-1, sysVRC6=-1, sysVRC7=-1, sysN163=-1, sysMMC5=-1;
+  int sysNES=-1, sysFDS=-1, sysVRC6=-1, sysVRC7=-1, sysN163=-1, sysMMC5=-1, sys5B=-1;
   std::vector<int> sys;
   for (int i=0; i<e->song.systemLen; i++) {
     int* slot=NULL;
@@ -76,6 +76,8 @@ void DivExportNSF::run() {
       case DIV_SYSTEM_VRC7: slot=&sysVRC7; break;
       case DIV_SYSTEM_N163: slot=&sysN163; break;
       case DIV_SYSTEM_MMC5: slot=&sysMMC5; break;
+      // Sunsoft 5B (FME-7): o AY8910 do Furnace no modo 5B (chipType 2)
+      case DIV_SYSTEM_AY8910: if (e->song.systemFlags[i].getInt("chipType",0)==2) slot=&sys5B; break;
       default: break;
     }
     if (slot==NULL) {
@@ -137,6 +139,12 @@ void DivExportNSF::run() {
         } else if (w.addr>=0x4000 && w.addr<=0x4017 && w.addr!=0x4014 && w.addr!=0x4016) {
           f.push_back(w.addr-0x4000);
           f.push_back(w.val&0xff);
+        }
+      } else if (w.sys==sys5B) {
+        // registrador em $C000, valor em $E000
+        if (w.addr<16) {
+          f.push_back(0x80); f.push_back(0x00); f.push_back(0xc0); f.push_back(w.addr);
+          f.push_back(0x80); f.push_back(0x00); f.push_back(0xe0); f.push_back(w.val&0xff);
         }
       } else if (w.sys==sysVRC7) {
         if (w.addr<0x40) {
@@ -218,6 +226,7 @@ void DivExportNSF::run() {
   if (sysFDS>=0) exp|=4;
   if (sysMMC5>=0) exp|=8;
   if (sysN163>=0) exp|=16;
+  if (sys5B>=0) exp|=32;
 
   SafeWriter* w=new SafeWriter;
   w->init();

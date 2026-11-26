@@ -474,7 +474,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 <div class="toast" id="toast"></div>
 
 <div class="dropzone" id="dropzone" data-en="Drop the song to open it in Chiptune Studio">Solte a música para abrir no Chiptune Studio</div>
-<iframe id="pf" src="player.html?v=17" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<iframe id="pf" src="player.html?v=18" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">/*@@SYNTH@@*/</script>
 <script>
@@ -497,16 +497,18 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   function furWorker() {
     if (furW) return furW;
     var base = new URL('.', location.href).href;
-    var src = "var M=null,P=null;function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=8');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=8';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
+    var src = "var M=null,P=null;function TX(q){if(!q)return '';var e=q;while(M.HEAPU8[e])e++;var b=M.HEAPU8.slice(q,e);try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(x){return new TextDecoder('windows-1252').decode(b);}}function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=9');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=9';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
       "onmessage=function(ev){var d=ev.data;ld().then(function(){var u=d.u8,p=M._malloc(u.length);M.HEAPU8.set(u,p);var np=M._malloc(256);M.stringToUTF8(d.name,np,256);var ok=M._rgf_load(p,u.length,np);M._free(p);M._free(np);" +
-      "if(!ok)return postMessage({id:d.id,err:'load',msg:M.UTF8ToString(M._rgf_error())});var n=M._rgf_vgm();if(n<=0)return postMessage({id:d.id,err:'conv'});" +
-      "var out=M.HEAPU8.slice(M._rgf_vgm_data(),M._rgf_vgm_data()+n);postMessage({id:d.id,u8:out,nsf:M._rgf_vgm_kind()===1},[out.buffer]);}).catch(function(e){postMessage({id:d.id,err:'wasm',msg:String(e&&e.message||e)});});};";
+      "if(!ok)return postMessage({id:d.id,err:'load',msg:M.UTF8ToString(M._rgf_error())});" +
+      "var ns=M._rgf_subsongs(),names=[];for(var k=0;k<ns;k++)names.push(M._rgf_subsong_name?TX(M._rgf_subsong_name(k)):'');var sb=Math.max(0,Math.min(ns-1,d.sub||0));if(sb>0)M._rgf_subsong(sb);" +
+      "var n=M._rgf_vgm();if(n<=0)return postMessage({id:d.id,err:'conv'});" +
+      "var out=M.HEAPU8.slice(M._rgf_vgm_data(),M._rgf_vgm_data()+n);postMessage({id:d.id,u8:out,nsf:M._rgf_vgm_kind()===1,subs:names,sub:sb,title:TX(M._rgf_info(0)),author:TX(M._rgf_info(1))},[out.buffer]);}).catch(function(e){postMessage({id:d.id,err:'wasm',msg:String(e&&e.message||e)});});};";
     furW = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
     furW.onmessage = function (ev) { var d = ev.data, w = furWait[d.id]; if (!w) return; delete furWait[d.id]; d.err ? w.no(d) : w.ok(d); };
     furW.onerror = function (e) { Object.keys(furWait).forEach(function (k) { furWait[k].no({ err: 'wasm', msg: e.message || '' }); delete furWait[k]; }); furW = null; };
     return furW;
   }
-  function furToChips(u8, nm) {
+  function furToChips(u8, nm, sub) {
     return new Promise(function (ok, no) {
       var id = ++furSeq;
       furWait[id] = { ok: ok, no: function (d) {
@@ -514,7 +516,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
         else if (d.err === 'conv') no(new Error(T('não deu para converter o módulo','could not convert the module')));
         else no(new Error(T('não consegui carregar o Furnace','could not load Furnace') + (d.msg ? ' (' + d.msg + ')' : '')));
       } };
-      furWorker().postMessage({ id: id, u8: u8.slice(0), name: nm.slice(-200) });
+      furWorker().postMessage({ id: id, u8: u8.slice(0), name: nm.slice(-200), sub: sub || 0 });
     });
   }
   // lê a música; MIDI usa os sons do SoundFont do player (baixado só quando abre um MIDI)
@@ -611,15 +613,23 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   }
   function parseSong(path, u8) {
     var nm = String(path).split('/').pop().replace(/^local:\d+:/, '');
-    if (FUR_RE.test(nm)) return furToChips(u8, nm).then(function (cv) {
+    // subfaixa escolhida no menu "Faixa" (o player toca a mesma, pelo índice)
+    if (FUR_RE.test(nm)) return furToChips(u8, nm, cur.path === path && cur.trackPicked ? cur.trackSel || 0 : 0).then(function (cv) {
       var nm2 = nm.replace(/\.[^.]+$/, cv.nsf ? '.nsf' : '.vgm');
       var pr = cv.nsf ? ripParse(path, cv.u8, nm2) : Promise.resolve(RGVGM.parse(cv.u8, { events: true, pcm: true, name: nm2 }));
       return pr.then(function (res) {
         res.format = nm.split('.').pop().toUpperCase();
         // o exportador põe "Furnace" quando o módulo não tem nome: usa o nome do arquivo
         res.info = res.info || {};
+        // nomes lidos direto do módulo (o FamiTracker grava em Latin-1; o worker já converte)
+        if (cv.title) res.info.title = cv.title;
+        if (cv.author) res.info.author = cv.author;
         if (!res.info.title || /^furnace$/i.test(res.info.title)) res.info.title = nm.replace(/\.[^.]+$/, '');
         if (/^furnace$/i.test(res.info.game || '')) res.info.game = '';
+        // subfaixas do módulo
+        res.trackList = (cv.subs || []).map(function (nmS, k) { return { i: k, name: nmS || '', ms: 0 }; });
+        res.trackSel = cv.sub || 0; res.trackSub = cv.sub || 0;
+        if (res.trackList.length > 1 && res.trackList[res.trackSel].name) res.info.title = res.info.title + ' · ' + res.trackList[res.trackSel].name;
         return res;
       });
     });
@@ -918,19 +928,10 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 
   // ───────────────────── acervo e playlists ─────────────────────
   var index = null, stack = [], mode = 'ac', playlists = null, plOpen = null, allFiles = [];
-  // módulo de tracker e chiptune com o mesmo nome na mesma pasta (ex.: .ftm e .nsf): fica só o chiptune (como no player)
-  var DUP_MOD = { ftm: 1, '0cc': 1, dnm: 1, fur: 1, dmf: 1, ftp: 1, it: 1, xm: 1, s3m: 1, mod: 1, mptm: 1, tfe: 1, tfm: 1, eft: 1, fc: 1, ahx: 1, hvl: 1 };
-  var DUP_CHIP = { nsf: 1, nsfe: 1, vgm: 1, vgz: 1, spc: 1, gbs: 1, sid: 1, hes: 1, kss: 1, ay: 1, sap: 1, gym: 1, nsf2: 1, snsf: 1, minisnsf: 1, gsf: 1, minigsf: 1, psf: 1, minipsf: 1, '2sf': 1, mini2sf: 1, usf: 1, miniusf: 1 };
-  function dupHidden(kids) {
-    var chips = {}, hide = {};
-    kids.forEach(function (n) { var m = n.type === 'file' && /^(.*)\.([^.]+)$/.exec(n.name); if (m && DUP_CHIP[m[2].toLowerCase()]) chips[m[1].toLowerCase()] = 1; });
-    kids.forEach(function (n, i) { var m = n.type === 'file' && /^(.*)\.([^.]+)$/.exec(n.name); if (m && DUP_MOD[m[2].toLowerCase()] && chips[m[1].toLowerCase()]) hide[i] = 1; });
-    return hide;
-  }
+  // (o Studio mostra módulo e chiptune com o mesmo nome; só o Chiptune Player esconde o módulo)
   function prune(node) {
     if (node.type === 'file') return VGM_RE.test(node.name) ? node : null;
-    var hid = dupHidden(node.children || []);
-    var ch = (node.children || []).filter(function (c, i) { return !hid[i]; }).map(prune).filter(Boolean);
+    var ch = (node.children || []).map(prune).filter(Boolean);
     if (!ch.length) return null;
     var n = { name: node.name, type: 'dir', path: node.path, children: ch, count: 0 };
     ch.forEach(function (c) { n.count += c.type === 'file' ? 1 : c.count; });

@@ -187,7 +187,11 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   ganhou `rgf_vgm()` / `rgf_vgm_data()` / `rgf_vgm_kind()`: grava a música carregada em VGM; com VRC6, N163 ou MMC5
   (que o VGM não tem) grava NSF pelo exportador do fork, e o Studio lê pelo caminho de NSF que já existia.
   Roda num Worker (o rg-furnace.js também se chama RGFUR, o mesmo nome do conversor de .fur da página).
-- Lista do acervo do Studio: módulo com chiptune do mesmo nome na pasta fica escondido (mesma regra do player).
+- O Studio mostra os dois (módulo e chiptune com o mesmo nome) — pedido do usuário; só o Chiptune Player esconde o módulo.
+- Exportador NSF do fork agora leva o Sunsoft 5B (AY8910 com chipType 2 → $C000/$E000, bit 5 das expansões):
+  no Studio o DJ Maximum mostra os canais do 5B.
+- Subfaixas: menu "Faixa" do Studio para módulos (`rgf_subsong_name`); o worker troca a subfaixa antes de gravar e o
+  player toca a mesma. Nomes do FamiTracker (Latin-1) decodificados certo.
 - Conserto no leitor de VGM: o comando 0x95 (início rápido de stream do DAC) usava `var sid` e apagava o SID
   (erro "reading '24'" em VGMs com stream do DAC, ex.: Obvious Hut).
 - Testado: as 71 músicas de módulo do acervo convertem (só o Kaminari, Snoozetracker, o Furnace não abre).

@@ -99,6 +99,13 @@ RGF_EXPORT int rgf_subsong(int i) {
   return e->rgPlayStart(sampleRate)?1:0;
 }
 
+// nome da subfaixa i (sem trocar a música que está tocando)
+RGF_EXPORT const char* rgf_subsong_name(int i) {
+  if (e==NULL || i<0 || i>=(int)e->song.subsong.size()) return "";
+  strBuf=e->song.subsong[i]->name;
+  return strBuf.c_str();
+}
+
 RGF_EXPORT int rgf_restart() {
   return (e!=NULL && e->rgPlayStart(sampleRate))?1:0;
 }
