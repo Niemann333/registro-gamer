@@ -1,7 +1,7 @@
 From d45624dd3ad56864af8fa98fa5f128728c3afc92 Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Mon, 23 Nov 2026 14:44:22 -0300
-Subject: [PATCH 35/48] Exportar SNSF (SNES): ROM HiROM com programa 65816 que
+Subject: [PATCH 35/49] Exportar SNSF (SNES): ROM HiROM com programa 65816 que
  manda as samples pelo IPL e o registro pela porta do APU; driver SPC700 com
  fila e timer de 2 kHz (acumulador de 24 bits)
 

@@ -496,8 +496,17 @@
     // eventos por canal do Furnace
     var per = [], famOfEv = [];
     for (var c = 0; c < L.chans; c++) per.push([]);
+    // canal 3 expandido do YM2612 (e.sub = operador): o canal do Furnace aqui é de uma nota só, então fica com
+    // a voz que começou primeiro e ignora as outras enquanto ela soa
+    var extOwner = {};
     events.forEach(function (e) {
       var ch = chanOf(L, e); if (ch == null || ch >= L.chans) return;
+      if (e.sub != null) {
+        var ow = extOwner[e.c];
+        if (e.k === 'on') { if (ow != null && ow !== e.sub) return; extOwner[e.c] = e.sub; }
+        else if (ow !== e.sub) return;
+        else if (e.k === 'off') delete extOwner[e.c];
+      }
       per[ch].push({ f: Math.round(e.t / spt), e: e });
     });
     per.forEach(function (l) { l.sort(function (a, b) { return a.f - b.f; }); });

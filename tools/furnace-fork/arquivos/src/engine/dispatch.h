@@ -40,6 +40,7 @@
 
 // forward declarations
 class DivEngine;
+class RGDnAPU;
 class DivMacroInt;
 struct DivSample;
 
@@ -1292,7 +1293,14 @@ class DivDispatch {
     // skipRegisterWrites: set while the engine is "seeking" in the song. when set, you shouldn't write to registers.
     // dumpWrites: set when the engine wants to know what are we writing. used during register dump export (e.g. VGM).
     bool skipRegisterWrites, dumpWrites;
+    // RG: áudio do Dn-FamiTracker: quando ligado, as escritas também vão para o APU do Dn (chip RGDnChip)
+    RGDnAPU* rgDn=NULL;
+    int rgDnChip=-1;
   public:
+    /**
+     * RG: liga/desliga o envio das escritas de registrador para o áudio do Dn-FamiTracker.
+     */
+    void rgDnAttach(RGDnAPU* d, int chip) { rgDn=d; rgDnChip=chip; }
     /**
      * the rate the samples are provided.
      * the engine shall resample to the output rate.

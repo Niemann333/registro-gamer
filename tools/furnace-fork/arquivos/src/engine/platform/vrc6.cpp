@@ -17,12 +17,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "vrc6.h"
 #include "../engine.h"
 #include <cstddef>
 #include <math.h>
 
-#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} }
+#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} if (rgDn) rgDn->write(rgDnChip,(a),(v)); }
 #define chWrite(c,a,v) rWrite(0x9000+(c<<12)+(a&3),v)
 
 const char* regCheatSheetVRC6[]={
@@ -504,6 +505,8 @@ int DivPlatformVRC6::dispatch(DivCommand c) {
 }
 
 void DivPlatformVRC6::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   if (isMuted[ch]) {
     chWrite(ch,0,0);

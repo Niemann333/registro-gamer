@@ -1795,17 +1795,19 @@ var AY8930_DUTY = ['3,1%', '6,3%', '12,5%', '25%', '50%', '75%', '87,5%', '93,8%
     if (!res || !res.midi) return;
     var open = {}, SR = 44100;
     function close(c, t) { var o = open[c]; if (o) { o.t1 = t / SR; if (o.t1 > o.t0) { if (o.p) o.fx = bendKind(o.p); (o.drum ? RL.drums : RL.notes).push(o); } delete open[c]; } }
+    // canal 3 expandido do YM2612: várias notas ao mesmo tempo no mesmo canal (e.sub = operador)
+    function okey(e) { return e.sub != null ? e.c + '/' + e.sub : e.c; }
     res.midi.events.forEach(function (e) {
       if (e.k === 'on') {
-        close(e.c, e.t);
+        close(okey(e), e.t);
         var tb = e.tb && res.timbres.indexOf(e.tb) >= 0 ? e.tb : null, drum = !e.n || (tb && tb.type === 'psg' && tb.wave === 'noise');
         var key = drum ? 0 : Math.round(e.n - (tb && tb.tune || 0));
-        open[e.c] = { c: e.c, t0: e.t / SR, t1: 0, n: key, tb: tb, drum: drum, v: e.v, f: drum ? 0 : e.n - (tb && tb.tune || 0) - key };
+        open[okey(e)] = { c: e.c, t0: e.t / SR, t1: 0, n: key, tb: tb, drum: drum, v: e.v, f: drum ? 0 : e.n - (tb && tb.tune || 0) - key };
       } else if (e.k === 'pitch') {
         // efeitos durante a nota (vibrato, slide, bend, arpejo): a altura muda sem tocar a nota de novo
-        var o = open[e.c];
+        var o = open[okey(e)];
         if (o && !o.drum) { (o.p || (o.p = [])).push([e.t / SR - o.t0, e.n - (o.tb && o.tb.tune || 0) - o.n]); }
-      } else if (e.k === 'off') close(e.c, e.t);
+      } else if (e.k === 'off') close(okey(e), e.t);
       else if (e.k === 'hit') RL.drums.push({ c: e.c, t0: e.t / SR, t1: e.t / SR + 0.08, n: 0, tb: null, drum: true });
     });
     var end = (res.totalSamples || res.seconds * SR) || 0;

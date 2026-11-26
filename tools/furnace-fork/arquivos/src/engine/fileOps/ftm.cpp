@@ -517,6 +517,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
 
     // Registro Gamer: 0CC-FamiTracker detune tables (per chip: NTSC, PAL, Saw, VRC7, FDS, N163)
     int rgDetune[6][96];
+    String rgDnOPLL; // RG: timbres próprios do VRC7 do Dn (hex, 19x8 bytes)
     int rgUnsupported[64];
     memset(rgUnsupported,0,sizeof(rgUnsupported));
     bool rgHasDetune[6]={false,false,false,false,false,false};
@@ -560,6 +561,7 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
     ds.compatFlags.linearPitch = 0;
     rgHiPitch.clear();
     ds.compatFlags.rgFamiTracker = true; // RG: efeitos com o comportamento do FamiTracker
+    if (!eft) ds.compatFlags.rgDnAudio = true; // RG: o som sai pelo áudio do Dn-FamiTracker (APU/mixer/emuladores do Dn)
     ds.compatFlags.noVolSlideReset = true;
     ds.compatFlags.resetMacroOnPorta = true; // RG: nota com portamento reinicia as sequências (FamiTracker)
     ds.compatFlags.continuousVibrato = true; // RG: no FamiTracker a fase do vibrato não recomeça a cada nota
@@ -2502,12 +2504,48 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
         delete[] Types;
       } else if (blockName == "JSON") {
         CHECK_BLOCK_VERSION(1);
-        logW("block JSON not supported...");
-        reader.seek(blockSize, SEEK_CUR);
+        // RG: Dn-FamiTracker: ajustes de nível por chip (centésimos de dB) e a mixagem "por hardware"
+        {
+          String js;
+          for (unsigned int i=0; i<blockSize; i++) js+=(char)reader.readC();
+          auto num=[&](const char* key, int& out) -> bool {
+            size_t k=js.find(String("\"")+key+"\"");
+            if (k==String::npos) return false;
+            k=js.find(':',k);
+            if (k==String::npos) return false;
+            k++;
+            while (k<js.size() && (js[k]==' ' || js[k]=='\t' || js[k]=='\n' || js[k]=='\r')) k++;
+            if (js.compare(k,4,"true")==0) { out=1; return true; }
+            if (js.compare(k,5,"false")==0) { out=0; return true; }
+            out=atoi(js.c_str()+k);
+            return true;
+          };
+          const char* offKeys[8]={"apu1-offset","apu2-offset","vrc6-offset","vrc7-offset","fds-offset","mmc5-offset","n163-offset","s5b-offset"};
+          for (int i=0; i<8; i++) {
+            int v=0;
+            if (num(offKeys[i],v)) ds.compatFlags.rgDnLevels[i]=(short)v;
+          }
+          int sv=0;
+          if (num("use-survey-mix",sv)) ds.compatFlags.rgDnSurvey=(sv!=0);
+          logI("Dn-FamiTracker JSON: survey mix %d",(int)ds.compatFlags.rgDnSurvey);
+        }
       } else if (blockName == "PARAMS_EMU") {
         CHECK_BLOCK_VERSION(1);
-        logW("block PARAMS_EMU not supported...");
-        reader.seek(blockSize, SEEK_CUR);
+        // RG: Dn-FamiTracker: timbres próprios do VRC7 (OPLL externo): 19 timbres de 8 bytes, cada um com um nome
+        {
+          size_t blockEnd=reader.tell()+blockSize;
+          int useExt=reader.readI();
+          if (useExt) {
+            String hex;
+            for (int i=0; i<19; i++) {
+              for (int j=0; j<8; j++) hex+=fmt::sprintf("%02x",(unsigned char)reader.readC());
+              // nome terminado em zero
+              while (reader.tell()<blockEnd && reader.readC()!=0);
+            }
+            rgDnOPLL=hex;
+          }
+          reader.seek(blockEnd,SEEK_SET);
+        }
       } else if (blockName == "DETUNETABLES") {
         CHECK_BLOCK_VERSION(1);
         // Registro Gamer: read them; they become the song tuning plus a transposition per chip (see the end)
@@ -3109,6 +3147,13 @@ bool DivEngine::loadFTM(unsigned char* file, size_t len, bool dnft, bool dnft_si
         if (chip==3) for (int c=0; c<6; c++) transpose(vrc7_chans[c]==0xff?-1:vrc7_chans[c],semis);
         if (chip==4) transpose(fds_chan==0xff?-1:fds_chan,semis);
         if (chip==5) for (int c=0; c<8; c++) transpose(n163_chans[c]==0xff?-1:n163_chans[c],semis);
+      }
+    }
+
+    // RG: timbres próprios do VRC7 do Dn (bloco PARAMS_EMU) vão para o sistema VRC7
+    if (!rgDnOPLL.empty()) {
+      for (int i=0; i<ds.systemLen; i++) {
+        if (ds.system[i]==DIV_SYSTEM_VRC7) ds.systemFlags[i].set("rgDnOPLL",rgDnOPLL);
       }
     }
 

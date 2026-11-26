@@ -27,6 +27,7 @@
 #define _USE_MATH_DEFINES
 #include "dispatch.h"
 #include "engine.h"
+#include "../../extern/dnft-apu/rgdn.h"
 #include "workPool.h"
 #include "../ta-log.h"
 #include <math.h>
@@ -3316,6 +3317,15 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
 
   // process audio (run the engine)
   bool mustPlay=playing && !halted;
+  // RG: buffer do áudio do Dn-FamiTracker
+  if (rgDn!=NULL) {
+    if (rgDnBufLen<size) {
+      delete[] rgDnBuf;
+      rgDnBuf=new short[size];
+      rgDnBufLen=size;
+    }
+    memset(rgDnBuf,0,size*sizeof(short));
+  }
   if (mustPlay) {
     // logic starts here
     // first reset the run position of all dispatches
@@ -3350,7 +3360,10 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
       // 2. check whether we gonna tick
       if (cycles<=0) {
         // we have to tick
-        if (nextTick()) {
+        bool rgTickEnd=nextTick();
+        // RG: áudio do Dn-FamiTracker: o quadro do Dn sai com as escritas deste tique
+        if (rgDn!=NULL) rgDn->tick();
+        if (rgTickEnd) {
           /*totalTicks=0;
           totalSeconds=0;*/
           // used by audio export to determine how many samples to write (otherwise it'll add silence at the end)
@@ -3436,6 +3449,8 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
             },&disCont[i]);
           }
           renderPool->wait();
+          // RG: áudio do Dn-FamiTracker
+          if (rgDn!=NULL) rgDn->render(rgDnBuf+(size-runLeftG),cycles);
           runLeftG-=cycles;
           cycles=0;
         } else {
@@ -3470,6 +3485,8 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
             },&disCont[i]);
           }
           // at this point runLeftG will be zero and we can break out of the loop
+          // RG: áudio do Dn-FamiTracker
+          if (rgDn!=NULL) rgDn->render(rgDnBuf+(size-runLeftG),runLeftG);
           runLeftG=0;
           renderPool->wait();
         }
@@ -3590,7 +3607,10 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
       if (destSubPort>=outChans) continue;
 
       // chip outputs
-      if (srcPortSet<song.systemLen && playing && !halted) {
+      // RG: os chips que tocam pelo áudio do Dn-FamiTracker não entram na mistura (o Dn entra uma vez, abaixo)
+      if (srcPortSet<song.systemLen && playing && !halted && rgDn!=NULL && rgDnSys[srcPortSet]) {
+        // nada
+      } else if (srcPortSet<song.systemLen && playing && !halted) {
         if (srcSubPort<disCont[srcPortSet].dispatch->getOutputCount()) {
           float vol=song.systemVol[srcPortSet]*disCont[srcPortSet].dispatch->getPostAmp()*song.masterVol*refPlayerVol;
 
@@ -3635,6 +3655,14 @@ void DivEngine::nextBuf(float** in, float** out, int inChans, int outChans, unsi
     }
 
     // nothing/invalid
+  }
+
+  // RG: áudio do Dn-FamiTracker (mono, nas duas primeiras saídas, no nível do WAV do Dn)
+  if (rgDn!=NULL && playing && !halted && out!=NULL) {
+    float vol=song.masterVol*refPlayerVol/32768.0f;
+    for (int c=0; c<MIN(outChans,2); c++) {
+      for (size_t j=0; j<size; j++) out[c][j]+=rgDnBuf[j]*vol;
+    }
   }
 
   // dump to oscillator buffer (a ring buffer)

@@ -17,6 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "ay.h"
 #include "../engine.h"
 #include "../../ta-log.h"
@@ -25,7 +26,7 @@
 #include <math.h>
 
 #define rWrite(a,v) if (!skipRegisterWrites) {pendingWrites[a]=v;}
-#define immWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(regRemap(a),v)); if (dumpWrites) {addWrite(regRemap(a),v);} }
+#define immWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(regRemap(a),v)); if (dumpWrites) {addWrite(regRemap(a),v);} if (rgDn) {rgDn->write(rgDnChip,0xc000,(a)&15); rgDn->write(rgDnChip,0xe000,(v));} }
 
 #define CHIP_DIVIDER (extMode?extDiv:((sunsoft||clockSel)?16:8))
 
@@ -1019,6 +1020,8 @@ int DivPlatformAY8910::dispatch(DivCommand c) {
 }
 
 void DivPlatformAY8910::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   if (isMuted[ch]) {
     rWrite(0x08+ch,0);

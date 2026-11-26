@@ -164,6 +164,24 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   * Falta: VRC7 com nível que muda por música (0,86–1,16: o 0CC usa um emu2413 antigo); atraso de modulação do
     FDS (o importador ignora); bias do FDS (Zxx); Hellpath.dnm (precisa do Dn-FamiTracker).
 
+## Dn-FamiTracker como referência no lugar do 0CC (25/11) — PRONTO (o áudio), efeitos novos pendentes
+- Pedido do usuário: trocar o 0CC pelo Dn-FamiTracker 0.5.3 (Gumball2415), com os emuladores mais novos dele.
+- **APU do próprio Dn dentro do Furnace** (`extern/dnft-apu/`, cópia de Source/APU + Blip_Buffer do Dn, GPL):
+  NSFPlay no 2A03, Mesen no FDS (passa-baixas 2 kHz) e no N163 (12 kHz, multiplexado), emu2413 1.5.2 com os timbres
+  Nuke no VRC7, Blip_Buffer melhorado, filtros 30 Hz / 12 kHz / 24 dB. Tudo num arquivo só (`rgdn_unity.cpp`,
+  namespace rgdn, C++17, sem PCH) + ponte `RGDnAPU` (rgdn.h).
+- Como funciona: flag `rgDnAudio` (ligada em todo .ftm/.0cc/.dnm importado). As plataformas NES/VRC6/VRC7/FDS/
+  MMC5/N163/5B continuam rodando (osciloscópio, exportações), mas repassam cada escrita de registrador para o APU do
+  Dn; o motor gera um quadro do Dn a cada tick (`rgDn->tick()` em playback.cpp) e soma a saída mono no lugar da
+  mixagem do patchbay. Mudo de canal = máscara do próprio APU (VRC7 por OPLL_setMask).
+- .dnm: bloco JSON (apu1…s5b-offset + use-survey-mix → `rgDnLevels`/`rgDnSurvey`, mixagem "de hardware" do Dn) e
+  PARAMS_EMU (timbres próprios do VRC7 → flag `rgDnOPLL` do sistema VRC7) agora são lidos.
+- Medido contra o APU do Dn alimentado pelos registradores do player (`tools/ref-dn/dnwav.cpp`, `dncmp.py`):
+  VRC6/VRC7/FDS/MMC5/N163/5B forma 0,95–1,000 e nível 0,99–1,01 em 11 músicas; registradores 2A03 sem regressão.
+  O nível do 2A03 varia (0,72–1,32) porque a referência não recebe a memória das amostras do DPCM.
+- Falta: efeitos novos do Dn (Kxx harmônico, =xx reinício de fase, Nxy volume-alvo) — nenhum módulo do acervo usa;
+  Mxy (volume atrasado, 3 vezes no DJ Maximum) ainda sem equivalente; caixa no diálogo de compatibilidade.
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com

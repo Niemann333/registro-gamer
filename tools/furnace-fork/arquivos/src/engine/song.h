@@ -270,6 +270,12 @@ struct DivCompatFlags {
   bool rgFTVibUp;
   // RG: FamiTracker com tempo 0 (as linhas duram só o speed)
   bool rgFTTempo0;
+  // RG: o som sai pelo áudio do Dn-FamiTracker (APU/mixer/emuladores do Dn) em vez dos chips do Furnace
+  bool rgDnAudio;
+  // RG: opções de áudio do Dn guardadas no módulo (.dnm): mixagem por hardware, timbres do VRC7, ajustes de nível
+  bool rgDnSurvey;
+  unsigned char rgDnVRC7Patch;
+  short rgDnLevels[8];
 
   void setDefaults();
   bool areDefaults();

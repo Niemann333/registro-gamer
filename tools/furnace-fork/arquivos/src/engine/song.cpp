@@ -1218,6 +1218,10 @@ void DivCompatFlags::setDefaults() {
   rgFamiTracker=false;
   rgFTVibUp=false;
   rgFTTempo0=false;
+  rgDnAudio=false;
+  rgDnSurvey=false;
+  rgDnVRC7Patch=0;
+  memset(rgDnLevels,0,sizeof(rgDnLevels));
 }
 
 bool DivCompatFlags::areDefaults() {
@@ -1308,6 +1312,17 @@ bool DivCompatFlags::readData(SafeReader& reader) {
   CHECK_AND_LOAD_BOOL(rgFamiTracker);
   CHECK_AND_LOAD_BOOL(rgFTVibUp);
   CHECK_AND_LOAD_BOOL(rgFTTempo0);
+  CHECK_AND_LOAD_BOOL(rgDnAudio);
+  CHECK_AND_LOAD_BOOL(rgDnSurvey);
+  CHECK_AND_LOAD_UNSIGNED_CHAR(rgDnVRC7Patch);
+  if (c.has("rgDnLevels")) {
+    String lv=c.getString("rgDnLevels","");
+    const char* q=lv.c_str();
+    for (int i=0; i<8 && *q; i++) {
+      rgDnLevels[i]=(short)strtol(q,(char**)&q,10);
+      if (*q==',') q++;
+    }
+  }
 
   return true;
 }
@@ -1387,6 +1402,14 @@ void DivCompatFlags::putData(SafeWriter* w) {
   CHECK_AND_STORE_BOOL(rgFamiTracker);
   CHECK_AND_STORE_BOOL(rgFTVibUp);
   CHECK_AND_STORE_BOOL(rgFTTempo0);
+  CHECK_AND_STORE_BOOL(rgDnAudio);
+  CHECK_AND_STORE_BOOL(rgDnSurvey);
+  CHECK_AND_STORE_UNSIGNED_CHAR(rgDnVRC7Patch);
+  if (memcmp(rgDnLevels,defaultFlags.rgDnLevels,sizeof(rgDnLevels))!=0) {
+    String lv;
+    for (int i=0; i<8; i++) lv+=fmt::sprintf(i?",%d":"%d",(int)rgDnLevels[i]);
+    c.set("rgDnLevels",lv);
+  }
 
   String data=c.toString();
   w->write("CFLG",4);

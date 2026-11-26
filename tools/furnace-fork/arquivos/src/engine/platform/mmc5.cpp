@@ -17,6 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "mmc5.h"
 #include "sound/nes/mmc5.h"
 #include "../engine.h"
@@ -24,7 +25,7 @@
 
 #define CHIP_DIVIDER 16
 
-#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite((a),v)); if (dumpWrites) {addWrite(a,v);} }
+#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite((a),v)); if (dumpWrites) {addWrite(a,v);} if (rgDn) rgDn->write(rgDnChip,(a),(v)); }
 
 const char* regCheatSheetMMC5[]={
   "S0Volume", "5000",
@@ -408,6 +409,8 @@ int DivPlatformMMC5::dispatch(DivCommand c) {
 }
 
 void DivPlatformMMC5::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   mmc5->muted[ch]=mute;
 }

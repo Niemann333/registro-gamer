@@ -17,16 +17,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "n163.h"
 #include "../engine.h"
 #include "../../ta-log.h"
 #include "IconsFontAwesome4.h"
 #include <math.h>
 
-#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} }
+#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} if (rgDn) rgDn->writeN163((a),(v),0xff); }
 // RG: com RGF_REGLOG (rgplayer) a máscara vai junto numa escrita falsa 0xfffe00mm antes da escrita real
 static int rgLogMask=-1;
-#define rWriteMask(a,v,m) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v,m)); if (dumpWrites) {if (rgLogMask<0) rgLogMask=getenv("RGF_REGLOG")?1:0; if (rgLogMask) addWrite(0xfffe0000|((m)&0xff),0); addWrite(a,v);} }
+#define rWriteMask(a,v,m) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v,m)); if (dumpWrites) {if (rgLogMask<0) rgLogMask=getenv("RGF_REGLOG")?1:0; if (rgLogMask) addWrite(0xfffe0000|((m)&0xff),0); addWrite(a,v);} if (rgDn) rgDn->writeN163((a),(v),(m)); }
 #define chWrite(c,a,v) \
   if (c<=chanMax) { \
     rWrite(0x78-(c<<3)+(a&7),v) \
@@ -586,6 +587,8 @@ int DivPlatformN163::dispatch(DivCommand c) {
 }
 
 void DivPlatformN163::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   chan[ch].volumeChanged=true;
 }

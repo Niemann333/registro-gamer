@@ -17,6 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "opll.h"
 #include "../engine.h"
 #include "../bsr.h"
@@ -25,7 +26,7 @@
 #include <math.h>
 
 #define rWrite(a,v) if (!skipRegisterWrites) {pendingWrites[a]=v;}
-#define immWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} }
+#define immWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite(a,v)); if (dumpWrites) {addWrite(a,v);} if (rgDn) {rgDn->write(rgDnChip,0x9010,(a)); rgDn->write(rgDnChip,0x9030,(v));} }
 
 #define CHIP_FREQBASE 1180068
 
@@ -450,6 +451,8 @@ int DivPlatformOPLL::toFreq(int freq, int fixedBlock) {
 }
 
 void DivPlatformOPLL::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   if (selCore==1) {
     OPLL_setMask(fm_emu,

@@ -202,8 +202,10 @@ var RGVGM = (function () {
     if (dual.ym2203) fm.ym2203b = new FMChip('opn', 'YM2203 #2', clk.ym2203, 3);
     Object.keys(fm).forEach(function (k) { fm[k].mcur = []; fm[k].mseen = []; });
 
-    function fmKey(chip, ch, on) {
+    function fmKey(chip, ch, on, sub) {
       var snap = chip.kind === 'opm' ? chip.snapshotOPM(ch) : chip.snapshotOPN(ch);
+      // canal 3 expandido (YM2612/OPN): cada operador tem a própria frequência; a nota é a do operador
+      if (sub != null) snap.note = midiOf(ext3Freq(chip, sub));
       var car = CARRIERS[snap.alg], minTL = 127;
       car.forEach(function (i) { minTL = Math.min(minTL, snap.ops[i].tl); });
       // volume da música mexe no TL das portadoras: normaliza para a mais alta = 0
@@ -223,9 +225,42 @@ var RGVGM = (function () {
       if (REC) {
         var id = chip.chip + ' · ' + lbl, st = fmState(chip, ch);
         if (!chip.mseen[ch]) { chip.mseen[ch] = 1; mchan(id, chip.chip, lbl, 'fm'); }
+        if (sub != null) {
+          // canal 3 expandido: várias notas ao mesmo tempo no mesmo canal (sub = operador)
+          st.n = midiOf(ext3Freq(chip, sub)); st.v = ext3Vol(chip, sub);
+          R0push({ c: id, sub: sub, t: t, k: 'on', n: st.n, v: st.v, pan: st.pan, tb: tbObj });
+          (chip.mext || (chip.mext = []))[sub] = st;
+          return;
+        }
         R0push({ c: id, t: t, k: 'on', n: st.n, v: st.v, pan: st.pan, tb: tbObj });
         chip.mcur[ch] = st;
       }
+    }
+    // canal 3 expandido do OPN: frequência de cada operador (op1 A9/AD, op2 AA/AE, op3 A8/AC, op4 A2/A6)
+    var EXT3_LO = [0xA9, 0xAA, 0xA8, 0xA2], EXT3_HI = [0xAD, 0xAE, 0xAC, 0xA6];
+    function ext3Freq(chip, op) {
+      var R = chip.regs[0], hi = R[EXT3_HI[op]], fnum = ((hi & 7) << 8) | R[EXT3_LO[op]], block = (hi >> 3) & 7;
+      return fnum * chip.rate * Math.pow(2, block - 1) / 1048576;
+    }
+    function ext3Vol(chip, op) { return Math.pow(10, -(chip.regs[0][0x40 + OPN_OFF[op] + 2] & 127) * 0.75 / 20); }
+    function ext3Off(chip, op) {
+      if (REC && chip.mext && chip.mext[op]) { REC.push({ c: chip.chip + ' · FM 3', sub: op, t: t, k: 'off' }); chip.mext[op] = null; }
+    }
+    // operadores ligados que soam (portadoras), sem repetir a mesma frequência: cada um é uma voz
+    function ext3Key(chip, bits) {
+      var alg = chip.regs[0][0xB2] & 7, car = CARRIERS[alg], prev = chip.ext3bits || 0, seen = {};
+      for (var op = 0; op < 4; op++) {
+        var on = (bits >> op) & 1, was = (prev >> op) & 1;
+        if (!on && was) ext3Off(chip, op);
+      }
+      for (var op2 = 0; op2 < 4; op2++) {
+        if (!((bits >> op2) & 1) || car.indexOf(op2) < 0) continue;
+        var f = Math.round(ext3Freq(chip, op2) * 10);
+        if (seen[f]) { if ((prev >> op2) & 1) continue; continue; }
+        seen[f] = 1;
+        if (!((prev >> op2) & 1) || !(chip.mext && chip.mext[op2])) fmKey(chip, 2, 1, op2);
+      }
+      chip.ext3bits = bits;
     }
     function R0push(e) { REC.push(e); }
     // estado atual de um canal FM: nota (com fração), volume (0..1) e pan (0..127)
@@ -252,6 +287,13 @@ var RGVGM = (function () {
       return { n: n, v: Math.pow(10, -minTL * 0.75 / 20), pan: pan };
     }
     function fmFrame(chip) {
+      // canal 3 expandido: altura e volume de cada voz (operador)
+      if (chip.ch3sp && chip.mext) for (var eo = 0; eo < 4; eo++) {
+        var ec = chip.mext[eo]; if (!ec) continue;
+        var en = midiOf(ext3Freq(chip, eo)), ev = ext3Vol(chip, eo), eid = chip.chip + ' · FM 3';
+        if (Math.abs(en - ec.n) > 0.02 && en > 0) { REC.push({ c: eid, sub: eo, t: col.ft, k: 'pitch', n: en }); ec.n = en; }
+        if (Math.abs(ev - ec.v) > 0.01) { REC.push({ c: eid, sub: eo, t: col.ft, k: 'vol', v: ev }); ec.v = ev; }
+      }
       for (var ch = 0; ch < chip.nch; ch++) {
         var cur = chip.mcur[ch]; if (!cur || !chip.keyed[ch]) continue;
         var st = fmState(chip, ch), id = chip.chip + ' · FM ' + (ch + 1);
@@ -439,10 +481,20 @@ var RGVGM = (function () {
       chip.regs[port][a] = d;
       if (port === 0 && a === 0x2B) chip.dac = !!(d & 0x80);
       if (DS && port === 0 && a === 0x2A && chip.chip === 'YM2612' && chip.dac) dsPush(t, d);
+      // canal 3 em modo especial (bits 6-7 do 0x27): os 4 operadores viram vozes separadas
+      if (port === 0 && a === 0x27) {
+        var sp = (d & 0xC0) !== 0;
+        if (sp !== !!chip.ch3sp) {
+          if (chip.ch3sp) { for (var eo = 0; eo < 4; eo++) ext3Off(chip, eo); chip.ext3bits = 0; }
+          else if (chip.keyed[2]) { fmOff(chip, 2); chip.keyed[2] = 0; }
+          chip.ch3sp = sp;
+        }
+      }
       if (port === 0 && a === 0x28) {
         var c = d & 7, ch = c >= 4 ? c - 1 : c;
         if (c === 3 || c === 7 || ch >= chip.nch) return;
         var on = (d >> 4) & 15;
+        if (ch === 2 && chip.ch3sp && chip.kind !== 'opm') { ext3Key(chip, on); chip.keyed[2] = on ? 1 : 0; return; }
         if (on && !chip.keyed[ch] && !(chip.dac && ch === 5 && chip.chip === 'YM2612')) fmKey(chip, ch);
         if (!on && chip.keyed[ch]) fmOff(chip, ch);
         chip.keyed[ch] = on ? 1 : 0;
@@ -2411,7 +2463,7 @@ var RGVGM = (function () {
       while (t >= nextFrame) {
         col.ft = nextFrame;
         nextFrame += FRAME;
-        if (REC) for (var fk in fm) if (fm[fk].mcur.length) fmFrame(fm[fk]);
+        if (REC) for (var fk in fm) if (fm[fk].mcur.length || fm[fk].mext) fmFrame(fm[fk]);
         if (REC) for (var ok in opl) if (opl[ok].mcur.length) oplFrame(opl[ok]);
         if (nes) nesFrame();
         if (fds) fdsFrame();

@@ -838,6 +838,8 @@ src/engine/playback.cpp
 src/engine/sample.cpp
 src/engine/rgsampletools.cpp
 src/engine/rgplay.cpp
+src/engine/rgDn.cpp
+extern/dnft-apu/rgdn_unity.cpp
 src/engine/song.cpp
 src/engine/sysDef.cpp
 src/engine/wavetable.cpp
@@ -963,6 +965,12 @@ endif()
 if (WITH_JSON)
   list(APPEND ENGINE_SOURCES src/engine/fileOps/json.cpp)
 endif()
+
+# RG: áudio do Dn-FamiTracker (extern/dnft-apu): caminhos de inclusão só para o arquivo único dele
+set_source_files_properties(extern/dnft-apu/rgdn_unity.cpp PROPERTIES
+  INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source;${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source/APU;${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source/APU/nsfplay"
+  COMPILE_FLAGS "-w -std=gnu++17"
+  SKIP_PRECOMPILE_HEADERS ON)
 
 if (WIN32)
   list(APPEND ENGINE_SOURCES src/utfutils.cpp)

@@ -17,6 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "nes.h"
 #include "sound/nes/cpu_inline.h"
 #include "../engine.h"
@@ -28,7 +29,7 @@ struct _nla_table nla_table;
 
 #define CHIP_DIVIDER 16
 
-#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite((a),v)); if (dumpWrites) {addWrite((a),v);} }
+#define rWrite(a,v) if (!skipRegisterWrites) {writes.push(QueuedWrite((a),v)); if (dumpWrites) {addWrite((a),v);} if (rgDn) rgDn->write(rgDnChip,(a),(v)); }
 
 const char* regCheatSheetNES[]={
   "S0Volume", "4000",
@@ -496,6 +497,8 @@ void DivPlatformNES::tick(bool sysTick) {
         rWrite(0x4015,31);
         if (dpcmBank!=(dpcmAddr>>14)) {
           dpcmBank=dpcmAddr>>14;
+          // RG: áudio do Dn-FamiTracker: a janela de $C000 é o banco atual
+          if (rgDn) rgDn->setSampleMem(dpcmMem+((dpcmBank&15)<<14),16384);
           logV("switching bank to %d",dpcmBank);
           if (dumpWrites) addWrite(0xffff0004,dpcmBank);
         }
@@ -951,6 +954,8 @@ int DivPlatformNES::dispatch(DivCommand c) {
 }
 
 void DivPlatformNES::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
   if (useNP) {
     if (isE) {
@@ -1039,6 +1044,7 @@ void DivPlatformNES::reset() {
   nextDPCMDelta=-1;
   lastDPCMFreq=15;
   linearCount=255;
+  if (rgDn && dpcmMem) rgDn->setSampleMem(dpcmMem,16384);
   // RG: o FamiTracker começa com o contador de duração em 1 (só importa quando o laço é desligado por Exx/Sxx)
   if (parent->song.compatFlags.rgFamiTracker) {
     for (int i=0; i<4; i++) chan[i].len=1;

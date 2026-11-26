@@ -17,6 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "../../../extern/dnft-apu/rgdn.h"
 #include "fds.h"
 #include "sound/nes/cpu_inline.h"
 #include "../engine.h"
@@ -25,7 +26,7 @@
 
 #define CHIP_FREQBASE 262144
 
-#define rWrite(a,v) if (!skipRegisterWrites) {doWrite(a,v); regPool[(a)&0x7f]=v; if (dumpWrites) {addWrite(a,v);} }
+#define rWrite(a,v) if (!skipRegisterWrites) {doWrite(a,v); regPool[(a)&0x7f]=v; if (dumpWrites) {addWrite(a,v);} if (rgDn) rgDn->write(rgDnChip,(a),(v)); }
 
 const char* regCheatSheetFDS[]={
   "IOCtrl", "4023",
@@ -533,6 +534,8 @@ int DivPlatformFDS::dispatch(DivCommand c) {
 }
 
 void DivPlatformFDS::muteChannel(int ch, bool mute) {
+  // RG: áudio do Dn-FamiTracker: silencia o canal no APU do Dn também
+  if (rgDn) rgDn->setMute(rgDnChip,ch,mute);
   isMuted[ch]=mute;
 }
 

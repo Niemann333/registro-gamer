@@ -807,6 +807,14 @@ class DivEngine {
   short tempoAccum;
   // RG: acumulador de tempo do FamiTracker (modo FamiTracker)
   int rgFTAccum;
+  // RG: áudio do Dn-FamiTracker (compatFlags.rgDnAudio): APU do Dn, buffer de saída e sistemas que tocam por ele
+  RGDnAPU* rgDn=NULL;
+  short* rgDnBuf=NULL;
+  size_t rgDnBufLen=0;
+  bool rgDnSys[DIV_MAX_CHIPS]={};
+  // cria/desfaz o APU do Dn conforme os sistemas da música e liga os chips nele
+  void rgDnSetup();
+  void rgDnRelease();
   // current console status view mode.
   DivStatusView view;
   // when to halt (pause playback).

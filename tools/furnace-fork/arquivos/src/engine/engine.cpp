@@ -21,6 +21,7 @@
 #include "dispatch.h"
 #include "song.h"
 #include "engine.h"
+#include "../../extern/dnft-apu/rgdn.h"
 #include "instrument.h"
 #include "safeReader.h"
 #include "workPool.h"
@@ -2231,6 +2232,8 @@ void DivEngine::reset() {
   elapsedBeats=0;
   nextSpeed=speeds.val[0];
   divider=curSubSong->hz;
+  // RG: áudio do Dn-FamiTracker: APU novo a cada reinício (as escritas do reset dos chips já vão para ele)
+  rgDnSetup();
   for (int i=0; i<song.systemLen; i++) {
     disCont[i].dispatch->reset();
     disCont[i].clear();
@@ -4048,12 +4051,14 @@ void DivEngine::initDispatch(bool isRender) {
     saveLock.unlock();
   }
   song.recalcChans();
+  rgDnSetup();
   BUSY_END;
 }
 
 void DivEngine::quitDispatch() {
   BUSY_BEGIN;
   logV("terminating dispatch...");
+  rgDnRelease();
   for (int i=0; i<song.systemLen; i++) {
     disCont[i].quit();
   }
