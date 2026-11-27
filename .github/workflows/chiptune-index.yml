@@ -62,7 +62,7 @@ jobs:
           EOF
       - name: Gerar subfaixas.json (faixas dentro de NSF, GBS, SID, SAP, KSS)
         run: python3 tools/gerar_subfaixas.py
-      - name: Gerar tracker-index.json (o que o Tracker abre: projetos .fur/.dmf, módulos, VGM)
+      - name: "Gerar tracker-index.json (o que o Tracker abre: projetos .fur/.dmf, módulos, VGM)"
         run: python3 tools/gerar_indice_tracker.py
       - name: Commit do índice
         run: |
