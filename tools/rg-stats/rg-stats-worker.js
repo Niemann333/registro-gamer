@@ -12,7 +12,7 @@
 // e visível (o navegador avisa a cada 30 s enquanto a aba está à vista). Robôs conhecidos são ignorados.
 // Visitas com mais de 400 dias são apagadas sozinhas.
 
-const ORIGENS = [/^https:\/\/[a-z0-9-]+\.blogspot\.com$/, /^https:\/\/[a-z0-9-]+\.blogspot\.com\.br$/, /^https:\/\/niemann333\.github\.io$/];
+const ORIGENS = [/^https:\/\/[a-z0-9-]+\.blogspot\.com$/, /^https:\/\/[a-z0-9-]+\.blogspot\.com\.br$/, /^https:\/\/lucniemann\.github\.io$/, /^https:\/\/niemann333\.github\.io$/];
 const ROBO = /bot|crawl|spider|slurp|preview|headless|lighthouse|pingdom|monitor|curl|wget|python|httpclient|facebookexternalhit|embedly|whatsapp|telegram/i;
 const RETER_DIAS = 400;
 

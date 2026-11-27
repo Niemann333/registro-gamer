@@ -104,7 +104,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
   <div class="sp"></div>
-  <a class="btn" id="bSrc" href="https://github.com/Niemann333/registro-gamer/tree/main/tools/furnace-fork" target="_blank" rel="noopener" style="text-decoration:none;color:inherit" title="Código-fonte do Tracker: o Furnace, criado por tildearrow, com as mudanças do blog (código aberto, licença GPL)" data-en-title="Tracker source code: Furnace, created by tildearrow, with the blog's changes (open source, GPL license)">&lt;/&gt;</a>
+  <a class="btn" id="bSrc" href="https://github.com/LucNiemann/registro-gamer/tree/main/tools/furnace-fork" target="_blank" rel="noopener" style="text-decoration:none;color:inherit" title="Código-fonte do Tracker: o Furnace, criado por tildearrow, com as mudanças do blog (código aberto, licença GPL)" data-en-title="Tracker source code: Furnace, created by tildearrow, with the blog's changes (open source, GPL license)">&lt;/&gt;</a>
   <button class="btn" id="bLand" style="display:none" title="Tela deitada (paisagem) em tela cheia: mostra mais da música" data-en-title="Landscape, full screen: shows more of the song">⟲</button>
   <button class="btn" id="bBack">← Chiptune Studio</button>
   <button class="btn" id="bClose" title="Fechar e voltar ao blog" data-en-title="Close and go back to the blog" style="display:none">✕</button>
@@ -376,7 +376,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   // /Computador = pastas que a pessoa conectou (Chrome/Edge); abrir lê do computador, salvar grava lá
   // /Aparelho   = arquivos que a pessoa escolheu do celular/computador pelo seletor do sistema (funciona em qualquer navegador)
   var ACV = '/Acervo', PC = '/Computador', DEV = '/Aparelho';
-  var RAWBASE = 'https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
+  var RAWBASE = 'https://raw.githubusercontent.com/LucNiemann/registro-gamer/main/';
   var vfsLoaded = {}, acvIndex = null, acvFiles = {}, dirs = [], dirsReady = null;
   function isVirt(p) { return p.indexOf(ACV + '/') === 0 || p.indexOf(PC + '/') === 0 || p.indexOf(DEV + '/') === 0; }
   function mkdirp(p) { var parts = p.split('/').filter(Boolean), cur = ''; parts.forEach(function (x) { cur += '/' + x; try { Module.FS.mkdir(cur); } catch (e) {} }); }

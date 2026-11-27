@@ -105,8 +105,8 @@
 
   // ── Chiptune Player Mobile ──
   (function(){
-    var PLAYER='https://niemann333.github.io/registro-gamer/chiptune-player/';
-    var RAW='https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
+    var PLAYER='https://lucniemann.github.io/registro-gamer/chiptune-player/';
+    var RAW='https://raw.githubusercontent.com/LucNiemann/registro-gamer/main/';
     var INDEX=PLAYER+'chiptunes-index.json';
     var AUDIO=/\.(vgm|vgz|nsf|nsfe|spc|gym|ay|gbs|hes|kss|sap|sid|mod|s3m|xm|it|mid|midi|psf|minipsf|psf2|minipsf2|gsf|minigsf|usf|miniusf|2sf|mini2sf)$/i;
     var SAP_RE=/\.sap$/i;
@@ -384,7 +384,7 @@
         _fi.contentWindow.postMessage({type:'mediainfo',title:title,artist:folder,album:'Registro Gamer'},'*');
       if('mediaSession' in navigator){
         try{
-          navigator.mediaSession.metadata=new MediaMetadata({title:title,artist:folder,album:'Registro Gamer',artwork:[{src:'https://niemann333.github.io/registro-gamer/chiptune-player/favicon.ico',sizes:'any',type:'image/x-icon'},{src:'https://resources.blogblog.com/blogblog/data/1kt/awesomeinc/favicon.ico',sizes:'any',type:'image/x-icon'}]});
+          navigator.mediaSession.metadata=new MediaMetadata({title:title,artist:folder,album:'Registro Gamer',artwork:[{src:'https://lucniemann.github.io/registro-gamer/chiptune-player/favicon.ico',sizes:'any',type:'image/x-icon'},{src:'https://resources.blogblog.com/blogblog/data/1kt/awesomeinc/favicon.ico',sizes:'any',type:'image/x-icon'}]});
           navigator.mediaSession.setActionHandler('nexttrack',function(){ctDoNav(1);});
           navigator.mediaSession.setActionHandler('previoustrack',function(){ctDoNav(-1);});
           navigator.mediaSession.setActionHandler('play',function(){
@@ -493,7 +493,7 @@
     // botão Chiptune Studio no nav (timbres das músicas no teclado touch ou MIDI)
     var stBtn=document.createElement('button');stBtn.className='nb';stBtn.id='nb-estudio';
     stBtn.innerHTML='<span class="ni" style="display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 5v9M12 5v9M17 5v9" stroke="currentColor" stroke-width="1.5"/><rect x="5.6" y="5" width="2.8" height="6" fill="currentColor"/><rect x="15.6" y="5" width="2.8" height="6" fill="currentColor"/></svg></span><span>Studio</span><div class="nd"></div>';
-    stBtn.onclick=function(){var u='https://niemann333.github.io/registro-gamer/chiptune-player/estudio.html';var w=null;try{w=window.open(u,'rg-estudio');}catch(e){}if(!w)location.href=u;};
+    stBtn.onclick=function(){var u='https://lucniemann.github.io/registro-gamer/chiptune-player/estudio.html';var w=null;try{w=window.open(u,'rg-estudio');}catch(e){}if(!w)location.href=u;};
     nav.insertBefore(stBtn,archBtn);
   })();
 

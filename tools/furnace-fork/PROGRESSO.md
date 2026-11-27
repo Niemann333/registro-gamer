@@ -247,7 +247,7 @@ Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE 
    pela porta do APU (protocolo IPL) e toca o registro direto da ROM; e tocador de SNSF (snsf9x/snes9x) no
    Chiptune Player. Formato: PSF versão 0x23; programa = [u32 deslocamento][u32 tamanho][ROM]; reservado = blocos
    [u32 tipo][u32 tamanho] (tipo 0 = SRAM [u32 deslocamento][dados]). Fonte do snsf9x: github.com/loveemu/snsf9x.
-3. Publicar o fork no GitHub (Niemann333/furnace) — GPL: o código do Tracker precisa estar disponível.
+3. Publicar o fork no GitHub (LucNiemann/furnace) — GPL: o código do Tracker precisa estar disponível.
 
 Fontes dos importadores do Studio: `tools/vgm-timbres.js`, `vgm-fur.js`, `fmt-import.js`, `sid-rip.js`, `estudio.src.html`, `build.py`;
 rg-rip.js: `tools/rip-src/` (gme + aopsf + vio2sf + VBA/playgsf com ganchos).
