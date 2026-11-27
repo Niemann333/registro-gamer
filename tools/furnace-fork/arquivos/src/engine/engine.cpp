@@ -205,6 +205,16 @@ const char* DivEngine::getEffectDesc(unsigned char effect, int chan, bool notNul
 }
 
 void DivEngine::calcSongTimestamps() {
+  // RG: VGM Music Maker: tempo contado como o VGMMM
+  if (curSubSong!=NULL && song.compatFlags.rgVGMMM) {
+    rgVgeTimestamps();
+    return;
+  }
+  // RG: BambooTracker: tempo contado pelo próprio BambooTracker
+  if (curSubSong!=NULL && song.compatFlags.rgBT && !song.systemFlags[0].getString("rgBTData","").empty()) {
+    rgBTTimestamps();
+    return;
+  }
   if (curSubSong!=NULL) {
     curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0);
   }
@@ -1720,6 +1730,37 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     logV("preserveDrift && curOrder is true");
     return;
   }
+  // RG: VGM Music Maker: o tocador do VGMMM começa direto na posição (sem andar pelas linhas)
+  if (rgVgeOn || rgBTOn) {
+    int goal=curOrder;
+    stepPlay=0;
+    clockDrift=0;
+    cycles=0;
+    midiClockCycles=0;
+    midiClockDrift=0;
+    midiTimeCycles=0;
+    midiTimeDrift=0;
+    ticks=1;
+    subticks=1;
+    tempoAccum=0;
+    rgFTAccum=0;
+    totalTimeDrift=0;
+    totalTicksR=0;
+    totalLoops=0;
+    lastLoopPos=-1;
+    endOfSong=false;
+    playing=true;
+    skipping=false;
+    if (rgVgeOn) {
+      rgVgeStart(goal,goalRow);
+    } else {
+      rgBTStart(goal,goalRow);
+    }
+    TimeMicros rowTS=curSubSong->ts.getTimes(curOrder,curRow);
+    totalTime=(rowTS.seconds<0)?TimeMicros(0,0):rowTS;
+    cmdStream.clear();
+    return;
+  }
   bool oldRepeatPattern=repeatPattern;
   repeatPattern=false;
   int goal=curOrder;
@@ -2234,6 +2275,8 @@ void DivEngine::reset() {
   divider=curSubSong->hz;
   // RG: áudio do Dn-FamiTracker: APU novo a cada reinício (as escritas do reset dos chips já vão para ele)
   rgDnSetup();
+  rgVgeSetup();
+  rgBTSetup();
   for (int i=0; i<song.systemLen; i++) {
     disCont[i].dispatch->reset();
     disCont[i].clear();
@@ -4052,6 +4095,8 @@ void DivEngine::initDispatch(bool isRender) {
   }
   song.recalcChans();
   rgDnSetup();
+  rgVgeSetup();
+  rgBTSetup();
   BUSY_END;
 }
 

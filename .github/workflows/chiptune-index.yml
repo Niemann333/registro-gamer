@@ -45,7 +45,7 @@ jobs:
                                  '.gbs','.hes','.kss','.sap','.ahx','.thx','.sid','.mod','.s3m',
                                  '.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf',
                                  '.2sf','.psf','.ssf','.dsf','.usf','.miniusf','.2sf','.mini2sf',
-                                 '.snsf','.minisnsf','.fur','.dmf','.ftm','.0cc','.dnm','.eft','.tfm','.tfe',
+                                 '.snsf','.minisnsf','.fur','.dmf','.ftm','.0cc','.dnm','.eft','.tfm','.tfe','.vge','.btm',
                                  '.fc','.fc13','.fc14','.smod']:
                           result.append({
                               "name": entry.name,
@@ -83,7 +83,7 @@ jobs:
           EXT = ['.vgm','.vgz','.nsf','.nsfe','.spc','.gym','.ay','.gbs','.hes','.kss','.sap','.ahx','.thx','.sid',
                  '.mod','.s3m','.xm','.it','.mptm','.mid','.midi','.gsf','.minigsf','.2sf','.psf','.ssf',
                  '.dsf','.usf','.miniusf','.mini2sf','.snsf','.minisnsf','.fur','.dmf','.ftm','.0cc','.dnm','.eft',
-                 '.tfm','.tfe','.fc','.fc13','.fc14','.smod']
+                 '.tfm','.tfe','.vge','.btm','.fc','.fc13','.fc14','.smod']
           def scan(path):
               result = []
               try:

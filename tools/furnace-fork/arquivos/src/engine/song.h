@@ -272,6 +272,10 @@ struct DivCompatFlags {
   bool rgFTTempo0;
   // RG: o som sai pelo áudio do Dn-FamiTracker (APU/mixer/emuladores do Dn) em vez dos chips do Furnace
   bool rgDnAudio;
+  // RG: módulo do VGM Music Maker: o tocador do próprio VGMMM toca a música (rgVge.cpp)
+  bool rgVGMMM;
+  // RG: módulo do BambooTracker: o tocador do próprio BambooTracker toca a música (rgBT.cpp)
+  bool rgBT;
   // RG: opções de áudio do Dn guardadas no módulo (.dnm): mixagem por hardware, timbres do VRC7, ajustes de nível
   bool rgDnSurvey;
   unsigned char rgDnVRC7Patch;

@@ -154,6 +154,12 @@ bool DivEngine::load(unsigned char* f, size_t slen, const char* nameHint) {
     return loadFC(file,len);
   } else if (memcmp(file,DIV_TFM_MAGIC,8)==0) {
     return loadTFMv2(file,len);
+  } else if (len>=16 && memcmp(file,"BambooTrackerMod",16)==0) {
+    // RG: BambooTracker
+    return loadBTM(file,len);
+  } else if (len>=16 && memcmp(file,"VGEfmtV",7)==0) {
+    // RG: VGM Music Maker
+    return loadVGE(file,len);
   } else if (memcmp(file,DIV_IT_MAGIC,4)==0) {
     return loadIT(file,len);
   } else if (memcmp(file,DIV_MIDI_MAGIC,4)==0) {

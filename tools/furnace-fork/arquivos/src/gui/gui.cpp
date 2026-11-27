@@ -2216,9 +2216,9 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
         _("Open File"),
 #ifdef __EMSCRIPTEN__
         // Web: VGM do acervo/computador abre como projeto (convertido pela página, com os timbres do chip)
-        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.mid *.midi *.kar *.smf *.vgm *.vgz",
+        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.vge *.btm *.mid *.midi *.kar *.smf *.vgm *.vgz",
 #else
-        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.mid *.midi *.kar *.smf",
+        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe *.vge *.btm *.mid *.midi *.kar *.smf",
 #endif
          _("all files"), "*"},
         workingDirSong,

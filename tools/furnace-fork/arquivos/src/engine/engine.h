@@ -815,6 +815,33 @@ class DivEngine {
   // cria/desfaz o APU do Dn conforme os sistemas da música e liga os chips nele
   void rgDnSetup();
   void rgDnRelease();
+  // RG: VGM Music Maker (compatFlags.rgVGMMM): o tocador do VGMMM toca a música e escreve nos chips
+  bool rgVgeOn=false;
+  bool rgVgeFirstTick=false;
+  bool rgVgeWait=false;
+  // liga/desliga o modo nos chips (YM2612 + SN76489)
+  void rgVgeSetup();
+  // monta o módulo do VGMMM a partir da música do Furnace (padrões, instrumentos, cabeçalho)
+  void rgVgeBuild();
+  // começa a tocar em order/row
+  void rgVgeStart(int order, int row);
+  // um tique do tocador; devolve true quando passa pelo ponto de volta
+  bool rgVgeTick();
+  // tempo de cada linha (como o VGMMM conta)
+  void rgVgeTimestamps();
+  // manda as escritas do VGMMM para os chips
+  void rgVgeApply(void* writes, void* dac);
+  // RG: BambooTracker (compatFlags.rgBT): o tocador do BambooTracker toca o módulo original guardado na música
+  rgbt::Player* rgBTPlayer=NULL;
+  String rgBTLoaded;
+  bool rgBTOn=false;
+  void rgBTSetup();
+  bool rgBTEnsure();
+  void rgBTStart(int order, int row);
+  bool rgBTTick();
+  void rgBTTimestamps();
+  void rgBTApply(void* writes);
+  void rgBTRelease();
   // current console status view mode.
   DivStatusView view;
   // when to halt (pause playback).
@@ -1105,6 +1132,8 @@ class DivEngine {
   bool loadFC(unsigned char* file, size_t len);
   bool loadTFMv1(unsigned char* file, size_t len);
   bool loadTFMv2(unsigned char* file, size_t len);
+  bool loadVGE(unsigned char* file, size_t len);
+  bool loadBTM(unsigned char* file, size_t len);
   bool loadMIDI(unsigned char* file, size_t len);
 
   /**

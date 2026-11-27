@@ -11,7 +11,7 @@ import os
 EXT = {
     # projetos e módulos
     '.fur', '.dmf', '.mod', '.s3m', '.xm', '.it', '.ftm', '.0cc', '.dnm', '.eft', '.fc13', '.fc14',
-    '.smod', '.fc', '.tfe', '.tfm',
+    '.smod', '.fc', '.tfe', '.tfm', '.vge', '.btm',
     # importação
     '.vgm', '.vgz', '.mid', '.midi', '.kar', '.smf', '.fub',
     # chiptunes que o Tracker converte em projeto (os mesmos do Chiptune Studio)

@@ -41,6 +41,7 @@
 // forward declarations
 class DivEngine;
 class RGDnAPU;
+namespace rgbt { class Player; }
 class DivMacroInt;
 struct DivSample;
 

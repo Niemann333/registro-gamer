@@ -801,6 +801,8 @@ src/engine/fileOps/mod.cpp
 src/engine/fileOps/s3m.cpp
 src/engine/fileOps/text.cpp
 src/engine/fileOps/tfm.cpp
+src/engine/fileOps/vge.cpp
+src/engine/fileOps/btm.cpp
 src/engine/fileOps/xm.cpp
 
 src/engine/fileOps/p.cpp
@@ -840,6 +842,10 @@ src/engine/rgsampletools.cpp
 src/engine/rgplay.cpp
 src/engine/rgDn.cpp
 extern/dnft-apu/rgdn_unity.cpp
+src/engine/rgVge.cpp
+extern/vgmmm/rgvge_unity.cpp
+src/engine/rgBT.cpp
+extern/bambootracker/rgbt_unity.cpp
 src/engine/song.cpp
 src/engine/sysDef.cpp
 src/engine/wavetable.cpp
@@ -969,6 +975,15 @@ endif()
 # RG: áudio do Dn-FamiTracker (extern/dnft-apu): caminhos de inclusão só para o arquivo único dele
 set_source_files_properties(extern/dnft-apu/rgdn_unity.cpp PROPERTIES
   INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source;${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source/APU;${CMAKE_CURRENT_SOURCE_DIR}/extern/dnft-apu/Source/APU/nsfplay"
+  COMPILE_FLAGS "-w -std=gnu++17"
+  SKIP_PRECOMPILE_HEADERS ON)
+# RG: núcleo do BambooTracker (extern/bambootracker)
+set_source_files_properties(extern/bambootracker/rgbt_unity.cpp PROPERTIES
+  INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/extern/bambootracker;${CMAKE_CURRENT_SOURCE_DIR}/extern/bambootracker/instrument;${CMAKE_CURRENT_SOURCE_DIR}/extern/bambootracker/module"
+  COMPILE_FLAGS "-w -std=gnu++17"
+  SKIP_PRECOMPILE_HEADERS ON)
+# RG: núcleo do VGM Music Maker (extern/vgmmm)
+set_source_files_properties(extern/vgmmm/rgvge_unity.cpp PROPERTIES
   COMPILE_FLAGS "-w -std=gnu++17"
   SKIP_PRECOMPILE_HEADERS ON)
 

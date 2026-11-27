@@ -1219,6 +1219,8 @@ void DivCompatFlags::setDefaults() {
   rgFTVibUp=false;
   rgFTTempo0=false;
   rgDnAudio=false;
+  rgVGMMM=false;
+  rgBT=false;
   rgDnSurvey=false;
   rgDnVRC7Patch=0;
   memset(rgDnLevels,0,sizeof(rgDnLevels));
@@ -1313,6 +1315,8 @@ bool DivCompatFlags::readData(SafeReader& reader) {
   CHECK_AND_LOAD_BOOL(rgFTVibUp);
   CHECK_AND_LOAD_BOOL(rgFTTempo0);
   CHECK_AND_LOAD_BOOL(rgDnAudio);
+  CHECK_AND_LOAD_BOOL(rgVGMMM);
+  CHECK_AND_LOAD_BOOL(rgBT);
   CHECK_AND_LOAD_BOOL(rgDnSurvey);
   CHECK_AND_LOAD_UNSIGNED_CHAR(rgDnVRC7Patch);
   if (c.has("rgDnLevels")) {
@@ -1403,6 +1407,8 @@ void DivCompatFlags::putData(SafeWriter* w) {
   CHECK_AND_STORE_BOOL(rgFTVibUp);
   CHECK_AND_STORE_BOOL(rgFTTempo0);
   CHECK_AND_STORE_BOOL(rgDnAudio);
+  CHECK_AND_STORE_BOOL(rgVGMMM);
+  CHECK_AND_STORE_BOOL(rgBT);
   CHECK_AND_STORE_BOOL(rgDnSurvey);
   CHECK_AND_STORE_UNSIGNED_CHAR(rgDnVRC7Patch);
   if (memcmp(rgDnLevels,defaultFlags.rgDnLevels,sizeof(rgDnLevels))!=0) {

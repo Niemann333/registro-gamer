@@ -389,7 +389,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
     <aside class="panel">
       <a class="trkBan" id="trkBan" href="tracker.html"><span class="ti">🎛</span><span class="tx"><b data-en="Open Tracker">Acessar Tracker</b></span><span class="go">›</span></a>
       <div class="tabs"><button class="tab on" id="tabAc" data-en="Library">Acervo</button><button class="tab" id="tabPl">Playlists</button><button class="tab" id="tabPc" title="Abrir uma música do seu aparelho (computador, celular, tablet…)" data-en-title="Open a song from your device (computer, phone, tablet…)">📂 Local</button></div>
-      <input type="file" id="pcIn" accept=".vgm,.vgz,.nsf,.nsfe,.gbs,.spc,.sid,.psf,.minipsf,.psflib,.2sf,.mini2sf,.2sflib,.gsf,.minigsf,.gsflib,.kss,.sap,.hes,.ay,.s98,.mod,.s3m,.xm,.it,.mptm,.mid,.midi,.rmi,.fur,.dmf,.ftm,.0cc,.dnm,.eft,.tfm,.tfe,.fc,.fc13,.fc14,.smod" multiple hidden>
+      <input type="file" id="pcIn" accept=".vgm,.vgz,.nsf,.nsfe,.gbs,.spc,.sid,.psf,.minipsf,.psflib,.2sf,.mini2sf,.2sflib,.gsf,.minigsf,.gsflib,.kss,.sap,.hes,.ay,.s98,.mod,.s3m,.xm,.it,.mptm,.mid,.midi,.rmi,.fur,.dmf,.ftm,.0cc,.dnm,.eft,.tfm,.tfe,.vge,.btm,.fc,.fc13,.fc14,.smod" multiple hidden>
       <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Buscar música ou jogo…" autocomplete="off"></div>
       <div class="crumbs" id="crumbs"></div>
       <div class="list" id="list"><div class="msg" data-en="Loading the library…">Carregando o acervo…</div></div>
@@ -474,7 +474,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 <div class="toast" id="toast"></div>
 
 <div class="dropzone" id="dropzone" data-en="Drop the song to open it in Chiptune Studio">Solte a música para abrir no Chiptune Studio</div>
-<iframe id="pf" src="player.html?v=18" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<iframe id="pf" src="player.html?v=19" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">// ===== Sintetizador do Estúdio (roda no AudioWorklet) =====
 // FM de 4 operadores no estilo OPN/OPM (YM2612, YM2151...) e PSG (pulso, triângulo, onda, ruído).
@@ -6748,16 +6748,16 @@ var RGMIDI = (function () {
   var RAW = 'https://raw.githubusercontent.com/Niemann333/registro-gamer/main/';
   var BLOG = 'https://lucniemanngames.blogspot.com/';
   // formatos que o Studio importa: VGM, S98 (log de chips), módulos de tracker e MIDI
-  var VGM_RE = /\.(vgm|vgz|s98|mod|s3m|xm|it|mptm|mid|midi|rmi|nsf|nsfe|gbs|kss|sap|hes|ay|spc|sid|psf|minipsf|2sf|mini2sf|gsf|minigsf|fur|dmf|ftm|0cc|dnm|eft|tfm|tfe|fc|fc13|fc14|smod)$/i;
+  var VGM_RE = /\.(vgm|vgz|s98|mod|s3m|xm|it|mptm|mid|midi|rmi|nsf|nsfe|gbs|kss|sap|hes|ay|spc|sid|psf|minipsf|2sf|mini2sf|gsf|minigsf|fur|dmf|ftm|0cc|dnm|eft|tfm|tfe|vge|btm|fc|fc13|fc14|smod)$/i;
   // módulos do Furnace, DefleMask, FamiTracker etc.: o próprio Furnace (rg-furnace.wasm, o mesmo do player) toca a música
   // e grava um VGM com as escritas nos chips (ou um NSF, quando há VRC6, N163 ou MMC5, que o VGM não tem)
-  var FUR_RE = /\.(fur|dmf|ftm|0cc|dnm|eft|tfm|tfe|fc|fc13|fc14|smod)$/i;
+  var FUR_RE = /\.(fur|dmf|ftm|0cc|dnm|eft|tfm|tfe|vge|btm|fc|fc13|fc14|smod)$/i;
   // roda num Worker: o rg-furnace.js também se chama RGFUR, o mesmo nome do conversor de .fur desta página
   var furW = null, furSeq = 0, furWait = {};
   function furWorker() {
     if (furW) return furW;
     var base = new URL('.', location.href).href;
-    var src = "var M=null,P=null;function TX(q){if(!q)return '';var e=q;while(M.HEAPU8[e])e++;var b=M.HEAPU8.slice(q,e);try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(x){return new TextDecoder('windows-1252').decode(b);}}function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=9');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=9';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
+    var src = "var M=null,P=null;function TX(q){if(!q)return '';var e=q;while(M.HEAPU8[e])e++;var b=M.HEAPU8.slice(q,e);try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(x){return new TextDecoder('windows-1252').decode(b);}}function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=10');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=10';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
       "onmessage=function(ev){var d=ev.data;ld().then(function(){var u=d.u8,p=M._malloc(u.length);M.HEAPU8.set(u,p);var np=M._malloc(256);M.stringToUTF8(d.name,np,256);var ok=M._rgf_load(p,u.length,np);M._free(p);M._free(np);" +
       "if(!ok)return postMessage({id:d.id,err:'load',msg:M.UTF8ToString(M._rgf_error())});" +
       "var ns=M._rgf_subsongs(),names=[];for(var k=0;k<ns;k++)names.push(M._rgf_subsong_name?TX(M._rgf_subsong_name(k)):'');var sb=Math.max(0,Math.min(ns-1,d.sub||0));if(sb>0)M._rgf_subsong(sb);" +
@@ -7240,7 +7240,7 @@ var RGMIDI = (function () {
   function isLocal(path) { return String(path).indexOf('local:') === 0; }
   function renderLocal(q) {
     $('crumbs').innerHTML = '<span>' + T('Arquivos locais (só nesta visita)','Local files (this visit only)') + '</span>';
-    var html = '<button class="pcopen" data-pcopen="1">' + T('📂 Abrir arquivo…','📂 Open file…') + '<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">' + T('VGM, NSF, GBS, SPC, SID, PSF, 2SF, GSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI ou módulos FUR, DMF, FTM, 0CC, DNM, TFE do seu aparelho (PSF/2SF/GSF: abra junto a .psflib/.2sflib/.gsflib) · também dá para arrastar o arquivo para cá','VGM, NSF, GBS, SPC, SID, PSF, 2SF, GSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI or FUR, DMF, FTM, 0CC, DNM, TFE modules from your device (PSF/2SF/GSF: also open the .psflib/.2sflib/.gsflib) · you can also drag the file here') + '</span></button>';
+    var html = '<button class="pcopen" data-pcopen="1">' + T('📂 Abrir arquivo…','📂 Open file…') + '<br><span style="font-weight:400;font-size:11.5px;color:var(--tx3)">' + T('VGM, NSF, GBS, SPC, SID, PSF, 2SF, GSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI ou módulos FUR, DMF, FTM, 0CC, DNM, TFE, VGE, BTM do seu aparelho (PSF/2SF/GSF: abra junto a .psflib/.2sflib/.gsflib) · também dá para arrastar o arquivo para cá','VGM, NSF, GBS, SPC, SID, PSF, 2SF, GSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI or FUR, DMF, FTM, 0CC, DNM, TFE, VGE, BTM modules from your device (PSF/2SF/GSF: also open the .psflib/.2sflib/.gsflib) · you can also drag the file here') + '</span></button>';
     localOrder.filter(function (p) { return !q || local[p].name.toLowerCase().indexOf(q) >= 0; }).forEach(function (p) { html += fileItem(p, local[p].name, false); });
     if (!localOrder.length) html += '<div class="msg">' + T('Nenhum arquivo aberto ainda.','No files opened yet.') + '</div>';
     $('list').innerHTML = html;
@@ -7251,7 +7251,7 @@ var RGMIDI = (function () {
     var LIB_RE = /\.(psflib|gsflib|2sflib|usflib|snsflib)$/i;   // bibliotecas dos PSF: ficam guardadas, mas não viram música da lista
     var list = Array.prototype.filter.call(files, function (f) { return VGM_RE.test(f.name) || LIB_RE.test(f.name); });
     if (!list.some(function (f) { return VGM_RE.test(f.name); }) && list.length) { list.forEach(function (f) { f.arrayBuffer().then(function (ab) { local['local:lib:' + f.name] = { name: f.name, file: ab, u8: new Uint8Array(ab), lib: true }; }); }); toast(T('Biblioteca guardada: abra agora a música','Library kept: now open the song')); return; }
-    if (!list.length) { toast(T('O Chiptune Studio abre arquivos VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI e módulos do Furnace, DefleMask e FamiTracker.','Chiptune Studio opens VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI and Furnace, DefleMask and FamiTracker modules.')); return; }
+    if (!list.length) { toast(T('O Chiptune Studio abre arquivos VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI e módulos do Furnace, DefleMask, FamiTracker, VGM Music Maker e BambooTracker.','Chiptune Studio opens VGM, NSF, GBS, SPC, SID, PSF, KSS, SAP, HES, AY, S98, MOD, S3M, XM, IT, MIDI and Furnace, DefleMask, FamiTracker, VGM Music Maker and BambooTracker modules.')); return; }
     var first = null;
     Promise.all(list.map(function (f) {
       return f.arrayBuffer().then(function (ab) {

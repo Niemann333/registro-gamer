@@ -2317,7 +2317,19 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
   // tick the engine state if we are not in freelance mode (engine active but not running).
   // this includes ticking the sub-tick counter, processing delayed rows,
   // effects and of course, playing the next row.
-  if (!freelance) {
+  if (!freelance && (rgVgeOn || rgBTOn)) {
+    // RG: VGM Music Maker: o tocador do VGMMM faz o tique inteiro (linhas, efeitos, registradores)
+    if (--subticks<=0) {
+      subticks=tickMult;
+      if (stepPlay!=1) {
+        if (shallStopSched) {
+          shallStop=true;
+        } else {
+          ret=rgVgeOn?rgVgeTick():rgBTTick();
+        }
+      }
+    }
+  } else if (!freelance) {
     // decrease sub-tick counter (low-latency mode)
     // run a tick once it reached zero
     if (--subticks<=0) {

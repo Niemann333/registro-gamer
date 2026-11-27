@@ -49,6 +49,28 @@ bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
 double DivEngine::rgPlaySeek(double sec) {
   if (!rgPlayStart(got.rate)) return 0;
   if (sec<=0) return 0;
+  // RG: VGM Music Maker: o tocador do VGMMM começa direto na linha (como o "tocar daqui" do programa)
+  if (rgVgeOn || rgBTOn) {
+    calcSongTimestamps();
+    DivSongTimestamps& ts=curSubSong->ts;
+    int bo=0, br=0;
+    double bt=-1;
+    for (int o=0; o<curSubSong->ordersLen; o++) {
+      for (int r=0; r<DIV_MAX_ROWS; r++) {
+        TimeMicros t=ts.getTimes(o,r);
+        if (t.seconds<0) continue;
+        double d=t.toDouble();
+        if (d<=sec && d>bt) {
+          bt=d;
+          bo=o;
+          br=r;
+        }
+      }
+    }
+    curOrder=bo;
+    playSub(false,br);
+    return totalTime.toDouble();
+  }
   // like playSub(): run the ticks with the chips' register writes muted, then make them write everything again
   skipping=true;
   for (int i=0; i<song.systemLen; i++) disCont[i].dispatch->setSkipRegisterWrites(true);

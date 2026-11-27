@@ -196,6 +196,23 @@ Pedido: "os módulos abertos no Furnace têm que tocar igual ao tracker de orige
   (erro "reading '24'" em VGMs com stream do DAC, ex.: Obvious Hut).
 - Testado: as 71 músicas de módulo do acervo convertem (só o Kaminari, Snoozetracker, o Furnace não abre).
 
+## VGM Music Maker (.vge) e BambooTracker (.btm) no Furnace (27/11) — PRONTOS
+Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE (VGM Music Maker)".
+- Mesmo caminho do Dn: o tocador do próprio programa toca; o Furnace mostra os padrões e manda as escritas nos chips.
+- VGE: núcleo do VGMMM 1.1 (reconstrução do Drozerix, com permissão do Shiru) em extern/vgmmm (namespace rgvgmmm).
+  Importador fileOps/vge.cpp (YM2612 + SN76489, relógios, velocidade par/ímpar, instrumentos, amostras já convertidas);
+  opção rgVGMMM; rgVge.cpp remonta o módulo do VGMMM a partir dos padrões do Furnace ao tocar (edições valem; efeitos
+  com tabela de ida e volta em rgVgeMap.h, tamanho do padrão = 0D00 na 5ª coluna). DAC pelo Furnace (rgVgeDac),
+  mudo pelo pan/volume. Escritas idênticas ao VGM do próprio VGMMM nos 7 .vge do acervo (ida e volta pelo Furnace);
+  áudio: nível 0,94–0,98, bandas ±1 dB (agudos −2 a −4 dB: núcleo YM2612 diferente), correlação 0,83–0,96.
+- BTM: núcleo do BambooTracker (GPL2) em extern/bambootracker (namespace rgbtcore), com um OPNA de mentira que só
+  guarda as escritas e a memória do ADPCM. Importador fileOps/btm.cpp (YM2608 ou YM2608 com FM3 estendido, subfaixas,
+  padrões e instrumentos para ver); o .btm original fica em rgBTData (base64) e o BambooTracker toca a partir dele
+  (rgBT.cpp; edições nos padrões não mudam o som). Tempos pelo próprio BambooTracker (tocado em silêncio, com cache).
+  Mixer do módulo (PC-9801-86 etc.) aplicado: nível por pista 0,98–1,01 do WAV do BambooTracker, FM corr 0,994.
+- Studio (FUR_RE), Chiptune Player (rg-player.js, AUDIO, duplicados), índices (Actions e tracker) aceitam .vge/.btm.
+- Referências: tools/ref-vgmmm, tools/ref-bt.
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com
