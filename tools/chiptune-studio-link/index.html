@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chiptune Studio · Registro Gamer</title>
+<meta name="description" content="Chiptune Studio: toque os timbres das músicas de videogame no teclado e componha no tracker (Furnace) direto no navegador.">
+<meta property="og:title" content="Chiptune Studio · Registro Gamer">
+<meta property="og:description" content="Toque os timbres das músicas de videogame no teclado e componha no tracker, direto no navegador.">
+<meta name="theme-color" content="#0b0b10">
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+iframe{position:fixed;inset:0;width:100%;height:100%;height:100dvh;border:0;display:block}
+</style>
+</head>
+<body>
+<!-- Link curto: o Chiptune Studio de verdade fica em /registro-gamer/chiptune-player/ (mesmo site), aberto aqui em tela cheia -->
+<iframe id="st" allow="midi; autoplay; fullscreen; clipboard-read; clipboard-write; gamepad; local-network-access" allowfullscreen></iframe>
+<script>
+(function () {
+  var BASE = '/registro-gamer/chiptune-player/';
+  var BLOG = 'https://lucniemanngames.blogspot.com/';
+  var f = document.getElementById('st');
+  // /chiptune-studio/?f=... e /chiptune-studio/#... passam adiante; /chiptune-studio/tracker abre direto o tracker
+  var sub = location.pathname.replace(/^\/chiptune-studio\/?/, '').replace(/\/$/, '');
+  var page = /^tracker(\.html)?$/i.test(sub) ? 'tracker.html' : 'estudio.html';
+  f.src = BASE + page + location.search + location.hash;
+  // o título da aba acompanha a página aberta (Studio ou Tracker)
+  f.addEventListener('load', function () {
+    try { if (f.contentDocument && f.contentDocument.title) document.title = f.contentDocument.title; } catch (e) {}
+    try { f.contentWindow.focus(); } catch (e) {}
+  });
+  // botão de fechar do Studio: volta para o blog
+  window.addEventListener('message', function (e) {
+    if (e.source !== f.contentWindow || !e.data) return;
+    if (e.data.type === 'rg-studio-close') location.href = BLOG;
+  });
+})();
+</script>
+</body>
+</html>
