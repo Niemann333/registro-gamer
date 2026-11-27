@@ -474,7 +474,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
 <div class="toast" id="toast"></div>
 
 <div class="dropzone" id="dropzone" data-en="Drop the song to open it in Chiptune Studio">Solte a música para abrir no Chiptune Studio</div>
-<iframe id="pf" src="player.html?v=19" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<iframe id="pf" src="player.html?v=20" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">// ===== Sintetizador do Estúdio (roda no AudioWorklet) =====
 // FM de 4 operadores no estilo OPN/OPM (YM2612, YM2151...) e PSG (pulso, triângulo, onda, ruído).
@@ -6757,7 +6757,7 @@ var RGMIDI = (function () {
   function furWorker() {
     if (furW) return furW;
     var base = new URL('.', location.href).href;
-    var src = "var M=null,P=null;function TX(q){if(!q)return '';var e=q;while(M.HEAPU8[e])e++;var b=M.HEAPU8.slice(q,e);try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(x){return new TextDecoder('windows-1252').decode(b);}}function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=10');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=10';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
+    var src = "var M=null,P=null;function TX(q){if(!q)return '';var e=q;while(M.HEAPU8[e])e++;var b=M.HEAPU8.slice(q,e);try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(x){return new TextDecoder('windows-1252').decode(b);}}function ld(){if(!P)P=new Promise(function(ok,no){importScripts('" + base + "rg-furnace.js?v=11');RGFUR({locateFile:function(){return '" + base + "rg-furnace.wasm?v=11';},print:function(){},printErr:function(){}}).then(function(m){M=m;if(!M._rgf_init(44100))throw new Error('init');ok();},no);});return P;}" +
       "onmessage=function(ev){var d=ev.data;ld().then(function(){var u=d.u8,p=M._malloc(u.length);M.HEAPU8.set(u,p);var np=M._malloc(256);M.stringToUTF8(d.name,np,256);var ok=M._rgf_load(p,u.length,np);M._free(p);M._free(np);" +
       "if(!ok)return postMessage({id:d.id,err:'load',msg:M.UTF8ToString(M._rgf_error())});" +
       "var ns=M._rgf_subsongs(),names=[];for(var k=0;k<ns;k++)names.push(M._rgf_subsong_name?TX(M._rgf_subsong_name(k)):'');var sb=Math.max(0,Math.min(ns-1,d.sub||0));if(sb>0)M._rgf_subsong(sb);" +

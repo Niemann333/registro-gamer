@@ -211,6 +211,23 @@ Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE 
   (rgBT.cpp; edições nos padrões não mudam o som). Tempos pelo próprio BambooTracker (tocado em silêncio, com cache).
   Mixer do módulo (PC-9801-86 etc.) aplicado: nível por pista 0,98–1,01 do WAV do BambooTracker, FM corr 0,994.
 - Studio (FUR_RE), Chiptune Player (rg-player.js, AUDIO, duplicados), índices (Actions e tracker) aceitam .vge/.btm.
+- CONVERSÃO NATIVA (pedido: "o Furnace aplicar suas configurações", com opção de voltar ao tocador original):
+  .vge e .btm abrem como música do Furnace (padrões/instrumentos/efeitos traduzidos); o original continua em
+  rgVgeData/rgBTData. Caixa "Tocar com o programa original" em Informações da música e em Compatibilidade
+  (DivEngine::rgSetOriginalPlayer liga rgVGMMM/rgBT e reinicia o chip). rgplayer: RGF_ORIG=1 toca o original.
+  VGE (fileOps/vge.cpp): PSG do VGMMM = teto(envelope*volume) → instrumento por (instrumento, volume) com ADSR
+  fino (bit 16 em open: frações do topo/sustain/fundo em val[9..11], macroInt.cpp) + volume fino no SN76489
+  (flag de sistema rgFineVol, sms.cpp, DivEngine::rgChanVolume); ruído taxa 3 = período do tom 3 (20 1x);
+  estéreo do PSG (Game Gear, chipType 3, 19xx → 08xy); systemVol 1,77 / 0,27. Registradores iguais ao tocador
+  original (PSG tique a tique); espectro vs WAV do VGMMM: mediana 0,8–1,3 dB (o tocador original dá 0,7–1,1).
+  BTM (fileOps/btm.cpp + Player::instrumentDetails em rgbt_unity.cpp: sequências tocadas pelo iterador do BT,
+  laço e soltura detectados): flag rgBTNative (tempo do TickCounter do BT em float = rgBTRowLen, vibrato 04xy
+  em triângulo 4x período, E1/E2 = 0Q/0R (y semitons em x tiques, não anda no 1º tique)); operadores S1 S2 S3 S4
+  → op[] {0,2,1,3}; SSG +12 (tabela do BT uma oitava acima) e E5 7D (tabela de 8 MHz); ruído na macro duty =
+  31-período; volMacroLinger desligado; ADPCM centerRate = deltaN da raiz na nota raiz (+60). Espectro vs WAV do
+  BT: mediana 0,88 dB / p90 3,6 (original 0,62 / 2,5); por pista 0,1–0,5 dB (FM3 op2/op4 p90 ~8 dB no solo).
+  Ainda não convertidos (avisa no log): envelope de hardware/ondas não quadradas do SSG, sequências de
+  operador, arpejo/altura por operador, bateria de ADPCM, eco (^n) usa a 1ª ocorrência do padrão.
 - Referências: tools/ref-vgmmm, tools/ref-bt.
 
 ## OpenMPT, próximos passos

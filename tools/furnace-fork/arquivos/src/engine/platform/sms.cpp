@@ -226,6 +226,7 @@ void DivPlatformSMS::tick(bool sysTick) {
     if (chan[i].std.vol.had) {
       chan[i].outVol=VOL_SCALE_LOG(chan[i].std.vol.val,chan[i].vol,15);
       if (chan[i].outVol<0) chan[i].outVol=0;
+      if (rgFineVol) rgFineEnv[i]=(chan[i].std.vol.type==1)?chan[i].std.vol.pos:(chan[i].std.vol.val<<8);
       // old formula
       // ((chan[i].vol&15)*MIN(15,chan[i].std.vol.val))>>4;
       chan[i].writeVol=true;
@@ -341,6 +342,24 @@ void DivPlatformSMS::tick(bool sysTick) {
     chan[3].freqChanged=false;
     updateSNMode=false;
   }
+  if (rgFineVol) {
+    // como o VGMMM: 15 - int(15 - envelope*volume), o nível arredondado para cima
+    for (int i=0; i<4; i++) {
+      int v=parent->rgChanVolume(this,i);
+      if (v<0) v=0;
+      if (v>(15<<8)) v=15<<8;
+      int e=rgFineEnv[i];
+      if (e<0) e=0;
+      if (e>(15<<8)) e=15<<8;
+      long long den=15LL*65536LL;
+      int lvl=(int)(((long long)e*(long long)v+den-1)/den);
+      if (lvl>15) lvl=15;
+      if (lvl!=chan[i].outVol) {
+        chan[i].outVol=lvl;
+        if (chan[i].active) chan[i].writeVol=true;
+      }
+    }
+  }
   for (int i=0; i<4; i++) {
     if (chan[i].writeVol) {
       rWrite(0,0x90|(i<<5)|(isMuted[i]?15:(15-(chan[i].outVol&15))));
@@ -369,6 +388,7 @@ int DivPlatformSMS::dispatch(DivCommand c) {
         chan[c.chan].outVol=chan[c.chan].vol;
         //rWrite(0,0x90|c.chan<<5|(isMuted[c.chan]?15:(15-(chan[c.chan].vol&15))));
       //}
+      rgFineEnv[c.chan]=15<<8;
       chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_STD));
       if (!parent->song.compatFlags.brokenOutVol && !chan[c.chan].std.vol.will) {
         chan[c.chan].outVol=chan[c.chan].vol;
@@ -494,6 +514,12 @@ void DivPlatformSMS::rgVgeWrite(unsigned char val) {
     if (isMuted[ch]) val|=15;
   }
   rWrite(0,val);
+}
+
+// RG: estéreo do Game Gear vindo do tocador do VGMMM (bits 4-7 esquerda, 0-3 direita)
+void DivPlatformSMS::rgVgeStereo(unsigned char val) {
+  lastPan=val;
+  if (stereo) rWrite(1,lastPan);
 }
 
 void DivPlatformSMS::muteChannel(int ch, bool mute) {
@@ -664,6 +690,7 @@ void DivPlatformSMS::setFlags(const DivConfig& flags) {
   CHECK_CUSTOM_CLOCK;
   resetPhase=!flags.getBool("noPhaseReset",false);
   easyNoise=!flags.getBool("noEasyNoise",false);
+  rgFineVol=flags.getBool("rgFineVol",false);
   divider=16;
   toneDivider=64.0;
   noiseDivider=64.0;

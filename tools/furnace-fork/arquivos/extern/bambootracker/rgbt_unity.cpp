@@ -305,6 +305,121 @@ std::vector<InsInfo> Player::instruments() {
   return ret;
 }
 
+template<class U> static auto rgSubOf(const U& u, int) -> decltype(u.subdata, int()) { return (u.subdata&0x3ffff)|((int)u.type<<20); }
+template<class U> static int rgSubOf(const U&, long) { return 0; }
+
+// toca a sequência pelo próprio iterador: um valor por tique, até 256; acha o laço e a soltura
+template<class ITF> static Seq rgRenderSeq(ITF mk, int type, bool hasSub) {
+  Seq q;
+  q.on=true;
+  q.type=type;
+  const int MAXN=240;
+  std::vector<int> v, s;
+  bool ended=false;
+  {
+    auto it=mk();
+    it->front();
+    for (int k=0; k<MAXN; k++) {
+      if (it->hasEnded()) { ended=true; break; }
+      auto d=it->data();
+      v.push_back(d.data);
+      s.push_back(hasSub?rgSubOf(d,0):0);
+      it->next();
+    }
+  }
+  if (!ended) {
+    // menor laço [L, fim) que se repete até o fim do que foi tocado
+    int n=(int)v.size();
+    int bestL=-1, bestP=0;
+    for (int P=1; P<=n/2 && bestL<0; P++) {
+      for (int L=0; L+2*P<=n; L++) {
+        bool ok=true;
+        for (int i=L; i+P<n; i++) if (v[i]!=v[i+P] || s[i]!=s[i+P]) { ok=false; break; }
+        if (ok) { bestL=L; bestP=P; break; }
+      }
+    }
+    if (bestL>=0) {
+      v.resize(bestL+bestP);
+      s.resize(bestL+bestP);
+      q.loop=bestL;
+    }
+  }
+  // soltura: solta depois do que foi tocado
+  {
+    auto it=mk();
+    it->front();
+    for (int k=0; k<(int)v.size() && !it->hasEnded(); k++) it->next();
+    it->release();
+    std::vector<int> rv, rs;
+    for (int k=0; k<64 && !it->hasEnded(); k++) {
+      auto d=it->data();
+      rv.push_back(d.data);
+      rs.push_back(hasSub?rgSubOf(d,0):0);
+      it->next();
+    }
+    if (!rv.empty() && v.size()+rv.size()<=250) {
+      q.rel=(int)v.size();
+      v.insert(v.end(),rv.begin(),rv.end());
+      s.insert(s.end(),rs.begin(),rs.end());
+    }
+  }
+  q.val=v;
+  q.sub=s;
+  return q;
+}
+
+std::vector<InsDetail> Player::instrumentDetails() {
+  std::vector<InsDetail> ret;
+  for (int n: p->instMan->getInstrumentIndices()) {
+    auto ins=p->instMan->getInstrumentSharedPtr(n);
+    if (!ins) continue;
+    InsDetail d;
+    d.number=n;
+    d.type=(int)ins->getType();
+    if (auto f=std::dynamic_pointer_cast<InstrumentFM>(ins)) {
+      d.envReset=f->getEnvelopeResetEnabled(FMOperatorType::All);
+      if (f->getArpeggioEnabled(FMOperatorType::All)) d.arp=rgRenderSeq([&](){ return f->getArpeggioSequenceIterator(FMOperatorType::All); },(int)f->getArpeggioType(FMOperatorType::All),false);
+      if (f->getPitchEnabled(FMOperatorType::All)) d.pitch=rgRenderSeq([&](){ return f->getPitchSequenceIterator(FMOperatorType::All); },(int)f->getPitchType(FMOperatorType::All),false);
+      if (f->getPanEnabled()) d.pan=rgRenderSeq([&](){ return f->getPanSequenceIterator(); },0,false);
+      for (int pi=0; pi<(int)FMEnvelopeParameter::SSGEG4+1; pi++) {
+        bool en=false;
+        try { en=f->getOperatorSequenceEnabled((FMEnvelopeParameter)pi); } catch (...) { en=false; }
+        if (en) { d.unsupported.push_back("sequência de operador"); break; }
+      }
+      if (f->getLFOEnabled()) {
+        d.lfoOn=true;
+        d.lfoFreq=f->getLFOParameter(FMLFOParameter::FREQ);
+        d.lfoAMS=f->getLFOParameter(FMLFOParameter::AMS);
+        d.lfoPMS=f->getLFOParameter(FMLFOParameter::PMS);
+        d.lfoAM[0]=f->getLFOParameter(FMLFOParameter::AM1);
+        d.lfoAM[1]=f->getLFOParameter(FMLFOParameter::AM2);
+        d.lfoAM[2]=f->getLFOParameter(FMLFOParameter::AM3);
+        d.lfoAM[3]=f->getLFOParameter(FMLFOParameter::AM4);
+      }
+      for (auto op: {FMOperatorType::Op1,FMOperatorType::Op2,FMOperatorType::Op3,FMOperatorType::Op4}) {
+        if (f->getArpeggioEnabled(op) || f->getPitchEnabled(op)) { d.unsupported.push_back("arpejo/altura por operador"); break; }
+      }
+    } else if (auto g=std::dynamic_pointer_cast<InstrumentSSG>(ins)) {
+      if (g->getWaveformEnabled()) d.ssgWave=rgRenderSeq([&](){ return g->getWaveformSequenceIterator(); },0,true);
+      if (g->getToneNoiseEnabled()) d.ssgTN=rgRenderSeq([&](){ return g->getToneNoiseSequenceIterator(); },0,false);
+      if (g->getEnvelopeEnabled()) d.ssgEnv=rgRenderSeq([&](){ return g->getEnvelopeSequenceIterator(); },0,true);
+      if (g->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return g->getArpeggioSequenceIterator(); },(int)g->getArpeggioType(),false);
+      if (g->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return g->getPitchSequenceIterator(); },(int)g->getPitchType(),false);
+    } else if (auto a=std::dynamic_pointer_cast<InstrumentADPCM>(ins)) {
+      d.rootKey=a->getSampleRootKeyNumber();
+      d.rootDeltaN=a->getSampleRootDeltaN();
+      d.repeat=a->isSampleRepeatable();
+      if (a->getEnvelopeEnabled()) d.adpcmEnv=rgRenderSeq([&](){ return a->getEnvelopeSequenceIterator(); },0,false);
+      if (a->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return a->getArpeggioSequenceIterator(); },(int)a->getArpeggioType(),false);
+      if (a->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return a->getPitchSequenceIterator(); },(int)a->getPitchType(),false);
+    } else {
+      d.unsupported.push_back("bateria de ADPCM");
+    }
+    ret.push_back(d);
+  }
+  return ret;
+}
+
 std::vector<SampleInfo> Player::samples() {
   std::vector<SampleInfo> ret;
   for (int n: p->instMan->getSampleADPCMEntriedIndices()) {

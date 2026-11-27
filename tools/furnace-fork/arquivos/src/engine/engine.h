@@ -325,6 +325,8 @@ struct DivChannelState {
   // stopOnOff: a compatibility thing.
   // releasing: whether a note release/macro release has occurred.
   bool doNote, legato, portaStop, keyOn, keyOff, stopOnOff, releasing;
+  // RG: BambooTracker: o slide de nota (0Qxy/0Rxy) não anda no tique em que começa
+  bool rgBTSkipPorta;
   // arpYield: another compatibility thing...
   // delayLocked: oh man
   bool arpYield, delayLocked, inPorta, scheduledSlideReset, shorthandPorta, wasShorthandPorta, noteOnInhibit, resetArp, sampleOffSet;
@@ -391,6 +393,7 @@ struct DivChannelState {
     keyOff(false),
     stopOnOff(false),
     releasing(false),
+    rgBTSkipPorta(false),
     arpYield(false),
     delayLocked(false),
     inPorta(false),
@@ -807,6 +810,7 @@ class DivEngine {
   short tempoAccum;
   // RG: acumulador de tempo do FamiTracker (modo FamiTracker)
   int rgFTAccum;
+  float rgBTAccum;
   // RG: áudio do Dn-FamiTracker (compatFlags.rgDnAudio): APU do Dn, buffer de saída e sistemas que tocam por ele
   RGDnAPU* rgDn=NULL;
   short* rgDnBuf=NULL;
@@ -1302,6 +1306,8 @@ class DivEngine {
   friend class DivExportRG;
 
   public:
+  // RG: volume do canal com a fração (8.8), para o volume fino do PSG convertido do VGMMM
+  int rgChanVolume(DivDispatch* disp, int ch);
     // the loaded song. this is public for convenience.
     // when replacing, there is a ritual you must follow:
     // 1. quitDispatch() (only if the engine is initialized)
@@ -1600,6 +1606,10 @@ class DivEngine {
     // Registro Gamer: headless player for the Chiptune Player (rgplay.cpp)
     // starts the current subsong from the beginning, rendering at rate
     bool rgPlayStart(int rate);
+    // RG: módulo do VGM Music Maker/BambooTracker convertido: tem o arquivo original guardado?
+    bool rgHasOriginal();
+    // RG: liga/desliga o tocador do programa original (VGMMM/BambooTracker) no lugar da conversão nativa
+    void rgSetOriginalPlayer(bool on);
     // renders n stereo frames; returns false once the song has stopped (FFxx)
     bool rgPlayRender(float* l, float* r, unsigned int n);
     // jumps to sec (seconds from the start, loops included) without rendering audio; returns where it landed
@@ -2364,6 +2374,7 @@ class DivEngine {
       virtualTempoD(150),
       tempoAccum(0),
       rgFTAccum(0),
+      rgBTAccum(0.0f),
       view(DIV_STATUS_NOTHING),
       haltOn(DIV_HALT_NONE),
       audioEngine(DIV_AUDIO_NULL),

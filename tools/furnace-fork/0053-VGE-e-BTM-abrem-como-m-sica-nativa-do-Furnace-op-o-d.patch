@@ -1,0 +1,1831 @@
+From 8f9b4eb241b3078ad19bdfaf7049c297df27e18d Mon Sep 17 00:00:00 2001
+From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
+Date: Fri, 27 Nov 2026 19:49:37 -0300
+Subject: [PATCH 53/53] =?UTF-8?q?VGE=20e=20BTM=20abrem=20como=20m=C3=BAsic?=
+ =?UTF-8?q?a=20nativa=20do=20Furnace=20(op=C3=A7=C3=A3o=20de=20tocar=20com?=
+ =?UTF-8?q?=20o=20programa=20original)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- VGE: PSG com ADSR fino e volume fino (teto como o VGMMM), ruído taxa 3, estéreo do PSG (Game Gear),
+  ganhos recalibrados; tempos do modo original pelos comprimentos do arquivo original.
+- BTM: instrumentos com sequências viram macros (iterador do BambooTracker), efeitos traduzidos,
+  flag rgBTNative (tempo, vibrato e slides de nota do BambooTracker), SSG +12 e afinação da tabela.
+- Caixa 'Tocar com o programa original' em Informações da música e Compatibilidade.
+---
+ extern/bambootracker/rgbt.h         |  26 ++
+ extern/bambootracker/rgbt_unity.cpp | 115 ++++++
+ src/engine/cmdStreamOps.cpp         |   2 +-
+ src/engine/engine.cpp               |  18 +-
+ src/engine/engine.h                 |  11 +
+ src/engine/fileOps/btm.cpp          | 216 ++++++++++-
+ src/engine/fileOps/vge.cpp          | 546 ++++++++++++++++++++++++----
+ src/engine/macroInt.cpp             |   7 +-
+ src/engine/platform/sms.cpp         |  27 ++
+ src/engine/platform/sms.h           |   4 +
+ src/engine/playback.cpp             |  53 ++-
+ src/engine/rgVge.cpp                |  58 ++-
+ src/engine/rgplay.cpp               |  25 ++
+ src/engine/song.cpp                 |  29 +-
+ src/engine/song.h                   |   5 +-
+ src/gui/compatFlags.cpp             |  18 +
+ src/gui/songInfo.cpp                |  11 +
+ src/rgplayer.cpp                    |   6 +
+ 18 files changed, 1081 insertions(+), 96 deletions(-)
+
+diff --git a/extern/bambootracker/rgbt.h b/extern/bambootracker/rgbt.h
+index 53c8b48..7b71385 100644
+--- a/extern/bambootracker/rgbt.h
++++ b/extern/bambootracker/rgbt.h
+@@ -43,6 +43,31 @@ namespace rgbt {
+     int sample;          // ADPCM: número da amostra
+   };
+ 
++  // sequência do instrumento, já tocada pelo iterador do BambooTracker (um valor por tique)
++  struct Seq {
++    bool on=false;
++    int type=0;               // 0 simples, 1 absoluta, 2 fixa, 3 relativa
++    std::vector<int> val;     // valor bruto do BambooTracker
++    std::vector<int> sub;     // subdado (envelope do SSG: período do envelope de hardware)
++    int loop=-1;              // volta para cá enquanto a nota toca
++    int rel=-1;               // ao soltar a nota pula para cá (o resto é a soltura)
++  };
++
++  struct InsDetail {
++    int number=0;
++    int type=0;
++    Seq arp, pitch, pan;      // FM (todos os operadores), SSG e ADPCM
++    Seq ssgWave, ssgTN, ssgEnv;
++    Seq adpcmEnv;
++    int rootKey=48;           // ADPCM: nota raiz (C4 = 48)
++    int rootDeltaN=0;
++    bool repeat=false;
++    bool envReset=false;      // FM: zerar o envelope a cada nota
++    bool lfoOn=false;
++    int lfoFreq=0, lfoAMS=0, lfoPMS=0, lfoAM[4]={0,0,0,0};
++    std::vector<std::string> unsupported;
++  };
++
+   struct SampleInfo {
+     int number;
+     std::string name;
+@@ -77,6 +102,7 @@ namespace rgbt {
+       void getStep(int s, int track, int order, int step, Step& out);
+       std::vector<InsInfo> instruments();
+       std::vector<SampleInfo> samples();
++      std::vector<InsDetail> instrumentDetails();
+       int mixerType();                // 0 não definido, 1 personalizado, 2.. presets
+       double mixerFM();               // dB
+       double mixerSSG();              // dB
+diff --git a/extern/bambootracker/rgbt_unity.cpp b/extern/bambootracker/rgbt_unity.cpp
+index cde5d64..56285ce 100644
+--- a/extern/bambootracker/rgbt_unity.cpp
++++ b/extern/bambootracker/rgbt_unity.cpp
+@@ -305,6 +305,121 @@ std::vector<InsInfo> Player::instruments() {
+   return ret;
+ }
+ 
++template<class U> static auto rgSubOf(const U& u, int) -> decltype(u.subdata, int()) { return (u.subdata&0x3ffff)|((int)u.type<<20); }
++template<class U> static int rgSubOf(const U&, long) { return 0; }
++
++// toca a sequência pelo próprio iterador: um valor por tique, até 256; acha o laço e a soltura
++template<class ITF> static Seq rgRenderSeq(ITF mk, int type, bool hasSub) {
++  Seq q;
++  q.on=true;
++  q.type=type;
++  const int MAXN=240;
++  std::vector<int> v, s;
++  bool ended=false;
++  {
++    auto it=mk();
++    it->front();
++    for (int k=0; k<MAXN; k++) {
++      if (it->hasEnded()) { ended=true; break; }
++      auto d=it->data();
++      v.push_back(d.data);
++      s.push_back(hasSub?rgSubOf(d,0):0);
++      it->next();
++    }
++  }
++  if (!ended) {
++    // menor laço [L, fim) que se repete até o fim do que foi tocado
++    int n=(int)v.size();
++    int bestL=-1, bestP=0;
++    for (int P=1; P<=n/2 && bestL<0; P++) {
++      for (int L=0; L+2*P<=n; L++) {
++        bool ok=true;
++        for (int i=L; i+P<n; i++) if (v[i]!=v[i+P] || s[i]!=s[i+P]) { ok=false; break; }
++        if (ok) { bestL=L; bestP=P; break; }
++      }
++    }
++    if (bestL>=0) {
++      v.resize(bestL+bestP);
++      s.resize(bestL+bestP);
++      q.loop=bestL;
++    }
++  }
++  // soltura: solta depois do que foi tocado
++  {
++    auto it=mk();
++    it->front();
++    for (int k=0; k<(int)v.size() && !it->hasEnded(); k++) it->next();
++    it->release();
++    std::vector<int> rv, rs;
++    for (int k=0; k<64 && !it->hasEnded(); k++) {
++      auto d=it->data();
++      rv.push_back(d.data);
++      rs.push_back(hasSub?rgSubOf(d,0):0);
++      it->next();
++    }
++    if (!rv.empty() && v.size()+rv.size()<=250) {
++      q.rel=(int)v.size();
++      v.insert(v.end(),rv.begin(),rv.end());
++      s.insert(s.end(),rs.begin(),rs.end());
++    }
++  }
++  q.val=v;
++  q.sub=s;
++  return q;
++}
++
++std::vector<InsDetail> Player::instrumentDetails() {
++  std::vector<InsDetail> ret;
++  for (int n: p->instMan->getInstrumentIndices()) {
++    auto ins=p->instMan->getInstrumentSharedPtr(n);
++    if (!ins) continue;
++    InsDetail d;
++    d.number=n;
++    d.type=(int)ins->getType();
++    if (auto f=std::dynamic_pointer_cast<InstrumentFM>(ins)) {
++      d.envReset=f->getEnvelopeResetEnabled(FMOperatorType::All);
++      if (f->getArpeggioEnabled(FMOperatorType::All)) d.arp=rgRenderSeq([&](){ return f->getArpeggioSequenceIterator(FMOperatorType::All); },(int)f->getArpeggioType(FMOperatorType::All),false);
++      if (f->getPitchEnabled(FMOperatorType::All)) d.pitch=rgRenderSeq([&](){ return f->getPitchSequenceIterator(FMOperatorType::All); },(int)f->getPitchType(FMOperatorType::All),false);
++      if (f->getPanEnabled()) d.pan=rgRenderSeq([&](){ return f->getPanSequenceIterator(); },0,false);
++      for (int pi=0; pi<(int)FMEnvelopeParameter::SSGEG4+1; pi++) {
++        bool en=false;
++        try { en=f->getOperatorSequenceEnabled((FMEnvelopeParameter)pi); } catch (...) { en=false; }
++        if (en) { d.unsupported.push_back("sequência de operador"); break; }
++      }
++      if (f->getLFOEnabled()) {
++        d.lfoOn=true;
++        d.lfoFreq=f->getLFOParameter(FMLFOParameter::FREQ);
++        d.lfoAMS=f->getLFOParameter(FMLFOParameter::AMS);
++        d.lfoPMS=f->getLFOParameter(FMLFOParameter::PMS);
++        d.lfoAM[0]=f->getLFOParameter(FMLFOParameter::AM1);
++        d.lfoAM[1]=f->getLFOParameter(FMLFOParameter::AM2);
++        d.lfoAM[2]=f->getLFOParameter(FMLFOParameter::AM3);
++        d.lfoAM[3]=f->getLFOParameter(FMLFOParameter::AM4);
++      }
++      for (auto op: {FMOperatorType::Op1,FMOperatorType::Op2,FMOperatorType::Op3,FMOperatorType::Op4}) {
++        if (f->getArpeggioEnabled(op) || f->getPitchEnabled(op)) { d.unsupported.push_back("arpejo/altura por operador"); break; }
++      }
++    } else if (auto g=std::dynamic_pointer_cast<InstrumentSSG>(ins)) {
++      if (g->getWaveformEnabled()) d.ssgWave=rgRenderSeq([&](){ return g->getWaveformSequenceIterator(); },0,true);
++      if (g->getToneNoiseEnabled()) d.ssgTN=rgRenderSeq([&](){ return g->getToneNoiseSequenceIterator(); },0,false);
++      if (g->getEnvelopeEnabled()) d.ssgEnv=rgRenderSeq([&](){ return g->getEnvelopeSequenceIterator(); },0,true);
++      if (g->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return g->getArpeggioSequenceIterator(); },(int)g->getArpeggioType(),false);
++      if (g->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return g->getPitchSequenceIterator(); },(int)g->getPitchType(),false);
++    } else if (auto a=std::dynamic_pointer_cast<InstrumentADPCM>(ins)) {
++      d.rootKey=a->getSampleRootKeyNumber();
++      d.rootDeltaN=a->getSampleRootDeltaN();
++      d.repeat=a->isSampleRepeatable();
++      if (a->getEnvelopeEnabled()) d.adpcmEnv=rgRenderSeq([&](){ return a->getEnvelopeSequenceIterator(); },0,false);
++      if (a->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return a->getArpeggioSequenceIterator(); },(int)a->getArpeggioType(),false);
++      if (a->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return a->getPitchSequenceIterator(); },(int)a->getPitchType(),false);
++    } else {
++      d.unsupported.push_back("bateria de ADPCM");
++    }
++    ret.push_back(d);
++  }
++  return ret;
++}
++
+ std::vector<SampleInfo> Player::samples() {
+   std::vector<SampleInfo> ret;
+   for (int n: p->instMan->getSampleADPCMEntriedIndices()) {
+diff --git a/src/engine/cmdStreamOps.cpp b/src/engine/cmdStreamOps.cpp
+index 1302271..8326e5f 100644
+--- a/src/engine/cmdStreamOps.cpp
++++ b/src/engine/cmdStreamOps.cpp
+@@ -1418,7 +1418,7 @@ SafeWriter* DivEngine::saveCommand(DivCSProgress* progress, DivCSOptions options
+     }
+     if (loopTick==-1) {
+       if (loopOrder==curOrder && loopRow==curRow) {
+-        if (song.compatFlags.rgFamiTracker?(ticks-1<=0):((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0)) {
++        if ((song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?(ticks-1<=0):((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0)) {
+           logI("loop is on tick %d",tick);
+           loopTick=tick;
+           // loop marker
+diff --git a/src/engine/engine.cpp b/src/engine/engine.cpp
+index d0312e2..55fa483 100644
+--- a/src/engine/engine.cpp
++++ b/src/engine/engine.cpp
+@@ -216,7 +216,7 @@ void DivEngine::calcSongTimestamps() {
+     return;
+   }
+   if (curSubSong!=NULL) {
+-    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0);
++    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0,song.compatFlags.rgBTNative);
+   }
+ }
+ 
+@@ -1631,6 +1631,16 @@ unsigned short DivEngine::getChanPan(int ch) {
+   return disCont[song.dispatchOfChan[ch]].dispatch->getPan(song.dispatchChanOfChan[ch]);
+ }
+ 
++int DivEngine::rgChanVolume(DivDispatch* disp, int ch) {
++  for (int i=0; i<song.systemLen; i++) {
++    if (disCont[i].dispatch!=disp) continue;
++    for (int j=0; j<song.chans; j++) {
++      if (song.dispatchOfChan[j]==i && song.dispatchChanOfChan[j]==ch) return chan[j].volume;
++    }
++  }
++  return 15<<8;
++}
++
+ SharedChannel* DivEngine::getDispatchChanState(int ch) {
+   if (ch<0 || ch>=song.chans) return NULL;
+   if (song.dispatchChanOfChan[ch]<0) return NULL;
+@@ -1744,6 +1754,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+     subticks=1;
+     tempoAccum=0;
+     rgFTAccum=0;
++    rgBTAccum=0.0f;
+     totalTimeDrift=0;
+     totalTicksR=0;
+     totalLoops=0;
+@@ -1784,6 +1795,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+     subticks=0;
+     tempoAccum=0;
+     rgFTAccum=0;
++    rgBTAccum=0.0f;
+     totalTime=TimeMicros(0,0);
+     totalTimeDrift=0;
+     totalTicksR=0;
+@@ -1833,7 +1845,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+       runMidiTime(cycles);
+     }
+     if (oldOrder!=curOrder) break;
+-    if (song.compatFlags.rgFamiTracker) {
++    if (song.compatFlags.rgFamiTracker || song.compatFlags.rgBTNative) {
+       if (ticks-1<1 && curRow>=goalRow) break;
+     } else if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
+   }
+@@ -1873,6 +1885,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
+     prevSpeed=nextSpeed;
+     tempoAccum=0;
+     rgFTAccum=0;
++    rgBTAccum=0.0f;
+   }
+   skipping=false;
+   cmdStream.clear();
+@@ -4120,6 +4133,7 @@ void DivEngine::quitDispatch() {
+   ticks=0;
+   tempoAccum=0;
+     rgFTAccum=0;
++    rgBTAccum=0.0f;
+   curRow=0;
+   curOrder=0;
+   prevRow=0;
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 701fa8f..a1bff36 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -325,6 +325,8 @@ struct DivChannelState {
+   // stopOnOff: a compatibility thing.
+   // releasing: whether a note release/macro release has occurred.
+   bool doNote, legato, portaStop, keyOn, keyOff, stopOnOff, releasing;
++  // RG: BambooTracker: o slide de nota (0Qxy/0Rxy) não anda no tique em que começa
++  bool rgBTSkipPorta;
+   // arpYield: another compatibility thing...
+   // delayLocked: oh man
+   bool arpYield, delayLocked, inPorta, scheduledSlideReset, shorthandPorta, wasShorthandPorta, noteOnInhibit, resetArp, sampleOffSet;
+@@ -391,6 +393,7 @@ struct DivChannelState {
+     keyOff(false),
+     stopOnOff(false),
+     releasing(false),
++    rgBTSkipPorta(false),
+     arpYield(false),
+     delayLocked(false),
+     inPorta(false),
+@@ -807,6 +810,7 @@ class DivEngine {
+   short tempoAccum;
+   // RG: acumulador de tempo do FamiTracker (modo FamiTracker)
+   int rgFTAccum;
++  float rgBTAccum;
+   // RG: áudio do Dn-FamiTracker (compatFlags.rgDnAudio): APU do Dn, buffer de saída e sistemas que tocam por ele
+   RGDnAPU* rgDn=NULL;
+   short* rgDnBuf=NULL;
+@@ -1302,6 +1306,8 @@ class DivEngine {
+   friend class DivExportRG;
+ 
+   public:
++  // RG: volume do canal com a fração (8.8), para o volume fino do PSG convertido do VGMMM
++  int rgChanVolume(DivDispatch* disp, int ch);
+     // the loaded song. this is public for convenience.
+     // when replacing, there is a ritual you must follow:
+     // 1. quitDispatch() (only if the engine is initialized)
+@@ -1600,6 +1606,10 @@ class DivEngine {
+     // Registro Gamer: headless player for the Chiptune Player (rgplay.cpp)
+     // starts the current subsong from the beginning, rendering at rate
+     bool rgPlayStart(int rate);
++    // RG: módulo do VGM Music Maker/BambooTracker convertido: tem o arquivo original guardado?
++    bool rgHasOriginal();
++    // RG: liga/desliga o tocador do programa original (VGMMM/BambooTracker) no lugar da conversão nativa
++    void rgSetOriginalPlayer(bool on);
+     // renders n stereo frames; returns false once the song has stopped (FFxx)
+     bool rgPlayRender(float* l, float* r, unsigned int n);
+     // jumps to sec (seconds from the start, loops included) without rendering audio; returns where it landed
+@@ -2364,6 +2374,7 @@ class DivEngine {
+       virtualTempoD(150),
+       tempoAccum(0),
+       rgFTAccum(0),
++      rgBTAccum(0.0f),
+       view(DIV_STATUS_NOTHING),
+       haltOn(DIV_HALT_NONE),
+       audioEngine(DIV_AUDIO_NULL),
+diff --git a/src/engine/fileOps/btm.cpp b/src/engine/fileOps/btm.cpp
+index c58ae27..7b4aea6 100644
+--- a/src/engine/fileOps/btm.cpp
++++ b/src/engine/fileOps/btm.cpp
+@@ -19,12 +19,15 @@
+ 
+ // RG: importador de módulos do BambooTracker (.btm).
+ // O arquivo é lido pelo próprio código do BambooTracker (extern/bambootracker). A música vira YM2608 (ou YM2608
+-// com o FM3 estendido) com os padrões e instrumentos do módulo, para ver no Furnace; o .btm original fica
+-// guardado (rgBTData) e o tocador do BambooTracker toca (rgBT.cpp), então o som sai igual ao do programa.
++// com o FM3 estendido) nativa do Furnace: padrões, instrumentos (sequências viram macros) e efeitos traduzidos,
++// com o tempo, o vibrato e os slides de nota na matemática do BambooTracker (rgBTNative). O .btm original fica
++// guardado (rgBTData): ligando rgBT o tocador do próprio BambooTracker toca (rgBT.cpp).
+ 
+ #include "fileOpsCommon.h"
+ #include "../../baseutils.h"
+ #include "../../../extern/bambootracker/rgbt.h"
++#include <functional>
++#include <deque>
+ 
+ // efeito do BambooTracker -> código parecido do Furnace (só para mostrar; quem toca é o BambooTracker)
+ static bool rgBTFx(const char* id, int v, int src, short& fx, short& val) {
+@@ -70,6 +73,79 @@ static bool rgBTFx(const char* id, int v, int src, short& fx, short& val) {
+   return false;
+ }
+ 
++// a tabela de períodos do SSG do BambooTracker é feita para 8 MHz: com o chip a 7,9872 MHz toca ~3 cents abaixo
++#define RG_BT_SSG_DETUNE (-3)
++
++// efeito do BambooTracker -> efeito do Furnace que faz a mesma coisa (modo nativo, com rgBTNative)
++static int rgBTFxNative(const char* id, int v, int src, short* fx, short* val) {
++  if (!id[0]) return 0;
++  int vv=(v<0)?0:v;
++  char a=id[0], b=id[1];
++  auto one=[&](int f, int x) { fx[0]=f; val[0]=x&0xff; return 1; };
++  // volume do BambooTracker sobe/desce 1 por tique a cada dígito; o 0Axy do Furnace anda 1/4
++  auto slide=[&](int hi, int lo) {
++    if (hi && !lo) return one(0x0a,MIN(15,hi*4)<<4);
++    if (!hi) return one(0x0a,MIN(15,lo*4));
++    return 0;
++  };
++  if (a=='0') {
++    switch (b) {
++      case '0': case '1': case '2': case '3': case '4': return one(b-'0',vv);
++      case 'B': return one(0x0b,vv);
++      case 'D': return one(0x0d,vv);
++      case '7': return one(0x07,vv); // tremolo (forma diferente)
++      case '8':
++        if (src==rgbt::RHYTHM || src==rgbt::FM || src==rgbt::ADPCM) return one(0x08,((vv&2)?0xf0:0)|((vv&1)?0x0f:0));
++        return 0;
++      case 'A': {
++        int hi=vv>>4, lo=vv&15;
++        // o FM do BambooTracker é atenuação: subir = menos atenuação
++        return slide(hi,lo);
++      }
++      case 'C': return one(0xff,0);
++      case 'F':
++        if (vv<0x20) return one(0x0f,MAX(1,vv));
++        return one(0xfd,vv); // tempo (numerador do tempo virtual, com o denominador 150)
++      case 'G': return one(0xed,vv);
++      case 'H': return (src==rgbt::SSG)?one(0x29,vv):0;
++      case 'I': return (src==rgbt::SSG)?one(0x24,vv):0;
++      case 'J': return (src==rgbt::SSG)?one(0x23,vv):0;
++      case 'K': return (vv&15)?one(0x0c,vv&15):0;
++      case 'P': {
++        // afinação em 1/32 de semitom (80 = centro); E5 do Furnace anda 1/128
++        int d=(vv-0x80)*4+((src==rgbt::SSG)?RG_BT_SSG_DETUNE:0);
++        return one(0xe5,MAX(0,MIN(255,0x80+d)));
++      }
++      case 'Q': return one(0xe1,vv);
++      case 'R': return one(0xe2,vv);
++      case 'S': return one(0xfc,vv);
++      case 'V':
++        if (src==rgbt::RHYTHM) return one(0x1f,vv);
++        return 0;
++      case 'W': return (src==rgbt::SSG)?one(0x21,vv):0;
++      default: return 0;
++    }
++  }
++  if (a=='E' && b=='S') return one(0xec,vv);
++  if (src==rgbt::FM) {
++    if (a=='F' && b=='B') return one(0x11,vv&7);
++    if (a=='T' && b>='1' && b<='4') return one(0x12+(b-'1'),vv&0x7f);
++    if (a=='M' && b=='L') return one(0x16,vv);
++  }
++  return 0;
++}
++
++// sequência do BambooTracker -> macro do Furnace
++static void rgBTMacro(DivInstrumentMacro& m, const rgbt::Seq& q, std::function<int(int,int)> conv) {
++  if (!q.on || q.val.empty()) return;
++  int n=MIN((int)q.val.size(),255);
++  for (int i=0; i<n; i++) m.val[i]=conv(q.val[i],i);
++  m.len=n;
++  m.loop=(q.loop>=0 && q.loop<n)?q.loop:255;
++  m.rel=(q.rel>=0 && q.rel<n)?q.rel:255;
++  m.open=true;
++}
++
+ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+   rgbt::Player pl;
+   std::string msg;
+@@ -98,8 +174,15 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+   ds.systemLen=1;
+   ds.system[0]=ext?DIV_SYSTEM_YM2608_EXT:DIV_SYSTEM_YM2608;
+   ds.systemFlags[0].set("clockSel",1); // 7,9872 MHz, como no BambooTracker
+-  ds.compatFlags.rgBT=true;
++  // nativo: o Furnace toca (rgBT=true volta ao tocador do BambooTracker)
++  ds.compatFlags.rgBT=false;
++  ds.compatFlags.rgBTNative=true;
+   ds.compatFlags.loopModality=2;
++  ds.compatFlags.linearPitch=1;
++  ds.compatFlags.pitchSlideSpeed=4; // 1/32 de semitom por unidade, como o BambooTracker
++  ds.compatFlags.newVolumeScaling=true; // atenuação somada (TL do portador + volume), como o BambooTracker
++  // no BambooTracker, quando o envelope do SSG/ADPCM acaba, um volume novo vale sozinho (o envelope não pesa mais)
++  ds.compatFlags.volMacroLinger=false;
+   // mixagem do BambooTracker (tipo de mixer do módulo, como a janela principal dele aplica), medida contra o WAV
+   // do próprio BambooTracker: FM/ritmo/ADPCM 1,17x e SSG 1,59x mais altos no Furnace com SSG a 0 dB
+   {
+@@ -127,6 +210,9 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+     sub->hz=MAX(1,pl.tickFrequency());
+     sub->speeds.val[0]=MAX(1,pl.songSpeed(s));
+     sub->speeds.len=1;
++    // tempo do BambooTracker: linha = speed*150/tempo tiques (a 60 Hz); no Furnace o tempo virtual N/D
++    sub->virtualTempoN=MAX(1,pl.songTempo(s));
++    sub->virtualTempoD=MAX(1,(int)round(2.5*sub->hz));
+     int ords=MIN(pl.orderSize(s),DIV_MAX_PATTERNS);
+     sub->ordersLen=MAX(1,ords);
+     int patLen=1;
+@@ -141,19 +227,41 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+       int ch=(int)t;
+       if (ext && !songExt && t>=3) ch=(int)t+3;
+       if (ch>=DIV_MAX_CHANS) continue;
++      int src=tracks[t].source;
++      std::deque<int> echo; // notas tocadas (a mais nova na frente), para ^0..^3
++      std::vector<bool> done(DIV_MAX_PATTERNS,false);
+       for (int o=0; o<ords; o++) {
+         int pi=pl.patternIndex(s,(int)t,o);
+         if (pi<0 || pi>=DIV_MAX_PATTERNS) continue;
+         sub->orders.ord[ch][o]=pi;
++        bool first=!done[pi];
++        done[pi]=true;
+         DivPattern* pat=sub->pat[ch].getPattern(pi,true);
+         int plen=MIN(pl.patternSize(s,o),patLen);
+         for (int r=0; r<plen; r++) {
+           rgbt::Step st;
+           pl.getStep(s,(int)t,o,r,st);
++          int note=-1;
+           if (st.note>=0) {
+-            int n=60+st.note;
++            note=st.note;
++          } else if (st.note<=-3 && st.note>=-6) {
++            // eco: repete uma nota anterior
++            int k=-3-st.note;
++            if (k<(int)echo.size()) note=echo[k];
++          }
++          if (note>=0) {
++            echo.push_front(note);
++            if (echo.size()>4) echo.pop_back();
++          }
++          if (!first) continue;
++          if (note>=0) {
++            // a tabela de períodos do SSG do BambooTracker toca uma oitava acima da do FM para a mesma nota
++            int n=60+note+((src==rgbt::SSG)?12:0);
+             if (n<180) pat->newData[r][DIV_PAT_NOTE]=n;
+-          } else if (st.note==-2 || st.note==-7) {
++          } else if (st.note==-2) {
++            // key off: com soltura de macro quando o instrumento tem
++            pat->newData[r][DIV_PAT_NOTE]=(src==rgbt::FM || src==rgbt::RHYTHM)?DIV_NOTE_OFF:DIV_NOTE_REL;
++          } else if (st.note==-7) {
+             pat->newData[r][DIV_PAT_NOTE]=DIV_NOTE_OFF;
+           }
+           if (st.ins>=0) {
+@@ -162,13 +270,28 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+           }
+           if (st.vol>=0) {
+             // volume do FM no BambooTracker é atenuação (00 = máximo)
+-            pat->newData[r][DIV_PAT_VOL]=(tracks[t].source==rgbt::FM)?(0x7f-MIN(st.vol,0x7f)):st.vol;
++            pat->newData[r][DIV_PAT_VOL]=(src==rgbt::FM)?(0x7f-MIN(st.vol,0x7f)):st.vol;
+           }
+-          for (int k=0; k<4; k++) {
+-            short fx, val;
+-            if (rgBTFx(st.fx[k].id,st.fx[k].value,tracks[t].source,fx,val)) {
+-              pat->newData[r][DIV_PAT_FX(k)]=fx;
+-              pat->newData[r][DIV_PAT_FXVAL(k)]=val;
++          int col=0;
++          for (int k=0; k<4 && col<4; k++) {
++            short fx[2], val[2];
++            int nfx=rgBTFxNative(st.fx[k].id,st.fx[k].value,src,fx,val);
++            for (int j=0; j<nfx && col<4; j++) {
++              pat->newData[r][DIV_PAT_FX(col)]=fx[j];
++              pat->newData[r][DIV_PAT_FXVAL(col)]=val[j];
++              col++;
++            }
++          }
++        }
++        // SSG: afinação da tabela do BambooTracker desde o começo
++        if (first && o==0 && src==rgbt::SSG) {
++          bool hasE5=false;
++          for (int k=0; k<4; k++) if (pat->newData[0][DIV_PAT_FX(k)]==0xe5) hasE5=true;
++          for (int k=0; k<4 && !hasE5; k++) {
++            if (pat->newData[0][DIV_PAT_FX(k)]==-1) {
++              pat->newData[0][DIV_PAT_FX(k)]=0xe5;
++              pat->newData[0][DIV_PAT_FXVAL(k)]=0x80+RG_BT_SSG_DETUNE;
++              break;
+             }
+           }
+         }
+@@ -185,6 +308,7 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+ 
+   // instrumentos (mesmo número do BambooTracker)
+   std::vector<rgbt::InsInfo> insList=pl.instruments();
++  std::vector<rgbt::InsDetail> insDet=pl.instrumentDetails();
+   for (auto& i: insList) maxIns=MAX(maxIns,i.number);
+   // DT do registrador (0..7) -> DT do Furnace (3 = 0)
+   const int dtFromReg[8]={3,4,5,6,3,2,1,0};
+@@ -198,8 +322,10 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+         ins->type=DIV_INS_FM;
+         ins->fm.alg=i.alg&7;
+         ins->fm.fb=i.fb&7;
++        // os operadores do BambooTracker vêm na ordem lógica (S1 S2 S3 S4); no Furnace op[] segue os registradores (S1 S3 S2 S4)
++        const int opMap[4]={0,2,1,3};
+         for (int o=0; o<4; o++) {
+-          DivInstrumentFM::Operator& op=ins->fm.op[o];
++          DivInstrumentFM::Operator& op=ins->fm.op[opMap[o]];
+           op.ar=i.ar[o]&31;
+           op.dr=i.dr[o]&31;
+           op.d2r=i.sr[o]&31;
+@@ -216,6 +342,60 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+         ins->type=DIV_INS_AY;
+       } else {
+         ins->type=DIV_INS_ADPCMB;
++        ins->amiga.initSample=i.sample;
++      }
++    }
++    // sequências -> macros
++    for (auto& d: insDet) {
++      if (d.number!=n) continue;
++      for (auto& u: d.unsupported) logW("BTM: instrumento %.2X: %s ainda não é convertido",n,u.c_str());
++      // arpejo: absoluta/relativa em notas (48 = 0), fixa = nota exata
++      if (d.arp.on) {
++        int acc=0;
++        rgBTMacro(ins->std.arpMacro,d.arp,[&](int v, int) -> int {
++          if (d.arp.type==2) return (v+((ins->type==DIV_INS_AY)?12:0))^0x40000000;
++          if (d.arp.type==3) { acc+=v-48; return acc; }
++          return v-48;
++        });
++      }
++      // altura em 1/32 de semitom (127 = 0); no Furnace 1/128
++      if (d.pitch.on) {
++        rgBTMacro(ins->std.pitchMacro,d.pitch,[&](int v, int) -> int { return (v-127)*4; });
++        if (d.pitch.type==3) ins->std.pitchMacro.mode=1;
++      }
++      if (ins->type==DIV_INS_AY) {
++        if (d.ssgEnv.on) {
++          bool hard=false;
++          for (int v: d.ssgEnv.val) if (v>=16) hard=true;
++          if (hard) logW("BTM: instrumento %.2X: envelope de hardware do SSG ainda não é convertido",n);
++          rgBTMacro(ins->std.volMacro,d.ssgEnv,[&](int v, int) -> int { return (v<16)?v:15; });
++        }
++        if (d.ssgTN.on) {
++          // 0 tom, 1-32 ruído (período 32-x), 33-64 tom+ruído (64-x), 65 nada
++          rgBTMacro(ins->std.waveMacro,d.ssgTN,[&](int v, int) -> int {
++            if (v==0) return 1;
++            if (v==65) return 0;
++            return (v>32)?3:2;
++          });
++          bool noise=false;
++          for (int v: d.ssgTN.val) if (v>0 && v<65) noise=true;
++          if (noise) {
++            int last=-1;
++            // a macro de ruído do Furnace escreve 31-valor no registrador
++            for (int v: d.ssgTN.val) if (v>0 && v<65) { last=31-((v>32)?(64-v):(32-v)); break; }
++            rgBTMacro(ins->std.dutyMacro,d.ssgTN,[&](int v, int) -> int {
++              if (v>0 && v<65) last=31-((v>32)?(64-v):(32-v));
++              return last;
++            });
++          }
++        }
++        if (d.ssgWave.on) {
++          bool square=true;
++          for (int v: d.ssgWave.val) if (v!=0) square=false;
++          if (!square) logW("BTM: instrumento %.2X: forma de onda do SSG (fora a quadrada) ainda não é convertida",n);
++        }
++      } else if (ins->type==DIV_INS_ADPCMB) {
++        if (d.adpcmEnv.on) rgBTMacro(ins->std.volMacro,d.adpcmEnv,[&](int v, int) -> int { return v; });
+       }
+     }
+     ds.ins.push_back(ins);
+@@ -232,8 +412,16 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+     for (auto& s: smp) {
+       if (s.number!=n || s.data.empty()) continue;
+       sm->name=fmt::sprintf("ADPCM %.2X",n);
+-      // deltaN da nota raiz -> Hz (clock/144 * deltaN / 65536)
+-      sm->centerRate=MAX(1,(int)round((7987200.0/144.0)*(double)s.rootRate/65536.0));
++      // o Furnace toca a amostra com deltaN = 65535*centerRate/8372 * f(nota)/(clock/144), f = 440*2^((nota-57)/12);
++      // o BambooTracker toca a nota raiz com o deltaN da raiz
++      int rootKey=48, rootDN=s.rootRate;
++      for (auto& d: insDet) {
++        if (d.type!=2) continue;
++        for (auto& ii: insList) if (ii.number==d.number && ii.sample==n) { rootKey=d.rootKey; rootDN=d.rootDeltaN; }
++      }
++      // nota no espaço do Furnace (60 = C-0): C-4 = 108 toca a 8372 "Hz" virtuais = centerRate
++      double fRoot=440.0*pow(2.0,(double)(rootKey+60-57)/12.0);
++      sm->centerRate=MAX(1,(int)round((double)rootDN*(7987200.0/144.0)*8372.0/(65535.0*fRoot)));
+       if (sm->init(s.data.size()*2)) {
+         memcpy(sm->dataB,s.data.data(),MIN(s.data.size(),(size_t)sm->lengthB));
+       }
+diff --git a/src/engine/fileOps/vge.cpp b/src/engine/fileOps/vge.cpp
+index 9c508da..0b63b9a 100644
+--- a/src/engine/fileOps/vge.cpp
++++ b/src/engine/fileOps/vge.cpp
+@@ -23,7 +23,9 @@
+ // tocar a música (rgVge.cpp), então o som sai igual ao do programa original.
+ 
+ #include "fileOpsCommon.h"
++#include <map>
+ #include "../rgVgeMap.h"
++#include "../../baseutils.h"
+ #include "../../../extern/vgmmm/rgvge.h"
+ 
+ static String rgVgeDate(unsigned short d) {
+@@ -62,11 +64,10 @@ bool DivEngine::loadVGE(unsigned char* file, size_t len) {
+   ds.systemLen=2;
+   ds.system[0]=DIV_SYSTEM_YM2612;
+   ds.system[1]=DIV_SYSTEM_SMS;
+-  ds.compatFlags.rgVGMMM=true;
+-  ds.compatFlags.loopModality=2;
++  ds.compatFlags.rgVGMMM=false;
+   // mixagem do VGMMM (chips.cpp: FM x(fmVolume*7+0x3c0)/256, PSG sem ganho): medida contra o WAV do próprio VGMMM
+-  ds.systemVol[0]=1.70f;
+-  ds.systemVol[1]=0.126f;
++  ds.systemVol[0]=1.77f;
++  ds.systemVol[1]=0.27f;
+ 
+   // relógios (o VGMMM usa os do PAL por padrão)
+   if (h.fmClock==7600489 || h.fmClock==7600490) {
+@@ -88,6 +89,7 @@ bool DivEngine::loadVGE(unsigned char* file, size_t len) {
+   // cabeçalho do VGMMM (para montar o módulo de volta na hora de tocar)
+   ds.systemFlags[0].set("rgVgeFM",(int)h.fmClock);
+   ds.systemFlags[0].set("rgVgePSG",(int)h.psgClock);
++  ds.systemFlags[1].set("rgFineVol",true);
+   ds.systemFlags[0].set("rgVgeSpeedE",(int)h.speedEven);
+   ds.systemFlags[0].set("rgVgeSpeedO",(int)h.speedOdd);
+   ds.systemFlags[0].set("rgVgeInter",(int)h.interleave);
+@@ -115,6 +117,25 @@ bool DivEngine::loadVGE(unsigned char* file, size_t len) {
+     sub->speeds.len=il*2;
+   }
+ 
++  // ---- conversão para música do Furnace (o Furnace toca; com rgVGMMM ligado, toca o VGMMM a partir do original)
++  // o arquivo original, para a opção "tocar com o VGM Music Maker"
++  ds.systemFlags[0].set("rgVgeData",taEncodeBase64(std::string((const char*)file,len)));
++
++  // volume do FM: o VGMMM usa uma tabela (fm_set_volume) e escala o TL dos carriers como o Furnace sem a
++  // "nova escala de volume" (127-((127-tl)*v)/127): a tabela vai direto para a coluna de volume
++  static const int vgeVolTab[32]={0,0,88,90,91,93,95,96,97,98,100,102,104,106,107,109,110,112,113,114,115,116,118,119,120,121,122,123,124,125,126,127};
++  ds.compatFlags.newVolumeScaling=false;
++  ds.compatFlags.linearPitch=1;
++  ds.compatFlags.pitchSlideSpeed=4; // 1/32 de semitom por unidade, como o VGMMM
++  // afinação: a tabela de F-num do VGMMM (A = 1085) é a do relógio NTSC; no relógio da música o FM sai um pouco
++  // fora de 440. O PSG usa períodos calculados para 3546894 Hz. O Furnace afina pelo FM e o PSG ganha um E5.
++  double fmA=1085.0*8.0*(double)h.fmClock/(144.0*1048576.0);
++  double psgA=440.0*(double)h.psgClock/3546894.0;
++  ds.tuning=(float)fmA;
++  int psgE5=0x80+(int)round(1200.0*log2(psgA/fmA)*128.0/100.0);
++  if (psgE5<0) psgE5=0;
++  if (psgE5>255) psgE5=255;
++
+   // padrões usados
+   bool used[256];
+   memset(used,0,sizeof(used));
+@@ -122,60 +143,419 @@ bool DivEngine::loadVGE(unsigned char* file, size_t len) {
+   for (int i=0; i<sub->ordersLen; i++) {
+     int p=rgvge::orderPattern(i);
+     used[p]=true;
+-    for (int ch=0; ch<rgvge::CHANNELS; ch++) sub->orders.ord[ch][i]=p;
+     if (rgvge::patternLength(p)>maxLen) maxLen=rgvge::patternLength(p);
+   }
+   if (maxLen>DIV_MAX_ROWS) maxLen=DIV_MAX_ROWS;
+   sub->patLen=maxLen;
+ 
+-  int maxIns=-1;
+-  bool fxUsed[rgvge::CHANNELS];
+-  memset(fxUsed,0,sizeof(fxUsed));
++  // instrumentos FM: mesmo número do VGMMM
++  int lastFM=0;
++  for (int i=0; i<rgvge::MAX_INSTRUMENTS; i++) {
++    if (!rgvge::insEmpty(i)) lastFM=i;
++  }
++  // amostras usadas (efeito 1C) e instrumentos usados no PSG
++  bool smpUsed[256], psgUsed[256];
++  bool psgPan=false; // o VGMMM faz estéreo no PSG (registro do Game Gear)
++  memset(smpUsed,0,sizeof(smpUsed));
++  memset(psgUsed,0,sizeof(psgUsed));
+   for (int p=0; p<256; p++) {
+     if (!used[p]) continue;
++    for (int row=0; row<rgvge::patternLength(p); row++) {
++      for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++        rgvge::Cell c;
++        rgvge::getCell(p,row,ch,c);
++        if (c.ins>0 && c.ins-1>lastFM) lastFM=c.ins-1;
++        if (ch>=6 && c.ins>0) psgUsed[c.ins&255]=true;
++        for (int k=0; k<4; k++) {
++          if (c.fx[k]==0x1c) smpUsed[c.param[k]==0xff?0xfe:c.param[k]]=true;
++          if (c.fx[k]==0x19 && ch>=6) psgPan=true;
++        }
++      }
++    }
++  }
++  psgUsed[1]=true; // instrumento padrão do VGMMM
++  if (psgPan) ds.systemFlags[1].set("chipType",3); // Game Gear: o mesmo PSG da Sega, com estéreo
++  int nFM=lastFM+1;
++  int psgIns[256];
++  int smpIns[256];
++  int nextIns=nFM;
++  for (int i=0; i<256; i++) {
++    psgIns[i]=-1;
++    smpIns[i]=-1;
++  }
++  for (int i=0; i<256; i++) {
++    int l=0;
++    if (smpUsed[i] && rgvge::sampleData(i,l)!=NULL && l>0) smpIns[i]=nextIns++;
++  }
++  for (int i=1; i<256; i++) {
++    if (psgUsed[i] && i-1<rgvge::MAX_INSTRUMENTS) psgIns[i]=1;
++  }
++  // PSG: o VGMMM multiplica o envelope pelo volume (15*nível*escala, arredondado para cima); o Furnace
++  // soma atenuações. Para soar igual, cada par instrumento+volume vira um instrumento com o envelope já
++  // na escala certa, e a coluna de volume fica no máximo.
++  std::vector<std::pair<int,int>> psgList; // (instrumento do VGMMM, volume 0-31)
++  std::map<int,int> psgMap;
++  auto psgScale=[&](int n, int cv) -> double {
++    rgvge::Ins vi;
++    rgvge::getIns(n-1,vi);
++    int tl=vi.op[3].tl&0x7f;
++    return 15.0*(double)(((127-tl)*(cv*4))/127)/127.0;
++  };
++  auto psgFor=[&](int n, int cv) -> int {
++    if (n<1 || n>255 || psgIns[n]<0) n=1;
++    cv&=31;
++    int key=(n<<5)|cv;
++    auto it=psgMap.find(key);
++    if (it!=psgMap.end()) return it->second;
++    int idx=nextIns++;
++    psgMap[key]=idx;
++    psgList.push_back(std::make_pair(n,cv));
++    return idx;
++  };
++
++  // estado de cada canal ao longo da música (memória dos efeitos do VGMMM)
++  struct VgeCh {
++    int ins=-1;          // instrumento do VGMMM (1..)
++    int furIns=-1;       // instrumento posto no Furnace
++    int vol=31;
++    bool arp=false;
++    int portaUp=0, portaDown=0, tonePorta=0, vibParam=0, volSlide=0;
++    bool pUp=false, pDown=false, pTone=false, pVib=false, pSlide=false;
++    bool dac=false;      // FM6 tocando amostra
++    double psgS=-1;      // PSG: escala do instrumento posto
++    int psgCv=31;        // PSG: volume (0-31) do instrumento posto
++  } cs[rgvge::CHANNELS];
++  bool written[256][DIV_MAX_ROWS];
++  memset(written,0,sizeof(written));
++  int maxCols[rgvge::CHANNELS];
++  for (int ch=0; ch<rgvge::CHANNELS; ch++) maxCols[ch]=1;
++  auto chFur=[&](int ch) -> int { return ch; };
++  auto addFx=[&](std::vector<std::pair<short,short>>& v, short fx, short val) {
++    for (auto& e: v) {
++      if (e.first==fx) {
++        e.second=val;
++        return;
++      }
++    }
++    v.push_back(std::make_pair(fx,val));
++  };
++  auto fmSlide=[&](std::vector<std::pair<short,short>>& v, int ch, int slide) {
++    // VGMMM: desce (y) e sobe (x) 1/8 de volume por tique; no Furnace F3/F4 (1/256 por tique) ou 0A
++    int net=(slide>>4)-(slide&15);
++    // no PSG o volume do instrumento posto vale 15 no Furnace: a descida é relativa a ele
++    double per=(ch<6)?(43.0*net):(480.0*net/(double)MAX(1,cs[ch].psgCv));
++    int a=(int)round(fabs(per));
++    if (net==0) {
++      addFx(v,0x0a,0);
++    } else if (a<=255) {
++      addFx(v,(per>0)?0xf3:0xf4,a);
++    } else {
++      int q=MIN(15,(int)round(fabs(per)/64.0));
++      addFx(v,0x0a,(per>0)?(q<<4):q);
++    }
++  };
++
++  // ruído: modo atual no Furnace (branco/periódico, taxa fixa ou período do tom 3)
++  bool nzWhite=true, nzCh3=false;
++  int tone2Note=-1;
++  auto nzFx=[&]() -> short { return (nzCh3?0x10:0x00)|(nzWhite?0x01:0x00); };
++  for (int o=0; o<sub->ordersLen; o++) {
++    int p=rgvge::orderPattern(o);
++    for (int ch=0; ch<rgvge::CHANNELS; ch++) sub->orders.ord[ch][o]=p;
+     int plen=MIN(rgvge::patternLength(p),maxLen);
+-    for (int ch=0; ch<rgvge::CHANNELS; ch++) {
+-      DivPattern* pat=sub->pat[ch].getPattern(p,true);
+-      for (int row=0; row<plen; row++) {
++    for (int row=0; row<plen; row++) {
++      bool first=!written[p][row];
++      written[p][row]=true;
++      // efeitos globais desta linha (amostra, ruído) que vão para outros canais
++      int dacTrig=-1, dacRetrig=-1, dacCut=-1, dacDelay=-1, noiseMode=-1;
++      for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++        rgvge::Cell c;
++        rgvge::getCell(p,row,ch,c);
++        for (int k=0; k<4; k++) {
++          unsigned char fx=c.fx[k], pp=c.param[k];
++          if (fx==0x1c) dacTrig=(pp==0xff)?0xfe:pp;
++          if (fx==0x1a) {
++            if ((pp&0xf0)==0x90) dacRetrig=pp&15;
++            if ((pp&0xf0)==0xc0) dacCut=pp&15;
++            if ((pp&0xf0)==0xd0) dacDelay=pp&15;
++          }
++          if (fx==0x17) noiseMode=(pp!=0);
++        }
++      }
++      for (int ch=0; ch<rgvge::CHANNELS; ch++) {
+         rgvge::Cell c;
+         rgvge::getCell(p,row,ch,c);
++        VgeCh& s=cs[ch];
++        short note=-1, ins=-1, vol=-1;
++        std::vector<std::pair<short,short>> fxs;
++        bool porta=false, hasArp=false, psgNoteVol=false;
++        bool nUp=false, nDown=false, nTone=false, nVib=false, nSlide=false;
++        for (int k=0; k<4; k++) {
++          if (c.fx[k]==0x03) porta=true;
++          if (c.fx[k]==0x00 && c.param[k]!=0) hasArp=true;
++        }
++        // começo da música: modo do ruído e afinação do PSG
++        if (o==0 && row==0) {
++          if (ch>=6) addFx(fxs,0xe5,psgE5);
++          if (ch==9) addFx(fxs,0x20,nzFx());
++        }
++        // nota
+         if (c.note==rgvge::NOTE_OFF) {
+-          pat->newData[row][DIV_PAT_NOTE]=DIV_NOTE_OFF;
++          if (ch<6) {
++            if (!(ch==5 && s.dac)) note=DIV_NOTE_OFF;
++          } else {
++            note=DIV_NOTE_REL;
++          }
+         } else if (c.note>=0 && c.note<12) {
+-          int n=60+c.octave*12+c.note;
+-          if (n>=0 && n<180) pat->newData[row][DIV_PAT_NOTE]=n;
++          // instrumento (o VGMMM usa o 1 quando nenhum foi escolhido)
++          int n=s.ins;
++          if (c.ins!=0) n=c.ins;
++          if (n<=0) n=1;
++          s.ins=n;
++          int fi;
++          if (ch<6) {
++            fi=n-1;
++          } else {
++            int cv=(c.volume!=0)?c.volume:s.vol;
++            fi=psgFor(n,cv);
++            for (auto& e: psgMap) if (e.second==fi) { s.psgS=psgScale(e.first>>5,e.first&31); s.psgCv=e.first&31; break; }
++            if (c.volume!=0) psgNoteVol=true;
++          }
++          if (c.ins!=0 || s.furIns!=fi || (ch==5 && s.dac)) ins=fi;
++          s.furIns=fi;
++          int semi=c.octave*12+c.note;
++          if (ch<9) {
++            note=60+semi-12;
++          } else {
++            // ruído: a nota escolhe a taxa (0-2) do jeito do VGMMM; o Furnace usa C/C#/D
++            int rate=(semi-12)&3;
++            bool wantCh3=(rate==3);
++            if (wantCh3) {
++              // taxa 3: o ruído segue o período do tom 3 (o que estiver nele; sem nota = período 0)
++              note=(tone2Note>=0)?tone2Note:179;
++            } else {
++              note=60+c.octave*12+(2-rate);
++            }
++            if (wantCh3!=nzCh3) {
++              nzCh3=wantCh3;
++              addFx(fxs,0x20,nzFx());
++            }
++          }
++          if (note<0) note=0;
++          if (note>179) note=179;
++          if (ch==8) tone2Note=note;
++          if (!porta && s.arp && !hasArp) {
++            addFx(fxs,0x00,0);
++            s.arp=false;
++          }
++          if (ch==5 && s.dac) {
++            // volta do DAC para o FM: volume do canal de novo
++            s.dac=false;
++            vol=vgeVolTab[s.vol&31];
++          }
+         }
+-        if (c.volume>0) pat->newData[row][DIV_PAT_VOL]=rgVgeVolToFur(ch,c.volume);
+-        if (c.ins>0) {
+-          pat->newData[row][DIV_PAT_INS]=c.ins-1;
+-          if (c.ins-1>maxIns) maxIns=c.ins-1;
++        if (c.volume!=0) {
++          s.vol=c.volume;
++          if (ch<6) {
++            if (!(ch==5 && s.dac)) vol=vgeVolTab[c.volume&31];
++          } else if (psgNoteVol) {
++            vol=15; // o volume já está no instrumento
++          } else {
++            // volume sem nota: o VGMMM reescala o envelope; aqui, atenuação relativa ao instrumento posto
++            double sNow=(s.psgS>=0)?s.psgS:psgScale((s.ins>0)?s.ins:1,31);
++            double sNew=psgScale((s.ins>0)?s.ins:1,c.volume);
++            vol=(sNow>0)?(int)round(15.0*sNew/sNow):15;
++            if (vol<0) vol=0;
++            if (vol>15) vol=15;
++          }
+         }
+-        for (int f=0; f<4; f++) {
+-          short ofx, op;
+-          if (rgVgeFxToFur(c.fx[f],c.param[f],ofx,op)) {
+-            pat->newData[row][DIV_PAT_FX(f)]=ofx;
+-            pat->newData[row][DIV_PAT_FXVAL(f)]=op;
+-            fxUsed[ch]=true;
++        // efeitos
++        for (int k=0; k<4; k++) {
++          unsigned char fx=c.fx[k], pp=c.param[k];
++          unsigned char hi=pp&0xf0;
++          switch (fx) {
++            case 0x00:
++              if (pp!=0) {
++                addFx(fxs,0x00,pp);
++                s.arp=true;
++              }
++              break;
++            case 0x01:
++              if (pp) s.portaUp=pp;
++              addFx(fxs,0x01,s.portaUp);
++              nUp=true;
++              break;
++            case 0x02:
++              if (pp) s.portaDown=pp;
++              addFx(fxs,0x02,s.portaDown);
++              nDown=true;
++              break;
++            case 0x03:
++              if (pp) s.tonePorta=pp;
++              addFx(fxs,0x03,s.tonePorta);
++              nTone=true;
++              break;
++            case 0x04:
++              if (pp&15) s.vibParam=(s.vibParam&0xf0)|(pp&15);
++              if (pp&0xf0) s.vibParam=(s.vibParam&15)|(pp&0xf0);
++              addFx(fxs,0x04,s.vibParam);
++              nVib=true;
++              break;
++            case 0x05:
++              if (pp) s.volSlide=pp;
++              addFx(fxs,0x03,s.tonePorta);
++              nTone=true;
++              fmSlide(fxs,ch,s.volSlide);
++              nSlide=true;
++              break;
++            case 0x06:
++              if (pp) s.volSlide=pp;
++              addFx(fxs,0x04,s.vibParam);
++              nVib=true;
++              fmSlide(fxs,ch,s.volSlide);
++              nSlide=true;
++              break;
++            case 0x0a:
++              if (pp) s.volSlide=pp;
++              fmSlide(fxs,ch,s.volSlide);
++              nSlide=true;
++              break;
++            case 0x08: if (ch<6) addFx(fxs,0x12,pp&0x7f); break;
++            case 0x09: if (ch<6) addFx(fxs,0x14,pp&0x7f); break; // operador 2 do registro (S3) = OP3 no Furnace
++            case 0x0c: if (ch<6) addFx(fxs,0x13,pp&0x7f); break;
++            case 0x0d: if (ch<6) addFx(fxs,0x15,pp&0x7f); break;
++            case 0x0e:
++              if (hi<=0x30) {
++                const int furOp[4]={1,3,2,4};
++                if (ch<6) addFx(fxs,0x16,(furOp[hi>>4]<<4)|(pp&15));
++              } else if (hi==0x90) {
++                if (pp&15) addFx(fxs,0x0c,pp&15);
++              } else if (hi==0xc0) {
++                if (pp&15) addFx(fxs,(ch<6)?0xec:0xfc,pp&15);
++              } else if (hi==0xd0) {
++                if (pp&15) addFx(fxs,0xed,pp&15);
++              } else if (hi==0xf0) {
++                if (ch<6) addFx(fxs,0x11,pp&7);
++              }
++              break;
++            case 0x0f:
++              if (hi!=0 && (pp>>4)==MAX(1,pp&15)) addFx(fxs,0x0f,pp>>4);
++              break;
++            case 0x15:
++              if (ch<6) addFx(fxs,0x10,pp?(0x10|(pp&7)):0);
++              break;
++            case 0x19:
++              addFx(fxs,0x08,(pp==0)?0xff:(((pp&0xf0)?0xf0:0)|((pp&0x0f)?0x0f:0)));
++              break;
++          }
++        }
++        // efeitos do VGMMM só valem na linha em que aparecem: no Furnace eles continuam, então param aqui
++        if (s.pUp && !nUp) addFx(fxs,0x01,0);
++        if (s.pDown && !nDown) addFx(fxs,0x02,0);
++        if (s.pTone && !nTone) addFx(fxs,0x03,0);
++        if (s.pVib && !nVib) addFx(fxs,0x04,0);
++        if (s.pSlide && !nSlide) addFx(fxs,0x0a,0);
++        s.pUp=nUp;
++        s.pDown=nDown;
++        s.pTone=nTone;
++        s.pVib=nVib;
++        s.pSlide=nSlide;
++        // amostras: sempre no FM6
++        if (ch==5) {
++          if (noiseMode>=0) {}
++          if (dacTrig>=0 && smpIns[dacTrig&255]>=0) {
++            note=60+48;
++            ins=smpIns[dacTrig&255];
++            vol=127;
++            s.dac=true;
++            s.furIns=ins;
++          }
++          if (dacRetrig>0) addFx(fxs,0x0c,dacRetrig);
++          if (dacCut>0) addFx(fxs,0xec,dacCut);
++          if (dacDelay>0) addFx(fxs,0xed,dacDelay);
++        }
++        if (ch==9 && noiseMode>=0 && nzWhite!=(noiseMode==0)) {
++          nzWhite=(noiseMode==0);
++          addFx(fxs,0x20,nzFx());
++        }
++
++        if (!first) continue;
++        DivPattern* pat=sub->pat[chFur(ch)].getPattern(p,true);
++        if (note>=0) pat->newData[row][DIV_PAT_NOTE]=note;
++        if (ins>=0) pat->newData[row][DIV_PAT_INS]=ins;
++        if (vol>=0) pat->newData[row][DIV_PAT_VOL]=vol;
++        int k=0;
++        for (auto& e: fxs) {
++          if (k>=7) break;
++          pat->newData[row][DIV_PAT_FX(k)]=e.first;
++          pat->newData[row][DIV_PAT_FXVAL(k)]=e.second;
++          k++;
++        }
++        if (k>maxCols[ch]) maxCols[ch]=k;
++      }
++    }
++  }
++  // padrão mais curto: 0D00 na última coluna livre do canal 1
++  int endCol=MIN(7,maxCols[0]);
++  for (int p=0; p<256; p++) {
++    if (!used[p]) continue;
++    int plen=MIN(rgvge::patternLength(p),maxLen);
++    if (plen<maxLen) {
++      DivPattern* pat=sub->pat[0].getPattern(p,true);
++      pat->newData[plen-1][DIV_PAT_FX(endCol)]=0x0d;
++      pat->newData[plen-1][DIV_PAT_FXVAL(endCol)]=0;
++    }
++  }
++  // volta para o ponto de laço no fim (0Bxx); se o último padrão aparece em outro lugar, vira uma cópia
++  if (h.loopPos>0 && sub->ordersLen>0) {
++    int lastO=sub->ordersLen-1;
++    int lp=sub->orders.ord[0][lastO];
++    bool shared=false;
++    for (int i=0; i<lastO; i++) {
++      if (sub->orders.ord[0][i]==lp) shared=true;
++    }
++    if (shared) {
++      int np=-1;
++      for (int i=0; i<DIV_MAX_PATTERNS; i++) {
++        if (!used[i]) {
++          bool taken=false;
++          for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++            if (sub->pat[ch].data[i]!=NULL) taken=true;
++          }
++          if (!taken) {
++            np=i;
++            break;
+           }
+         }
+       }
+-      // padrão mais curto: 0D00 na quinta coluna do canal 1 (é por ele que o tamanho volta ao VGMMM)
+-      if (ch==0 && plen<maxLen) {
+-        pat->newData[plen-1][DIV_PAT_FX(4)]=0x0d;
+-        pat->newData[plen-1][DIV_PAT_FXVAL(4)]=0;
++      if (np>=0) {
++        for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++          DivPattern* src=sub->pat[ch].getPattern(lp,true);
++          DivPattern* dst=sub->pat[ch].getPattern(np,true);
++          src->copyOn(dst);
++          sub->orders.ord[ch][lastO]=np;
++        }
++        lp=np;
+       }
+     }
++    int plen=MIN(rgvge::patternLength(rgvge::orderPattern(lastO)),maxLen);
++    DivPattern* pat=sub->pat[0].getPattern(lp,true);
++    int col=MIN(7,endCol+1);
++    // o 0D00 do fim do padrão atrapalharia o pulo
++    if (pat->newData[plen-1][DIV_PAT_FX(endCol)]==0x0d) {
++      pat->newData[plen-1][DIV_PAT_FX(endCol)]=-1;
++      pat->newData[plen-1][DIV_PAT_FXVAL(endCol)]=-1;
++      col=endCol;
++    }
++    pat->newData[plen-1][DIV_PAT_FX(col)]=0x0b;
++    pat->newData[plen-1][DIV_PAT_FXVAL(col)]=h.loopPos;
++    if (col+1>maxCols[0]) maxCols[0]=col+1;
+   }
+-  for (int ch=0; ch<rgvge::CHANNELS; ch++) sub->pat[ch].effectCols=4;
+-  sub->pat[0].effectCols=5;
++  for (int ch=0; ch<rgvge::CHANNELS; ch++) sub->pat[ch].effectCols=MIN(8,MAX(1,maxCols[ch]));
++  sub->pat[0].effectCols=MIN(8,MAX(sub->pat[0].effectCols,endCol+1));
+ 
+-  // instrumentos (o VGMMM usa o mesmo instrumento no PSG: envelope do operador 4)
+-  int lastIns=maxIns;
+-  for (int i=0; i<rgvge::MAX_INSTRUMENTS; i++) {
+-    if (!rgvge::insEmpty(i) && i>lastIns) lastIns=i;
+-  }
+-  if (lastIns<0) lastIns=0;
+-  for (int i=0; i<=lastIns; i++) {
++  // instrumentos FM (o VGMMM guarda os operadores na ordem dos registradores, igual ao Furnace)
++  for (int i=0; i<nFM; i++) {
+     rgvge::Ins vi;
+     rgvge::getIns(i,vi);
+     DivInstrument* ins=new DivInstrument;
+@@ -187,45 +567,85 @@ bool DivEngine::loadVGE(unsigned char* file, size_t len) {
+     ins->fm.ams=vi.ams&3;
+     ins->fm.fms=vi.fms&7;
+     for (int j=0; j<4; j++) {
+-      DivInstrumentFM::Operator& o=ins->fm.op[j];
+-      o.mult=vi.op[j].mult&15;
+-      o.dt=(vi.op[j].dt+3)&7;
+-      o.tl=vi.op[j].tl&0x7f;
+-      o.rs=vi.op[j].rs&3;
+-      o.ar=vi.op[j].ar&31;
+-      o.am=(vi.op[j].dr>>7)&1;
+-      o.dr=vi.op[j].dr&31;
+-      o.d2r=vi.op[j].sr&31;
+-      o.rr=vi.op[j].rr&15;
+-      o.sl=vi.op[j].sl&15;
+-      o.ssgEnv=vi.op[j].ssg&15;
++      DivInstrumentFM::Operator& op=ins->fm.op[j];
++      op.mult=vi.op[j].mult&15;
++      op.dt=(vi.op[j].dt+3)&7;
++      op.tl=vi.op[j].tl&0x7f;
++      op.rs=vi.op[j].rs&3;
++      op.ar=vi.op[j].ar&31;
++      op.am=(vi.op[j].dr>>7)&1;
++      op.dr=vi.op[j].dr&31;
++      op.d2r=vi.op[j].sr&31;
++      op.rr=vi.op[j].rr&15;
++      op.sl=vi.op[j].sl&15;
++      op.ssgEnv=vi.op[j].ssg&15;
+     }
+     ds.ins.push_back(ins);
+   }
+-  ds.insLen=ds.ins.size();
+-
+-  // amostras: já convertidas pelo VGMMM (volume e afinação aplicados) na taxa da música
+-  int lastSmp=-1;
+-  for (int i=0; i<rgvge::MAX_SAMPLES; i++) {
+-    int l=0;
+-    if (rgvge::sampleData(i,l)!=NULL && l>0) lastSmp=i;
+-  }
+-  for (int i=0; i<=lastSmp; i++) {
++  // amostras (já convertidas pelo VGMMM na taxa da música) e um instrumento para cada uma
++  for (int i=0; i<256; i++) {
++    if (smpIns[i]<0) continue;
+     DivSample* s=new DivSample;
+     int l=0;
+     const unsigned char* d=rgvge::sampleData(i,l);
+     s->name=rgvge::sampleName(i);
+-    if (s->name=="empty") s->name="";
++    if (s->name=="empty" || s->name.empty()) s->name=fmt::sprintf("%.2X",i);
+     s->centerRate=MAX(1,(int)h.sampleRate);
+     s->legacyRate=s->centerRate;
+     s->depth=DIV_SAMPLE_DEPTH_8BIT;
+-    if (d!=NULL && l>0) {
+-      if (s->init(l)) {
+-        for (int k=0; k<l; k++) s->data8[k]=(signed char)(d[k]-0x80);
+-      }
++    if (d!=NULL && l>0 && s->init(l)) {
++      for (int k=0; k<l; k++) s->data8[k]=(signed char)(d[k]-0x80);
+     }
++    DivInstrument* ins=new DivInstrument;
++    ins->type=DIV_INS_AMIGA;
++    ins->name=fmt::sprintf("DAC: %s",s->name);
++    ins->amiga.initSample=ds.sample.size();
+     ds.sample.push_back(s);
++    ds.ins.push_back(ins);
+   }
++  // instrumentos do PSG: o VGMMM faz um ADSR por software com o operador 4 (macro ADSR do Furnace)
++  {
++    float rateTab[32];
++    float v=1.0f;
++    for (int i=0; i<32; i++) {
++      rateTab[31-i]=v;
++      v*=0.8f;
++    }
++    rateTab[0]=0.0f;
++    for (auto& pe: psgList) {
++      int n=pe.first, cv=pe.second;
++      rgvge::Ins vi;
++      rgvge::getIns(n-1,vi);
++      DivInstrument* ins=new DivInstrument;
++      ins->type=DIV_INS_STD;
++      ins->name=fmt::sprintf("%s (PSG v%.2X)",(strcmp(vi.name,"empty")==0)?"":vi.name,cv);
++      const rgvge::Op& o4=vi.op[3];
++      // nível máximo = 15*escala (instrumento e volume), em 1/256 de passo
++      double S=psgScale(n,cv);
++      double full=S*256.0;
++      int topP=(int)floor(full);
++      int susP=(int)floor((15-(o4.sl&15))/15.0*full);
++      DivInstrumentMacro& m=ins->std.volMacro;
++      m.len=16; // ADSR: o Furnace guarda os parâmetros como 16 valores
++      // ADSR fino (bit 16: fração do topo/sustain/fundo em val[9]/val[10]/val[11]). Com o volume fino
++      // do SN76489 (rgFineVol), o nível sai como no VGMMM: teto(envelope*volume).
++      m.open=3|16;
++      m.val[0]=0;
++      m.val[11]=0;
++      m.val[1]=topP>>8;
++      m.val[9]=topP&255;
++      m.val[2]=(int)round(rateTab[o4.ar&31]*full);
++      m.val[3]=0;
++      m.val[4]=(int)round(rateTab[o4.dr&31]*full);
++      m.val[5]=susP>>8;
++      m.val[10]=susP&255;
++      m.val[6]=0;
++      m.val[7]=(int)round(rateTab[o4.sr&31]*full);
++      m.val[8]=(int)round(rateTab[((o4.rr&15)*2)&31]*full);
++      ds.ins.push_back(ins);
++    }
++  }
++  ds.insLen=ds.ins.size();
+   ds.sampleLen=ds.sample.size();
+   BUSY_END;
+ 
+diff --git a/src/engine/macroInt.cpp b/src/engine/macroInt.cpp
+index 8355eeb..d17d958 100644
+--- a/src/engine/macroInt.cpp
++++ b/src/engine/macroInt.cpp
+@@ -32,11 +32,12 @@
+ #define ADSR_SR source.val[7]
+ #define ADSR_RR source.val[8]
+ 
+-#define ADSR_BOTTOM (source.val[0]<<8)
+-#define ADSR_TOP ((source.val[1]<<8)|0xff)
++#define ADSR_BOTTOM ((source.val[0]<<8)|((source.open&16)?(source.val[11]&0xff):0))
++// RG: o bit 16 de open liga o ADSR fino (fração do topo, do sustain e do fundo em val[9], val[10] e val[11])
++#define ADSR_TOP ((source.val[1]<<8)|((source.open&16)?(source.val[9]&0xff):0xff))
+ #define ADSR_BOTTOM_INV ((source.val[0]<<8)|0xff)
+ #define ADSR_TOP_INV (source.val[1]<<8)
+-#define ADSR_SUS ((source.val[5]<<8)|0xff)
++#define ADSR_SUS ((source.val[5]<<8)|((source.open&16)?(source.val[10]&0xff):0xff))
+ #define ADSR_SUS_INV (source.val[5]<<8)
+ 
+ #define LFO_SPEED source.val[11]
+diff --git a/src/engine/platform/sms.cpp b/src/engine/platform/sms.cpp
+index fb2f4ca..1570524 100644
+--- a/src/engine/platform/sms.cpp
++++ b/src/engine/platform/sms.cpp
+@@ -226,6 +226,7 @@ void DivPlatformSMS::tick(bool sysTick) {
+     if (chan[i].std.vol.had) {
+       chan[i].outVol=VOL_SCALE_LOG(chan[i].std.vol.val,chan[i].vol,15);
+       if (chan[i].outVol<0) chan[i].outVol=0;
++      if (rgFineVol) rgFineEnv[i]=(chan[i].std.vol.type==1)?chan[i].std.vol.pos:(chan[i].std.vol.val<<8);
+       // old formula
+       // ((chan[i].vol&15)*MIN(15,chan[i].std.vol.val))>>4;
+       chan[i].writeVol=true;
+@@ -341,6 +342,24 @@ void DivPlatformSMS::tick(bool sysTick) {
+     chan[3].freqChanged=false;
+     updateSNMode=false;
+   }
++  if (rgFineVol) {
++    // como o VGMMM: 15 - int(15 - envelope*volume), o nível arredondado para cima
++    for (int i=0; i<4; i++) {
++      int v=parent->rgChanVolume(this,i);
++      if (v<0) v=0;
++      if (v>(15<<8)) v=15<<8;
++      int e=rgFineEnv[i];
++      if (e<0) e=0;
++      if (e>(15<<8)) e=15<<8;
++      long long den=15LL*65536LL;
++      int lvl=(int)(((long long)e*(long long)v+den-1)/den);
++      if (lvl>15) lvl=15;
++      if (lvl!=chan[i].outVol) {
++        chan[i].outVol=lvl;
++        if (chan[i].active) chan[i].writeVol=true;
++      }
++    }
++  }
+   for (int i=0; i<4; i++) {
+     if (chan[i].writeVol) {
+       rWrite(0,0x90|(i<<5)|(isMuted[i]?15:(15-(chan[i].outVol&15))));
+@@ -369,6 +388,7 @@ int DivPlatformSMS::dispatch(DivCommand c) {
+         chan[c.chan].outVol=chan[c.chan].vol;
+         //rWrite(0,0x90|c.chan<<5|(isMuted[c.chan]?15:(15-(chan[c.chan].vol&15))));
+       //}
++      rgFineEnv[c.chan]=15<<8;
+       chan[c.chan].macroInit(parent->getIns(chan[c.chan].ins,DIV_INS_STD));
+       if (!parent->song.compatFlags.brokenOutVol && !chan[c.chan].std.vol.will) {
+         chan[c.chan].outVol=chan[c.chan].vol;
+@@ -496,6 +516,12 @@ void DivPlatformSMS::rgVgeWrite(unsigned char val) {
+   rWrite(0,val);
+ }
+ 
++// RG: estéreo do Game Gear vindo do tocador do VGMMM (bits 4-7 esquerda, 0-3 direita)
++void DivPlatformSMS::rgVgeStereo(unsigned char val) {
++  lastPan=val;
++  if (stereo) rWrite(1,lastPan);
++}
++
+ void DivPlatformSMS::muteChannel(int ch, bool mute) {
+   if (rgVge) {
+     isMuted[ch]=mute;
+@@ -664,6 +690,7 @@ void DivPlatformSMS::setFlags(const DivConfig& flags) {
+   CHECK_CUSTOM_CLOCK;
+   resetPhase=!flags.getBool("noPhaseReset",false);
+   easyNoise=!flags.getBool("noEasyNoise",false);
++  rgFineVol=flags.getBool("rgFineVol",false);
+   divider=16;
+   toneDivider=64.0;
+   noiseDivider=64.0;
+diff --git a/src/engine/platform/sms.h b/src/engine/platform/sms.h
+index 4f03d22..af41c0a 100644
+--- a/src/engine/platform/sms.h
++++ b/src/engine/platform/sms.h
+@@ -103,6 +103,10 @@ class DivPlatformSMS: public DivDispatch {
+     unsigned char rgVgeVol[4]={15,15,15,15};
+     int rgVgeLatch=0;
+     void rgVgeWrite(unsigned char val);
++    void rgVgeStereo(unsigned char val);
++    // RG: volume fino (conversão do VGMMM): nível = teto(envelope fino * volume fino do canal / 15)
++    bool rgFineVol=false;
++    int rgFineEnv[4]={15<<8,15<<8,15<<8,15<<8};
+     int getPortaFloor(int ch);
+     void setFlags(const DivConfig& flags);
+     void notifyInsDeletion(void* ins);
+diff --git a/src/engine/playback.cpp b/src/engine/playback.cpp
+index 7411f20..9ffaed3 100644
+--- a/src/engine/playback.cpp
++++ b/src/engine/playback.cpp
+@@ -375,7 +375,21 @@ static int rgFTVibrato(int depth, int phase, bool up) {
+   return v;
+ }
+ 
+-#define RG_VIBVAL(i) (song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
++// RG: vibrato do BambooTracker (WavingEffectIterator): triângulo de período 4x, passo y em 1/32 de semitom
++static int rgBTVibrato(int depth, int period, int pos) {
++  if (depth<=0 || period<=0 || pos<0) return 0;
++  int n=period*4;
++  int q=pos%n;
++  int sign=1;
++  if (q>=period*2) {
++    q-=period*2;
++    sign=-1;
++  }
++  int v=(q<=period)?(q*depth):((period*2-q)*depth);
++  return sign*v*4; // 1/32 de semitom -> 1/128
++}
++
++#define RG_VIBVAL(i) (song.compatFlags.rgBTNative?rgBTVibrato(chan[i].vibratoDepth,chan[i].vibratoRate,chan[i].vibratoPos):song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
+ 
+ // fail build if you forgot to update the array
+ static_assert((sizeof(cmdName)/sizeof(void*))==DIV_CMD_MAX,"update cmdName!");
+@@ -1218,6 +1232,12 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].vibratoDepth=effectVal&15;
+         chan[i].vibratoRate=effectVal>>4;
+         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
++        if (song.compatFlags.rgBTNative) {
++          // RG: BambooTracker: o efeito cria um vibrato novo, que vale 0 neste tick
++          chan[i].vibratoPos=-1;
++          dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch));
++          break;
++        }
+         if (song.compatFlags.rgFamiTracker) {
+           // RG: 400 recomeça a fase (48 no estilo antigo); o resto é feito a cada tick
+           if (effectVal==0) chan[i].vibratoPos=song.compatFlags.rgFTVibUp?48:0;
+@@ -1473,6 +1493,11 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].portaNote=chan[i].note+(effectVal&15);
+         // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
+         chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
++        // RG: BambooTracker (0Qxy/0Rxy): chega a y semitons em x ticks (em 1/32 de semitom por tick)
++        if (song.compatFlags.rgBTNative) {
++          chan[i].portaSpeed=((effectVal>>4)>0)?((32*(effectVal&15)+(effectVal>>4)-1)/(effectVal>>4)):(32*(effectVal&15));
++          chan[i].rgBTSkipPorta=true;
++        }
+         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+         // these are for compatibility stuff
+         chan[i].portaStop=true;
+@@ -1505,6 +1530,11 @@ void DivEngine::processRow(int i, bool afterDelay) {
+         chan[i].portaNote=chan[i].note-(effectVal&15);
+         // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
+         chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
++        // RG: BambooTracker (0Qxy/0Rxy): chega a y semitons em x ticks (em 1/32 de semitom por tick)
++        if (song.compatFlags.rgBTNative) {
++          chan[i].portaSpeed=((effectVal>>4)>0)?((32*(effectVal&15)+(effectVal>>4)-1)/(effectVal>>4)):(32*(effectVal&15));
++          chan[i].rgBTSkipPorta=true;
++        }
+         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
+         chan[i].portaStop=true;
+         // COMPAT FLAG: stop portamento on note off
+@@ -1742,7 +1772,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
+     // COMPAT FLAG: continuous vibrato
+     // - when enabled, the vibrato position is not reset on each note
+     if (!song.compatFlags.continuousVibrato) {
+-      chan[i].vibratoPos=0;
++      // RG: no BambooTracker a nota recomeça o vibrato e o tick da nota não avança a fase
++      chan[i].vibratoPos=song.compatFlags.rgBTNative?-1:0;
+     }
+     // send pitch now (why? didn't we do that already?)
+     dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
+@@ -2069,6 +2100,7 @@ void DivEngine::nextRow() {
+   }
+   // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
+   if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks,song.compatFlags.rgFTTempo0);
++  else if (song.compatFlags.rgBTNative) ticks=rgBTRowLen(rgBTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks);
+ 
+   /*
+   if (skipping) {
+@@ -2354,8 +2386,8 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+       if (stepPlay!=1) {
+         // increase accumulator by virtual tempo numerator
+         // RG: no modo FamiTracker um tick do Furnace é um quadro real (o tempo já está na duração da linha)
+-        const int rgVN=song.compatFlags.rgFamiTracker?1:virtualTempoN;
+-        const int rgVD=song.compatFlags.rgFamiTracker?1:virtualTempoD;
++        const int rgVN=(song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?1:virtualTempoN;
++        const int rgVD=(song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?1:virtualTempoD;
+         tempoAccum+=rgVN;
+         // while accumulator is higher than virtual tempo denominator
+         while (tempoAccum>=rgVD) {
+@@ -2569,7 +2601,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+ 
+         // vibrato
+         // RG: modo FamiTracker: fase anda mesmo com profundidade 0 e a altura sai da tabela do FamiTracker
+-        if (song.compatFlags.rgFamiTracker) {
++        if (song.compatFlags.rgBTNative) {
++          if (chan[i].vibratoRate>0 && chan[i].vibratoDepth>0) {
++            chan[i].vibratoPos++;
++            if (chan[i].vibratoPos>=chan[i].vibratoRate*4) chan[i].vibratoPos=0;
++            chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+1)&511;
++            dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgBTVibrato(chan[i].vibratoDepth,chan[i].vibratoRate,chan[i].vibratoPos)));
++          }
++        } else if (song.compatFlags.rgFamiTracker) {
+           if (chan[i].vibratoRate>0 || chan[i].vibratoDepth>0) {
+             chan[i].vibratoPos=(chan[i].vibratoPos+chan[i].vibratoRate)&63;
+             chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+chan[i].vibratoRate)&511;
+@@ -2652,7 +2691,9 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
+         // - Amiga/PC tracker behavior where slides and vibrato do not take course during the first tick of a row
+         if (!song.compatFlags.noSlidesOnFirstTick || !firstTick) {
+           // portamento only runs if the channel has been used and the porta speed is higher than 0
+-          if ((chan[i].keyOn || chan[i].keyOff) && chan[i].portaSpeed>0) {
++          if (chan[i].rgBTSkipPorta) {
++            chan[i].rgBTSkipPorta=false;
++          } else if ((chan[i].keyOn || chan[i].keyOff) && chan[i].portaSpeed>0) {
+             // send a portamento update command to the dispatch.
+             // it returns whether the portamento is complete and has reached the target note.
+             // COMPAT FLAG: pitch linearity
+diff --git a/src/engine/rgVge.cpp b/src/engine/rgVge.cpp
+index 63e672a..7720397 100644
+--- a/src/engine/rgVge.cpp
++++ b/src/engine/rgVge.cpp
+@@ -43,9 +43,40 @@ static int rgVgePatLen(DivSubSong* sub, int p) {
+   return len;
+ }
+ 
++// o .vge original guardado na música (importação nova): carrega no VGMMM
++static bool rgVgeLoadOriginal(DivConfig& f) {
++  {
++    String data=f.getString("rgVgeData","");
++    if (!data.empty()) {
++      std::string bin;
++      unsigned int acc=0;
++      int bits=0;
++      for (char ch: data) {
++        int v;
++        if (ch>='A' && ch<='Z') v=ch-'A';
++        else if (ch>='a' && ch<='z') v=ch-'a'+26;
++        else if (ch>='0' && ch<='9') v=ch-'0'+52;
++        else if (ch=='+') v=62;
++        else if (ch=='/') v=63;
++        else continue;
++        acc=(acc<<6)|v;
++        bits+=6;
++        if (bits>=8) {
++          bits-=8;
++          bin+=(char)((acc>>bits)&0xff);
++        }
++      }
++      if (rgvge::load((const unsigned char*)bin.data(),bin.size())==0) return true;
++    }
++  }
++  return false;
++}
++
+ void DivEngine::rgVgeBuild() {
+   DivSubSong* sub=curSubSong;
+   DivConfig& f=song.systemFlags[0];
++  // o .vge original guardado na música (importação nova): o VGMMM toca a partir dele
++  if (rgVgeLoadOriginal(f)) return;
+   rgvge::clear();
+   rgvge::Header h;
+   rgvge::getHeader(h);
+@@ -163,6 +194,8 @@ void DivEngine::rgVgeApply(void* writes, void* dac) {
+       fm->rgVgeWrite((i.type<<8)|i.reg,i.val);
+     } else if (i.type==2) {
+       psg->rgVgeWrite(i.val);
++    } else if (i.type==3) {
++      psg->rgVgeStereo(i.val);
+     }
+   }
+   int rate=song.systemFlags[0].getInt("rgVgeRate",22050);
+@@ -232,16 +265,37 @@ void DivEngine::rgVgeTimestamps() {
+   unsigned int count=0;
+   uint64_t total=0;
+   int rows=0;
++  // com o original guardado, o comprimento e os 0F vêm dele (a conversão nativa marca os padrões de outro jeito)
++  bool orig=rgVgeLoadOriginal(f);
+   for (int o=0; o<sub->ordersLen; o++) {
+     int p=sub->orders.ord[0][o];
+-    int len=rgVgePatLen(sub,p);
++    int len=orig?MAX(1,MIN(rgvge::MAX_ROWS,rgvge::patternLength(rgvge::orderPattern(o)))):rgVgePatLen(sub,p);
+     ts.orders[o]=new TimeMicros[DIV_MAX_ROWS];
+     for (int i=0; i<DIV_MAX_ROWS; i++) ts.orders[o][i].seconds=-1;
+     for (int row=0; row<len; row++) {
+       double t=(double)total/hz;
+       ts.orders[o][row]=TimeMicros((int)t,(int)((t-(int)t)*1000000.0));
+       // efeito 0F do VGMMM nesta linha (qualquer canal)
+-      for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++      if (orig) {
++        int op=rgvge::orderPattern(o);
++        for (int ch=0; ch<rgvge::CHANNELS; ch++) {
++          rgvge::Cell cl;
++          rgvge::getCell(op,row,ch,cl);
++          for (int k=0; k<4; k++) {
++            if (cl.fx[k]!=0x0f) continue;
++            int v=cl.param[k];
++            if ((v&0xf0)==0) {
++              inter=v&15;
++            } else {
++              even=v>>4;
++              odd=v&15;
++              if (even==0) even=1;
++              if ((v&15)==0) odd=1;
++            }
++          }
++        }
++      }
++      for (int ch=0; ch<rgvge::CHANNELS && !orig; ch++) {
+         DivPattern* pat=sub->pat[ch].getPattern(sub->orders.ord[ch][o],false);
+         if (pat==NULL) continue;
+         for (int k=0; k<4; k++) {
+diff --git a/src/engine/rgplay.cpp b/src/engine/rgplay.cpp
+index a3d70ed..2a9692e 100644
+--- a/src/engine/rgplay.cpp
++++ b/src/engine/rgplay.cpp
+@@ -35,6 +35,31 @@ bool DivEngine::rgPlayStart(int rate) {
+   return playing;
+ }
+ 
++bool DivEngine::rgHasOriginal() {
++  return song.systemFlags[0].getString("rgVgeData","")!="" || song.systemFlags[0].getString("rgBTData","")!="";
++}
++
++void DivEngine::rgSetOriginalPlayer(bool on) {
++  bool vge=song.systemFlags[0].getString("rgVgeData","")!="";
++  bool bt=song.systemFlags[0].getString("rgBTData","")!="";
++  if (!vge && !bt) return;
++  bool wasPlaying=isPlaying();
++  if (wasPlaying) stop();
++  BUSY_BEGIN;
++  if (vge) song.compatFlags.rgVGMMM=on;
++  if (bt) {
++    song.compatFlags.rgBT=on;
++    song.compatFlags.rgBTNative=!on;
++  }
++  // as escritas do tocador original e as do Furnace usam o chip de jeitos diferentes: recomeça o chip
++  quitDispatch();
++  initDispatch();
++  renderSamples();
++  reset();
++  BUSY_END;
++  calcSongTimestamps();
++}
++
+ bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
+   float* out[2]={l,r};
+   for (unsigned int i=0; i<n; i++) {
+diff --git a/src/engine/song.cpp b/src/engine/song.cpp
+index cfdde59..5d8ca31 100644
+--- a/src/engine/song.cpp
++++ b/src/engine/song.cpp
+@@ -79,7 +79,23 @@ int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool no
+   return len;
+ }
+ 
+-void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT, bool rgFTTempo0) {
++// RG: duração da linha no BambooTracker (TickCounter::resetRest): passos de tempo em float, cortados para o inteiro
++int rgBTRowLen(float& accum, int tempoN, int tempoD, double hz, int speed) {
++  if (speed<1) speed=1;
++  int rate=(int)round(hz);
++  if (rate<1) rate=1;
++  int tempo=MAX(1,(int)round((double)tempoN*2.5*hz/(double)MAX(1,tempoD)));
++  float strict=10.0f*rate*speed/(tempo<<2);
++  float diff=strict-(float)speed;
++  accum=accum+diff;
++  int c=(int)accum;
++  int len=speed+c;
++  accum-=c;
++  if (len<1) len=1;
++  return len;
++}
++
++void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT, bool rgFTTempo0, bool rgBTT) {
+   // reduced version of the playback routine for calculation.
+   std::chrono::high_resolution_clock::time_point timeStart=std::chrono::high_resolution_clock::now();
+ 
+@@ -118,6 +134,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+   int ticks=speeds.val[0];
+   int tempoAccum=0;
+   int rgFTAccum=0;
++  float rgBTAccum=0.0f;
+   int curSpeed=0;
+   int changeOrd=-1;
+   int changePos=0;
+@@ -163,6 +180,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+     }
+     // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
+     if (rgFT) ticks=rgFTRowLen(rgFTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks,rgFTTempo0);
++    else if (rgBTT) ticks=rgBTRowLen(rgBTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks);
+   };
+ 
+   // get the tick counters rolling
+@@ -395,8 +413,8 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
+     }
+ 
+     // RG: no modo FamiTracker um tick do Furnace é um quadro real
+-    const int rgVN=rgFT?1:curVirtualTempoN;
+-    const int rgVD=rgFT?1:curVirtualTempoD;
++    const int rgVN=(rgFT||rgBTT)?1:curVirtualTempoN;
++    const int rgVD=(rgFT||rgBTT)?1:curVirtualTempoD;
+     // heuristic
+     int advance=(rgVD*ticks)/rgVN;
+     for (int i=0; i<chans; i++) {
+@@ -884,7 +902,7 @@ void DivSong::findSubSongs() {
+     // find possible subsongs
+     logD("finding subsongs...");
+     while (++curStart<i->ordersLen) {
+-      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker,compatFlags.rgFTTempo0);
++      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker,compatFlags.rgFTTempo0,compatFlags.rgBTNative);
+       if (!i->ts.isLoopable) break;
+       
+       // make sure we don't pick the same range twice
+@@ -1221,6 +1239,7 @@ void DivCompatFlags::setDefaults() {
+   rgDnAudio=false;
+   rgVGMMM=false;
+   rgBT=false;
++  rgBTNative=false;
+   rgDnSurvey=false;
+   rgDnVRC7Patch=0;
+   memset(rgDnLevels,0,sizeof(rgDnLevels));
+@@ -1317,6 +1336,7 @@ bool DivCompatFlags::readData(SafeReader& reader) {
+   CHECK_AND_LOAD_BOOL(rgDnAudio);
+   CHECK_AND_LOAD_BOOL(rgVGMMM);
+   CHECK_AND_LOAD_BOOL(rgBT);
++  CHECK_AND_LOAD_BOOL(rgBTNative);
+   CHECK_AND_LOAD_BOOL(rgDnSurvey);
+   CHECK_AND_LOAD_UNSIGNED_CHAR(rgDnVRC7Patch);
+   if (c.has("rgDnLevels")) {
+@@ -1409,6 +1429,7 @@ void DivCompatFlags::putData(SafeWriter* w) {
+   CHECK_AND_STORE_BOOL(rgDnAudio);
+   CHECK_AND_STORE_BOOL(rgVGMMM);
+   CHECK_AND_STORE_BOOL(rgBT);
++  CHECK_AND_STORE_BOOL(rgBTNative);
+   CHECK_AND_STORE_BOOL(rgDnSurvey);
+   CHECK_AND_STORE_UNSIGNED_CHAR(rgDnVRC7Patch);
+   if (memcmp(rgDnLevels,defaultFlags.rgDnLevels,sizeof(rgDnLevels))!=0) {
+diff --git a/src/engine/song.h b/src/engine/song.h
+index 7429933..25bb1c5 100644
+--- a/src/engine/song.h
++++ b/src/engine/song.h
+@@ -131,7 +131,7 @@ struct DivSubSong {
+   /**
+    * calculate timestamps (loop position, song length and more).
+    */
+-  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false, bool rgFTTempo0=false);
++  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false, bool rgFTTempo0=false, bool rgBTT=false);
+ 
+   /**
+    * read sub-song data.
+@@ -190,6 +190,7 @@ struct DivEffectStorage {
+  * noTempo: a música do FamiTracker tem tempo 0 (linhas duram o speed).
+  */
+ int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool noTempo);
++int rgBTRowLen(float& accum, int tempoN, int tempoD, double hz, int speed);
+ 
+ struct DivCompatFlags {
+   bool limitSlides;
+@@ -276,6 +277,8 @@ struct DivCompatFlags {
+   bool rgVGMMM;
+   // RG: módulo do BambooTracker: o tocador do próprio BambooTracker toca a música (rgBT.cpp)
+   bool rgBT;
++  // RG: música convertida do BambooTracker: tempo, vibrato e slides de nota com a matemática do BambooTracker
++  bool rgBTNative;
+   // RG: opções de áudio do Dn guardadas no módulo (.dnm): mixagem por hardware, timbres do VRC7, ajustes de nível
+   bool rgDnSurvey;
+   unsigned char rgDnVRC7Patch;
+diff --git a/src/gui/compatFlags.cpp b/src/gui/compatFlags.cpp
+index df17d2d..8327cad 100644
+--- a/src/gui/compatFlags.cpp
++++ b/src/gui/compatFlags.cpp
+@@ -29,6 +29,18 @@ void FurnaceGUI::drawCompatFlags() {
+   }
+   if (!compatFlagsOpen) return;
+   if (ImGui::Begin("Compatibility Flags",&compatFlagsOpen,globalWinFlags,_("Compatibility Flags"))) {
++    // RG: música convertida do VGM Music Maker/BambooTracker: escolher quem toca
++    if (e->rgHasOriginal()) {
++      bool orig=e->song.compatFlags.rgVGMMM || e->song.compatFlags.rgBT;
++      if (ImGui::Checkbox(_("Tocar com o programa original (VGM Music Maker / BambooTracker)"),&orig)) {
++        e->rgSetOriginalPlayer(orig);
++        MARK_MODIFIED;
++      }
++      if (ImGui::IsItemHovered()) {
++        ImGui::SetTooltip(_("desligado: a música toca no Furnace (padrões, instrumentos e efeitos convertidos, editáveis).\nligado: toca o arquivo original guardado, com o tocador do próprio programa (som idêntico, mas as edições não valem)."));
++      }
++      ImGui::Separator();
++    }
+     ImGui::TextWrapped(_("these flags are designed to provide better DefleMask/older Furnace compatibility.\nit is recommended to disable most of these unless you rely on specific quirks."));
+     if (ImGui::BeginTabBar("settingsTab")) {
+       if (ImGui::BeginTabItem(_("DefleMask"))) {
+@@ -471,6 +483,12 @@ void FurnaceGUI::drawCompatFlags() {
+         if (ImGui::IsItemHovered()) {
+           ImGui::SetTooltip(_("when enabled, the arp speed is shared among all channels."));
+         }
++        if (ImGui::Checkbox(_("Tempo, vibrato e slides do BambooTracker"),&e->song.compatFlags.rgBTNative)) {
++          MARK_MODIFIED;
++        }
++        if (ImGui::IsItemHovered()) {
++          ImGui::SetTooltip(_("ligado: duração das linhas como no BambooTracker (tempo virtual N/D), vibrato 04xy em triângulo\n(x = período, y = profundidade em 1/32 de semitom) e E1xy/E2xy chegando a y semitons em x tiques."));
++        }
+         if (ImGui::Checkbox(_("FamiTracker effect behavior"),&e->song.compatFlags.rgFamiTracker)) {
+           MARK_MODIFIED;
+         }
+diff --git a/src/gui/songInfo.cpp b/src/gui/songInfo.cpp
+index d2f544d..78467fe 100644
+--- a/src/gui/songInfo.cpp
++++ b/src/gui/songInfo.cpp
+@@ -110,6 +110,17 @@ void FurnaceGUI::drawSongInfo(bool asChild) {
+       }
+       ImGui::EndTable();
+     }
++    // RG: música convertida do VGM Music Maker/BambooTracker: escolher quem toca
++    if (e->rgHasOriginal()) {
++      bool orig=e->song.compatFlags.rgVGMMM || e->song.compatFlags.rgBT;
++      if (ImGui::Checkbox(_("Tocar com o programa original"),&orig)) {
++        e->rgSetOriginalPlayer(orig);
++        MARK_MODIFIED;
++      }
++      if (ImGui::IsItemHovered()) {
++        ImGui::SetTooltip(_("desligado: a música toca no Furnace (padrões, instrumentos e efeitos convertidos, editáveis).\nligado: toca o arquivo original guardado, com o tocador do VGM Music Maker / BambooTracker (som idêntico, mas as edições não valem)."));
++      }
++    }
+   }
+   if (!asChild && ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) curWindow=GUI_WINDOW_SONG_INFO;
+   if (asChild) {
+diff --git a/src/rgplayer.cpp b/src/rgplayer.cpp
+index f2aaa53..cb010eb 100644
+--- a/src/rgplayer.cpp
++++ b/src/rgplayer.cpp
+@@ -234,6 +234,12 @@ int main(int argc, char** argv) {
+     return 2;
+   }
+   double t[3];
++  // teste: tocar com o tocador original (VGM Music Maker / BambooTracker)
++  if (getenv("RGF_ORIG")) {
++    if (e->song.systemFlags[0].getString("rgVgeData","")!="") e->song.compatFlags.rgVGMMM=true;
++    if (e->song.systemFlags[0].getString("rgBTData","")!="") { e->song.compatFlags.rgBT=true; e->song.compatFlags.rgBTNative=false; }
++    e->rgPlayStart(e->getAudioDescGot().rate);
++  }
+   if (getenv("RGF_VGM")) {
+     int n=rgf_vgm();
+     FILE* vf=fopen(getenv("RGF_VGM"),"wb");
+-- 
+2.43.0
+

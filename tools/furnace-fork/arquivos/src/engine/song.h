@@ -131,7 +131,7 @@ struct DivSubSong {
   /**
    * calculate timestamps (loop position, song length and more).
    */
-  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false, bool rgFTTempo0=false);
+  void calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat=0, bool rgFT=false, bool rgFTTempo0=false, bool rgBTT=false);
 
   /**
    * read sub-song data.
@@ -190,6 +190,7 @@ struct DivEffectStorage {
  * noTempo: a música do FamiTracker tem tempo 0 (linhas duram o speed).
  */
 int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool noTempo);
+int rgBTRowLen(float& accum, int tempoN, int tempoD, double hz, int speed);
 
 struct DivCompatFlags {
   bool limitSlides;
@@ -276,6 +277,8 @@ struct DivCompatFlags {
   bool rgVGMMM;
   // RG: módulo do BambooTracker: o tocador do próprio BambooTracker toca a música (rgBT.cpp)
   bool rgBT;
+  // RG: música convertida do BambooTracker: tempo, vibrato e slides de nota com a matemática do BambooTracker
+  bool rgBTNative;
   // RG: opções de áudio do Dn guardadas no módulo (.dnm): mixagem por hardware, timbres do VRC7, ajustes de nível
   bool rgDnSurvey;
   unsigned char rgDnVRC7Patch;

@@ -1418,7 +1418,7 @@ SafeWriter* DivEngine::saveCommand(DivCSProgress* progress, DivCSOptions options
     }
     if (loopTick==-1) {
       if (loopOrder==curOrder && loopRow==curRow) {
-        if (song.compatFlags.rgFamiTracker?(ticks-1<=0):((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0)) {
+        if ((song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?(ticks-1<=0):((ticks-((tempoAccum+virtualTempoN)/virtualTempoD))<=0)) {
           logI("loop is on tick %d",tick);
           loopTick=tick;
           // loop marker

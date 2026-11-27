@@ -248,6 +248,7 @@ M	src/engine/fileOps/xm.cpp
 M	src/engine/fileOpsIns.cpp
 M	src/engine/fileOpsSample.cpp
 M	src/engine/filePlayer.h
+M	src/engine/macroInt.cpp
 M	src/engine/pitchTable.cpp
 M	src/engine/platform/amiga.h
 M	src/engine/platform/ay.cpp
@@ -318,6 +319,7 @@ M	src/gui/sampleEdit.cpp
 M	src/gui/settings.cpp
 M	src/gui/settings/allSettings.cpp
 M	src/gui/settings/loadSettings.cpp
+M	src/gui/songInfo.cpp
 M	src/gui/tutorial.cpp
 M	src/log.cpp
 M	src/main.cpp

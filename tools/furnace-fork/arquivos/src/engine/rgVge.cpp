@@ -43,9 +43,40 @@ static int rgVgePatLen(DivSubSong* sub, int p) {
   return len;
 }
 
+// o .vge original guardado na música (importação nova): carrega no VGMMM
+static bool rgVgeLoadOriginal(DivConfig& f) {
+  {
+    String data=f.getString("rgVgeData","");
+    if (!data.empty()) {
+      std::string bin;
+      unsigned int acc=0;
+      int bits=0;
+      for (char ch: data) {
+        int v;
+        if (ch>='A' && ch<='Z') v=ch-'A';
+        else if (ch>='a' && ch<='z') v=ch-'a'+26;
+        else if (ch>='0' && ch<='9') v=ch-'0'+52;
+        else if (ch=='+') v=62;
+        else if (ch=='/') v=63;
+        else continue;
+        acc=(acc<<6)|v;
+        bits+=6;
+        if (bits>=8) {
+          bits-=8;
+          bin+=(char)((acc>>bits)&0xff);
+        }
+      }
+      if (rgvge::load((const unsigned char*)bin.data(),bin.size())==0) return true;
+    }
+  }
+  return false;
+}
+
 void DivEngine::rgVgeBuild() {
   DivSubSong* sub=curSubSong;
   DivConfig& f=song.systemFlags[0];
+  // o .vge original guardado na música (importação nova): o VGMMM toca a partir dele
+  if (rgVgeLoadOriginal(f)) return;
   rgvge::clear();
   rgvge::Header h;
   rgvge::getHeader(h);
@@ -163,6 +194,8 @@ void DivEngine::rgVgeApply(void* writes, void* dac) {
       fm->rgVgeWrite((i.type<<8)|i.reg,i.val);
     } else if (i.type==2) {
       psg->rgVgeWrite(i.val);
+    } else if (i.type==3) {
+      psg->rgVgeStereo(i.val);
     }
   }
   int rate=song.systemFlags[0].getInt("rgVgeRate",22050);
@@ -232,16 +265,37 @@ void DivEngine::rgVgeTimestamps() {
   unsigned int count=0;
   uint64_t total=0;
   int rows=0;
+  // com o original guardado, o comprimento e os 0F vêm dele (a conversão nativa marca os padrões de outro jeito)
+  bool orig=rgVgeLoadOriginal(f);
   for (int o=0; o<sub->ordersLen; o++) {
     int p=sub->orders.ord[0][o];
-    int len=rgVgePatLen(sub,p);
+    int len=orig?MAX(1,MIN(rgvge::MAX_ROWS,rgvge::patternLength(rgvge::orderPattern(o)))):rgVgePatLen(sub,p);
     ts.orders[o]=new TimeMicros[DIV_MAX_ROWS];
     for (int i=0; i<DIV_MAX_ROWS; i++) ts.orders[o][i].seconds=-1;
     for (int row=0; row<len; row++) {
       double t=(double)total/hz;
       ts.orders[o][row]=TimeMicros((int)t,(int)((t-(int)t)*1000000.0));
       // efeito 0F do VGMMM nesta linha (qualquer canal)
-      for (int ch=0; ch<rgvge::CHANNELS; ch++) {
+      if (orig) {
+        int op=rgvge::orderPattern(o);
+        for (int ch=0; ch<rgvge::CHANNELS; ch++) {
+          rgvge::Cell cl;
+          rgvge::getCell(op,row,ch,cl);
+          for (int k=0; k<4; k++) {
+            if (cl.fx[k]!=0x0f) continue;
+            int v=cl.param[k];
+            if ((v&0xf0)==0) {
+              inter=v&15;
+            } else {
+              even=v>>4;
+              odd=v&15;
+              if (even==0) even=1;
+              if ((v&15)==0) odd=1;
+            }
+          }
+        }
+      }
+      for (int ch=0; ch<rgvge::CHANNELS && !orig; ch++) {
         DivPattern* pat=sub->pat[ch].getPattern(sub->orders.ord[ch][o],false);
         if (pat==NULL) continue;
         for (int k=0; k<4; k++) {

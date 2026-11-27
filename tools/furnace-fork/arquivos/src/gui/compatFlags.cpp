@@ -29,6 +29,18 @@ void FurnaceGUI::drawCompatFlags() {
   }
   if (!compatFlagsOpen) return;
   if (ImGui::Begin("Compatibility Flags",&compatFlagsOpen,globalWinFlags,_("Compatibility Flags"))) {
+    // RG: música convertida do VGM Music Maker/BambooTracker: escolher quem toca
+    if (e->rgHasOriginal()) {
+      bool orig=e->song.compatFlags.rgVGMMM || e->song.compatFlags.rgBT;
+      if (ImGui::Checkbox(_("Tocar com o programa original (VGM Music Maker / BambooTracker)"),&orig)) {
+        e->rgSetOriginalPlayer(orig);
+        MARK_MODIFIED;
+      }
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(_("desligado: a música toca no Furnace (padrões, instrumentos e efeitos convertidos, editáveis).\nligado: toca o arquivo original guardado, com o tocador do próprio programa (som idêntico, mas as edições não valem)."));
+      }
+      ImGui::Separator();
+    }
     ImGui::TextWrapped(_("these flags are designed to provide better DefleMask/older Furnace compatibility.\nit is recommended to disable most of these unless you rely on specific quirks."));
     if (ImGui::BeginTabBar("settingsTab")) {
       if (ImGui::BeginTabItem(_("DefleMask"))) {
@@ -470,6 +482,12 @@ void FurnaceGUI::drawCompatFlags() {
         }
         if (ImGui::IsItemHovered()) {
           ImGui::SetTooltip(_("when enabled, the arp speed is shared among all channels."));
+        }
+        if (ImGui::Checkbox(_("Tempo, vibrato e slides do BambooTracker"),&e->song.compatFlags.rgBTNative)) {
+          MARK_MODIFIED;
+        }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip(_("ligado: duração das linhas como no BambooTracker (tempo virtual N/D), vibrato 04xy em triângulo\n(x = período, y = profundidade em 1/32 de semitom) e E1xy/E2xy chegando a y semitons em x tiques."));
         }
         if (ImGui::Checkbox(_("FamiTracker effect behavior"),&e->song.compatFlags.rgFamiTracker)) {
           MARK_MODIFIED;

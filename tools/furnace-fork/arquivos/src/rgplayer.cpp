@@ -234,6 +234,12 @@ int main(int argc, char** argv) {
     return 2;
   }
   double t[3];
+  // teste: tocar com o tocador original (VGM Music Maker / BambooTracker)
+  if (getenv("RGF_ORIG")) {
+    if (e->song.systemFlags[0].getString("rgVgeData","")!="") e->song.compatFlags.rgVGMMM=true;
+    if (e->song.systemFlags[0].getString("rgBTData","")!="") { e->song.compatFlags.rgBT=true; e->song.compatFlags.rgBTNative=false; }
+    e->rgPlayStart(e->getAudioDescGot().rate);
+  }
   if (getenv("RGF_VGM")) {
     int n=rgf_vgm();
     FILE* vf=fopen(getenv("RGF_VGM"),"wb");

@@ -1,7 +1,7 @@
 From 581e77ac85c93bdf204f3262f13f1d36b5085a66 Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Wed, 25 Nov 2026 16:51:45 -0300
-Subject: [PATCH 47/52] =?UTF-8?q?Web:=20exporta=C3=A7=C3=A3o=20de=20=C3=A1?=
+Subject: [PATCH 47/53] =?UTF-8?q?Web:=20exporta=C3=A7=C3=A3o=20de=20=C3=A1?=
  =?UTF-8?q?udio=20em=20fatias=20(fiber=20com=20ASYNCIFY)=20em=20vez=20de?=
  =?UTF-8?q?=20thread=20=E2=80=94=20a=20p=C3=A1gina=20n=C3=A3o=20aborta=20m?=
  =?UTF-8?q?ais=20e=20mostra=20o=20progresso?=

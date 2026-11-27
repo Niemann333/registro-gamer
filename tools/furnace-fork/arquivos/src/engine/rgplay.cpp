@@ -35,6 +35,31 @@ bool DivEngine::rgPlayStart(int rate) {
   return playing;
 }
 
+bool DivEngine::rgHasOriginal() {
+  return song.systemFlags[0].getString("rgVgeData","")!="" || song.systemFlags[0].getString("rgBTData","")!="";
+}
+
+void DivEngine::rgSetOriginalPlayer(bool on) {
+  bool vge=song.systemFlags[0].getString("rgVgeData","")!="";
+  bool bt=song.systemFlags[0].getString("rgBTData","")!="";
+  if (!vge && !bt) return;
+  bool wasPlaying=isPlaying();
+  if (wasPlaying) stop();
+  BUSY_BEGIN;
+  if (vge) song.compatFlags.rgVGMMM=on;
+  if (bt) {
+    song.compatFlags.rgBT=on;
+    song.compatFlags.rgBTNative=!on;
+  }
+  // as escritas do tocador original e as do Furnace usam o chip de jeitos diferentes: recomeça o chip
+  quitDispatch();
+  initDispatch();
+  renderSamples();
+  reset();
+  BUSY_END;
+  calcSongTimestamps();
+}
+
 bool DivEngine::rgPlayRender(float* l, float* r, unsigned int n) {
   float* out[2]={l,r};
   for (unsigned int i=0; i<n; i++) {

@@ -79,7 +79,23 @@ int rgFTRowLen(int& accum, int tempoN, int tempoD, double hz, int speed, bool no
   return len;
 }
 
-void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT, bool rgFTTempo0) {
+// RG: duração da linha no BambooTracker (TickCounter::resetRest): passos de tempo em float, cortados para o inteiro
+int rgBTRowLen(float& accum, int tempoN, int tempoD, double hz, int speed) {
+  if (speed<1) speed=1;
+  int rate=(int)round(hz);
+  if (rate<1) rate=1;
+  int tempo=MAX(1,(int)round((double)tempoN*2.5*hz/(double)MAX(1,tempoD)));
+  float strict=10.0f*rate*speed/(tempo<<2);
+  float diff=strict-(float)speed;
+  accum=accum+diff;
+  int c=(int)accum;
+  int len=speed+c;
+  accum-=c;
+  if (len<1) len=1;
+  return len;
+}
+
+void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& grooves, int jumpTreatment, int ignoreJumpAtEnd, int brokenSpeedSel, int delayBehavior, int firstPat, bool rgFT, bool rgFTTempo0, bool rgBTT) {
   // reduced version of the playback routine for calculation.
   std::chrono::high_resolution_clock::time_point timeStart=std::chrono::high_resolution_clock::now();
 
@@ -118,6 +134,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
   int ticks=speeds.val[0];
   int tempoAccum=0;
   int rgFTAccum=0;
+  float rgBTAccum=0.0f;
   int curSpeed=0;
   int changeOrd=-1;
   int changePos=0;
@@ -163,6 +180,7 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
     }
     // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
     if (rgFT) ticks=rgFTRowLen(rgFTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks,rgFTTempo0);
+    else if (rgBTT) ticks=rgBTRowLen(rgBTAccum,curVirtualTempoN,curVirtualTempoD,hz,ticks);
   };
 
   // get the tick counters rolling
@@ -395,8 +413,8 @@ void DivSubSong::calcTimestamps(int chans, std::vector<DivGroovePattern>& groove
     }
 
     // RG: no modo FamiTracker um tick do Furnace é um quadro real
-    const int rgVN=rgFT?1:curVirtualTempoN;
-    const int rgVD=rgFT?1:curVirtualTempoD;
+    const int rgVN=(rgFT||rgBTT)?1:curVirtualTempoN;
+    const int rgVD=(rgFT||rgBTT)?1:curVirtualTempoD;
     // heuristic
     int advance=(rgVD*ticks)/rgVN;
     for (int i=0; i<chans; i++) {
@@ -884,7 +902,7 @@ void DivSong::findSubSongs() {
     // find possible subsongs
     logD("finding subsongs...");
     while (++curStart<i->ordersLen) {
-      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker,compatFlags.rgFTTempo0);
+      i->calcTimestamps(chans,grooves,compatFlags.jumpTreatment,compatFlags.ignoreJumpAtEnd,compatFlags.brokenSpeedSel,compatFlags.delayBehavior,curStart,compatFlags.rgFamiTracker,compatFlags.rgFTTempo0,compatFlags.rgBTNative);
       if (!i->ts.isLoopable) break;
       
       // make sure we don't pick the same range twice
@@ -1221,6 +1239,7 @@ void DivCompatFlags::setDefaults() {
   rgDnAudio=false;
   rgVGMMM=false;
   rgBT=false;
+  rgBTNative=false;
   rgDnSurvey=false;
   rgDnVRC7Patch=0;
   memset(rgDnLevels,0,sizeof(rgDnLevels));
@@ -1317,6 +1336,7 @@ bool DivCompatFlags::readData(SafeReader& reader) {
   CHECK_AND_LOAD_BOOL(rgDnAudio);
   CHECK_AND_LOAD_BOOL(rgVGMMM);
   CHECK_AND_LOAD_BOOL(rgBT);
+  CHECK_AND_LOAD_BOOL(rgBTNative);
   CHECK_AND_LOAD_BOOL(rgDnSurvey);
   CHECK_AND_LOAD_UNSIGNED_CHAR(rgDnVRC7Patch);
   if (c.has("rgDnLevels")) {
@@ -1409,6 +1429,7 @@ void DivCompatFlags::putData(SafeWriter* w) {
   CHECK_AND_STORE_BOOL(rgDnAudio);
   CHECK_AND_STORE_BOOL(rgVGMMM);
   CHECK_AND_STORE_BOOL(rgBT);
+  CHECK_AND_STORE_BOOL(rgBTNative);
   CHECK_AND_STORE_BOOL(rgDnSurvey);
   CHECK_AND_STORE_UNSIGNED_CHAR(rgDnVRC7Patch);
   if (memcmp(rgDnLevels,defaultFlags.rgDnLevels,sizeof(rgDnLevels))!=0) {

@@ -43,6 +43,31 @@ namespace rgbt {
     int sample;          // ADPCM: número da amostra
   };
 
+  // sequência do instrumento, já tocada pelo iterador do BambooTracker (um valor por tique)
+  struct Seq {
+    bool on=false;
+    int type=0;               // 0 simples, 1 absoluta, 2 fixa, 3 relativa
+    std::vector<int> val;     // valor bruto do BambooTracker
+    std::vector<int> sub;     // subdado (envelope do SSG: período do envelope de hardware)
+    int loop=-1;              // volta para cá enquanto a nota toca
+    int rel=-1;               // ao soltar a nota pula para cá (o resto é a soltura)
+  };
+
+  struct InsDetail {
+    int number=0;
+    int type=0;
+    Seq arp, pitch, pan;      // FM (todos os operadores), SSG e ADPCM
+    Seq ssgWave, ssgTN, ssgEnv;
+    Seq adpcmEnv;
+    int rootKey=48;           // ADPCM: nota raiz (C4 = 48)
+    int rootDeltaN=0;
+    bool repeat=false;
+    bool envReset=false;      // FM: zerar o envelope a cada nota
+    bool lfoOn=false;
+    int lfoFreq=0, lfoAMS=0, lfoPMS=0, lfoAM[4]={0,0,0,0};
+    std::vector<std::string> unsupported;
+  };
+
   struct SampleInfo {
     int number;
     std::string name;
@@ -77,6 +102,7 @@ namespace rgbt {
       void getStep(int s, int track, int order, int step, Step& out);
       std::vector<InsInfo> instruments();
       std::vector<SampleInfo> samples();
+      std::vector<InsDetail> instrumentDetails();
       int mixerType();                // 0 não definido, 1 personalizado, 2.. presets
       double mixerFM();               // dB
       double mixerSSG();              // dB

@@ -103,6 +103,10 @@ class DivPlatformSMS: public DivDispatch {
     unsigned char rgVgeVol[4]={15,15,15,15};
     int rgVgeLatch=0;
     void rgVgeWrite(unsigned char val);
+    void rgVgeStereo(unsigned char val);
+    // RG: volume fino (conversão do VGMMM): nível = teto(envelope fino * volume fino do canal / 15)
+    bool rgFineVol=false;
+    int rgFineEnv[4]={15<<8,15<<8,15<<8,15<<8};
     int getPortaFloor(int ch);
     void setFlags(const DivConfig& flags);
     void notifyInsDeletion(void* ins);

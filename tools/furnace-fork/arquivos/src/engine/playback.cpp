@@ -375,7 +375,21 @@ static int rgFTVibrato(int depth, int phase, bool up) {
   return v;
 }
 
-#define RG_VIBVAL(i) (song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
+// RG: vibrato do BambooTracker (WavingEffectIterator): triângulo de período 4x, passo y em 1/32 de semitom
+static int rgBTVibrato(int depth, int period, int pos) {
+  if (depth<=0 || period<=0 || pos<0) return 0;
+  int n=period*4;
+  int q=pos%n;
+  int sign=1;
+  if (q>=period*2) {
+    q-=period*2;
+    sign=-1;
+  }
+  int v=(q<=period)?(q*depth):((period*2-q)*depth);
+  return sign*v*4; // 1/32 de semitom -> 1/128
+}
+
+#define RG_VIBVAL(i) (song.compatFlags.rgBTNative?rgBTVibrato(chan[i].vibratoDepth,chan[i].vibratoRate,chan[i].vibratoPos):song.compatFlags.rgFamiTracker?rgFTVibrato(chan[i].vibratoDepth,chan[i].vibratoPos,song.compatFlags.rgFTVibUp):(((chan[i].vibratoDepth*vibTable[chan[i].vibratoPos]*chan[i].vibratoFine)>>4)/15))
 
 // fail build if you forgot to update the array
 static_assert((sizeof(cmdName)/sizeof(void*))==DIV_CMD_MAX,"update cmdName!");
@@ -1218,6 +1232,12 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].vibratoDepth=effectVal&15;
         chan[i].vibratoRate=effectVal>>4;
         dispatchCmd(DivCommand(DIV_CMD_HINT_VIBRATO,i,(chan[i].vibratoDepth&15)|(chan[i].vibratoRate<<4)));
+        if (song.compatFlags.rgBTNative) {
+          // RG: BambooTracker: o efeito cria um vibrato novo, que vale 0 neste tick
+          chan[i].vibratoPos=-1;
+          dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch));
+          break;
+        }
         if (song.compatFlags.rgFamiTracker) {
           // RG: 400 recomeça a fase (48 no estilo antigo); o resto é feito a cada tick
           if (effectVal==0) chan[i].vibratoPos=song.compatFlags.rgFTVibUp?48:0;
@@ -1473,6 +1493,11 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].portaNote=chan[i].note+(effectVal&15);
         // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
         chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
+        // RG: BambooTracker (0Qxy/0Rxy): chega a y semitons em x ticks (em 1/32 de semitom por tick)
+        if (song.compatFlags.rgBTNative) {
+          chan[i].portaSpeed=((effectVal>>4)>0)?((32*(effectVal&15)+(effectVal>>4)-1)/(effectVal>>4)):(32*(effectVal&15));
+          chan[i].rgBTSkipPorta=true;
+        }
         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
         // these are for compatibility stuff
         chan[i].portaStop=true;
@@ -1505,6 +1530,11 @@ void DivEngine::processRow(int i, bool afterDelay) {
         chan[i].portaNote=chan[i].note-(effectVal&15);
         // RG: no FamiTracker (Qxy/Rxy) a velocidade é 2x+1
         chan[i].portaSpeed=song.compatFlags.rgFamiTracker?((effectVal>>4)*2+1):((effectVal>>4)*4);
+        // RG: BambooTracker (0Qxy/0Rxy): chega a y semitons em x ticks (em 1/32 de semitom por tick)
+        if (song.compatFlags.rgBTNative) {
+          chan[i].portaSpeed=((effectVal>>4)>0)?((32*(effectVal&15)+(effectVal>>4)-1)/(effectVal>>4)):(32*(effectVal&15));
+          chan[i].rgBTSkipPorta=true;
+        }
         dispatchCmd(DivCommand(DIV_CMD_HINT_PORTA,i,chan[i].portaNote,MAX(chan[i].portaSpeed,0)));
         chan[i].portaStop=true;
         // COMPAT FLAG: stop portamento on note off
@@ -1742,7 +1772,8 @@ void DivEngine::processRow(int i, bool afterDelay) {
     // COMPAT FLAG: continuous vibrato
     // - when enabled, the vibrato position is not reset on each note
     if (!song.compatFlags.continuousVibrato) {
-      chan[i].vibratoPos=0;
+      // RG: no BambooTracker a nota recomeça o vibrato e o tick da nota não avança a fase
+      chan[i].vibratoPos=song.compatFlags.rgBTNative?-1:0;
     }
     // send pitch now (why? didn't we do that already?)
     dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+RG_VIBVAL(i)));
@@ -2069,6 +2100,7 @@ void DivEngine::nextRow() {
   }
   // RG: modo FamiTracker: a linha dura o que o acumulador de tempo do FamiTracker mandar (em quadros reais)
   if (song.compatFlags.rgFamiTracker) ticks=rgFTRowLen(rgFTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks,song.compatFlags.rgFTTempo0);
+  else if (song.compatFlags.rgBTNative) ticks=rgBTRowLen(rgBTAccum,virtualTempoN,virtualTempoD,curSubSong->hz,ticks);
 
   /*
   if (skipping) {
@@ -2354,8 +2386,8 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
       if (stepPlay!=1) {
         // increase accumulator by virtual tempo numerator
         // RG: no modo FamiTracker um tick do Furnace é um quadro real (o tempo já está na duração da linha)
-        const int rgVN=song.compatFlags.rgFamiTracker?1:virtualTempoN;
-        const int rgVD=song.compatFlags.rgFamiTracker?1:virtualTempoD;
+        const int rgVN=(song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?1:virtualTempoN;
+        const int rgVD=(song.compatFlags.rgFamiTracker||song.compatFlags.rgBTNative)?1:virtualTempoD;
         tempoAccum+=rgVN;
         // while accumulator is higher than virtual tempo denominator
         while (tempoAccum>=rgVD) {
@@ -2569,7 +2601,14 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
 
         // vibrato
         // RG: modo FamiTracker: fase anda mesmo com profundidade 0 e a altura sai da tabela do FamiTracker
-        if (song.compatFlags.rgFamiTracker) {
+        if (song.compatFlags.rgBTNative) {
+          if (chan[i].vibratoRate>0 && chan[i].vibratoDepth>0) {
+            chan[i].vibratoPos++;
+            if (chan[i].vibratoPos>=chan[i].vibratoRate*4) chan[i].vibratoPos=0;
+            chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+1)&511;
+            dispatchCmd(DivCommand(DIV_CMD_PITCH,i,chan[i].pitch+rgBTVibrato(chan[i].vibratoDepth,chan[i].vibratoRate,chan[i].vibratoPos)));
+          }
+        } else if (song.compatFlags.rgFamiTracker) {
           if (chan[i].vibratoRate>0 || chan[i].vibratoDepth>0) {
             chan[i].vibratoPos=(chan[i].vibratoPos+chan[i].vibratoRate)&63;
             chan[i].vibratoPosGiant=(chan[i].vibratoPosGiant+chan[i].vibratoRate)&511;
@@ -2652,7 +2691,9 @@ bool DivEngine::nextTick(bool noAccum, bool inhibitLowLat) {
         // - Amiga/PC tracker behavior where slides and vibrato do not take course during the first tick of a row
         if (!song.compatFlags.noSlidesOnFirstTick || !firstTick) {
           // portamento only runs if the channel has been used and the porta speed is higher than 0
-          if ((chan[i].keyOn || chan[i].keyOff) && chan[i].portaSpeed>0) {
+          if (chan[i].rgBTSkipPorta) {
+            chan[i].rgBTSkipPorta=false;
+          } else if ((chan[i].keyOn || chan[i].keyOff) && chan[i].portaSpeed>0) {
             // send a portamento update command to the dispatch.
             // it returns whether the portamento is complete and has reached the target note.
             // COMPAT FLAG: pitch linearity

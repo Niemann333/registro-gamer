@@ -216,7 +216,7 @@ void DivEngine::calcSongTimestamps() {
     return;
   }
   if (curSubSong!=NULL) {
-    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0);
+    curSubSong->calcTimestamps(song.chans,song.grooves,song.compatFlags.jumpTreatment,song.compatFlags.ignoreJumpAtEnd,song.compatFlags.brokenSpeedSel,song.compatFlags.delayBehavior,0,song.compatFlags.rgFamiTracker,song.compatFlags.rgFTTempo0,song.compatFlags.rgBTNative);
   }
 }
 
@@ -1631,6 +1631,16 @@ unsigned short DivEngine::getChanPan(int ch) {
   return disCont[song.dispatchOfChan[ch]].dispatch->getPan(song.dispatchChanOfChan[ch]);
 }
 
+int DivEngine::rgChanVolume(DivDispatch* disp, int ch) {
+  for (int i=0; i<song.systemLen; i++) {
+    if (disCont[i].dispatch!=disp) continue;
+    for (int j=0; j<song.chans; j++) {
+      if (song.dispatchOfChan[j]==i && song.dispatchChanOfChan[j]==ch) return chan[j].volume;
+    }
+  }
+  return 15<<8;
+}
+
 SharedChannel* DivEngine::getDispatchChanState(int ch) {
   if (ch<0 || ch>=song.chans) return NULL;
   if (song.dispatchChanOfChan[ch]<0) return NULL;
@@ -1744,6 +1754,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     subticks=1;
     tempoAccum=0;
     rgFTAccum=0;
+    rgBTAccum=0.0f;
     totalTimeDrift=0;
     totalTicksR=0;
     totalLoops=0;
@@ -1784,6 +1795,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     subticks=0;
     tempoAccum=0;
     rgFTAccum=0;
+    rgBTAccum=0.0f;
     totalTime=TimeMicros(0,0);
     totalTimeDrift=0;
     totalTicksR=0;
@@ -1833,7 +1845,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
       runMidiTime(cycles);
     }
     if (oldOrder!=curOrder) break;
-    if (song.compatFlags.rgFamiTracker) {
+    if (song.compatFlags.rgFamiTracker || song.compatFlags.rgBTNative) {
       if (ticks-1<1 && curRow>=goalRow) break;
     } else if (ticks-((tempoAccum+virtualTempoN)/MAX(1,virtualTempoD))<1 && curRow>=goalRow) break;
   }
@@ -1873,6 +1885,7 @@ void DivEngine::playSub(bool preserveDrift, int goalRow) {
     prevSpeed=nextSpeed;
     tempoAccum=0;
     rgFTAccum=0;
+    rgBTAccum=0.0f;
   }
   skipping=false;
   cmdStream.clear();
@@ -4120,6 +4133,7 @@ void DivEngine::quitDispatch() {
   ticks=0;
   tempoAccum=0;
     rgFTAccum=0;
+    rgBTAccum=0.0f;
   curRow=0;
   curOrder=0;
   prevRow=0;
