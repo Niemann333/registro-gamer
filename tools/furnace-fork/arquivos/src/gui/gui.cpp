@@ -4124,6 +4124,9 @@ void FurnaceGUI::editOptions(bool topMenu) {
 
 #ifdef __EMSCRIPTEN__
 EM_JS(int, rgWebMobile, (), { return Module.rgMobile ? 1 : 0; });
+// RG: skin escolhida na página (guardada no navegador) e aviso de troca para a página
+EM_JS(int, rgWebSkinIs, (const char* id), { return ((Module.rgSkin || '') === UTF8ToString(id)) ? 1 : 0; });
+EM_JS(void, rgWebSkinChanged, (const char* id), { try { if (Module.rgOnSkin) Module.rgOnSkin(UTF8ToString(id)); } catch (e) {} });
 #endif
 void FurnaceGUI::toggleMobileUI(bool enable, bool force) {
   if (mobileUI!=enable || force) {
@@ -5710,6 +5713,14 @@ bool FurnaceGUI::loop() {
           ImGui::SetItemTooltip(_("the system has set Furnace to full screen."));
         }
 #endif
+        // RG: skins (visual completo: cores, fontes, cantos)
+        if (ImGui::BeginMenu(_("skin"))) {
+          String curSk=rgCurrentSkin();
+          for (int i=0; i<rgSkinCount(); i++) {
+            if (ImGui::MenuItem(rgSkinName(i),NULL,curSk==rgSkinId(i))) rgRequestSkin(rgSkinId(i));
+          }
+          ImGui::EndMenu();
+        }
         if (ImGui::MenuItem(_("lock layout"),NULL,lockLayout)) {
           lockLayout=!lockLayout;
         }
@@ -8559,6 +8570,17 @@ bool FurnaceGUI::loop() {
       willCommit=false;
     }
 
+    // RG: troca de skin pedida (menu ou página)
+    if (!rgSkinPending.empty()) {
+      String sk=rgSkinPending;
+      rgSkinPending="";
+      if (rgApplySkin(sk)) {
+#ifdef __EMSCRIPTEN__
+        rgWebSkinChanged(sk.c_str());
+#endif
+      }
+    }
+
     // To check for instrument editor modification, we need an up-to-date `insEditMayBeDirty`
     // (based on incoming user input events), and we want any possible instrument modifications
     // to already have been made.
@@ -9389,6 +9411,15 @@ void FurnaceGUI::syncState() {
   followPattern=e->getConfBool("followPattern",true);
   editStep=e->getConfInt("editStep",1);
   editStepCoarse=e->getConfInt("editStepCoarse",16);
+#ifdef __EMSCRIPTEN__
+  // RG: a página manda a skin guardada no navegador (vale também para o Studio); aplica se for outra
+  {
+    String cur=rgCurrentSkin();
+    for (int i=0; i<rgSkinCount(); i++) {
+      if (rgWebSkinIs(rgSkinId(i)) && cur!=rgSkinId(i)) rgRequestSkin(rgSkinId(i));
+    }
+  }
+#endif
 #ifdef __EMSCRIPTEN__
   // Web (Chiptune Studio): na primeira vez, o Tracker já abre com a edição ligada (clicar na casa e digitar)
   // e com passo 0 (a nota fica onde foi escrita). Depois vale o que a pessoa escolher.

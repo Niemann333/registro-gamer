@@ -1173,6 +1173,7 @@ src/gui/regView.cpp
 src/gui/sampleEdit.cpp
 src/gui/scaling.cpp
 src/gui/settings.cpp
+src/gui/rgSkins.cpp
 src/gui/newSettings.cpp
 src/gui/songInfo.cpp
 src/gui/songNotes.cpp

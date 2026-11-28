@@ -230,6 +230,15 @@ Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE 
   operador, arpejo/altura por operador, bateria de ADPCM, eco (^n) usa a 1ª ocorrência do padrão.
 - Referências: tools/ref-vgmmm, tools/ref-bt.
 
+## Skins (2026-11-28)
+- src/gui/rgSkins.cpp: skins = cores (sobre a base do Furnace ou o verde do blog) + fontes + cantos/bordas;
+  menu configurações → skin; a página chama rg_web_skin(id) e o Furnace avisa a página (Module.rgOnSkin).
+  Skins: registro (verde, padrão no Tracker), studio (azul-roxo), furnace, famitracker (janela do Windows +
+  editor preto/verde/amarelo, fonte DejaVu Sans Mono Bold em res/web/fonts), openmpt (editor branco, colunas
+  coloridas, Proggy Clean).
+- chiptune-player/rg-skins.js: lista e escolha guardada em localStorage "rgSkin" (só o nome), vale no Studio
+  (CSS por html[data-skin]) e no Tracker (barra de cima + Furnace).
+
 ## OpenMPT, próximos passos
 - Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
   (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com

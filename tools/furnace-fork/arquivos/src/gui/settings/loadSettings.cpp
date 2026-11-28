@@ -78,9 +78,9 @@ const char* audioBackends[]={
 // the first reads config values from a config object.
 // the next one clamps these values.
 
-// Chiptune Studio: paleta verde neon sobre preto (igual ao Chiptune Player do blog)
-static int rgWebDefaultColor(int i, unsigned int def) {
-#ifdef __EMSCRIPTEN__
+// Chiptune Studio: paleta verde neon sobre preto (igual ao Chiptune Player do blog). É a skin "Registro Gamer"
+// (rgSkins.cpp) e o padrão no navegador.
+int rgGreenColor(int i, unsigned int def) {
 #define RGC(r,g,b,a) ((int)(((unsigned int)(a)<<24)|((unsigned int)(b)<<16)|((unsigned int)(g)<<8)|(unsigned int)(r)))
   switch (i) {
     case GUI_COLOR_BACKGROUND: return RGC(5,10,5,255);
@@ -124,8 +124,15 @@ static int rgWebDefaultColor(int i, unsigned int def) {
     case GUI_COLOR_PATTERN_PLAY_HEAD: return RGC(57,255,20,60);
   }
 #undef RGC
-#endif
   return (int)def;
+}
+
+static int rgWebDefaultColor(int i, unsigned int def) {
+#ifdef __EMSCRIPTEN__
+  return rgGreenColor(i,def);
+#else
+  return (int)def;
+#endif
 }
 
 void FurnaceGUI::readConfig(DivConfig& conf, FurnaceGUISettingGroups groups) {

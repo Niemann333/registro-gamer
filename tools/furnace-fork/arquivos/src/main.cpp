@@ -728,6 +728,10 @@ EM_ASYNC_JS(void, rgWebMountHome, (), {
 extern "C" EMSCRIPTEN_KEEPALIVE int rg_web_modified() {
   return g.rgIsModified()?1:0;
 }
+// Registro Gamer: a página troca a skin (menu "Skin" da barra de cima)
+extern "C" EMSCRIPTEN_KEEPALIVE void rg_web_skin(const char* id) {
+  g.rgRequestSkin(id);
+}
 // Registro Gamer: a página manda um arquivo (vindo do computador) como se fosse "arrastar e soltar"
 extern "C" EMSCRIPTEN_KEEPALIVE void rg_web_drop(const char* path) {
   SDL_Event ev;

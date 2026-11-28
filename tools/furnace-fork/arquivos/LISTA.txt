@@ -167,6 +167,8 @@ M	extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
 M	extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.hpp
 M	po/locale/pt_BR/LC_MESSAGES/furnace.mo
 M	po/pt_BR.po
+A	res/web/fonts/DejaVu-LICENSE.txt
+A	res/web/fonts/DejaVuSansMono-Bold.ttf
 A	res/web/fonts/OFL.txt
 A	res/web/fonts/Oxanium-Bold.ttf
 A	res/web/fonts/Oxanium-Medium.ttf
@@ -315,6 +317,7 @@ M	src/gui/orders.cpp
 M	src/gui/pattern.cpp
 M	src/gui/presets/gameConsoles.cpp
 M	src/gui/render/renderGL.cpp
+A	src/gui/rgSkins.cpp
 M	src/gui/sampleEdit.cpp
 M	src/gui/settings.cpp
 M	src/gui/settings/allSettings.cpp

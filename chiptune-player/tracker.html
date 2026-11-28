@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-skin-default="registro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tracker · Chiptune Studio</title>
 <meta name="theme-color" content="#050a05">
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="rg-skins.js?v=1"></script>
 <style>
 :root{--bg:#050a05;--bg3:#0e260e;--line:#163a16;--line2:#1e501e;--tx:#c8ffbe;--tx2:#7fc87a;--tx3:#4f874f;--ac:#1f8a10;--ac2:#39ff14;--barH:42px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -40,6 +41,37 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
 .imp ul{margin:6px 0 4px;padding-left:20px}
 .imp .fn{font-weight:700;color:#fff;word-break:break-all}
 .imp .row{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+/* ── skins (rg-skins.js põe data-skin no <html>; o Furnace troca o resto lá dentro) ── */
+.skinsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line2);background:var(--bg3);color:inherit;border-radius:8px;padding:5px 26px 5px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.skinsel option{background:#fff;color:#000}
+html[data-skin=studio]{--bg:#0c0a14;--bg3:#1b1730;--line:#2c2547;--line2:#3d3363;--tx:#e9e4ff;--tx2:#a99fd0;--tx3:#6f6699;--ac:#7c3aed;--ac2:#c084fc}
+html[data-skin=studio] .bar{background:#13101f}
+html[data-skin=studio] .logo i{background:linear-gradient(135deg,#a855f7,#6d28d9);box-shadow:0 0 12px #a855f766}
+html[data-skin=studio] .btn.pri{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}
+html[data-skin=studio] .dot.on{background:#c084fc;box-shadow:0 0 7px #c084fc}
+html[data-skin=studio] .toast,html[data-skin=studio] .imp .box{background:#1b1730}
+html[data-skin=studio] .drop{background:rgba(168,85,247,.15)}
+html[data-skin=furnace]{--bg:#1a1a1a;--bg3:#262626;--line:#3a3a46;--line2:#4a4a58;--tx:#ffffff;--tx2:#b4b4c0;--tx3:#7a7a86;--ac:#1087fa;--ac2:#4296fa}
+html[data-skin=furnace] body,html[data-skin=furnace] .btn,html[data-skin=furnace] .skinsel{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+html[data-skin=furnace] .bar{background:#242424}
+html[data-skin=furnace] .logo i{background:linear-gradient(135deg,#4296fa,#1060c0);box-shadow:none}
+html[data-skin=furnace] .btn.pri{background:#1087fa;color:#fff}
+html[data-skin=furnace] .dot.on{background:#4296fa;box-shadow:0 0 7px #4296fa}
+html[data-skin=furnace] .toast,html[data-skin=furnace] .imp .box{background:#202020}
+html[data-skin=famitracker],html[data-skin=openmpt]{--bg:#ababab;--bg3:#e1e1e1;--line:#a0a0a0;--line2:#adadad;--tx:#000000;--tx2:#333333;--tx3:#6d6d6d;--ac:#0078d7;--ac2:#0078d7}
+html[data-skin=famitracker] body,html[data-skin=openmpt] body,html[data-skin=famitracker] .btn,html[data-skin=openmpt] .btn,html[data-skin=famitracker] .skinsel,html[data-skin=openmpt] .skinsel{font-family:"Segoe UI",Tahoma,Arial,sans-serif;letter-spacing:0}
+html[data-skin=famitracker] .bar,html[data-skin=openmpt] .bar{background:#f0f0f0;border-bottom-color:#a0a0a0}
+html[data-skin=famitracker] .btn,html[data-skin=openmpt] .btn,html[data-skin=famitracker] .skinsel,html[data-skin=openmpt] .skinsel,html[data-skin=famitracker] .pill,html[data-skin=openmpt] .pill{border-radius:0;font-weight:400}
+html[data-skin=famitracker] .btn:hover,html[data-skin=openmpt] .btn:hover{background:#e5f1fb;border-color:#0078d7;color:#000}
+html[data-skin=famitracker] .btn.pri,html[data-skin=openmpt] .btn.pri{background:#e1e1e1;border:1px solid #0078d7;color:#000;font-weight:600}
+html[data-skin=famitracker] .logo i,html[data-skin=openmpt] .logo i{background:#d4d0c8;border-radius:0;box-shadow:inset 1px 1px #fff,inset -1px -1px #808080}
+html[data-skin=famitracker] .dot.on,html[data-skin=openmpt] .dot.on{background:#00a000;box-shadow:none}
+html[data-skin=famitracker] .toast,html[data-skin=openmpt] .toast,html[data-skin=famitracker] .imp .box,html[data-skin=openmpt] .imp .box{background:#f0f0f0;border-radius:0;color:#000}
+html[data-skin=famitracker] .imp h3,html[data-skin=openmpt] .imp h3{color:#003c74}
+html[data-skin=famitracker] .imp .fn,html[data-skin=openmpt] .imp .fn{color:#000}
+html[data-skin=famitracker] .drop,html[data-skin=openmpt] .drop{background:rgba(0,120,215,.15)}
+html[data-skin=famitracker] #load,html[data-skin=openmpt] #load{background:#f0f0f0}
 @media (max-width:760px){.note,.logo span{display:none}}
 /* celular: barra enxuta (o Furnace fica no modo celular dele) */
 @media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}.btn .lbl{display:none}}
@@ -104,6 +136,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
   <div class="sp"></div>
+  <select class="skinsel" id="skinSel" title="Skin: muda o visual do Tracker e do Chiptune Studio (as janelas e as funções continuam as mesmas)" data-en-title="Skin: changes the look of the Tracker and Chiptune Studio (windows and features stay the same)"></select>
   <a class="btn" id="bSrc" href="https://github.com/LucNiemann/registro-gamer/tree/main/tools/furnace-fork" target="_blank" rel="noopener" style="text-decoration:none;color:inherit" title="Código-fonte do Tracker: o Furnace, criado por tildearrow, com as mudanças do blog (código aberto, licença GPL)" data-en-title="Tracker source code: Furnace, created by tildearrow, with the blog's changes (open source, GPL license)">&lt;/&gt;</a>
   <button class="btn" id="bLand" style="display:none" title="Tela deitada (paisagem) em tela cheia: mostra mais da música" data-en-title="Landscape, full screen: shows more of the song">⟲</button>
   <button class="btn" id="bBack">← Chiptune Studio</button>
@@ -142,11 +175,13 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   var T = window.rgT;
 
   // versão do programa: muda a cada atualização, para o navegador não ficar com o Tracker antigo guardado
-  var RG_VER = window.RG_VER = '20261127b';
+  var RG_VER = window.RG_VER = '20261128a';
   window.Module = {
     locateFile: function (p) { return p + '?v=' + RG_VER; },
     canvas: $('canvas'),
     rgLang: rgI18n.lang, // idioma do Furnace (en_US ou pt_BR), lido quando o programa inicia
+    rgSkin: rgSkins.saved(), // skin escolhida antes (vazia = a do próprio Tracker)
+    rgOnSkin: function (id) { rgSkins.set(id, true); skinSel.value = id; }, // trocada pelo menu do Tracker
     // modo celular do Furnace: liga sozinho em celular/tablet (ou com ?mobile=1 / ?mobile=0 para forçar)
     rgMobile: (function () {
       var q = /[?&]mobile=([01])/.exec(location.search); if (q) return q[1] === '1';
@@ -160,6 +195,18 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     onRgReady: function () { ready = true; vfsInit(); setTimeout(function () { $('load').style.display = 'none'; }, 400); hookWrites(); setTimeout(checkInbox, 600); },
     onAbort: function () { $('loadTxt').textContent = T('O Tracker parou com um erro. Recarregue a página.','The Tracker stopped with an error. Reload the page.'); $('load').style.display = 'grid'; }
   };
+
+  // ── skin: o mesmo visual no Tracker (Furnace) e na página ──
+  var skinSel = $('skinSel');
+  rgSkins.fill(skinSel);
+  skinSel.onchange = function () { rgSkins.set(skinSel.value); };
+  rgSkins.on(function (id, fromApp) {
+    skinSel.value = id;
+    if (fromApp) return;
+    Module.rgSkin = id;
+    if (ready) { try { Module.ccall('rg_web_skin', null, ['string'], [id]); } catch (e) {} }
+  });
+  rgI18n.on && rgI18n.on(function () { rgSkins.fill(skinSel); });
 
   // ── pasta de destino conforme o tipo do arquivo ──
   function folderFor(name) {

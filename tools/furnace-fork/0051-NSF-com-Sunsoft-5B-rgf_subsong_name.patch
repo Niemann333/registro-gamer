@@ -1,7 +1,7 @@
 From 21481c25b11168622b1b0f1471f2507b15093177 Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Thu, 26 Nov 2026 15:42:58 -0300
-Subject: [PATCH 51/53] NSF com Sunsoft 5B; rgf_subsong_name
+Subject: [PATCH 51/54] NSF com Sunsoft 5B; rgf_subsong_name
 
 ---
  src/engine/export/nsf.cpp | 11 ++++++++++-

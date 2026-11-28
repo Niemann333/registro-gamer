@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-skin-default="studio">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0c0a14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="rg-skins.js?v=1"></script>
 <script>
 (function () { // modo computador ou celular: escolha salva, senão detecta pelo tipo de tela
   var m = null; try { m = localStorage.getItem('rgStudioMode'); } catch (e) {}
@@ -369,6 +370,42 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   html.mob .panel>*{flex-shrink:0}
   html.mob .panel .list{flex:none;overflow:visible}
 }
+
+/* ── skins (rg-skins.js põe data-skin no <html>; a mesma escolha vale no Tracker) ── */
+.skinsel{appearance:none;-webkit-appearance:none;border:1px solid var(--line2);background:var(--bg2);color:var(--tx);border-radius:999px;padding:6px 26px 6px 11px;font:600 11.5px/1 inherit;font-family:inherit;cursor:pointer;flex:none;max-width:200px;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.skinsel option{background:#fff;color:#000}
+html.mob .skinsel{max-width:120px}
+html:not([data-skin=studio]) body{background-image:none}
+html:not([data-skin=studio]) .logo .ic{background:linear-gradient(135deg,var(--ac2),var(--ac));box-shadow:none}
+html:not([data-skin=studio]) .btn.pri,html:not([data-skin=studio]).pc #btnTracker{background:var(--ac);box-shadow:none}
+html:not([data-skin=studio]) .trkBan{background:linear-gradient(120deg,var(--ac) 0%,var(--ac2) 100%);box-shadow:none}
+html:not([data-skin=studio]) .card.on{box-shadow:0 0 0 1px var(--ac);background:var(--acd)}
+html:not([data-skin=studio]) .kbwrap{background:var(--bg2)}
+html:not([data-skin=studio]) .kw span.c{color:var(--ac)}
+html:not([data-skin=studio]) .kw.dn{background:var(--ac2);box-shadow:inset 0 -2px 0 var(--ac)}
+html:not([data-skin=studio]) .kbk.dn{background:var(--ac)}
+html:not([data-skin=studio]) .op.car{border-color:var(--line2);background:var(--bg2)}
+html:not([data-skin=studio]) .prm input[type=range]::-webkit-slider-thumb{box-shadow:none}
+/* Registro Gamer: verde neon sobre preto */
+html[data-skin=registro]{--bg:#050a05;--bg2:#081208;--bg3:#0e260e;--line:#163a16;--line2:#1e501e;--tx:#c8ffbe;--tx2:#7fc87a;--tx3:#4f874f;--ac:#1f8a10;--ac2:#39ff14;--acd:#0d2e0a}
+/* Furnace: cinza-escuro com azul */
+html[data-skin=furnace]{--bg:#141414;--bg2:#1e1e1e;--bg3:#2a2a2a;--line:#3a3a46;--line2:#4a4a58;--tx:#ffffff;--tx2:#b4b4c0;--tx3:#7a7a86;--ac:#1087fa;--ac2:#4296fa;--acd:#10325a}
+html[data-skin=furnace] body,html[data-skin=furnace] .lang button,html[data-skin=furnace] .skinsel{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+/* FamiTracker e OpenMPT: janela clássica do Windows, sem cantos arredondados */
+html[data-skin=famitracker],html[data-skin=openmpt]{--bg:#f0f0f0;--bg2:#ffffff;--bg3:#e1e1e1;--line:#c8c8c8;--line2:#a0a0a0;--tx:#000000;--tx2:#333333;--tx3:#6d6d6d;--ac:#0078d7;--ac2:#3399ff;--acd:#cce8ff;--keyb:#202020}
+html[data-skin=famitracker] body,html[data-skin=openmpt] body,html[data-skin=famitracker] .lang button,html[data-skin=openmpt] .lang button,html[data-skin=famitracker] .skinsel,html[data-skin=openmpt] .skinsel{font-family:"Segoe UI",Tahoma,Arial,sans-serif;letter-spacing:0}
+html[data-skin=famitracker] *:not(.dot),html[data-skin=openmpt] *:not(.dot){border-radius:0!important}
+html[data-skin=famitracker] .btn,html[data-skin=openmpt] .btn{background:#e1e1e1;border-color:#adadad;color:#000}
+html[data-skin=famitracker] .btn:hover,html[data-skin=openmpt] .btn:hover{background:#e5f1fb;border-color:#0078d7}
+html[data-skin=famitracker] .btn.pri,html[data-skin=openmpt] .btn.pri,html[data-skin=famitracker].pc #btnTracker,html[data-skin=openmpt].pc #btnTracker{background:#e1e1e1;border:1px solid #0078d7;color:#000}
+html[data-skin=famitracker] .trkBan,html[data-skin=openmpt] .trkBan{background:#e1e1e1;color:#000;border:1px solid #0078d7}
+html[data-skin=famitracker] .trkBan *,html[data-skin=openmpt] .trkBan *{color:#000}
+html[data-skin=famitracker] .trkBan::after,html[data-skin=openmpt] .trkBan::after{display:none}
+html[data-skin=famitracker] .top,html[data-skin=openmpt] .top{background:#f0f0f0;border-bottom:1px solid #a0a0a0}
+html[data-skin=famitracker] .lang button.on,html[data-skin=openmpt] .lang button.on{background:#0078d7;color:#fff}
+/* FamiTracker: azul das bordas do editor do FamiTracker */
+html[data-skin=famitracker]{--ac:#3060a0;--ac2:#5080c0;--acd:#c8d8f0}
 </style>
 </head>
 <body>
@@ -376,6 +413,7 @@ html.pc .hint{font-size:12px;color:var(--tx2)}
   <header class="top">
     <div class="logo"><div class="ic">🎹</div><div>CHIPTUNE STUDIO<small data-en="REGISTRO GAMER · CHIP SOUNDS">REGISTRO GAMER · TIMBRES DOS CHIPS</small></div></div>
     <div class="sp"></div>
+    <select class="skinsel" id="skinSel" title="Skin: muda o visual do Chiptune Studio e do Tracker" data-en-title="Skin: changes the look of Chiptune Studio and the Tracker"></select>
     <div class="lang" id="langSw"><button type="button" data-l="pt">PT</button><button type="button" data-l="en">EN</button></div>
     <div class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span class="txt" id="midiTxt" data-en="MIDI: searching…">MIDI: procurando…</span></div>
     <button class="btn sm" id="btnMode" title="Alternar entre o modo computador e o modo celular">📱</button>
@@ -2280,6 +2318,11 @@ var AY8930_DUTY = ['3,1%', '6,3%', '12,5%', '25%', '50%', '75%', '87,5%', '93,8%
   // o blog avisa quando o idioma muda lá fora
   window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-lang' && e.source === window.parent) rgI18n.set(e.data.lang); });
   langMark(); qPh();
+  // skin (a mesma do Tracker; guardada no navegador)
+  rgSkins.fill($('skinSel'));
+  $('skinSel').onchange = function () { rgSkins.set(this.value); };
+  rgSkins.on(function (id) { $('skinSel').value = id; });
+  rgI18n.on(function () { rgSkins.fill($('skinSel')); });
   // abre direto numa música: estudio.html?f=Chiptunes/...vgz
   var qf = new URLSearchParams(location.search).get('f');
   if (qf && VGM_RE.test(qf)) selectSong(qf, qf.split('/').pop());

@@ -3549,6 +3549,14 @@ class FurnaceGUI {
   public:
     // Registro Gamer (web): há alterações não salvas?
     bool rgIsModified() { return modified; }
+    // RG: skins (rgSkins.cpp)
+    String rgSkinPending;
+    int rgSkinCount();
+    const char* rgSkinId(int i);
+    const char* rgSkinName(int i);
+    String rgCurrentSkin();
+    void rgRequestSkin(const String& id);
+    bool rgApplySkin(const String& id);
     void editStr(String* which);
     void showError(String what);
     void showWarning(String what, FurnaceGUIWarnings type);
