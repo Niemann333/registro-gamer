@@ -384,7 +384,7 @@ std::vector<InsDetail> Player::instrumentDetails() {
       for (int pi=0; pi<(int)FMEnvelopeParameter::SSGEG4+1; pi++) {
         bool en=false;
         try { en=f->getOperatorSequenceEnabled((FMEnvelopeParameter)pi); } catch (...) { en=false; }
-        if (en) { d.unsupported.push_back("sequência de operador"); break; }
+        if (en) d.opSeq.push_back(std::make_pair(pi,rgRenderSeq([&](){ return f->getOperatorSequenceSequenceIterator((FMEnvelopeParameter)pi); },0,false)));
       }
       if (f->getLFOEnabled()) {
         d.lfoOn=true;
@@ -412,8 +412,18 @@ std::vector<InsDetail> Player::instrumentDetails() {
       if (a->getEnvelopeEnabled()) d.adpcmEnv=rgRenderSeq([&](){ return a->getEnvelopeSequenceIterator(); },0,false);
       if (a->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return a->getArpeggioSequenceIterator(); },(int)a->getArpeggioType(),false);
       if (a->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return a->getPitchSequenceIterator(); },(int)a->getPitchType(),false);
-    } else {
-      d.unsupported.push_back("bateria de ADPCM");
+    } else if (auto k=std::dynamic_pointer_cast<InstrumentDrumkit>(ins)) {
+      for (int key: k->getAssignedKeys()) {
+        if (!k->getSampleEnabled(key)) continue;
+        InsDetail::KitKey kk;
+        kk.key=key;
+        kk.sample=k->getSampleNumber(key);
+        kk.rootKey=k->getSampleRootKeyNumber(key);
+        kk.rootDeltaN=k->getSampleRootDeltaN(key);
+        kk.pitch=k->getPitch(key);
+        kk.pan=k->getPan(key);
+        d.kit.push_back(kk);
+      }
     }
     ret.push_back(d);
   }

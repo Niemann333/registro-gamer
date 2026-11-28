@@ -941,6 +941,8 @@ src/engine/export/rgexport.cpp
 src/engine/export/nsf.cpp
 src/engine/export/spc.cpp
 src/engine/export/psf.cpp
+src/engine/export/gsf.cpp
+src/engine/export/nds2sf.cpp
 src/engine/export/gbs.cpp
 src/engine/export/sid.cpp
 src/engine/export/snsf.cpp

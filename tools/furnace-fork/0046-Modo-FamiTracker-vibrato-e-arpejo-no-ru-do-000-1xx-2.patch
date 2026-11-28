@@ -1,7 +1,7 @@
 From d1b270803b694079742537c2cf30d0fc39579875 Mon Sep 17 00:00:00 2001
 From: Niemann333 <109040743+Niemann333@users.noreply.github.com>
 Date: Wed, 25 Nov 2026 16:08:15 -0300
-Subject: [PATCH 46/54] =?UTF-8?q?Modo=20FamiTracker:=20vibrato=20e=20arpej?=
+Subject: [PATCH 46/55] =?UTF-8?q?Modo=20FamiTracker:=20vibrato=20e=20arpej?=
  =?UTF-8?q?o=20no=20ru=C3=ADdo,=20000/1xx/2xx=20substituem=20o=203xx=20da?=
  =?UTF-8?q?=20mesma=20linha,=20sweep=20de=20hardware=20sem=20reescrever=20?=
  =?UTF-8?q?a=20altura,=20notas=20limitadas=20a=20C-0..B-7,=20slides=20at?=

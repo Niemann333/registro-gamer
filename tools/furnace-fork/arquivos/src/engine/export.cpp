@@ -28,6 +28,8 @@
 #include "export/nsf.h"
 #include "export/spc.h"
 #include "export/psf.h"
+#include "export/gsf.h"
+#include "export/nds2sf.h"
 #include "export/gbs.h"
 #include "export/sid.h"
 #include "export/snsf.h"
@@ -62,6 +64,12 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
       break;
     case DIV_ROM_SPC:
       exporter=new DivExportSPC;
+      break;
+    case DIV_ROM_2SF:
+      exporter=new DivExport2SF;
+      break;
+    case DIV_ROM_GSF:
+      exporter=new DivExportGSF;
       break;
     case DIV_ROM_PSF:
       exporter=new DivExportPSF;

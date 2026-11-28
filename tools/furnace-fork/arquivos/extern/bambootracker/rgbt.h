@@ -65,6 +65,12 @@ namespace rgbt {
     bool envReset=false;      // FM: zerar o envelope a cada nota
     bool lfoOn=false;
     int lfoFreq=0, lfoAMS=0, lfoPMS=0, lfoAM[4]={0,0,0,0};
+    // bateria de ADPCM: cada tecla toca uma amostra com o deltaN da raiz × 2^(altura/12) e o seu panorama
+    struct KitKey { int key, sample, rootKey, rootDeltaN, pitch, pan; };
+    std::vector<KitKey> kit;
+    // FM: sequências de parâmetro (índice do FMEnvelopeParameter: 0 AL, 1 FB, 2+op*9+k = AR DR SR RR SL TL KS ML DT
+    // dos operadores S1..S4, 38+op = SSGEG), valor bruto do registrador (SSGEG: -1 desligado)
+    std::vector<std::pair<int,Seq>> opSeq;
     std::vector<std::string> unsupported;
   };
 

@@ -184,6 +184,31 @@ void DivEngine::registerROMExports() {
     false, DIV_REQPOL_LAX
   );
 
+  romExportDefs[DIV_ROM_GSF]=new DivROMExportDef(
+    "Game Boy Advance GSF", "Registro Gamer",
+    "GSF (Game Boy Advance Sound Format) export: a GBA ROM that plays the song.\n"
+    "plays on any GSF player (foobar2000, Winamp in_gsf, the blog's Chiptune Player, etc.).\n"
+    "the song is mixed into 8-bit audio played by the GBA's direct sound channels (like most GBA games do), up to 32MB.",
+    "GSF files", ".gsf",
+    {
+      DIV_SYSTEM_GBA_DMA, DIV_SYSTEM_GBA_MINMOD, DIV_SYSTEM_GB
+    },
+    false, DIV_REQPOL_LAX
+  );
+
+  romExportDefs[DIV_ROM_2SF]=new DivROMExportDef(
+    "Nintendo DS 2SF", "Registro Gamer",
+    "2SF (Nintendo DS Sound Format) export: a DS cartridge image that plays the song.\n"
+    "plays on any 2SF player (foobar2000, Winamp in_2sf, the blog's Chiptune Player, etc.).\n"
+    "the samples and the song must fit in the 4MB of main RAM.\n"
+    "register dump-based (the song is recorded tick by tick and compressed).",
+    "2SF files", ".2sf",
+    {
+      DIV_SYSTEM_NDS
+    },
+    false, DIV_REQPOL_LAX
+  );
+
   romExportDefs[DIV_ROM_GBS]=new DivROMExportDef(
     "Game Boy GBS", "Registro Gamer",
     "GBS (Game Boy Sound System) export.\n"

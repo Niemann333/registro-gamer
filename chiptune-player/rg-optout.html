@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Não contar minhas visitas · Registro Gamer</title>
+<style>
+body{margin:0;background:#050a05;color:#c8ffbe;font:15px/1.5 system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.c{max-width:520px;padding:24px;border:1px solid #1e501e;border-radius:12px;background:#081208;margin:16px}
+h1{font-size:18px;margin:0 0 8px;color:#39ff14}p{color:#7fc87a;margin:8px 0}
+button{font:inherit;background:#1f8a10;color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;margin-right:8px}
+button.s{background:#0e260e;color:#c8ffbe;border:1px solid #1e501e}
+b{color:#c8ffbe}
+</style></head>
+<body>
+<div class="c" id="c" hidden>
+  <h1 id="h"></h1>
+  <p id="st"></p>
+  <button id="b1"></button><button class="s" id="b0"></button>
+  <p id="nt"></p>
+</div>
+<script>
+// Guarda (ou tira) a escolha de "não contar minhas visitas" no endereço das ferramentas (lucniemann.github.io),
+// que tem a memória do navegador separada da do blog. Dentro da página de privacidade do blog ela roda numa
+// moldura escondida (?off=1 liga, ?off=0 desliga, sem nada só consulta) e avisa a página; aberta direto, mostra botões.
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  var en = /[?&]lang=en\b/.test(location.search) || (!/[?&]lang=pt\b/.test(location.search) && !/^pt/i.test(navigator.language || 'pt'));
+  function T(pt, e) { return en ? e : pt; }
+  function get() { try { return localStorage.getItem('rgNoStats') === '1'; } catch (e) { return null; } }
+  function set(v) { try { if (v) localStorage.setItem('rgNoStats', '1'); else localStorage.removeItem('rgNoStats'); } catch (e) {} }
+  var q = /[?&]off=([01])/.exec(location.search);
+  if (q) set(q[1] === '1');
+  var gpc = false; try { gpc = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1'; } catch (e) {}
+  if (window.parent !== window) { try { parent.postMessage({ type: 'rg-optout', off: get(), gpc: gpc }, '*'); } catch (e) {} return; }
+  document.documentElement.lang = en ? 'en' : 'pt-BR';
+  $('c').hidden = false;
+  $('h').textContent = T('Não contar minhas visitas', 'Do not count my visits');
+  $('b1').textContent = T('Não contar', 'Do not count');
+  $('b0').textContent = T('Pode contar', 'Count again');
+  $('nt').textContent = T('Vale para este navegador, no Chiptune Studio, no Chiptune Player e no Tracker. No blog, use o botão da página de privacidade.',
+    'Applies to this browser, in Chiptune Studio, Chiptune Player and the Tracker. On the blog, use the button on the privacy page.');
+  function show() {
+    var v = get();
+    $('st').innerHTML = gpc ? T('Seu navegador já pede para não ser rastreado (Global Privacy Control / Do Not Track): <b>nada é contado</b>.', 'Your browser already asks not to be tracked (Global Privacy Control / Do Not Track): <b>nothing is counted</b>.')
+      : v ? T('<b>Suas visitas não são contadas</b> neste navegador.', '<b>Your visits are not counted</b> in this browser.')
+      : T('Suas visitas são contadas (o que é guardado está no aviso de privacidade do blog).', 'Your visits are counted (what is kept is listed in the blog\'s privacy notice).');
+  }
+  $('b1').onclick = function () { set(true); show(); };
+  $('b0').onclick = function () { set(false); show(); };
+  show();
+})();
+</script>
+</body></html>

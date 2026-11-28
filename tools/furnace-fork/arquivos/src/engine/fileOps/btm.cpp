@@ -28,6 +28,7 @@
 #include "../../../extern/bambootracker/rgbt.h"
 #include <functional>
 #include <deque>
+#include <map>
 
 // efeito do BambooTracker -> código parecido do Furnace (só para mostrar; quem toca é o BambooTracker)
 static bool rgBTFx(const char* id, int v, int src, short& fx, short& val) {
@@ -203,6 +204,13 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
   ds.systemFlags[0].set("rgBTData",taEncodeBase64(std::string((const char*)file,len)));
 
   int maxIns=-1;
+  // bateria de ADPCM com teclas fora do centro: o panorama de cada tecla vai como 08xx junto da nota
+  std::map<int,std::map<int,int>> kitPan;
+  for (auto& d: pl.instrumentDetails()) {
+    bool offCenter=false;
+    for (auto& kk: d.kit) if (kk.pan!=3) offCenter=true;
+    if (offCenter) for (auto& kk: d.kit) kitPan[d.number][kk.key]=kk.pan;
+  }
   for (int s=0; s<songs; s++) {
     if (s>0) ds.subsong.push_back(new DivSubSong);
     DivSubSong* sub=ds.subsong[s];
@@ -229,6 +237,7 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
       if (ch>=DIV_MAX_CHANS) continue;
       int src=tracks[t].source;
       std::deque<int> echo; // notas tocadas (a mais nova na frente), para ^0..^3
+      int curIns=-1;
       std::vector<bool> done(DIV_MAX_PATTERNS,false);
       for (int o=0; o<ords; o++) {
         int pi=pl.patternIndex(s,(int)t,o);
@@ -253,6 +262,7 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
             echo.push_front(note);
             if (echo.size()>4) echo.pop_back();
           }
+          if (st.ins>=0) curIns=st.ins;
           if (!first) continue;
           if (note>=0) {
             // a tabela de períodos do SSG do BambooTracker toca uma oitava acima da do FM para a mesma nota
@@ -279,6 +289,17 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
             for (int j=0; j<nfx && col<4; j++) {
               pat->newData[r][DIV_PAT_FX(col)]=fx[j];
               pat->newData[r][DIV_PAT_FXVAL(col)]=val[j];
+              col++;
+            }
+          }
+          if (src==rgbt::ADPCM && note>=0 && col<4 && kitPan.count(curIns)) {
+            std::map<int,int>& kp=kitPan[curIns];
+            std::map<int,int>::iterator kit=kp.find(note);
+            if (kit!=kp.end()) {
+              // panorama do BambooTracker: 1 direita, 2 esquerda, 3 os dois
+              const int panFx[4]={0x00,0x0f,0xf0,0xff};
+              pat->newData[r][DIV_PAT_FX(col)]=0x08;
+              pat->newData[r][DIV_PAT_FXVAL(col)]=panFx[kit->second&3];
               col++;
             }
           }
@@ -310,6 +331,19 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
   std::vector<rgbt::InsInfo> insList=pl.instruments();
   std::vector<rgbt::InsDetail> insDet=pl.instrumentDetails();
   for (auto& i: insList) maxIns=MAX(maxIns,i.number);
+  // calibração das amostras do ADPCM: a nota raiz (do BambooTracker) que toca com o deltaN da raiz.
+  // a bateria usa a calibração da amostra quando bate (a diferença é um número inteiro de semitons);
+  // se não bate, ganha uma cópia da amostra com a calibração dela
+  std::vector<rgbt::SampleInfo> smp=pl.samples();
+  int maxSmp=-1;
+  for (auto& s: smp) maxSmp=MAX(maxSmp,s.number);
+  std::map<int,std::pair<int,int>> calib;
+  for (auto& d: insDet) {
+    if (d.type!=2) continue;
+    for (auto& ii: insList) if (ii.number==d.number && ii.sample>=0) calib[ii.sample]=std::make_pair(d.rootKey,d.rootDeltaN);
+  }
+  struct SmpCopy { int src, rootKey, rootDN; };
+  std::vector<SmpCopy> smpCopies;
   // DT do registrador (0..7) -> DT do Furnace (3 = 0)
   const int dtFromReg[8]={3,4,5,6,3,2,1,0};
   for (int n=0; n<=maxIns; n++) {
@@ -340,6 +374,44 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
         }
       } else if (i.type==1) {
         ins->type=DIV_INS_AY;
+      } else if (i.type==3) {
+        // bateria: mapa de notas (tecla -> amostra e nota que dá o deltaN da tecla)
+        ins->type=DIV_INS_ADPCMB;
+        ins->amiga.useNoteMap=true;
+        for (int k=0; k<180; k++) {
+          ins->amiga.noteMap[k].map=-1;
+          ins->amiga.noteMap[k].freq=k;
+        }
+        for (auto& d: insDet) {
+          if (d.number!=n) continue;
+          for (auto& kk: d.kit) {
+            if (kk.sample<0 || kk.key<0 || kk.key+60>=180 || kk.rootDeltaN<=0) continue;
+            int smpIdx=kk.sample, noteOut=kk.rootKey+kk.pitch;
+            std::map<int,std::pair<int,int>>::iterator c=calib.find(kk.sample);
+            if (c==calib.end()) {
+              calib[kk.sample]=std::make_pair(kk.rootKey,kk.rootDeltaN);
+            } else {
+              double semis=12.0*log2((double)kk.rootDeltaN/(double)MAX(1,c->second.second));
+              if (fabs(semis-round(semis))<0.02) {
+                noteOut=c->second.first+kk.pitch+(int)round(semis);
+              } else {
+                int found=-1;
+                for (size_t q=0; q<smpCopies.size(); q++) {
+                  if (smpCopies[q].src==kk.sample && smpCopies[q].rootDN==kk.rootDeltaN) found=(int)q;
+                }
+                if (found<0) {
+                  smpCopies.push_back(SmpCopy{kk.sample,kk.rootKey,kk.rootDeltaN});
+                  found=(int)smpCopies.size()-1;
+                }
+                smpIdx=maxSmp+1+found;
+                noteOut=smpCopies[found].rootKey+kk.pitch;
+              }
+            }
+            ins->amiga.noteMap[kk.key+60].map=smpIdx;
+            logD("BTM: bateria %.2X tecla %d: amostra %d (raiz %d, deltaN %d, altura %d, pan %d) -> nota %d",n,kk.key,smpIdx,kk.rootKey,kk.rootDeltaN,kk.pitch,kk.pan,noteOut);
+            ins->amiga.noteMap[kk.key+60].freq=CLAMP(noteOut+60,0,179);
+          }
+        }
       } else {
         ins->type=DIV_INS_ADPCMB;
         ins->amiga.initSample=i.sample;
@@ -363,13 +435,35 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
         rgBTMacro(ins->std.pitchMacro,d.pitch,[&](int v, int) -> int { return (v-127)*4; });
         if (d.pitch.type==3) ins->std.pitchMacro.mode=1;
       }
-      if (ins->type==DIV_INS_AY) {
-        if (d.ssgEnv.on) {
-          bool hard=false;
-          for (int v: d.ssgEnv.val) if (v>=16) hard=true;
-          if (hard) logW("BTM: instrumento %.2X: envelope de hardware do SSG ainda não é convertido",n);
-          rgBTMacro(ins->std.volMacro,d.ssgEnv,[&](int v, int) -> int { return (v<16)?v:15; });
+      // FM: sequências de parâmetro -> macros (AL/FB do instrumento, o resto por operador)
+      if (ins->type==DIV_INS_FM) {
+        const int opMap[4]={0,2,1,3};
+        for (auto& os: d.opSeq) {
+          int pi=os.first;
+          const rgbt::Seq& q=os.second;
+          if (pi==0) { rgBTMacro(ins->std.algMacro,q,[](int v, int) -> int { return v&7; }); continue; }
+          if (pi==1) { rgBTMacro(ins->std.fbMacro,q,[](int v, int) -> int { return v&7; }); continue; }
+          if (pi>=38 && pi<42) {
+            rgBTMacro(ins->std.opMacros[opMap[pi-38]].ssgMacro,q,[](int v, int) -> int { return (v<0)?0:(8|(v&7)); });
+            continue;
+          }
+          if (pi<2 || pi>=38) continue;
+          int op=opMap[(pi-2)/9], k=(pi-2)%9;
+          DivInstrumentSTD::OpMacro& om=ins->std.opMacros[op];
+          switch (k) {
+            case 0: rgBTMacro(om.arMacro,q,[](int v, int) -> int { return v&31; }); break;
+            case 1: rgBTMacro(om.drMacro,q,[](int v, int) -> int { return v&31; }); break;
+            case 2: rgBTMacro(om.d2rMacro,q,[](int v, int) -> int { return v&31; }); break;
+            case 3: rgBTMacro(om.rrMacro,q,[](int v, int) -> int { return v&15; }); break;
+            case 4: rgBTMacro(om.slMacro,q,[](int v, int) -> int { return v&15; }); break;
+            case 5: rgBTMacro(om.tlMacro,q,[](int v, int) -> int { return v&127; }); break;
+            case 6: rgBTMacro(om.rsMacro,q,[](int v, int) -> int { return v&3; }); break;
+            case 7: rgBTMacro(om.multMacro,q,[](int v, int) -> int { return v&15; }); break;
+            case 8: rgBTMacro(om.dtMacro,q,[&](int v, int) -> int { return dtFromReg[v&7]; }); break;
+          }
         }
+      }
+      if (ins->type==DIV_INS_AY) {
         if (d.ssgTN.on) {
           // 0 tom, 1-32 ruído (período 32-x), 33-64 tom+ruído (64-x), 65 nada
           rgBTMacro(ins->std.waveMacro,d.ssgTN,[&](int v, int) -> int {
@@ -389,10 +483,105 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
             });
           }
         }
-        if (d.ssgWave.on) {
-          bool square=true;
-          for (int v: d.ssgWave.val) if (v!=0) square=false;
-          if (!square) logW("BTM: instrumento %.2X: forma de onda do SSG (fora a quadrada) ainda não é convertida",n);
+        // envelope de hardware e formas de onda: o BambooTracker usa o envelope do SSG (registrador 0D) com o
+        // período fixo (subdado "bruto") ou proporcional ao tom (subdado "razão": período = TP*r1/(r2*div),
+        // div 32 nas formas de triângulo, 16 nas outras). No Furnace: bit 4 da macro de onda (envelope), ex2
+        // (forma), ex5 (período fixo) e ex3/alg (envelope automático: período = TP*alg/(ex3*16)).
+        // ondas: 1 triângulo (forma 0E, sem tom), 2 serra (0C), 3 serra invertida (08), 4-6 iguais com o tom
+        // (máscara quadrada) por cima.
+        int waveForm=0;
+        if (d.ssgWave.on && !d.ssgWave.val.empty()) {
+          waveForm=d.ssgWave.val[0];
+          for (int v: d.ssgWave.val) if (v!=waveForm) {
+            logW("BTM: instrumento %.2X: forma de onda do SSG que muda durante a nota; usando a primeira",n);
+            break;
+          }
+          if (waveForm<0 || waveForm>6) waveForm=0;
+          if (waveForm>=4) {
+            for (size_t k=0; k<d.ssgWave.sub.size(); k++) {
+              int sub=d.ssgWave.sub[k];
+              if (((sub>>20)==2 && (sub&0xffff)!=0x0101) || (sub>>20)==1) {
+                logW("BTM: instrumento %.2X: máscara quadrada com outra frequência ainda não é convertida (usando a da nota)",n);
+                break;
+              }
+            }
+          }
+        }
+        bool hardEnv=false, softEnv=false;
+        if (d.ssgEnv.on) for (int v: d.ssgEnv.val) { if (v>=16) hardEnv=true; else softEnv=true; }
+        auto setRatio=[&](int shape, int sub) {
+          int div=(shape==0x0a || shape==0x0e)?32:16;
+          if ((sub>>20)==1) {
+            ins->std.ex5Macro.val[0]=sub&0xffff;
+            ins->std.ex5Macro.len=1;
+            ins->std.ex5Macro.open=true;
+          } else {
+            int r1=1, r2=1;
+            if ((sub>>20)==2) { r1=(sub>>8)&0xff; r2=sub&0xff; }
+            if (r1<1) r1=1;
+            if (r2<1) r2=1;
+            int num=r2*div/16;
+            ins->std.ex3Macro.val[0]=num;
+            ins->std.ex3Macro.len=1;
+            ins->std.ex3Macro.open=true;
+            ins->std.algMacro.val[0]=r1;
+            ins->std.algMacro.len=1;
+            ins->std.algMacro.open=true;
+          }
+        };
+        int envBits=0;
+        if (waveForm>=1) {
+          const int shapeOf[7]={0,0x0e,0x0c,0x08,0x0e,0x0c,0x08};
+          int shape=shapeOf[waveForm];
+          ins->std.ex2Macro.val[0]=shape;
+          ins->std.ex2Macro.len=1;
+          ins->std.ex2Macro.open=true;
+          // triângulo/serra: o envelope dá a nota (o "tom" do envelope)
+          setRatio(shape,0);
+          envBits=(waveForm>=4)?(4|1):4;
+          if (hardEnv) logW("BTM: instrumento %.2X: forma de onda e envelope de hardware juntos; vale a forma de onda",n);
+        } else if (hardEnv) {
+          // envelope de hardware na sequência de envelope
+          int firstShape=-1, firstSub=0;
+          bool sameShape=true, sameSub=true;
+          for (size_t k=0; k<d.ssgEnv.val.size(); k++) {
+            int v=d.ssgEnv.val[k];
+            if (v<16) continue;
+            int sh=v-16+8, sb=(k<d.ssgEnv.sub.size())?d.ssgEnv.sub[k]:0;
+            if (firstShape<0) { firstShape=sh; firstSub=sb; }
+            if (sh!=firstShape) sameShape=false;
+            if (sb!=firstSub) sameSub=false;
+          }
+          if (sameShape) {
+            ins->std.ex2Macro.val[0]=firstShape;
+            ins->std.ex2Macro.len=1;
+            ins->std.ex2Macro.open=true;
+          } else {
+            int last=firstShape;
+            rgBTMacro(ins->std.ex2Macro,d.ssgEnv,[&](int v, int) -> int { if (v>=16) last=v-16+8; return last; });
+          }
+          if (!sameSub) logW("BTM: instrumento %.2X: período do envelope de hardware que muda durante a nota; usando o primeiro",n);
+          setRatio(firstShape,firstSub);
+          envBits=4;
+          if (softEnv) logW("BTM: instrumento %.2X: envelope que mistura volume e hardware; aproximado",n);
+        }
+        if (d.ssgEnv.on && waveForm==0) {
+          rgBTMacro(ins->std.volMacro,d.ssgEnv,[&](int v, int) -> int { return (v<16)?v:15; });
+        }
+        if (envBits) {
+          // a macro de onda ganha o bit do envelope (e perde o tom no triângulo/serra puros)
+          if (ins->std.waveMacro.len>0) {
+            for (int k=0; k<ins->std.waveMacro.len; k++) {
+              int w=ins->std.waveMacro.val[k];
+              ins->std.waveMacro.val[k]=(waveForm>=1 && waveForm<4)?((w&2)|4):(w|envBits);
+            }
+          } else if (hardEnv && softEnv && waveForm==0) {
+            rgBTMacro(ins->std.waveMacro,d.ssgEnv,[&](int v, int) -> int { return (v>=16)?5:1; });
+          } else {
+            ins->std.waveMacro.val[0]=envBits;
+            ins->std.waveMacro.len=1;
+            ins->std.waveMacro.open=true;
+          }
         }
       } else if (ins->type==DIV_INS_ADPCMB) {
         if (d.adpcmEnv.on) rgBTMacro(ins->std.volMacro,d.adpcmEnv,[&](int v, int) -> int { return v; });
@@ -403,21 +592,22 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
   ds.insLen=ds.ins.size();
 
   // amostras do ADPCM (para ver; a memória do chip é a que o BambooTracker monta)
-  std::vector<rgbt::SampleInfo> smp=pl.samples();
-  int maxSmp=-1;
-  for (auto& s: smp) maxSmp=MAX(maxSmp,s.number);
-  for (int n=0; n<=maxSmp; n++) {
+  for (int n=0; n<=maxSmp+(int)smpCopies.size(); n++) {
     DivSample* sm=new DivSample;
     sm->depth=DIV_SAMPLE_DEPTH_ADPCM_B;
+    int srcN=(n>maxSmp)?smpCopies[n-maxSmp-1].src:n;
     for (auto& s: smp) {
-      if (s.number!=n || s.data.empty()) continue;
-      sm->name=fmt::sprintf("ADPCM %.2X",n);
+      if (s.number!=srcN || s.data.empty()) continue;
+      sm->name=(n>maxSmp)?fmt::sprintf("ADPCM %.2X (bateria)",srcN):fmt::sprintf("ADPCM %.2X",n);
       // o Furnace toca a amostra com deltaN = 65535*centerRate/8372 * f(nota)/(clock/144), f = 440*2^((nota-57)/12);
       // o BambooTracker toca a nota raiz com o deltaN da raiz
       int rootKey=48, rootDN=s.rootRate;
-      for (auto& d: insDet) {
-        if (d.type!=2) continue;
-        for (auto& ii: insList) if (ii.number==d.number && ii.sample==n) { rootKey=d.rootKey; rootDN=d.rootDeltaN; }
+      if (n>maxSmp) {
+        rootKey=smpCopies[n-maxSmp-1].rootKey;
+        rootDN=smpCopies[n-maxSmp-1].rootDN;
+      } else if (calib.count(n)) {
+        rootKey=calib[n].first;
+        rootDN=calib[n].second;
       }
       // nota no espaço do Furnace (60 = C-0): C-4 = 108 toca a 8372 "Hz" virtuais = centerRate
       double fRoot=440.0*pow(2.0,(double)(rootKey+60-57)/12.0);

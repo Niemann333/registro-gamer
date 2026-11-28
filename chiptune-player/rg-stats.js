@@ -3,10 +3,22 @@
 // Ações nos gadgets: window.rgEv('gadget', 'ação', 'item') — antes do script carregar, as chamadas ficam em
 // window.rgEvQ (cada gadget define um rgEv provisório que só guarda na fila). Cliques nos gadgets também são
 // contados sozinhos (gadget = parte da página onde foi o clique, item = texto do botão/link).
-// Nada fica guardado no navegador: a sessão é só desta aba (memória).
+// Nada fica guardado no navegador: a sessão é só desta aba (memória). Só a escolha de não ser contado
+// (rgNoStats), se a pessoa pedir.
 (function () {
   if (window.__rgStats) return;
   window.__rgStats = 1;
+  // quem pediu para não ser contado (aviso de privacidade → "não contar minhas visitas", ou o sinal
+  // Global Privacy Control / Do Not Track do navegador) não manda nada
+  // o aviso de privacidade (lucniemann.github.io, numa moldura) avisa quando a pessoa muda a escolha
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'rg-nostats' || !/^https:\/\/(lucniemann|niemann333)\.github\.io$/.test(e.origin)) return;
+    try { if (e.data.off) localStorage.setItem('rgNoStats', '1'); else localStorage.removeItem('rgNoStats'); } catch (x) {}
+  });
+  var naoConta = false;
+  try { naoConta = localStorage.getItem('rgNoStats') === '1'; } catch (e) {}
+  try { if (navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1') naoConta = true; } catch (e) {}
+  if (naoConta) { window.rgEv = function () {}; window.rgEvQ = []; return; }
   var API = 'https://rg-stats.luciano-333-games.workers.dev';
   var me = document.currentScript;
   var site = (me && me.getAttribute('data-site')) || 'blog';

@@ -24040,3 +24040,30 @@ msgstr "muda a altura sem mudar a duração."
 
 msgid "semitones##RGSemis"
 msgstr "semitons##RGSemis"
+
+msgid "GSF (Game Boy Advance Sound Format) export: a GBA ROM that plays the song.\nplays on any GSF player (foobar2000, Winamp in_gsf, the blog's Chiptune Player, etc.).\nthe song is mixed into 8-bit audio played by the GBA's direct sound channels (like most GBA games do), up to 32MB."
+msgstr "exportação GSF (Game Boy Advance Sound Format): uma ROM de Game Boy Advance que toca a música.\ntoca em qualquer player de GSF (foobar2000, Winamp com in_gsf, o Chiptune Player do blog etc.).\na música é mixada em áudio de 8 bits tocado pelos canais de som direto do GBA (como faz a maioria dos jogos de GBA), em até 32 MB."
+
+msgid "GSF files"
+msgstr "arquivos GSF"
+
+msgid "no Game Boy Advance or Game Boy chip in this song"
+msgstr "esta música não tem chip de Game Boy Advance nem de Game Boy"
+
+msgid "the song has no sound"
+msgstr "a música não tem som"
+
+msgid "the song does not fit in a 32MB Game Boy Advance ROM (%d KB)"
+msgstr "a música não cabe numa ROM de Game Boy Advance de 32 MB (%d KB)"
+
+msgid "2SF (Nintendo DS Sound Format) export: a DS cartridge image that plays the song.\nplays on any 2SF player (foobar2000, Winamp in_2sf, the blog's Chiptune Player, etc.).\nthe samples and the song must fit in the 4MB of main RAM.\nregister dump-based (the song is recorded tick by tick and compressed)."
+msgstr "exportação 2SF (Nintendo DS Sound Format): uma imagem de cartucho de DS que toca a música.\ntoca em qualquer player de 2SF (foobar2000, Winamp com in_2sf, o Chiptune Player do blog etc.).\nas samples e a música precisam caber nos 4 MB de RAM principal.\nfeita a partir das escritas nos registradores (a música é gravada tique a tique e comprimida)."
+
+msgid "2SF files"
+msgstr "arquivos 2SF"
+
+msgid "no Nintendo DS chip in this song"
+msgstr "esta música não tem chip de Nintendo DS"
+
+msgid "the song does not fit in the 4MB of the Nintendo DS's RAM (%d KB)"
+msgstr "a música não cabe nos 4 MB de RAM do Nintendo DS (%d KB)"

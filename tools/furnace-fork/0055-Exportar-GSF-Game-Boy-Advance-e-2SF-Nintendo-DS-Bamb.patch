@@ -1,0 +1,1621 @@
+From e53968a9af741bc595b53a1f666295a105f537d1 Mon Sep 17 00:00:00 2001
+From: LucNiemann <109040743+LucNiemann@users.noreply.github.com>
+Date: Sat, 28 Nov 2026 02:54:54 -0300
+Subject: [PATCH 55/55] =?UTF-8?q?Exportar=20GSF=20(Game=20Boy=20Advance)?=
+ =?UTF-8?q?=20e=202SF=20(Nintendo=20DS);=20BambooTracker:=20bateria=20de?=
+ =?UTF-8?q?=20ADPCM,=20sequ=C3=AAncias=20de=20operador,=20envelope=20de=20?=
+ =?UTF-8?q?hardware=20e=20formas=20de=20onda=20do=20SSG?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ CMakeLists.txt                      |   2 +
+ extern/bambootracker/rgbt.h         |   6 +
+ extern/bambootracker/rgbt_unity.cpp |  16 +-
+ po/pt_BR.po                         |  27 +++
+ scripts/rg-mkdrv-arm.sh             |  17 ++
+ src/engine/export.cpp               |   8 +
+ src/engine/export.h                 |   2 +
+ src/engine/export/gsf.cpp           | 303 ++++++++++++++++++++++++++++
+ src/engine/export/gsf.h             |  27 +++
+ src/engine/export/gsfdrv.inc        |  36 ++++
+ src/engine/export/gsfdrv.s          | 102 ++++++++++
+ src/engine/export/nds2sf.cpp        | 302 +++++++++++++++++++++++++++
+ src/engine/export/nds2sf.h          |  27 +++
+ src/engine/export/ndsdrv.inc        |  39 ++++
+ src/engine/export/ndsdrv.s          | 166 +++++++++++++++
+ src/engine/exportDef.cpp            |  25 +++
+ src/engine/fileOps/btm.cpp          | 228 +++++++++++++++++++--
+ src/main.cpp                        |  10 +
+ 18 files changed, 1321 insertions(+), 22 deletions(-)
+ create mode 100755 scripts/rg-mkdrv-arm.sh
+ create mode 100644 src/engine/export/gsf.cpp
+ create mode 100644 src/engine/export/gsf.h
+ create mode 100644 src/engine/export/gsfdrv.inc
+ create mode 100644 src/engine/export/gsfdrv.s
+ create mode 100644 src/engine/export/nds2sf.cpp
+ create mode 100644 src/engine/export/nds2sf.h
+ create mode 100644 src/engine/export/ndsdrv.inc
+ create mode 100644 src/engine/export/ndsdrv.s
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9d50c47..418bd28 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -941,6 +941,8 @@ src/engine/export/rgexport.cpp
+ src/engine/export/nsf.cpp
+ src/engine/export/spc.cpp
+ src/engine/export/psf.cpp
++src/engine/export/gsf.cpp
++src/engine/export/nds2sf.cpp
+ src/engine/export/gbs.cpp
+ src/engine/export/sid.cpp
+ src/engine/export/snsf.cpp
+diff --git a/extern/bambootracker/rgbt.h b/extern/bambootracker/rgbt.h
+index 7b71385..c4643cc 100644
+--- a/extern/bambootracker/rgbt.h
++++ b/extern/bambootracker/rgbt.h
+@@ -65,6 +65,12 @@ namespace rgbt {
+     bool envReset=false;      // FM: zerar o envelope a cada nota
+     bool lfoOn=false;
+     int lfoFreq=0, lfoAMS=0, lfoPMS=0, lfoAM[4]={0,0,0,0};
++    // bateria de ADPCM: cada tecla toca uma amostra com o deltaN da raiz × 2^(altura/12) e o seu panorama
++    struct KitKey { int key, sample, rootKey, rootDeltaN, pitch, pan; };
++    std::vector<KitKey> kit;
++    // FM: sequências de parâmetro (índice do FMEnvelopeParameter: 0 AL, 1 FB, 2+op*9+k = AR DR SR RR SL TL KS ML DT
++    // dos operadores S1..S4, 38+op = SSGEG), valor bruto do registrador (SSGEG: -1 desligado)
++    std::vector<std::pair<int,Seq>> opSeq;
+     std::vector<std::string> unsupported;
+   };
+ 
+diff --git a/extern/bambootracker/rgbt_unity.cpp b/extern/bambootracker/rgbt_unity.cpp
+index 56285ce..df88961 100644
+--- a/extern/bambootracker/rgbt_unity.cpp
++++ b/extern/bambootracker/rgbt_unity.cpp
+@@ -384,7 +384,7 @@ std::vector<InsDetail> Player::instrumentDetails() {
+       for (int pi=0; pi<(int)FMEnvelopeParameter::SSGEG4+1; pi++) {
+         bool en=false;
+         try { en=f->getOperatorSequenceEnabled((FMEnvelopeParameter)pi); } catch (...) { en=false; }
+-        if (en) { d.unsupported.push_back("sequência de operador"); break; }
++        if (en) d.opSeq.push_back(std::make_pair(pi,rgRenderSeq([&](){ return f->getOperatorSequenceSequenceIterator((FMEnvelopeParameter)pi); },0,false)));
+       }
+       if (f->getLFOEnabled()) {
+         d.lfoOn=true;
+@@ -412,8 +412,18 @@ std::vector<InsDetail> Player::instrumentDetails() {
+       if (a->getEnvelopeEnabled()) d.adpcmEnv=rgRenderSeq([&](){ return a->getEnvelopeSequenceIterator(); },0,false);
+       if (a->getArpeggioEnabled()) d.arp=rgRenderSeq([&](){ return a->getArpeggioSequenceIterator(); },(int)a->getArpeggioType(),false);
+       if (a->getPitchEnabled()) d.pitch=rgRenderSeq([&](){ return a->getPitchSequenceIterator(); },(int)a->getPitchType(),false);
+-    } else {
+-      d.unsupported.push_back("bateria de ADPCM");
++    } else if (auto k=std::dynamic_pointer_cast<InstrumentDrumkit>(ins)) {
++      for (int key: k->getAssignedKeys()) {
++        if (!k->getSampleEnabled(key)) continue;
++        InsDetail::KitKey kk;
++        kk.key=key;
++        kk.sample=k->getSampleNumber(key);
++        kk.rootKey=k->getSampleRootKeyNumber(key);
++        kk.rootDeltaN=k->getSampleRootDeltaN(key);
++        kk.pitch=k->getPitch(key);
++        kk.pan=k->getPan(key);
++        d.kit.push_back(kk);
++      }
+     }
+     ret.push_back(d);
+   }
+diff --git a/po/pt_BR.po b/po/pt_BR.po
+index 3a8c468..7984ebf 100644
+--- a/po/pt_BR.po
++++ b/po/pt_BR.po
+@@ -24040,3 +24040,30 @@ msgstr "muda a altura sem mudar a duração."
+ 
+ msgid "semitones##RGSemis"
+ msgstr "semitons##RGSemis"
++
++msgid "GSF (Game Boy Advance Sound Format) export: a GBA ROM that plays the song.\nplays on any GSF player (foobar2000, Winamp in_gsf, the blog's Chiptune Player, etc.).\nthe song is mixed into 8-bit audio played by the GBA's direct sound channels (like most GBA games do), up to 32MB."
++msgstr "exportação GSF (Game Boy Advance Sound Format): uma ROM de Game Boy Advance que toca a música.\ntoca em qualquer player de GSF (foobar2000, Winamp com in_gsf, o Chiptune Player do blog etc.).\na música é mixada em áudio de 8 bits tocado pelos canais de som direto do GBA (como faz a maioria dos jogos de GBA), em até 32 MB."
++
++msgid "GSF files"
++msgstr "arquivos GSF"
++
++msgid "no Game Boy Advance or Game Boy chip in this song"
++msgstr "esta música não tem chip de Game Boy Advance nem de Game Boy"
++
++msgid "the song has no sound"
++msgstr "a música não tem som"
++
++msgid "the song does not fit in a 32MB Game Boy Advance ROM (%d KB)"
++msgstr "a música não cabe numa ROM de Game Boy Advance de 32 MB (%d KB)"
++
++msgid "2SF (Nintendo DS Sound Format) export: a DS cartridge image that plays the song.\nplays on any 2SF player (foobar2000, Winamp in_2sf, the blog's Chiptune Player, etc.).\nthe samples and the song must fit in the 4MB of main RAM.\nregister dump-based (the song is recorded tick by tick and compressed)."
++msgstr "exportação 2SF (Nintendo DS Sound Format): uma imagem de cartucho de DS que toca a música.\ntoca em qualquer player de 2SF (foobar2000, Winamp com in_2sf, o Chiptune Player do blog etc.).\nas samples e a música precisam caber nos 4 MB de RAM principal.\nfeita a partir das escritas nos registradores (a música é gravada tique a tique e comprimida)."
++
++msgid "2SF files"
++msgstr "arquivos 2SF"
++
++msgid "no Nintendo DS chip in this song"
++msgstr "esta música não tem chip de Nintendo DS"
++
++msgid "the song does not fit in the 4MB of the Nintendo DS's RAM (%d KB)"
++msgstr "a música não cabe nos 4 MB de RAM do Nintendo DS (%d KB)"
+diff --git a/scripts/rg-mkdrv-arm.sh b/scripts/rg-mkdrv-arm.sh
+new file mode 100755
+index 0000000..f975eff
+--- /dev/null
++++ b/scripts/rg-mkdrv-arm.sh
+@@ -0,0 +1,17 @@
++#!/bin/sh
++# monta um driver ARM e gera o .inc: mkdrv.sh fonte.s base nome-do-array saida.inc "comentario"
++set -e
++llvm-mc -triple=armv4t -filetype=obj -o /tmp/drv.o "$1"
++ld.lld -Ttext=$2 -e _start -o /tmp/drv.elf /tmp/drv.o
++llvm-objcopy -O binary /tmp/drv.elf /tmp/drv.bin
++python3 - "$3" "$4" "$5" <<'PY'
++import sys
++b=open('/tmp/drv.bin','rb').read()
++name,out,com=sys.argv[1:4]
++lines=['// '+com+'; não editar à mão','static const unsigned char %s[%d]={'%(name,len(b))]
++for i in range(0,len(b),16):
++  lines.append('  '+', '.join('0x%02x'%x for x in b[i:i+16])+',')
++lines.append('};')
++open(out,'w').write('\n'.join(lines)+'\n')
++print(len(b),'bytes')
++PY
+diff --git a/src/engine/export.cpp b/src/engine/export.cpp
+index add5a59..10d53a0 100644
+--- a/src/engine/export.cpp
++++ b/src/engine/export.cpp
+@@ -28,6 +28,8 @@
+ #include "export/nsf.h"
+ #include "export/spc.h"
+ #include "export/psf.h"
++#include "export/gsf.h"
++#include "export/nds2sf.h"
+ #include "export/gbs.h"
+ #include "export/sid.h"
+ #include "export/snsf.h"
+@@ -63,6 +65,12 @@ DivROMExport* DivEngine::buildROM(DivROMExportOptions sys) {
+     case DIV_ROM_SPC:
+       exporter=new DivExportSPC;
+       break;
++    case DIV_ROM_2SF:
++      exporter=new DivExport2SF;
++      break;
++    case DIV_ROM_GSF:
++      exporter=new DivExportGSF;
++      break;
+     case DIV_ROM_PSF:
+       exporter=new DivExportPSF;
+       break;
+diff --git a/src/engine/export.h b/src/engine/export.h
+index 01bc1a0..dae004a 100644
+--- a/src/engine/export.h
++++ b/src/engine/export.h
+@@ -49,6 +49,8 @@ enum DivROMExportOptions {
+   DIV_ROM_XM,
+   DIV_ROM_IT,
+   DIV_ROM_MPTM,
++  DIV_ROM_GSF,
++  DIV_ROM_2SF,
+ 
+   DIV_ROM_MAX
+ };
+diff --git a/src/engine/export/gsf.cpp b/src/engine/export/gsf.cpp
+new file mode 100644
+index 0000000..30b5993
+--- /dev/null
++++ b/src/engine/export/gsf.cpp
+@@ -0,0 +1,303 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++
++// Registro Gamer: GSF export (Game Boy Advance).
++// the GBA has no sample channels of its own: its games mix the music in software into an 8-bit
++// stream that two DMA channels feed to the "direct sound" FIFOs. this exporter does the same:
++// the song (GBA DMA, GBA MinMod and the Game Boy channels) is mixed while it plays, stored in the
++// ROM as 8-bit signed audio (left -> FIFO A, right -> FIFO B, or one stream for both if it is mono)
++// and played by gsfdrv.s; timer 0 sets the rate and timer 1 counts the samples to find the loop.
++
++#include "gsf.h"
++#include "../engine.h"
++#include "../ta-log.h"
++#include "blip_buf.h"
++#include <fmt/printf.h>
++#include <zlib.h>
++#include <math.h>
++
++#include "gsfdrv.inc"
++
++#define GBA_ROM 0x08000000
++#define GBA_ROM_MAX (32*1024*1024)
++#define GSF_PAD 256
++
++static void put32(std::vector<unsigned char>& v, size_t at, unsigned int x) {
++  v[at]=x&0xff;
++  v[at+1]=(x>>8)&0xff;
++  v[at+2]=(x>>16)&0xff;
++  v[at+3]=(x>>24)&0xff;
++}
++
++static String timeStr(double secs) {
++  int s=(int)(secs+0.999);
++  return fmt::sprintf("%d:%02d",s/60,s%60);
++}
++
++struct GSFChip {
++  DivDispatch* d;
++  int outs;
++  float vol;
++  double acc;
++  blip_t* bb[2];
++  int prev[2];
++  size_t pos;
++  std::vector<short> buf[2];
++};
++
++void DivExportGSF::run() {
++  std::vector<int> sys;
++  for (int i=0; i<e->song.systemLen; i++) {
++    DivSystem s=e->song.system[i];
++    if (s==DIV_SYSTEM_GBA_DMA || s==DIV_SYSTEM_GBA_MINMOD || s==DIV_SYSTEM_GB) {
++      sys.push_back(i);
++    } else {
++      logAppendf("WARNING: chip %d (%s) is not part of the Game Boy Advance sound; ignored",i,e->getSystemName(s));
++    }
++  }
++  if (sys.empty()) {
++    fail(_("no Game Boy Advance or Game Boy chip in this song"));
++    return;
++  }
++
++  // rate: 32768Hz (512 cycles per sample, like many games) unless the song is too long for 32MB
++  double est=0;
++  e->synchronizedSoft([&]() {
++    e->calcSongTimestamps();
++    est=e->curSubSong->ts.totalTime.toDouble();
++  });
++  int cycles=512;
++  double maxSecs=(double)(GBA_ROM_MAX-65536)/2.0;
++  if (est>0 && est*16777216.0/cycles>maxSecs) {
++    cycles=(int)ceil(est*16777216.0/maxSecs);
++    if (cycles>2048) cycles=2048;
++    logAppendf("long song (%.0f s): lowering the rate to %d Hz",est,16777216/cycles);
++  }
++  double outRate=16777216.0/cycles;
++
++  std::vector<GSFChip> chips(sys.size());
++  for (size_t k=0; k<sys.size(); k++) {
++    GSFChip& c=chips[k];
++    c.d=dispatchOf(sys[k]);
++    c.outs=c.d->getOutputCount();
++    if (c.outs>2) c.outs=2;
++    if (c.outs<1) c.outs=1;
++    c.vol=e->song.systemVol[sys[k]];
++    c.acc=0;
++    c.pos=0;
++    for (int o=0; o<2; o++) {
++      c.bb[o]=NULL;
++      c.prev[o]=0;
++      if (o<c.outs) {
++        c.bb[o]=blip_new(8192);
++        blip_set_rates(c.bb[o],c.d->rate,outRate);
++        blip_set_dc(c.bb[o],1);
++      }
++    }
++  }
++
++  std::vector<float> mixL, mixR;
++  std::vector<size_t> tickPos;
++  short tmp[4096];
++  tickHook=[&](int t) {
++    size_t start=mixL.size();
++    tickPos.push_back(start);
++    for (GSFChip& c: chips) {
++      if (c.pos<start) c.pos=start;
++      c.acc+=(double)c.d->rate/tickRate;
++      size_t n=(size_t)c.acc;
++      c.acc-=n;
++      // in pieces, so that each blip frame stays small
++      size_t piece=(size_t)((double)c.d->rate*1500.0/outRate);
++      if (piece<1) piece=1;
++      while (n>0) {
++        size_t m=n<piece?n:piece;
++        n-=m;
++        short* ptr[DIV_MAX_OUTPUTS];
++        for (int o=0; o<DIV_MAX_OUTPUTS; o++) ptr[o]=NULL;
++        for (int o=0; o<c.outs; o++) {
++          if (c.buf[o].size()<m) c.buf[o].resize(m);
++          ptr[o]=c.buf[o].data();
++        }
++        c.d->acquire(ptr,m);
++        for (int o=0; o<c.outs; o++) {
++          short* b=c.buf[o].data();
++          for (size_t j=0; j<m; j++) {
++            if (b[j]!=c.prev[o]) {
++              blip_add_delta(c.bb[o],j,b[j]-c.prev[o]);
++              c.prev[o]=b[j];
++            }
++          }
++          blip_end_frame(c.bb[o],m);
++        }
++        int avail=blip_samples_avail(c.bb[0]);
++        for (int o=1; o<c.outs; o++) {
++          int a=blip_samples_avail(c.bb[o]);
++          if (a<avail) avail=a;
++        }
++        if (avail<=0) continue;
++        if (mixL.size()<c.pos+avail) {
++          mixL.resize(c.pos+avail,0.0f);
++          mixR.resize(c.pos+avail,0.0f);
++        }
++        for (int o=0; o<c.outs; o++) {
++          int got=0;
++          while (got<avail) {
++            int want=avail-got;
++            if (want>4096) want=4096;
++            int r=blip_read_samples(c.bb[o],tmp,want,0);
++            if (r<=0) break;
++            for (int j=0; j<r; j++) {
++              float v=tmp[j]*c.vol;
++              if (c.outs==1) {
++                mixL[c.pos+got+j]+=v;
++                mixR[c.pos+got+j]+=v;
++              } else if (o==0) {
++                mixL[c.pos+got+j]+=v;
++              } else {
++                mixR[c.pos+got+j]+=v;
++              }
++            }
++            got+=r;
++          }
++        }
++        c.pos+=avail;
++      }
++    }
++    if ((t&255)==0) progress[0].amount=0.5f*(est>0?fmin(1.0,(double)t/tickRate/est):0.0);
++  };
++  bool ok=capture(sys);
++  tickHook=nullptr;
++  for (GSFChip& c: chips) {
++    for (int o=0; o<2; o++) if (c.bb[o]!=NULL) blip_delete(c.bb[o]);
++  }
++  if (!ok) {
++    fail("aborted");
++    return;
++  }
++  progress[0].amount=0.6f;
++
++  size_t total=mixL.size();
++  for (GSFChip& c: chips) if (c.pos<total) total=c.pos;
++  mixL.resize(total);
++  mixR.resize(total);
++  if (total<64) {
++    fail(_("the song has no sound"));
++    return;
++  }
++  long long loopSmp=-1;
++  if (loopTick>=0 && loopTick<(int)tickPos.size()) loopSmp=(long long)tickPos[loopTick];
++  if (loopSmp>=(long long)total) loopSmp=-1;
++
++  // 8 bits: the loudest point goes to the top
++  bool mono=true;
++  float peak=1.0f;
++  for (size_t i=0; i<total; i++) {
++    if (fabsf(mixL[i])>peak) peak=fabsf(mixL[i]);
++    if (fabsf(mixR[i])>peak) peak=fabsf(mixR[i]);
++    if (mono && fabsf(mixL[i]-mixR[i])>0.5f) mono=false;
++  }
++  float gain=127.0f/peak;
++  auto q8=[&](float v) -> unsigned char {
++    int x=(int)lrintf(v*gain);
++    if (x<-128) x=-128;
++    if (x>127) x=127;
++    return (unsigned char)(signed char)x;
++  };
++  auto stream=[&](std::vector<float>& src, std::vector<unsigned char>& out) {
++    out.resize(total+GSF_PAD);
++    for (size_t i=0; i<total; i++) out[i]=q8(src[i]);
++    // after the end: the start of the loop again (the DMA reads ahead), or silence
++    for (size_t i=0; i<GSF_PAD; i++) {
++      out[total+i]=(loopSmp>=0 && (size_t)loopSmp+i<total)?out[loopSmp+i]:0;
++    }
++  };
++
++  std::vector<unsigned char> rom(sizeof(gsfDriver),0);
++  memcpy(rom.data(),gsfDriver,sizeof(gsfDriver));
++  while (rom.size()&255) rom.push_back(0);
++  memcpy(&rom[0xa0],"REGISTROGAMER",12);
++  memcpy(&rom[0xac],"RGTK01",6);
++  std::vector<unsigned char> s;
++  unsigned int addrL=GBA_ROM+rom.size(), addrR;
++  stream(mixL,s);
++  rom.insert(rom.end(),s.begin(),s.end());
++  while (rom.size()&255) rom.push_back(0);
++  if (mono) {
++    addrR=addrL;
++  } else {
++    addrR=GBA_ROM+rom.size();
++    stream(mixR,s);
++    rom.insert(rom.end(),s.begin(),s.end());
++    while (rom.size()&255) rom.push_back(0);
++  }
++  if (rom.size()>GBA_ROM_MAX) {
++    fail(fmt::sprintf(_("the song does not fit in a 32MB Game Boy Advance ROM (%d KB)"),(int)(rom.size()/1024)));
++    return;
++  }
++  put32(rom,0xc0,addrL);
++  put32(rom,0xc4,addrR);
++  put32(rom,0xc8,(unsigned int)total);
++  put32(rom,0xcc,(loopSmp>=0)?(unsigned int)loopSmp:0xffffffff);
++  put32(rom,0xd0,(unsigned int)(65536-cycles));
++  logAppendf("%s, %d Hz, %d samples, loop at %d; ROM: %d KB",mono?"mono":"stereo",(int)outRate,(int)total,(int)loopSmp,(int)(rom.size()/1024));
++
++  // GSF program: entry point, load address, size, ROM
++  std::vector<unsigned char> prog(12,0);
++  put32(prog,0,GBA_ROM);
++  put32(prog,4,GBA_ROM);
++  put32(prog,8,rom.size());
++  prog.insert(prog.end(),rom.begin(),rom.end());
++
++  progress[0].amount=0.8f;
++  uLongf zLen=compressBound(prog.size());
++  std::vector<unsigned char> z(zLen);
++  if (compress2(z.data(),&zLen,prog.data(),prog.size(),9)!=Z_OK) {
++    fail("could not compress the program");
++    return;
++  }
++  z.resize(zLen);
++  unsigned int crc=crc32(0L,z.data(),z.size());
++
++  double secs=(double)total/outRate;
++  if (loopSmp>=0) secs+=(double)(total-loopSmp)/outRate;
++
++  SafeWriter* w=new SafeWriter;
++  w->init();
++  w->write("PSF\x22",4);
++  w->writeI(0);
++  w->writeI(z.size());
++  w->writeI(crc);
++  w->write(z.data(),z.size());
++  String tags="[TAG]";
++  if (!e->song.name.empty()) tags+="title="+e->song.name+"\n";
++  if (!e->song.author.empty()) tags+="artist="+e->song.author+"\n";
++  if (!e->song.category.empty()) tags+="game="+e->song.category+"\n";
++  tags+="length="+timeStr(secs)+"\n";
++  tags+=(loopSmp>=0)?"fade=10\n":"fade=0\n";
++  tags+="utf8=1\n";
++  tags+="gsfby=Registro Gamer Tracker (Furnace)\n";
++  w->writeText(tags);
++
++  output.push_back(DivROMExportOutput("export.gsf",w));
++  progress[0].amount=1.0f;
++  logAppend("finished!");
++  running=false;
++}
+diff --git a/src/engine/export/gsf.h b/src/engine/export/gsf.h
+new file mode 100644
+index 0000000..48b73fd
+--- /dev/null
++++ b/src/engine/export/gsf.h
+@@ -0,0 +1,27 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++
++#include "rgexport.h"
++
++class DivExportGSF: public DivExportRG {
++  void run();
++  public:
++    ~DivExportGSF() {}
++};
+diff --git a/src/engine/export/gsfdrv.inc b/src/engine/export/gsfdrv.inc
+new file mode 100644
+index 0000000..33a7eeb
+--- /dev/null
++++ b/src/engine/export/gsfdrv.inc
+@@ -0,0 +1,36 @@
++// gerado por gsfdrv.s (scripts/rg-mkdrv-arm.sh gsfdrv.s 0x08000000 ...); carregado em 08000000h; tabela em +C0: esquerda, direita, fim, loop, recarga do timer 0; não editar à mão
++static const unsigned char gsfDriver[524]={
++  0x33, 0x00, 0x00, 0xea, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
++  0x00, 0x00, 0x00, 0x00, 0x01, 0xc3, 0xa0, 0xe3, 0x01, 0x9c, 0x8c, 0xe2, 0x24, 0xb0, 0x4f, 0xe2,
++  0x80, 0x00, 0xa0, 0xe3, 0xb4, 0x08, 0xcc, 0xe1, 0x00, 0x00, 0xa0, 0xe3, 0xb0, 0x08, 0xcc, 0xe1,
++  0x00, 0x01, 0x9f, 0xe5, 0xb2, 0x08, 0xcc, 0xe1, 0x00, 0x00, 0xa0, 0xe3, 0xb2, 0x00, 0xc9, 0xe1,
++  0xb6, 0x00, 0xc9, 0xe1, 0x00, 0x00, 0x9b, 0xe5, 0xbc, 0x00, 0x8c, 0xe5, 0xe8, 0x00, 0x9f, 0xe5,
++  0xc0, 0x00, 0x8c, 0xe5, 0x04, 0x00, 0x9b, 0xe5, 0xc8, 0x00, 0x8c, 0xe5, 0xdc, 0x00, 0x9f, 0xe5,
++  0xcc, 0x00, 0x8c, 0xe5, 0xd8, 0x10, 0x9f, 0xe5, 0x04, 0x00, 0xa0, 0xe3, 0xb4, 0x0c, 0xcc, 0xe1,
++  0xb0, 0x0d, 0xcc, 0xe1, 0xb6, 0x1c, 0xcc, 0xe1, 0xb2, 0x1d, 0xcc, 0xe1, 0x00, 0x00, 0xa0, 0xe3,
++  0xb4, 0x00, 0xc9, 0xe1, 0x84, 0x00, 0xa0, 0xe3, 0xb6, 0x00, 0xc9, 0xe1, 0x10, 0x00, 0x9b, 0xe5,
++  0xb0, 0x00, 0xc9, 0xe1, 0x80, 0x00, 0xa0, 0xe3, 0xb2, 0x00, 0xc9, 0xe1, 0x00, 0x40, 0xa0, 0xe3,
++  0x00, 0x50, 0xa0, 0xe3, 0x08, 0x60, 0x9b, 0xe5, 0x98, 0xa0, 0x9f, 0xe5, 0xb4, 0x00, 0xd9, 0xe1,
++  0x05, 0x10, 0x40, 0xe0, 0x0a, 0x10, 0x01, 0xe0, 0x00, 0x50, 0xa0, 0xe1, 0x01, 0x40, 0x84, 0xe0,
++  0x06, 0x00, 0x54, 0xe1, 0xf8, 0xff, 0xff, 0x3a, 0x0c, 0x70, 0x9b, 0xe5, 0x01, 0x00, 0x77, 0xe3,
++  0x12, 0x00, 0x00, 0x0a, 0x06, 0x20, 0x44, 0xe0, 0x00, 0x00, 0xa0, 0xe3, 0xb6, 0x0c, 0xcc, 0xe1,
++  0xb2, 0x0d, 0xcc, 0xe1, 0x4c, 0x00, 0x9f, 0xe5, 0xb2, 0x08, 0xcc, 0xe1, 0x02, 0x80, 0x87, 0xe0,
++  0x03, 0x80, 0xc8, 0xe3, 0x00, 0x00, 0x9b, 0xe5, 0x08, 0x00, 0x80, 0xe0, 0xbc, 0x00, 0x8c, 0xe5,
++  0x04, 0x00, 0x9b, 0xe5, 0x08, 0x00, 0x80, 0xe0, 0xc8, 0x00, 0x8c, 0xe5, 0x30, 0x10, 0x9f, 0xe5,
++  0xb6, 0x1c, 0xcc, 0xe1, 0xb2, 0x1d, 0xcc, 0xe1, 0x02, 0x40, 0x87, 0xe0, 0xe2, 0xff, 0xff, 0xea,
++  0x00, 0x00, 0xa0, 0xe3, 0xb6, 0x0c, 0xcc, 0xe1, 0xb2, 0x0d, 0xcc, 0xe1, 0xb2, 0x00, 0xc9, 0xe1,
++  0xb4, 0x08, 0xcc, 0xe1, 0xfe, 0xff, 0xff, 0xea, 0x0c, 0x9a, 0x00, 0x00, 0xa0, 0x00, 0x00, 0x04,
++  0xa4, 0x00, 0x00, 0x04, 0x40, 0xb6, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
++};
+diff --git a/src/engine/export/gsfdrv.s b/src/engine/export/gsfdrv.s
+new file mode 100644
+index 0000000..705f2a7
+--- /dev/null
++++ b/src/engine/export/gsfdrv.s
+@@ -0,0 +1,102 @@
++@ driver GSF do Tracker do Registro Gamer (Game Boy Advance, ARM7TDMI)
++@ toca a música já mixada (8 bits com sinal, como o mixer de software dos jogos de GBA) pelos
++@ canais de som direto A (esquerda) e B (direita): timer 0 dá a taxa e os DMA 1 e 2 enchem as FIFOs.
++@ o timer 1 (em cascata) conta as amostras tocadas; no fim, os DMA voltam para o ponto de loop.
++  .syntax unified
++  .arm
++  .text
++  .globl _start
++_start:
++  b start
++  .space 0xbc                 @ cabeçalho do cartucho (0x04-0xBF)
++tbl:
++  .word 0                     @ +C0 som da esquerda (FIFO A)
++  .word 0                     @ +C4 som da direita (FIFO B; igual ao da esquerda se for mono)
++  .word 0                     @ +C8 fim (em amostras)
++  .word 0xffffffff            @ +CC ponto de loop (em amostras; FFFFFFFF = a música acaba)
++  .word 0                     @ +D0 recarga do timer 0 (65536 - ciclos por amostra)
++start:
++  mov r12, #0x04000000
++  add r9, r12, #0x100          @ timers
++  adr r11, tbl
++  @ som ligado, PSG mudo, som direto A só na esquerda e B só na direita, 100%, FIFOs zeradas
++  mov r0, #0x80
++  strh r0, [r12, #0x84]
++  mov r0, #0
++  strh r0, [r12, #0x80]
++  ldr r0, =0x9a0c
++  strh r0, [r12, #0x82]
++  @ timers parados
++  mov r0, #0
++  strh r0, [r9, #2]
++  strh r0, [r9, #6]
++  @ DMA 1 → FIFO A, DMA 2 → FIFO B
++  ldr r0, [r11, #0]
++  str r0, [r12, #0xbc]
++  ldr r0, =0x040000a0
++  str r0, [r12, #0xc0]
++  ldr r0, [r11, #4]
++  str r0, [r12, #0xc8]
++  ldr r0, =0x040000a4
++  str r0, [r12, #0xcc]
++  ldr r1, =0xb640             @ ligado, repete, 32 bits, início pela FIFO, destino fixo
++  mov r0, #4
++  strh r0, [r12, #0xc4]
++  strh r0, [r12, #0xd0]
++  strh r1, [r12, #0xc6]
++  strh r1, [r12, #0xd2]
++  @ timer 1 conta as estouradas do timer 0 (= amostras tocadas)
++  mov r0, #0
++  strh r0, [r9, #4]
++  mov r0, #0x84
++  strh r0, [r9, #6]
++  ldr r0, [r11, #0x10]
++  strh r0, [r9, #0]
++  mov r0, #0x80
++  strh r0, [r9, #2]
++  mov r4, #0                  @ amostras tocadas
++  mov r5, #0                  @ última leitura do timer 1
++  ldr r6, [r11, #8]           @ fim
++  ldr r10, =0xffff
++poll:
++  ldrh r0, [r9, #4]
++  sub r1, r0, r5
++  and r1, r1, r10
++  mov r5, r0
++  add r4, r4, r1
++  cmp r4, r6
++  blo poll
++  @ chegou ao fim
++  ldr r7, [r11, #0xc]
++  cmn r7, #1
++  beq parar
++  sub r2, r4, r6              @ d = amostras além do fim
++  @ para os DMA e esvazia as FIFOs: o que o DMA já tinha lido adiante é jogado fora, e a leitura
++  @ recomeça em loop + d (com erro de no máximo 2 amostras: o DMA lê de 4 em 4 bytes)
++  mov r0, #0
++  strh r0, [r12, #0xc6]
++  strh r0, [r12, #0xd2]
++  ldr r0, =0x9a0c
++  strh r0, [r12, #0x82]
++  add r8, r7, r2              @ (o esvaziar da FIFO adianta 2 amostras: loop + d - 2, arredondado)
++  bic r8, r8, #3
++  ldr r0, [r11, #0]
++  add r0, r0, r8
++  str r0, [r12, #0xbc]
++  ldr r0, [r11, #4]
++  add r0, r0, r8
++  str r0, [r12, #0xc8]
++  ldr r1, =0xb640
++  strh r1, [r12, #0xc6]
++  strh r1, [r12, #0xd2]
++  add r4, r7, r2              @ continua contando a partir do loop
++  b poll
++parar:
++  mov r0, #0
++  strh r0, [r12, #0xc6]
++  strh r0, [r12, #0xd2]
++  strh r0, [r9, #2]
++  strh r0, [r12, #0x84]
++fim:
++  b fim
++  .ltorg
+diff --git a/src/engine/export/nds2sf.cpp b/src/engine/export/nds2sf.cpp
+new file mode 100644
+index 0000000..004b7e9
+--- /dev/null
++++ b/src/engine/export/nds2sf.cpp
+@@ -0,0 +1,302 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++
++// Registro Gamer: 2SF export (Nintendo DS).
++// the 2SF holds a DS cartridge image: the ARM9 binary (an idle loop, followed by the samples and the
++// register log, all copied to main RAM at 02000000h) and the ARM7 binary (ndsdrv.s, in ARM7 WRAM),
++// which replays the log on the DS sound registers. a tick happens when timer 0 (33.5MHz/64) has
++// counted the length of a tick (kept as a fraction, so the average speed is exact).
++//
++// log format:
++// - $00-$CF vv: write vv to sound register 04000400h+cmd
++// - $D0 rr vv: same, for registers $00-$FF
++// - $D1 rr vv: same, for registers $100-$1FF
++// - $D2 cc o0 o1 o2: set the sample address of channel cc (offset in the sample memory)
++// - $D3 rr lo hi: 16-bit write (timer, loop start); $D4 rr b0 b1 b2: 32-bit write (length)
++//   (the emulators used by 2SF players ignore byte writes to these registers)
++// - $E0 a0 a1 a2 nl nh: play nh:nl bytes of log found at offset a2:a1:a0, then come back
++// - $F0-$FD: end of tick, then wait cmd-$F0 more ticks
++// - $FE nn: end of tick, then wait nn more ticks
++// - $FF: jump to the loop point (or stop if the song ends)
++
++#include "nds2sf.h"
++#include "../engine.h"
++#include "../ta-log.h"
++#include <fmt/printf.h>
++#include <zlib.h>
++#include <map>
++#include <math.h>
++
++#include "ndsdrv.inc"
++
++#define NDS_ARM9_RAM 0x02000000
++#define NDS_SAMPLES 0x02000400
++#define NDS_RAM_LIMIT 0x023f0000
++#define NDS_ARM7_RAM 0x03800000
++#define NDS_REFSTACK 0x0380e000
++#define NDS_TIMER_HZ (33513982.0/64.0)
++
++typedef std::vector<unsigned char> Tok;
++
++static void putWait(std::vector<Tok>& s, int frames) {
++  while (frames>0) {
++    int k=frames-1;
++    if (k>255) k=255;
++    if (k<=13) {
++      s.push_back(Tok(1,(unsigned char)(0xf0+k)));
++    } else {
++      Tok t;
++      t.push_back(0xfe);
++      t.push_back(k);
++      s.push_back(t);
++    }
++    frames-=k+1;
++  }
++}
++
++static void put32(std::vector<unsigned char>& v, size_t at, unsigned int x) {
++  v[at]=x&0xff;
++  v[at+1]=(x>>8)&0xff;
++  v[at+2]=(x>>16)&0xff;
++  v[at+3]=(x>>24)&0xff;
++}
++
++static String timeStr(double secs) {
++  int s=(int)(secs+0.999);
++  return fmt::sprintf("%d:%02d",s/60,s%60);
++}
++
++static unsigned short crc16(const unsigned char* d, size_t n) {
++  unsigned int c=0xffff;
++  for (size_t i=0; i<n; i++) {
++    c^=d[i];
++    for (int k=0; k<8; k++) c=(c&1)?((c>>1)^0xa001):(c>>1);
++  }
++  return c&0xffff;
++}
++
++void DivExport2SF::run() {
++  int sysNDS=-1;
++  for (int i=0; i<e->song.systemLen; i++) {
++    if (e->song.system[i]==DIV_SYSTEM_NDS && sysNDS<0) {
++      sysNDS=i;
++    } else {
++      logAppendf("WARNING: chip %d (%s) is not part of the Nintendo DS sound; ignored",i,e->getSystemName(e->song.system[i]));
++    }
++  }
++  if (sysNDS<0) {
++    fail(_("no Nintendo DS chip in this song"));
++    return;
++  }
++  std::vector<int> sys;
++  sys.push_back(sysNDS);
++  if (!capture(sys)) {
++    fail("aborted");
++    return;
++  }
++  progress[0].amount=0.5f;
++  logAppend("packing the register log...");
++
++  std::vector<Tok> tok;
++  int loopTok=-1, pending=0;
++  std::map<unsigned int,unsigned int> last;
++  unsigned int sad[16], wide[256];
++  memset(sad,0,sizeof(sad));
++  memset(wide,0,sizeof(wide));
++  for (size_t t=0; t<ticks.size(); t++) {
++    if ((int)t==loopTick) {
++      putWait(tok,pending);
++      pending=0;
++      loopTok=(int)tok.size();
++      last.clear();
++    }
++    std::vector<Tok> f;
++    for (RGWrite& w: ticks[t]) {
++      unsigned int a=w.addr, v=w.val&0xff;
++      if (a>=0x200) continue;
++      Tok c;
++      if (a<0x100 && (a&15)>=4 && (a&15)<=7) {
++        // sample address: the 4 bytes come in order; sent once complete, relative to the samples
++        int ch=a>>4;
++        int sh=((a&15)-4)*8;
++        sad[ch]=(sad[ch]&~(0xffu<<sh))|(v<<sh);
++        if ((a&15)!=7) continue;
++        unsigned int off=sad[ch]&0xfffffc;
++        c.push_back(0xd2);
++        c.push_back(ch);
++        c.push_back(off&0xff);
++        c.push_back((off>>8)&0xff);
++        c.push_back((off>>16)&0xff);
++        f.push_back(c);
++        continue;
++      }
++      if (a<0x100 && (a&15)>=8) {
++        // timer (8-9), loop start (A-B), length (C-F): bytes come in order, sent as one write
++        unsigned int r=(a&15)>=0xc?(a&0xfc):(a&0xfe);
++        int sh=(a-r)*8;
++        wide[r]=(wide[r]&~(0xffu<<sh))|(v<<sh);
++        bool lastByte=((a&15)>=0xc)?((a&3)==3):((a&1)==1);
++        if (!lastByte) continue;
++        unsigned int key=0x1000+r;
++        std::map<unsigned int,unsigned int>::iterator it=last.find(key);
++        if (it!=last.end() && it->second==wide[r]) continue;
++        last[key]=wide[r];
++        if ((a&15)>=0xc) {
++          c.push_back(0xd4);
++          c.push_back(r);
++          c.push_back(wide[r]&0xff);
++          c.push_back((wide[r]>>8)&0xff);
++          c.push_back((wide[r]>>16)&0xff);
++        } else {
++          c.push_back(0xd3);
++          c.push_back(r);
++          c.push_back(wide[r]&0xff);
++          c.push_back((wide[r]>>8)&0xff);
++        }
++        f.push_back(c);
++        continue;
++      }
++      // master volume at half: the DS mixer (and the emulators of the 2SF players) is twice as loud
++      // as the Tracker's DS core, and clips; this keeps the level heard in the Tracker
++      if (a==0x100) v=(v&0x7f)>>1;
++      bool always=(a<0x100 && (a&15)==3);
++      std::map<unsigned int,unsigned int>::iterator it=last.find(a);
++      if (!always && it!=last.end() && it->second==v) continue;
++      last[a]=v;
++      if (a<0xd0) {
++        c.push_back(a);
++      } else if (a<0x100) {
++        c.push_back(0xd0);
++        c.push_back(a);
++      } else {
++        c.push_back(0xd1);
++        c.push_back(a-0x100);
++      }
++      c.push_back(v);
++      f.push_back(c);
++    }
++    if (!f.empty()) {
++      putWait(tok,pending);
++      pending=0;
++      tok.insert(tok.end(),f.begin(),f.end());
++    }
++    pending++;
++  }
++  putWait(tok,pending);
++  tok.push_back(Tok(1,0xff));
++
++  progress[0].amount=0.6f;
++  int loopOut=-1;
++  std::vector<unsigned char> log=pack(tok,loopTok,0,8,loopOut,3);
++
++  // ARM9 binary: idle loop, samples, log
++  std::vector<unsigned char> arm9(NDS_SAMPLES-NDS_ARM9_RAM,0);
++  put32(arm9,0,0xeafffffe);
++  size_t smpLen=0;
++  const unsigned char* smpMem=sampleMem(sysNDS,0,smpLen);
++  if (smpMem!=NULL && smpLen>0) arm9.insert(arm9.end(),smpMem,smpMem+smpLen);
++  while (arm9.size()&3) arm9.push_back(0);
++  unsigned int logAddr=NDS_ARM9_RAM+arm9.size();
++  arm9.insert(arm9.end(),log.begin(),log.end());
++  while (arm9.size()&3) arm9.push_back(0);
++  logAppendf("samples: %d bytes; log: %d commands -> %d bytes",(int)smpLen,(int)tok.size(),(int)log.size());
++  if (NDS_ARM9_RAM+arm9.size()>NDS_RAM_LIMIT) {
++    fail(fmt::sprintf(_("the song does not fit in the 4MB of the Nintendo DS's RAM (%d KB)"),(int)(arm9.size()/1024)));
++    return;
++  }
++
++  // ARM7 binary: the player
++  std::vector<unsigned char> arm7(sizeof(ndsDriver),0);
++  memcpy(arm7.data(),ndsDriver,sizeof(ndsDriver));
++  double period=NDS_TIMER_HZ*256.0/tickRate;
++  if (period>4e9) period=4e9;
++  put32(arm7,4,logAddr);
++  put32(arm7,8,(loopOut>=0)?(logAddr+loopOut):0);
++  put32(arm7,12,(unsigned int)(period+0.5));
++  put32(arm7,16,NDS_SAMPLES);
++  put32(arm7,20,NDS_REFSTACK);
++  while (arm7.size()&3) arm7.push_back(0);
++
++  // cartridge: header, ARM9, ARM7
++  std::vector<unsigned char> rom(0x200,0);
++  memcpy(&rom[0],"REGISTROGAME",12);
++  memcpy(&rom[0x0c],"RGTK",4);
++  memcpy(&rom[0x10],"01",2);
++  unsigned int arm9Off=0x200;
++  rom.insert(rom.end(),arm9.begin(),arm9.end());
++  while (rom.size()&0x1ff) rom.push_back(0);
++  unsigned int arm7Off=rom.size();
++  rom.insert(rom.end(),arm7.begin(),arm7.end());
++  while (rom.size()&0x1ff) rom.push_back(0);
++  put32(rom,0x20,arm9Off);
++  put32(rom,0x24,NDS_ARM9_RAM);
++  put32(rom,0x28,NDS_ARM9_RAM);
++  put32(rom,0x2c,arm9.size());
++  put32(rom,0x30,arm7Off);
++  put32(rom,0x34,NDS_ARM7_RAM);
++  put32(rom,0x38,NDS_ARM7_RAM);
++  put32(rom,0x3c,arm7.size());
++  put32(rom,0x80,rom.size());
++  put32(rom,0x84,0x200);
++  unsigned short hc=crc16(rom.data(),0x15e);
++  rom[0x15e]=hc&0xff;
++  rom[0x15f]=hc>>8;
++
++  // 2SF program: load offset, size, ROM
++  std::vector<unsigned char> prog(8,0);
++  put32(prog,0,0);
++  put32(prog,4,rom.size());
++  prog.insert(prog.end(),rom.begin(),rom.end());
++
++  progress[0].amount=0.8f;
++  uLongf zLen=compressBound(prog.size());
++  std::vector<unsigned char> z(zLen);
++  if (compress2(z.data(),&zLen,prog.data(),prog.size(),9)!=Z_OK) {
++    fail("could not compress the program");
++    return;
++  }
++  z.resize(zLen);
++  unsigned int crc=crc32(0L,z.data(),z.size());
++
++  double secs=(double)ticks.size()/tickRate;
++  if (loopOut>=0 && loopTick>=0) secs+=(double)(ticks.size()-loopTick)/tickRate;
++
++  SafeWriter* w=new SafeWriter;
++  w->init();
++  w->write("PSF\x24",4);
++  w->writeI(0);
++  w->writeI(z.size());
++  w->writeI(crc);
++  w->write(z.data(),z.size());
++  String tags="[TAG]";
++  if (!e->song.name.empty()) tags+="title="+e->song.name+"\n";
++  if (!e->song.author.empty()) tags+="artist="+e->song.author+"\n";
++  if (!e->song.category.empty()) tags+="game="+e->song.category+"\n";
++  tags+="length="+timeStr(secs)+"\n";
++  tags+=(loopOut>=0)?"fade=10\n":"fade=0\n";
++  tags+="utf8=1\n";
++  tags+="2sfby=Registro Gamer Tracker (Furnace)\n";
++  w->writeText(tags);
++
++  output.push_back(DivROMExportOutput("export.2sf",w));
++  progress[0].amount=1.0f;
++  logAppend("finished!");
++  running=false;
++}
+diff --git a/src/engine/export/nds2sf.h b/src/engine/export/nds2sf.h
+new file mode 100644
+index 0000000..ffe66c2
+--- /dev/null
++++ b/src/engine/export/nds2sf.h
+@@ -0,0 +1,27 @@
++/**
++ * Furnace Tracker - multi-system chiptune tracker
++ * Copyright (C) 2021-2026 tildearrow and contributors
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++ */
++
++
++#include "rgexport.h"
++
++class DivExport2SF: public DivExportRG {
++  void run();
++  public:
++    ~DivExport2SF() {}
++};
+diff --git a/src/engine/export/ndsdrv.inc b/src/engine/export/ndsdrv.inc
+new file mode 100644
+index 0000000..27102fd
+--- /dev/null
++++ b/src/engine/export/ndsdrv.inc
+@@ -0,0 +1,39 @@
++// gerado por ndsdrv.s (scripts/rg-mkdrv-arm.sh ndsdrv.s 0x03800000 ...); ARM7 em 03800000h; tabela em +4: registro, repetição, tique × 256, samples, pilha das referências; não editar à mão
++static const unsigned char ndsDriver[576]={
++  0x04, 0x00, 0x00, 0xea, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0xd2, 0x9f, 0xe5, 0x24, 0x90, 0x4f, 0xe2,
++  0x0c, 0xa2, 0x9f, 0xe5, 0x0c, 0xb2, 0x9f, 0xe5, 0x0c, 0x02, 0x9f, 0xe5, 0x01, 0x10, 0xa0, 0xe3,
++  0xb0, 0x10, 0xc0, 0xe1, 0x00, 0x00, 0xa0, 0xe3, 0xb2, 0x00, 0xcb, 0xe1, 0xb0, 0x00, 0xcb, 0xe1,
++  0x81, 0x00, 0xa0, 0xe3, 0xb2, 0x00, 0xcb, 0xe1, 0x04, 0x40, 0x99, 0xe5, 0x00, 0x50, 0xa0, 0xe3,
++  0x14, 0x60, 0x99, 0xe5, 0x00, 0x70, 0xa0, 0xe3, 0x00, 0x80, 0xa0, 0xe3, 0x00, 0x30, 0xa0, 0xe3,
++  0xb0, 0xc0, 0xdb, 0xe1, 0xb0, 0x00, 0xdb, 0xe1, 0x0c, 0x10, 0x40, 0xe0, 0x01, 0x18, 0xa0, 0xe1,
++  0x00, 0xc0, 0xa0, 0xe1, 0x21, 0x34, 0x83, 0xe0, 0x0c, 0x10, 0x99, 0xe5, 0x01, 0x00, 0x53, 0xe1,
++  0xf7, 0xff, 0xff, 0x3a, 0x01, 0x30, 0x43, 0xe0, 0x00, 0x00, 0x58, 0xe3, 0x01, 0x80, 0x48, 0x12,
++  0xf3, 0xff, 0xff, 0x1a, 0x5b, 0x00, 0x00, 0xeb, 0xd0, 0x00, 0x50, 0xe3, 0x1a, 0x00, 0x00, 0x3a,
++  0x1d, 0x00, 0x00, 0x0a, 0xd1, 0x00, 0x50, 0xe3, 0x20, 0x00, 0x00, 0x0a, 0xd2, 0x00, 0x50, 0xe3,
++  0x23, 0x00, 0x00, 0x0a, 0xd3, 0x00, 0x50, 0xe3, 0x2e, 0x00, 0x00, 0x0a, 0xd4, 0x00, 0x50, 0xe3,
++  0x34, 0x00, 0x00, 0x0a, 0xe0, 0x00, 0x50, 0xe3, 0x3c, 0x00, 0x00, 0x0a, 0xf0, 0x00, 0x50, 0xe3,
++  0xef, 0xff, 0xff, 0x3a, 0xfe, 0x00, 0x50, 0xe3, 0xf0, 0x80, 0x40, 0x32, 0xe0, 0xff, 0xff, 0x3a,
++  0x06, 0x00, 0x00, 0x0a, 0x08, 0x00, 0x99, 0xe5, 0x00, 0x00, 0x50, 0xe3, 0x00, 0x40, 0xa0, 0x11,
++  0xe7, 0xff, 0xff, 0x1a, 0x00, 0x00, 0xa0, 0xe3, 0x00, 0x01, 0x8a, 0xe5, 0xfe, 0xff, 0xff, 0xea,
++  0x40, 0x00, 0x00, 0xeb, 0x00, 0x80, 0xa0, 0xe1, 0xd5, 0xff, 0xff, 0xea, 0x00, 0x20, 0xa0, 0xe1,
++  0x3c, 0x00, 0x00, 0xeb, 0x02, 0x00, 0xca, 0xe7, 0xdd, 0xff, 0xff, 0xea, 0x39, 0x00, 0x00, 0xeb,
++  0x00, 0x20, 0xa0, 0xe1, 0x37, 0x00, 0x00, 0xeb, 0x02, 0x00, 0xca, 0xe7, 0xd8, 0xff, 0xff, 0xea,
++  0x34, 0x00, 0x00, 0xeb, 0x01, 0x2c, 0x80, 0xe2, 0x32, 0x00, 0x00, 0xeb, 0x02, 0x00, 0xca, 0xe7,
++  0xd3, 0xff, 0xff, 0xea, 0x2f, 0x00, 0x00, 0xeb, 0x00, 0x22, 0xa0, 0xe1, 0x04, 0x20, 0x82, 0xe2,
++  0x2c, 0x00, 0x00, 0xeb, 0x00, 0x10, 0xa0, 0xe1, 0x2a, 0x00, 0x00, 0xeb, 0x00, 0x14, 0x81, 0xe1,
++  0x28, 0x00, 0x00, 0xeb, 0x00, 0x18, 0x81, 0xe1, 0x10, 0x00, 0x99, 0xe5, 0x00, 0x10, 0x81, 0xe0,
++  0x02, 0x10, 0x8a, 0xe7, 0xc6, 0xff, 0xff, 0xea, 0x22, 0x00, 0x00, 0xeb, 0x00, 0x20, 0xa0, 0xe1,
++  0x20, 0x00, 0x00, 0xeb, 0x00, 0x10, 0xa0, 0xe1, 0x1e, 0x00, 0x00, 0xeb, 0x00, 0x14, 0x81, 0xe1,
++  0xb2, 0x10, 0x8a, 0xe1, 0xbe, 0xff, 0xff, 0xea, 0x1a, 0x00, 0x00, 0xeb, 0x00, 0x20, 0xa0, 0xe1,
++  0x18, 0x00, 0x00, 0xeb, 0x00, 0x10, 0xa0, 0xe1, 0x16, 0x00, 0x00, 0xeb, 0x00, 0x14, 0x81, 0xe1,
++  0x14, 0x00, 0x00, 0xeb, 0x00, 0x18, 0x81, 0xe1, 0x02, 0x10, 0x8a, 0xe7, 0xb4, 0xff, 0xff, 0xea,
++  0x10, 0x00, 0x00, 0xeb, 0x00, 0x10, 0xa0, 0xe1, 0x0e, 0x00, 0x00, 0xeb, 0x00, 0x14, 0x81, 0xe1,
++  0x0c, 0x00, 0x00, 0xeb, 0x00, 0x18, 0x81, 0xe1, 0x0a, 0x00, 0x00, 0xeb, 0x00, 0x20, 0xa0, 0xe1,
++  0x08, 0x00, 0x00, 0xeb, 0x00, 0x24, 0x82, 0xe1, 0x85, 0x01, 0x86, 0xe0, 0x00, 0x40, 0x80, 0xe5,
++  0x04, 0x70, 0x80, 0xe5, 0x01, 0x50, 0x85, 0xe2, 0x04, 0x00, 0x99, 0xe5, 0x01, 0x40, 0x80, 0xe0,
++  0x02, 0x70, 0xa0, 0xe1, 0xa2, 0xff, 0xff, 0xea, 0x01, 0x00, 0xd4, 0xe4, 0x00, 0x00, 0x55, 0xe3,
++  0x1e, 0xff, 0x2f, 0x01, 0x01, 0x70, 0x57, 0xe2, 0x1e, 0xff, 0x2f, 0x11, 0x01, 0x50, 0x45, 0xe2,
++  0x85, 0x41, 0x86, 0xe0, 0x04, 0x70, 0x94, 0xe5, 0x00, 0x40, 0x94, 0xe5, 0x1e, 0xff, 0x2f, 0xe1,
++  0x00, 0xfd, 0x80, 0x03, 0x00, 0x04, 0x00, 0x04, 0x00, 0x01, 0x00, 0x04, 0x04, 0x03, 0x00, 0x04,
++};
+diff --git a/src/engine/export/ndsdrv.s b/src/engine/export/ndsdrv.s
+new file mode 100644
+index 0000000..880c2d7
+--- /dev/null
++++ b/src/engine/export/ndsdrv.s
+@@ -0,0 +1,166 @@
++@ driver 2SF do Tracker do Registro Gamer (Nintendo DS, ARM7)
++@ as samples já estão na RAM principal (vão junto com o binário do ARM9); a cada tique, medido pelo
++@ timer 0 (33,5 MHz / 64), repete as escritas nos registradores de som gravadas (formato em 2sf.cpp)
++  .syntax unified
++  .arm
++  .text
++  .globl _start
++_start:
++  b start
++tbl:
++  .word 0                     @ +4  início do registro (log)
++  .word 0                     @ +8  ponto de repetição (0 = a música acaba)
++  .word 0                     @ +12 duração do tique em contagens do timer × 256
++  .word 0                     @ +16 endereço das samples (a posição 0 da memória de samples do Furnace)
++  .word 0                     @ +20 pilha das referências
++start:
++  ldr sp, =0x0380fd00
++  adr r9, _start
++  ldr r10, =0x04000400        @ registradores de som
++  ldr r11, =0x04000100        @ timer 0
++  @ alto-falantes ligados
++  ldr r0, =0x04000304
++  mov r1, #1
++  strh r1, [r0]
++  @ timer 0 livre, 33,5 MHz / 64
++  mov r0, #0
++  strh r0, [r11, #2]
++  strh r0, [r11]
++  mov r0, #0x81
++  strh r0, [r11, #2]
++  ldr r4, [r9, #4]            @ posição no registro
++  mov r5, #0                  @ profundidade das referências
++  ldr r6, [r9, #20]           @ pilha das referências
++  mov r7, #0                  @ bytes que faltam na referência atual
++  mov r8, #0                  @ tiques de espera
++  mov r3, #0                  @ acumulador do tempo
++  ldrh r12, [r11]             @ última leitura do timer
++main:
++  ldrh r0, [r11]
++  sub r1, r0, r12
++  mov r1, r1, lsl #16
++  mov r12, r0
++  add r3, r3, r1, lsr #8      @ (delta & FFFF) × 256
++  ldr r1, [r9, #12]
++  cmp r3, r1
++  blo main
++  sub r3, r3, r1
++  cmp r8, #0
++  subne r8, r8, #1
++  bne main
++cmd:
++  bl gb
++  cmp r0, #0xd0
++  blo wreg
++  beq wany
++  cmp r0, #0xd1
++  beq wctl
++  cmp r0, #0xd2
++  beq wsad
++  cmp r0, #0xd3
++  beq wh
++  cmp r0, #0xd4
++  beq ww
++  cmp r0, #0xe0
++  beq ref
++  cmp r0, #0xf0
++  blo cmd
++  cmp r0, #0xfe
++  sublo r8, r0, #0xf0
++  blo main
++  beq wlong
++  @ FF: volta ao ponto de repetição ou acaba
++  ldr r0, [r9, #8]
++  cmp r0, #0
++  movne r4, r0
++  bne cmd
++  mov r0, #0
++  str r0, [r10, #0x100]
++fim:
++  b fim
++wlong:
++  bl gb
++  mov r8, r0
++  b main
++wreg:                         @ 00-CF vv: registrador 0x00-0xCF
++  mov r2, r0
++  bl gb
++  strb r0, [r10, r2]
++  b cmd
++wany:                         @ D0 rr vv: registrador 0x00-0xFF
++  bl gb
++  mov r2, r0
++  bl gb
++  strb r0, [r10, r2]
++  b cmd
++wctl:                         @ D1 rr vv: registrador 0x100-0x1FF
++  bl gb
++  add r2, r0, #0x100
++  bl gb
++  strb r0, [r10, r2]
++  b cmd
++wsad:                         @ D2 cc o0 o1 o2: endereço da sample do canal cc (relativo às samples)
++  bl gb
++  mov r2, r0, lsl #4
++  add r2, r2, #4
++  bl gb
++  mov r1, r0
++  bl gb
++  orr r1, r1, r0, lsl #8
++  bl gb
++  orr r1, r1, r0, lsl #16
++  ldr r0, [r9, #16]
++  add r1, r1, r0
++  str r1, [r10, r2]
++  b cmd
++wh:                           @ D3 rr lo hi: registrador de 16 bits (frequência, início do loop)
++  bl gb
++  mov r2, r0
++  bl gb
++  mov r1, r0
++  bl gb
++  orr r1, r1, r0, lsl #8
++  strh r1, [r10, r2]
++  b cmd
++ww:                           @ D4 rr b0 b1 b2: registrador de 32 bits (tamanho)
++  bl gb
++  mov r2, r0
++  bl gb
++  mov r1, r0
++  bl gb
++  orr r1, r1, r0, lsl #8
++  bl gb
++  orr r1, r1, r0, lsl #16
++  str r1, [r10, r2]
++  b cmd
++ref:                          @ E0 a0 a1 a2 nl nh: toca nh:nl bytes do registro a partir de a2:a1:a0
++  bl gb
++  mov r1, r0
++  bl gb
++  orr r1, r1, r0, lsl #8
++  bl gb
++  orr r1, r1, r0, lsl #16
++  bl gb
++  mov r2, r0
++  bl gb
++  orr r2, r2, r0, lsl #8
++  add r0, r6, r5, lsl #3
++  str r4, [r0]
++  str r7, [r0, #4]
++  add r5, r5, #1
++  ldr r0, [r9, #4]
++  add r4, r0, r1
++  mov r7, r2
++  b cmd
++gb:                           @ próximo byte do registro (volta da referência quando ela acaba)
++  ldrb r0, [r4], #1
++  cmp r5, #0
++  bxeq lr
++  subs r7, r7, #1
++  bxne lr
++  sub r5, r5, #1
++  add r4, r6, r5, lsl #3      @ (sem registrador temporário: quem chama guarda valores em r1 e r2)
++  ldr r7, [r4, #4]
++  ldr r4, [r4]
++  bx lr
++  .ltorg
+diff --git a/src/engine/exportDef.cpp b/src/engine/exportDef.cpp
+index 31b6be3..86d952d 100644
+--- a/src/engine/exportDef.cpp
++++ b/src/engine/exportDef.cpp
+@@ -184,6 +184,31 @@ void DivEngine::registerROMExports() {
+     false, DIV_REQPOL_LAX
+   );
+ 
++  romExportDefs[DIV_ROM_GSF]=new DivROMExportDef(
++    "Game Boy Advance GSF", "Registro Gamer",
++    "GSF (Game Boy Advance Sound Format) export: a GBA ROM that plays the song.\n"
++    "plays on any GSF player (foobar2000, Winamp in_gsf, the blog's Chiptune Player, etc.).\n"
++    "the song is mixed into 8-bit audio played by the GBA's direct sound channels (like most GBA games do), up to 32MB.",
++    "GSF files", ".gsf",
++    {
++      DIV_SYSTEM_GBA_DMA, DIV_SYSTEM_GBA_MINMOD, DIV_SYSTEM_GB
++    },
++    false, DIV_REQPOL_LAX
++  );
++
++  romExportDefs[DIV_ROM_2SF]=new DivROMExportDef(
++    "Nintendo DS 2SF", "Registro Gamer",
++    "2SF (Nintendo DS Sound Format) export: a DS cartridge image that plays the song.\n"
++    "plays on any 2SF player (foobar2000, Winamp in_2sf, the blog's Chiptune Player, etc.).\n"
++    "the samples and the song must fit in the 4MB of main RAM.\n"
++    "register dump-based (the song is recorded tick by tick and compressed).",
++    "2SF files", ".2sf",
++    {
++      DIV_SYSTEM_NDS
++    },
++    false, DIV_REQPOL_LAX
++  );
++
+   romExportDefs[DIV_ROM_GBS]=new DivROMExportDef(
+     "Game Boy GBS", "Registro Gamer",
+     "GBS (Game Boy Sound System) export.\n"
+diff --git a/src/engine/fileOps/btm.cpp b/src/engine/fileOps/btm.cpp
+index 7b4aea6..04097aa 100644
+--- a/src/engine/fileOps/btm.cpp
++++ b/src/engine/fileOps/btm.cpp
+@@ -28,6 +28,7 @@
+ #include "../../../extern/bambootracker/rgbt.h"
+ #include <functional>
+ #include <deque>
++#include <map>
+ 
+ // efeito do BambooTracker -> código parecido do Furnace (só para mostrar; quem toca é o BambooTracker)
+ static bool rgBTFx(const char* id, int v, int src, short& fx, short& val) {
+@@ -203,6 +204,13 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+   ds.systemFlags[0].set("rgBTData",taEncodeBase64(std::string((const char*)file,len)));
+ 
+   int maxIns=-1;
++  // bateria de ADPCM com teclas fora do centro: o panorama de cada tecla vai como 08xx junto da nota
++  std::map<int,std::map<int,int>> kitPan;
++  for (auto& d: pl.instrumentDetails()) {
++    bool offCenter=false;
++    for (auto& kk: d.kit) if (kk.pan!=3) offCenter=true;
++    if (offCenter) for (auto& kk: d.kit) kitPan[d.number][kk.key]=kk.pan;
++  }
+   for (int s=0; s<songs; s++) {
+     if (s>0) ds.subsong.push_back(new DivSubSong);
+     DivSubSong* sub=ds.subsong[s];
+@@ -229,6 +237,7 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+       if (ch>=DIV_MAX_CHANS) continue;
+       int src=tracks[t].source;
+       std::deque<int> echo; // notas tocadas (a mais nova na frente), para ^0..^3
++      int curIns=-1;
+       std::vector<bool> done(DIV_MAX_PATTERNS,false);
+       for (int o=0; o<ords; o++) {
+         int pi=pl.patternIndex(s,(int)t,o);
+@@ -253,6 +262,7 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+             echo.push_front(note);
+             if (echo.size()>4) echo.pop_back();
+           }
++          if (st.ins>=0) curIns=st.ins;
+           if (!first) continue;
+           if (note>=0) {
+             // a tabela de períodos do SSG do BambooTracker toca uma oitava acima da do FM para a mesma nota
+@@ -282,6 +292,17 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+               col++;
+             }
+           }
++          if (src==rgbt::ADPCM && note>=0 && col<4 && kitPan.count(curIns)) {
++            std::map<int,int>& kp=kitPan[curIns];
++            std::map<int,int>::iterator kit=kp.find(note);
++            if (kit!=kp.end()) {
++              // panorama do BambooTracker: 1 direita, 2 esquerda, 3 os dois
++              const int panFx[4]={0x00,0x0f,0xf0,0xff};
++              pat->newData[r][DIV_PAT_FX(col)]=0x08;
++              pat->newData[r][DIV_PAT_FXVAL(col)]=panFx[kit->second&3];
++              col++;
++            }
++          }
+         }
+         // SSG: afinação da tabela do BambooTracker desde o começo
+         if (first && o==0 && src==rgbt::SSG) {
+@@ -310,6 +331,19 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+   std::vector<rgbt::InsInfo> insList=pl.instruments();
+   std::vector<rgbt::InsDetail> insDet=pl.instrumentDetails();
+   for (auto& i: insList) maxIns=MAX(maxIns,i.number);
++  // calibração das amostras do ADPCM: a nota raiz (do BambooTracker) que toca com o deltaN da raiz.
++  // a bateria usa a calibração da amostra quando bate (a diferença é um número inteiro de semitons);
++  // se não bate, ganha uma cópia da amostra com a calibração dela
++  std::vector<rgbt::SampleInfo> smp=pl.samples();
++  int maxSmp=-1;
++  for (auto& s: smp) maxSmp=MAX(maxSmp,s.number);
++  std::map<int,std::pair<int,int>> calib;
++  for (auto& d: insDet) {
++    if (d.type!=2) continue;
++    for (auto& ii: insList) if (ii.number==d.number && ii.sample>=0) calib[ii.sample]=std::make_pair(d.rootKey,d.rootDeltaN);
++  }
++  struct SmpCopy { int src, rootKey, rootDN; };
++  std::vector<SmpCopy> smpCopies;
+   // DT do registrador (0..7) -> DT do Furnace (3 = 0)
+   const int dtFromReg[8]={3,4,5,6,3,2,1,0};
+   for (int n=0; n<=maxIns; n++) {
+@@ -340,6 +374,44 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+         }
+       } else if (i.type==1) {
+         ins->type=DIV_INS_AY;
++      } else if (i.type==3) {
++        // bateria: mapa de notas (tecla -> amostra e nota que dá o deltaN da tecla)
++        ins->type=DIV_INS_ADPCMB;
++        ins->amiga.useNoteMap=true;
++        for (int k=0; k<180; k++) {
++          ins->amiga.noteMap[k].map=-1;
++          ins->amiga.noteMap[k].freq=k;
++        }
++        for (auto& d: insDet) {
++          if (d.number!=n) continue;
++          for (auto& kk: d.kit) {
++            if (kk.sample<0 || kk.key<0 || kk.key+60>=180 || kk.rootDeltaN<=0) continue;
++            int smpIdx=kk.sample, noteOut=kk.rootKey+kk.pitch;
++            std::map<int,std::pair<int,int>>::iterator c=calib.find(kk.sample);
++            if (c==calib.end()) {
++              calib[kk.sample]=std::make_pair(kk.rootKey,kk.rootDeltaN);
++            } else {
++              double semis=12.0*log2((double)kk.rootDeltaN/(double)MAX(1,c->second.second));
++              if (fabs(semis-round(semis))<0.02) {
++                noteOut=c->second.first+kk.pitch+(int)round(semis);
++              } else {
++                int found=-1;
++                for (size_t q=0; q<smpCopies.size(); q++) {
++                  if (smpCopies[q].src==kk.sample && smpCopies[q].rootDN==kk.rootDeltaN) found=(int)q;
++                }
++                if (found<0) {
++                  smpCopies.push_back(SmpCopy{kk.sample,kk.rootKey,kk.rootDeltaN});
++                  found=(int)smpCopies.size()-1;
++                }
++                smpIdx=maxSmp+1+found;
++                noteOut=smpCopies[found].rootKey+kk.pitch;
++              }
++            }
++            ins->amiga.noteMap[kk.key+60].map=smpIdx;
++            logD("BTM: bateria %.2X tecla %d: amostra %d (raiz %d, deltaN %d, altura %d, pan %d) -> nota %d",n,kk.key,smpIdx,kk.rootKey,kk.rootDeltaN,kk.pitch,kk.pan,noteOut);
++            ins->amiga.noteMap[kk.key+60].freq=CLAMP(noteOut+60,0,179);
++          }
++        }
+       } else {
+         ins->type=DIV_INS_ADPCMB;
+         ins->amiga.initSample=i.sample;
+@@ -363,13 +435,35 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+         rgBTMacro(ins->std.pitchMacro,d.pitch,[&](int v, int) -> int { return (v-127)*4; });
+         if (d.pitch.type==3) ins->std.pitchMacro.mode=1;
+       }
+-      if (ins->type==DIV_INS_AY) {
+-        if (d.ssgEnv.on) {
+-          bool hard=false;
+-          for (int v: d.ssgEnv.val) if (v>=16) hard=true;
+-          if (hard) logW("BTM: instrumento %.2X: envelope de hardware do SSG ainda não é convertido",n);
+-          rgBTMacro(ins->std.volMacro,d.ssgEnv,[&](int v, int) -> int { return (v<16)?v:15; });
++      // FM: sequências de parâmetro -> macros (AL/FB do instrumento, o resto por operador)
++      if (ins->type==DIV_INS_FM) {
++        const int opMap[4]={0,2,1,3};
++        for (auto& os: d.opSeq) {
++          int pi=os.first;
++          const rgbt::Seq& q=os.second;
++          if (pi==0) { rgBTMacro(ins->std.algMacro,q,[](int v, int) -> int { return v&7; }); continue; }
++          if (pi==1) { rgBTMacro(ins->std.fbMacro,q,[](int v, int) -> int { return v&7; }); continue; }
++          if (pi>=38 && pi<42) {
++            rgBTMacro(ins->std.opMacros[opMap[pi-38]].ssgMacro,q,[](int v, int) -> int { return (v<0)?0:(8|(v&7)); });
++            continue;
++          }
++          if (pi<2 || pi>=38) continue;
++          int op=opMap[(pi-2)/9], k=(pi-2)%9;
++          DivInstrumentSTD::OpMacro& om=ins->std.opMacros[op];
++          switch (k) {
++            case 0: rgBTMacro(om.arMacro,q,[](int v, int) -> int { return v&31; }); break;
++            case 1: rgBTMacro(om.drMacro,q,[](int v, int) -> int { return v&31; }); break;
++            case 2: rgBTMacro(om.d2rMacro,q,[](int v, int) -> int { return v&31; }); break;
++            case 3: rgBTMacro(om.rrMacro,q,[](int v, int) -> int { return v&15; }); break;
++            case 4: rgBTMacro(om.slMacro,q,[](int v, int) -> int { return v&15; }); break;
++            case 5: rgBTMacro(om.tlMacro,q,[](int v, int) -> int { return v&127; }); break;
++            case 6: rgBTMacro(om.rsMacro,q,[](int v, int) -> int { return v&3; }); break;
++            case 7: rgBTMacro(om.multMacro,q,[](int v, int) -> int { return v&15; }); break;
++            case 8: rgBTMacro(om.dtMacro,q,[&](int v, int) -> int { return dtFromReg[v&7]; }); break;
++          }
+         }
++      }
++      if (ins->type==DIV_INS_AY) {
+         if (d.ssgTN.on) {
+           // 0 tom, 1-32 ruído (período 32-x), 33-64 tom+ruído (64-x), 65 nada
+           rgBTMacro(ins->std.waveMacro,d.ssgTN,[&](int v, int) -> int {
+@@ -389,10 +483,105 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+             });
+           }
+         }
+-        if (d.ssgWave.on) {
+-          bool square=true;
+-          for (int v: d.ssgWave.val) if (v!=0) square=false;
+-          if (!square) logW("BTM: instrumento %.2X: forma de onda do SSG (fora a quadrada) ainda não é convertida",n);
++        // envelope de hardware e formas de onda: o BambooTracker usa o envelope do SSG (registrador 0D) com o
++        // período fixo (subdado "bruto") ou proporcional ao tom (subdado "razão": período = TP*r1/(r2*div),
++        // div 32 nas formas de triângulo, 16 nas outras). No Furnace: bit 4 da macro de onda (envelope), ex2
++        // (forma), ex5 (período fixo) e ex3/alg (envelope automático: período = TP*alg/(ex3*16)).
++        // ondas: 1 triângulo (forma 0E, sem tom), 2 serra (0C), 3 serra invertida (08), 4-6 iguais com o tom
++        // (máscara quadrada) por cima.
++        int waveForm=0;
++        if (d.ssgWave.on && !d.ssgWave.val.empty()) {
++          waveForm=d.ssgWave.val[0];
++          for (int v: d.ssgWave.val) if (v!=waveForm) {
++            logW("BTM: instrumento %.2X: forma de onda do SSG que muda durante a nota; usando a primeira",n);
++            break;
++          }
++          if (waveForm<0 || waveForm>6) waveForm=0;
++          if (waveForm>=4) {
++            for (size_t k=0; k<d.ssgWave.sub.size(); k++) {
++              int sub=d.ssgWave.sub[k];
++              if (((sub>>20)==2 && (sub&0xffff)!=0x0101) || (sub>>20)==1) {
++                logW("BTM: instrumento %.2X: máscara quadrada com outra frequência ainda não é convertida (usando a da nota)",n);
++                break;
++              }
++            }
++          }
++        }
++        bool hardEnv=false, softEnv=false;
++        if (d.ssgEnv.on) for (int v: d.ssgEnv.val) { if (v>=16) hardEnv=true; else softEnv=true; }
++        auto setRatio=[&](int shape, int sub) {
++          int div=(shape==0x0a || shape==0x0e)?32:16;
++          if ((sub>>20)==1) {
++            ins->std.ex5Macro.val[0]=sub&0xffff;
++            ins->std.ex5Macro.len=1;
++            ins->std.ex5Macro.open=true;
++          } else {
++            int r1=1, r2=1;
++            if ((sub>>20)==2) { r1=(sub>>8)&0xff; r2=sub&0xff; }
++            if (r1<1) r1=1;
++            if (r2<1) r2=1;
++            int num=r2*div/16;
++            ins->std.ex3Macro.val[0]=num;
++            ins->std.ex3Macro.len=1;
++            ins->std.ex3Macro.open=true;
++            ins->std.algMacro.val[0]=r1;
++            ins->std.algMacro.len=1;
++            ins->std.algMacro.open=true;
++          }
++        };
++        int envBits=0;
++        if (waveForm>=1) {
++          const int shapeOf[7]={0,0x0e,0x0c,0x08,0x0e,0x0c,0x08};
++          int shape=shapeOf[waveForm];
++          ins->std.ex2Macro.val[0]=shape;
++          ins->std.ex2Macro.len=1;
++          ins->std.ex2Macro.open=true;
++          // triângulo/serra: o envelope dá a nota (o "tom" do envelope)
++          setRatio(shape,0);
++          envBits=(waveForm>=4)?(4|1):4;
++          if (hardEnv) logW("BTM: instrumento %.2X: forma de onda e envelope de hardware juntos; vale a forma de onda",n);
++        } else if (hardEnv) {
++          // envelope de hardware na sequência de envelope
++          int firstShape=-1, firstSub=0;
++          bool sameShape=true, sameSub=true;
++          for (size_t k=0; k<d.ssgEnv.val.size(); k++) {
++            int v=d.ssgEnv.val[k];
++            if (v<16) continue;
++            int sh=v-16+8, sb=(k<d.ssgEnv.sub.size())?d.ssgEnv.sub[k]:0;
++            if (firstShape<0) { firstShape=sh; firstSub=sb; }
++            if (sh!=firstShape) sameShape=false;
++            if (sb!=firstSub) sameSub=false;
++          }
++          if (sameShape) {
++            ins->std.ex2Macro.val[0]=firstShape;
++            ins->std.ex2Macro.len=1;
++            ins->std.ex2Macro.open=true;
++          } else {
++            int last=firstShape;
++            rgBTMacro(ins->std.ex2Macro,d.ssgEnv,[&](int v, int) -> int { if (v>=16) last=v-16+8; return last; });
++          }
++          if (!sameSub) logW("BTM: instrumento %.2X: período do envelope de hardware que muda durante a nota; usando o primeiro",n);
++          setRatio(firstShape,firstSub);
++          envBits=4;
++          if (softEnv) logW("BTM: instrumento %.2X: envelope que mistura volume e hardware; aproximado",n);
++        }
++        if (d.ssgEnv.on && waveForm==0) {
++          rgBTMacro(ins->std.volMacro,d.ssgEnv,[&](int v, int) -> int { return (v<16)?v:15; });
++        }
++        if (envBits) {
++          // a macro de onda ganha o bit do envelope (e perde o tom no triângulo/serra puros)
++          if (ins->std.waveMacro.len>0) {
++            for (int k=0; k<ins->std.waveMacro.len; k++) {
++              int w=ins->std.waveMacro.val[k];
++              ins->std.waveMacro.val[k]=(waveForm>=1 && waveForm<4)?((w&2)|4):(w|envBits);
++            }
++          } else if (hardEnv && softEnv && waveForm==0) {
++            rgBTMacro(ins->std.waveMacro,d.ssgEnv,[&](int v, int) -> int { return (v>=16)?5:1; });
++          } else {
++            ins->std.waveMacro.val[0]=envBits;
++            ins->std.waveMacro.len=1;
++            ins->std.waveMacro.open=true;
++          }
+         }
+       } else if (ins->type==DIV_INS_ADPCMB) {
+         if (d.adpcmEnv.on) rgBTMacro(ins->std.volMacro,d.adpcmEnv,[&](int v, int) -> int { return v; });
+@@ -403,21 +592,22 @@ bool DivEngine::loadBTM(unsigned char* file, size_t len) {
+   ds.insLen=ds.ins.size();
+ 
+   // amostras do ADPCM (para ver; a memória do chip é a que o BambooTracker monta)
+-  std::vector<rgbt::SampleInfo> smp=pl.samples();
+-  int maxSmp=-1;
+-  for (auto& s: smp) maxSmp=MAX(maxSmp,s.number);
+-  for (int n=0; n<=maxSmp; n++) {
++  for (int n=0; n<=maxSmp+(int)smpCopies.size(); n++) {
+     DivSample* sm=new DivSample;
+     sm->depth=DIV_SAMPLE_DEPTH_ADPCM_B;
++    int srcN=(n>maxSmp)?smpCopies[n-maxSmp-1].src:n;
+     for (auto& s: smp) {
+-      if (s.number!=n || s.data.empty()) continue;
+-      sm->name=fmt::sprintf("ADPCM %.2X",n);
++      if (s.number!=srcN || s.data.empty()) continue;
++      sm->name=(n>maxSmp)?fmt::sprintf("ADPCM %.2X (bateria)",srcN):fmt::sprintf("ADPCM %.2X",n);
+       // o Furnace toca a amostra com deltaN = 65535*centerRate/8372 * f(nota)/(clock/144), f = 440*2^((nota-57)/12);
+       // o BambooTracker toca a nota raiz com o deltaN da raiz
+       int rootKey=48, rootDN=s.rootRate;
+-      for (auto& d: insDet) {
+-        if (d.type!=2) continue;
+-        for (auto& ii: insList) if (ii.number==d.number && ii.sample==n) { rootKey=d.rootKey; rootDN=d.rootDeltaN; }
++      if (n>maxSmp) {
++        rootKey=smpCopies[n-maxSmp-1].rootKey;
++        rootDN=smpCopies[n-maxSmp-1].rootDN;
++      } else if (calib.count(n)) {
++        rootKey=calib[n].first;
++        rootDN=calib[n].second;
+       }
+       // nota no espaço do Furnace (60 = C-0): C-4 = 108 toca a 8372 "Hz" virtuais = centerRate
+       double fRoot=440.0*pow(2.0,(double)(rootKey+60-57)/12.0);
+diff --git a/src/main.cpp b/src/main.cpp
+index a3ba2e2..9ce4f8a 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -1077,6 +1077,16 @@ int main(int argc, char** argv) {
+       return 1;
+     }
+   }
++#ifndef __EMSCRIPTEN__
++  // RG: debugging aid for the exporters: RG_CHANGE_SYS=index:fileID swaps a chip after loading
++  // (for example "0:214" turns the first chip into a Nintendo DS)
++  if (getenv("RG_CHANGE_SYS")!=NULL) {
++    int idx=0, fid=0;
++    if (sscanf(getenv("RG_CHANGE_SYS"),"%d:%d",&idx,&fid)==2) {
++      e.changeSystem(idx,e.systemFromFileFur(fid),true);
++    }
++  }
++#endif
+   if (infoMode) {
+     e.dumpSongInfo();
+     finishLogFile();
+-- 
+2.43.0
+

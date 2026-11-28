@@ -1077,6 +1077,16 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
+#ifndef __EMSCRIPTEN__
+  // RG: debugging aid for the exporters: RG_CHANGE_SYS=index:fileID swaps a chip after loading
+  // (for example "0:214" turns the first chip into a Nintendo DS)
+  if (getenv("RG_CHANGE_SYS")!=NULL) {
+    int idx=0, fid=0;
+    if (sscanf(getenv("RG_CHANGE_SYS"),"%d:%d",&idx,&fid)==2) {
+      e.changeSystem(idx,e.systemFromFileFur(fid),true);
+    }
+  }
+#endif
   if (infoMode) {
     e.dumpSongInfo();
     finishLogFile();

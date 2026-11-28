@@ -1,0 +1,18 @@
+<!-- Registro Gamer — página "Privacidade" do Blogger.
+     Blogger → Páginas → Nova página → título "Privacidade" → modo HTML (ícone < >) → cole tudo isto → Publicar.
+     O texto vem do repositório (chiptune-player/privacidade.html): mudou lá, muda aqui sozinho. -->
+<div id="rg-priv" style="margin:0 -8px">
+<iframe id="rg-priv-f" title="Aviso de privacidade" style="width:100%;height:1400px;border:0;border-radius:10px;background:#050a05;display:block" loading="lazy"></iframe>
+</div>
+<script>
+(function(){
+  var f=document.getElementById('rg-priv-f');
+  var L=(window.rgI18n&&rgI18n.lang)||(function(){try{return localStorage.getItem('rgLang');}catch(e){return null;}})()||'pt';
+  f.src='https://lucniemann.github.io/registro-gamer/chiptune-player/privacidade.html?lang='+L;
+  window.addEventListener('message',function(e){
+    if(e.source!==f.contentWindow||!e.data) return;
+    if(e.data.type==='rg-privacy-h'&&e.data.h>200) f.style.height=(e.data.h+20)+'px';
+  });
+  window.addEventListener('rg:lang',function(ev){try{f.contentWindow.postMessage({type:'rg-lang',lang:ev.detail},'*');}catch(x){}});
+})();
+</script>

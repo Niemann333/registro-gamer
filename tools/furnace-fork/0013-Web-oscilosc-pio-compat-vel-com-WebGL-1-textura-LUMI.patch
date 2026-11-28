@@ -1,7 +1,7 @@
 From 20580ec099578dcab2a6f72526e9483dbe3216ce Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 12 Nov 2026 04:43:10 -0300
-Subject: [PATCH 13/54] =?UTF-8?q?Web:=20oscilosc=C3=B3pio=20compat=C3=ADve?=
+Subject: [PATCH 13/55] =?UTF-8?q?Web:=20oscilosc=C3=B3pio=20compat=C3=ADve?=
  =?UTF-8?q?l=20com=20WebGL=201=20(textura=20LUMINANCE,=20precis=C3=A3o=20e?=
  =?UTF-8?q?=20la=C3=A7os=20constantes)?=
 MIME-Version: 1.0

@@ -175,6 +175,7 @@ A	res/web/fonts/Oxanium-Medium.ttf
 A	scripts/rg-asm6502.py
 A	scripts/rg-asmgb.py
 A	scripts/rg-asmspc.py
+A	scripts/rg-mkdrv-arm.sh
 A	scripts/rg-snsfinc.py
 A	scripts/rg-z80inc.py
 M	src/audio/midi.cpp
@@ -197,6 +198,10 @@ A	src/engine/export/gbs.cpp
 A	src/engine/export/gbs.h
 A	src/engine/export/gbsdrv.asm
 A	src/engine/export/gbsdrv.inc
+A	src/engine/export/gsf.cpp
+A	src/engine/export/gsf.h
+A	src/engine/export/gsfdrv.inc
+A	src/engine/export/gsfdrv.s
 A	src/engine/export/hes.cpp
 A	src/engine/export/hes.h
 A	src/engine/export/hesdrv.asm
@@ -207,6 +212,10 @@ A	src/engine/export/kssdrv.asm
 A	src/engine/export/kssdrv.inc
 A	src/engine/export/module.cpp
 A	src/engine/export/module.h
+A	src/engine/export/nds2sf.cpp
+A	src/engine/export/nds2sf.h
+A	src/engine/export/ndsdrv.inc
+A	src/engine/export/ndsdrv.s
 A	src/engine/export/nsf.cpp
 A	src/engine/export/nsf.h
 A	src/engine/export/nsfdrv.asm

@@ -240,11 +240,8 @@ Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE 
   (CSS por html[data-skin]) e no Tracker (barra de cima + Furnace).
 
 ## OpenMPT, próximos passos
-- Ferramentas de sample (EM ANDAMENTO, fora do site): no fork, `git stash list` → "ferramentas de sample (em andamento)"
-  (botão de chave inglesa no editor de samples: remover DC, tirar estalos, afinação automática, loop no cruzamento com
-  zero, esticar o tempo, mudar a altura). Código DSP em src/engine/rgsampletools.* (cópia em /home/claude/work/stash).
-  PROBLEMA: a afinação automática dá certo no teste nativo (363 Hz, afinação 435.93 → 5961 / 8430), mas no navegador
-  dá 8233 nos dois modos. Investigar antes de publicar. O resto (WSOLA) foi testado e funciona.
+- Ferramentas de sample: PRONTAS e publicadas (ver a seção de 24/11; o "erro" da afinação automática no navegador
+  não existia — 263 Hz → 8233 bate com o nativo).
 - OPL4 (YMF278B): precisa da ROM yrw801 da Yamaha (direitos autorais) → o player avisa e pula (pedido do usuário).
 - Soundfont gmgsx-plus.sf2: origem duvidosa; sugerido trocar por GeneralUser GS / FluidR3 (aguardando o usuário).
 - Mais chips no modo fiel (ondas de PCE/SCC/Game Boy, pulsos, ruído) gerando samples.
@@ -267,3 +264,19 @@ rg-rip.js: `tools/rip-src/` (gme + aopsf + vio2sf + VBA/playgsf com ganchos).
 - Codificadores em `chiptune-player/enc/` (wasm-media-encoders e libflac.js, MIT).
 - Botão "🔊 Chiptune → Áudio" na barra do Tracker; "⬇ Áudio" no Studio (já com a música escolhida, inclusive arquivo local).
 - Testado: NSF, FUR, VGZ em todos os formatos (ffprobe confere taxa, bits, duração e pico −1 dB).
+
+## Exportar GSF e 2SF (2026-11-28)
+- **GSF (Game Boy Advance)** — `src/engine/export/gsf.cpp` + `gsfdrv.s` (ARM). Chips: GBA DMA, GBA MinMod e Game Boy. A música é mixada enquanto toca (acquire de cada chip + blip_buf) em áudio de 8 bits com sinal, como o mixer de software dos jogos de GBA, e tocada pelos canais de som direto (DMA 1 → FIFO A esquerda, DMA 2 → FIFO B direita; uma trilha só se for mono). Timer 0 = taxa (32768 Hz; menor se a música não couber em 32 MB), timer 1 em cascata conta as amostras; no fim o driver esvazia as FIFOs e volta os DMA para o ponto de loop (erro ≤ 2 amostras, o DMA lê de 4 em 4 bytes). Testado no motor GSF do Chiptune Player: correlação 0,99 com a trilha gravada.
+- **2SF (Nintendo DS)** — `nds2sf.cpp` + `ndsdrv.s` (ARM7). Imagem de cartucho: ARM9 (laço parado + samples + registro em 02000000h) e ARM7 (driver em 03800000h) que repete as escritas do chip NDS a cada tique (timer 0, 33,5 MHz/64, fração acumulada). Frequência/loop/tamanho vão como escritas de 16/32 bits (o vio2sf ignora escritas de 8 bits nesses registradores). Volume geral pela metade: o mixer do DS (e o vio2sf) é 2× mais alto que o núcleo do Furnace e satura. Testado no vio2sf nativo (2sftowav) e no Chiptune Player.
+- Driver ARM: `scripts/rg-mkdrv-arm.sh fonte.s endereço nome saída.inc "comentário"` (llvm-mc + ld.lld).
+- Depuração: `RG_CHANGE_SYS=índice:fileID` (só nativo) troca um chip depois de abrir (ex.: `0:214` = Nintendo DS).
+
+## BambooTracker: o que faltava (2026-11-28)
+- **Bateria de ADPCM**: mapa de notas do instrumento (tecla → amostra e nota que dá deltaN = raiz × 2^(altura/12)); amostra com outra calibração ganha cópia; panorama de cada tecla vira 08xx junto da nota. Conferido: o chip recebe os mesmos deltaN do player original (±1).
+- **Sequências de operador do FM**: AL, FB e AR/DR/SR/RR/SL/TL/KS/ML/DT/SSGEG por operador viram macros.
+- **SSG**: envelope de hardware na sequência de envelope (forma ex2, período fixo ex5 ou proporcional ao tom ex3/alg) e as formas de onda triângulo/serra/serra invertida (com e sem máscara quadrada) pelo envelope automático. Nenhuma música de exemplo usa; feito pelas fórmulas do BambooTracker, sem comparação com o original.
+- Falta: arpejo/altura por operador.
+
+## Aviso de privacidade (2026-11-28)
+- `chiptune-player/privacidade.html` (PT/EN): o que o contador guarda, 400 dias, Cloudflare, terceiros, direitos da LGPD. Botão "não contar minhas visitas" (`rgNoStats`); `rg-stats.js` respeita isso e o Global Privacy Control / Do Not Track. `rg-optout.html` faz o mesmo aberto direto (endereço das ferramentas).
+- Página do Blogger: `tools/blog/pagina-privacidade.html` (moldura com altura automática). Mobile: link "🔒 Aviso de privacidade" no fim da aba Blog.

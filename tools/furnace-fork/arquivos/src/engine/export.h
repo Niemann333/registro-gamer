@@ -49,6 +49,8 @@ enum DivROMExportOptions {
   DIV_ROM_XM,
   DIV_ROM_IT,
   DIV_ROM_MPTM,
+  DIV_ROM_GSF,
+  DIV_ROM_2SF,
 
   DIV_ROM_MAX
 };

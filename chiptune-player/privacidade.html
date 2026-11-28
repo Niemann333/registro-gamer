@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aviso de privacidade · Registro Gamer</title>
+<style>
+/* Aviso de privacidade do Registro Gamer. Aparece na página "Privacidade" do blog (numa moldura),
+   no gadget Mobile e pode ser aberto direto. O botão "não contar minhas visitas" guarda a escolha aqui
+   (lucniemann.github.io) e avisa o blog (rg-stats.js guarda lá também). */
+*{box-sizing:border-box}
+body{margin:0;background:#050a05;color:#c8ffbe;font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.w{max-width:760px;margin:0 auto;padding:20px 18px 40px}
+h1{font-size:22px;color:#39ff14;margin:0 0 4px}
+h2{font-size:16px;color:#39ff14;margin:26px 0 6px;border-bottom:1px solid #163a16;padding-bottom:4px}
+p,li{color:#a8e8a0}
+ul{padding-left:20px;margin:6px 0}
+li{margin:3px 0}
+b,strong{color:#c8ffbe}
+a{color:#39ff14}
+.sub{color:#4f874f;font-size:13px;margin:0 0 14px}
+.top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.lang button,.box button{font:inherit;font-size:13px;background:#0e260e;color:#c8ffbe;border:1px solid #1e501e;border-radius:8px;padding:5px 12px;cursor:pointer}
+.lang button.on{background:#1f8a10;border-color:#1f8a10;color:#fff}
+.box{border:1px solid #1e501e;background:#081208;border-radius:12px;padding:14px;margin:16px 0}
+.box .st{margin:0 0 10px}
+.box button.pri{background:#1f8a10;border-color:#1f8a10;color:#fff}
+.box button{margin:0 8px 6px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+td,th{border:1px solid #163a16;padding:6px 8px;text-align:left;vertical-align:top}
+th{color:#c8ffbe;background:#0a1a0a}
+td{color:#a8e8a0}
+[data-l]{display:none}
+html[lang=pt-BR] [data-l=pt],html[lang=en] [data-l=en]{display:block}
+html[lang=pt-BR] span[data-l=pt],html[lang=en] span[data-l=en]{display:inline}
+</style>
+</head>
+<body>
+<div class="w">
+<div class="top">
+  <div>
+    <h1><span data-l="pt">Aviso de privacidade</span><span data-l="en">Privacy notice</span></h1>
+    <p class="sub"><span data-l="pt">Registro Gamer · atualizado em 28/11/2026</span><span data-l="en">Registro Gamer · updated on Nov 28, 2026</span></p>
+  </div>
+  <div class="lang"><button data-set="pt">PT</button><button data-set="en">EN</button></div>
+</div>
+
+<!-- ───────────────────────── PORTUGUÊS ───────────────────────── -->
+<div data-l="pt">
+<p>Este aviso explica que dados o blog <b>Registro Gamer</b> (lucniemanngames.blogspot.com) e as ferramentas dele
+(Chiptune Player, Chiptune Studio, Tracker e conversores, em lucniemann.github.io) coletam, para quê e o que você pode
+fazer a respeito, conforme a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+
+<h2>Quem é o responsável</h2>
+<p>O blog é pessoal, mantido por <b>Luc Niemann</b>, que é quem decide sobre estes dados (o “controlador”, na LGPD).
+Não há empresa, anunciante ou parceiro comercial por trás dele.</p>
+
+<h2>O que é contado nas visitas</h2>
+<p>Para saber quais páginas, músicas e ferramentas são usadas e o que melhorar, cada página vista no blog e nas
+ferramentas é registrada num contador próprio. Ele guarda:</p>
+<table>
+<tr><th>Dado</th><th>Exemplo</th></tr>
+<tr><td>Endereço IP</td><td>o número de internet do seu aparelho ou da sua rede</td></tr>
+<tr><td>Local aproximado e provedor, deduzidos do IP</td><td>país, estado e cidade; nome do provedor de internet</td></tr>
+<tr><td>Navegador e aparelho</td><td>identificação do navegador, idioma, tamanho da tela</td></tr>
+<tr><td>A visita</td><td>página vista, site de onde você veio, horário e tempo na página</td></tr>
+<tr><td>O que foi usado nos gadgets</td><td>música tocada, ferramenta aberta, texto do botão clicado; para arquivos do seu aparelho, <b>só o nome</b> do arquivo</td></tr>
+</table>
+<p>Isso <b>não</b> serve para descobrir quem você é, não é vendido nem repassado, não é usado para propaganda e só o
+autor do blog vê (num painel protegido por senha). Os registros são <b>apagados sozinhos depois de 400 dias</b>.</p>
+<p>O contador roda num serviço da <b>Cloudflare</b> (Workers e banco de dados D1), que guarda esses dados em nome do blog
+e pode processá-los fora do Brasil.</p>
+<p>Base legal: <b>legítimo interesse</b> (art. 7º, IX da LGPD) — entender o uso do blog e das ferramentas e melhorá-los —
+com a opção de recusar a qualquer momento, logo abaixo.</p>
+
+<h2>Não quero ser contado</h2>
+<div class="box">
+  <p class="st" id="st-pt"></p>
+  <button class="pri" data-off="1">Não contar minhas visitas</button><button data-off="0">Pode contar</button>
+</div>
+<p>A escolha fica guardada <b>neste navegador</b> (no blog e nas ferramentas). Se o seu navegador envia o sinal
+<b>Global Privacy Control</b> ou <b>Do Not Track</b>, nada é contado, mesmo sem apertar o botão.</p>
+
+<h2>Arquivos que você abre</h2>
+<p>Músicas, módulos e projetos que você abre do seu aparelho no Chiptune Player, no Chiptune Studio, no Tracker ou no
+conversor <b>Chiptune → Áudio</b> são lidos e convertidos <b>no próprio navegador</b>: o conteúdo não é enviado para
+nenhum servidor e não fica guardado. Só o nome do arquivo entra no contador de uso (veja acima).</p>
+
+<h2>O que fica guardado no seu navegador</h2>
+<p>Os gadgets não criam cookies. No armazenamento local do navegador ficam só preferências: idioma (PT/EN), skin,
+ajustes de volume por música, painéis abertos ou fechados, a lista de nomes das pastas e arquivos que você adicionou ao
+player (os arquivos em si não) e a escolha de não ser contado. Você pode apagar tudo limpando os dados do site no
+navegador.</p>
+
+<h2>Serviços de terceiros</h2>
+<ul>
+<li><b>Blogger (Google)</b> hospeda o blog e usa cookies próprios — veja a <a href="https://policies.google.com/privacy?hl=pt-BR" target="_blank" rel="noopener">política de privacidade do Google</a>.</li>
+<li><b>Disqus</b> cuida dos comentários dos posts; ao comentar, valem os <a href="https://disqus.com/privacy-policy/" target="_blank" rel="noopener">termos do Disqus</a>.</li>
+<li><b>GitHub Pages</b> hospeda as ferramentas e as músicas, e <b>Google Fonts</b> entrega as fontes; como qualquer site, eles recebem o IP de quem acessa.</li>
+<li>A <b>tradução dos posts</b> para o inglês é feita pela DeepL (através da Cloudflare). Só o texto do post é enviado, nunca dados de quem lê.</li>
+</ul>
+
+<h2>Seus direitos</h2>
+<p>Pela LGPD (art. 18) você pode pedir para saber se há dados seus, ter acesso a eles, corrigi-los ou apagá-los, entre
+outros direitos. Como o contador não sabe quem você é, o pedido precisa vir com o seu IP e o período aproximado das
+visitas. Faça o pedido pelos comentários do blog pedindo contato (sem publicar dados pessoais no comentário); a
+resposta vem em até 15 dias. Você também pode reclamar à <a href="https://www.gov.br/anpd" target="_blank" rel="noopener">ANPD</a>.</p>
+
+<h2>Mudanças</h2>
+<p>Se o blog passar a coletar algo diferente, este aviso será atualizado e a data no alto da página muda.</p>
+</div>
+
+<!-- ───────────────────────── ENGLISH ───────────────────────── -->
+<div data-l="en">
+<p>This notice explains what data the <b>Registro Gamer</b> blog (lucniemanngames.blogspot.com) and its tools
+(Chiptune Player, Chiptune Studio, Tracker and converters, at lucniemann.github.io) collect, why, and what you can do
+about it, under Brazil's General Data Protection Law (LGPD, Law 13,709/2018).</p>
+
+<h2>Who is responsible</h2>
+<p>The blog is personal, run by <b>Luc Niemann</b>, who decides about this data (the “controller” under the LGPD).
+There is no company, advertiser or business partner behind it.</p>
+
+<h2>What is counted on each visit</h2>
+<p>To learn which pages, songs and tools are used and what to improve, each page viewed on the blog and on the tools
+is recorded by its own counter. It keeps:</p>
+<table>
+<tr><th>Data</th><th>Example</th></tr>
+<tr><td>IP address</td><td>the internet number of your device or network</td></tr>
+<tr><td>Approximate location and provider, derived from the IP</td><td>country, state and city; name of the internet provider</td></tr>
+<tr><td>Browser and device</td><td>browser identification, language, screen size</td></tr>
+<tr><td>The visit</td><td>page viewed, site you came from, time and time spent on the page</td></tr>
+<tr><td>What was used in the gadgets</td><td>song played, tool opened, text of the button clicked; for files from your device, <b>only the file name</b></td></tr>
+</table>
+<p>This is <b>not</b> used to find out who you are, is not sold or shared, is not used for advertising, and only the
+blog's author sees it (in a password-protected panel). Records are <b>deleted automatically after 400 days</b>.</p>
+<p>The counter runs on <b>Cloudflare</b> (Workers and the D1 database), which stores this data on the blog's behalf and
+may process it outside Brazil.</p>
+<p>Legal basis: <b>legitimate interest</b> (LGPD art. 7, IX) — understanding how the blog and tools are used and
+improving them — with the option to opt out at any time, right below.</p>
+
+<h2>I don't want to be counted</h2>
+<div class="box">
+  <p class="st" id="st-en"></p>
+  <button class="pri" data-off="1">Do not count my visits</button><button data-off="0">Count again</button>
+</div>
+<p>The choice is kept <b>in this browser</b> (on the blog and on the tools). If your browser sends the
+<b>Global Privacy Control</b> or <b>Do Not Track</b> signal, nothing is counted, even without pressing the button.</p>
+
+<h2>Files you open</h2>
+<p>Songs, modules and projects you open from your device in Chiptune Player, Chiptune Studio, the Tracker or the
+<b>Chiptune → Audio</b> converter are read and converted <b>inside your browser</b>: their content is not sent to any
+server and is not stored. Only the file name goes into the usage counter (see above).</p>
+
+<h2>What is kept in your browser</h2>
+<p>The gadgets create no cookies. The browser's local storage only keeps preferences: language (PT/EN), skin, volume
+adjustments per song, open or closed panels, the list of names of the folders and files you added to the player (not
+the files themselves) and the choice not to be counted. You can erase all of it by clearing the site's data in your
+browser.</p>
+
+<h2>Third-party services</h2>
+<ul>
+<li><b>Blogger (Google)</b> hosts the blog and uses its own cookies — see <a href="https://policies.google.com/privacy?hl=en" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
+<li><b>Disqus</b> handles the post comments; when you comment, <a href="https://disqus.com/privacy-policy/" target="_blank" rel="noopener">Disqus's terms</a> apply.</li>
+<li><b>GitHub Pages</b> hosts the tools and the songs, and <b>Google Fonts</b> serves the fonts; like any website, they receive the visitor's IP.</li>
+<li>The <b>translation of posts</b> into English is done by DeepL (through Cloudflare). Only the post text is sent, never data about readers.</li>
+</ul>
+
+<h2>Your rights</h2>
+<p>Under the LGPD (art. 18) you can ask whether there is data about you, access it, correct it or delete it, among
+other rights. Since the counter does not know who you are, the request must include your IP and the approximate period
+of the visits. Make the request through the blog comments asking to be contacted (without posting personal data in the
+comment); you will get an answer within 15 days. You can also file a complaint with the
+<a href="https://www.gov.br/anpd" target="_blank" rel="noopener">ANPD</a> (Brazil's data protection authority).</p>
+
+<h2>Changes</h2>
+<p>If the blog starts collecting anything different, this notice will be updated and the date at the top will change.</p>
+</div>
+</div>
+<script>
+(function () {
+  var q = /[?&]lang=(pt|en)\b/.exec(location.search), L = q ? q[1] : null;
+  if (!L) { try { L = localStorage.getItem('rgLang'); } catch (e) {} }
+  if (L !== 'pt' && L !== 'en') L = /^pt/i.test(navigator.language || 'pt') ? 'pt' : 'en';
+  function lang(l) {
+    L = l; document.documentElement.lang = l === 'en' ? 'en' : 'pt-BR';
+    document.querySelectorAll('.lang button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-set') === l); });
+    altura();
+  }
+  document.querySelectorAll('.lang button').forEach(function (b) { b.onclick = function () { lang(b.getAttribute('data-set')); try { localStorage.setItem('rgLang', L); } catch (e) {} }; });
+  // a página do blog (ou o gadget) manda o idioma
+  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-lang' && /^(pt|en)$/.test(e.data.lang)) lang(e.data.lang); });
+
+  var gpc = false;
+  try { gpc = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1'; } catch (e) {}
+  function get() { try { return localStorage.getItem('rgNoStats') === '1'; } catch (e) { return false; } }
+  function set(v) { try { if (v) localStorage.setItem('rgNoStats', '1'); else localStorage.removeItem('rgNoStats'); } catch (e) {} }
+  function show() {
+    var off = get();
+    document.getElementById('st-pt').innerHTML = gpc ? 'Seu navegador pede para não ser rastreado (Global Privacy Control / Do Not Track): <b>nada é contado</b>.'
+      : off ? '<b>Suas visitas não são contadas</b> neste navegador.' : 'Suas visitas são contadas, como descrito acima.';
+    document.getElementById('st-en').innerHTML = gpc ? 'Your browser asks not to be tracked (Global Privacy Control / Do Not Track): <b>nothing is counted</b>.'
+      : off ? '<b>Your visits are not counted</b> in this browser.' : 'Your visits are counted, as described above.';
+  }
+  document.querySelectorAll('.box button').forEach(function (b) {
+    b.onclick = function () {
+      var off = b.getAttribute('data-off') === '1';
+      set(off); show();
+      // o blog (outro endereço) guarda a escolha do lado dele também (rg-stats.js)
+      try { if (window.parent !== window) window.parent.postMessage({ type: 'rg-nostats', off: off }, '*'); } catch (e) {}
+    };
+  });
+  // altura para a moldura da página do blog
+  function altura() { try { if (window.parent !== window) window.parent.postMessage({ type: 'rg-privacy-h', h: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
+  window.addEventListener('resize', altura);
+  lang(L); show();
+  setTimeout(altura, 300);
+})();
+</script>
+</body>
+</html>
