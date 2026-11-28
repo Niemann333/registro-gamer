@@ -24,7 +24,12 @@ const SQL_INIT = [
     ua TEXT, idioma TEXT, tela TEXT, embutido INTEGER,
     inicio INTEGER, ultimo INTEGER, dur INTEGER DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS visitas_inicio ON visitas(inicio)`,
-  `CREATE INDEX IF NOT EXISTS visitas_site ON visitas(site, inicio)`
+  `CREATE INDEX IF NOT EXISTS visitas_site ON visitas(site, inicio)`,
+  `CREATE TABLE IF NOT EXISTS eventos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visita INTEGER, site TEXT, ip TEXT, gadget TEXT, acao TEXT, detalhe TEXT, quando INTEGER)`,
+  `CREATE INDEX IF NOT EXISTS eventos_quando ON eventos(quando)`,
+  `CREATE INDEX IF NOT EXISTS eventos_gadget ON eventos(gadget, quando)`
 ];
 let iniciado = false;
 async function init(env) {
@@ -88,6 +93,22 @@ export default {
       if (Math.random() < 0.01) ctx.waitUntil(env.DB.prepare('DELETE FROM visitas WHERE inicio < ?').bind(agora - RETER_DIAS * 864e5).run());
       return json({ ok: true, id: r.meta.last_row_id, k: tok }, h);
     }
+    // ---------- o que a pessoa fez nos gadgets (lote de eventos da página) ----------
+    if (url.pathname === '/e' && req.method === 'POST') {
+      let b = {};
+      try { b = JSON.parse(await req.text()); } catch (e) {}
+      if (!b.id || !b.k || !Array.isArray(b.ev)) return json({ ok: false }, h);
+      const v = await env.DB.prepare('SELECT id, site, ip FROM visitas WHERE id=? AND tok=? AND inicio > ?')
+        .bind(Number(b.id), String(b.k), Date.now() - 12 * 3600e3).first();
+      if (!v) return json({ ok: false }, h);
+      const agora = Date.now();
+      const st = env.DB.prepare('INSERT INTO eventos (visita,site,ip,gadget,acao,detalhe,quando) VALUES (?,?,?,?,?,?,?)');
+      const lote = b.ev.slice(0, 40).map(e => st.bind(v.id, v.site, v.ip, corta(e[0], 24), corta(e[1], 40), corta(e[2], 200),
+        agora - Math.max(0, Math.min(600000, Number(e[3]) || 0))));
+      if (lote.length) await env.DB.batch(lote);
+      if (Math.random() < 0.01) ctx.waitUntil(env.DB.prepare('DELETE FROM eventos WHERE quando < ?').bind(agora - RETER_DIAS * 864e5).run());
+      return json({ ok: true }, h);
+    }
     // ---------- ainda aberta (a cada 30 s, e ao sair) ----------
     if (url.pathname === '/p' && req.method === 'POST') {
       let b = {};
@@ -134,6 +155,21 @@ async function dados(env, url) {
   const arg = site ? [desde, site] : [desde];
   const dia = `strftime('%Y-%m-%d', (inicio/1000) + (${tz})*60, 'unixepoch')`;
   const q = (sql, ...a) => env.DB.prepare(sql).bind(...a).all().then(r => r.results);
+  const gadget = url.searchParams.get('gadget') || '';
+  const wg = (site ? ' AND site=?' : '') + (gadget ? ' AND gadget=?' : '');
+  const argE = [desde].concat(site ? [site] : [], gadget ? [gadget] : []);
+  const diaE = `strftime('%Y-%m-%d', (quando/1000) + (${tz})*60, 'unixepoch')`;
+  const [gadgets, acoes, itens, evDia, evRec] = await Promise.all([
+    q(`SELECT gadget, COUNT(*) AS n, COUNT(DISTINCT ip) AS pessoas, COUNT(DISTINCT visita) AS visitas FROM eventos
+       WHERE quando>=?${ws} GROUP BY gadget ORDER BY n DESC`, ...arg),
+    q(`SELECT gadget, acao, COUNT(*) AS n, COUNT(DISTINCT ip) AS pessoas FROM eventos WHERE quando>=?${wg}
+       GROUP BY gadget, acao ORDER BY n DESC LIMIT 40`, ...argE),
+    q(`SELECT gadget, acao, detalhe, COUNT(*) AS n, COUNT(DISTINCT ip) AS pessoas FROM eventos WHERE quando>=?${wg} AND detalhe<>''
+       GROUP BY gadget, acao, detalhe ORDER BY n DESC LIMIT 60`, ...argE),
+    q(`SELECT ${diaE} AS dia, gadget, COUNT(*) AS n FROM eventos WHERE quando>=?${wg} GROUP BY dia, gadget ORDER BY dia`, ...argE),
+    q(`SELECT e.quando, e.site, e.gadget, e.acao, e.detalhe, e.ip, v.cidade, v.pais FROM eventos e LEFT JOIN visitas v ON v.id=e.visita
+       WHERE e.quando>=?${wg.replace(/ AND (site|gadget)=/g, ' AND e.$1=')} ORDER BY e.id DESC LIMIT 300`, ...argE)
+  ]);
   const [porDia, total, paginas, paises, origens, aparelhos, recentes, online, porHora] = await Promise.all([
     q(`SELECT ${dia} AS dia, COUNT(*) AS vistas, COUNT(DISTINCT ip) AS pessoas, CAST(AVG(dur) AS INTEGER) AS tempo
        FROM visitas WHERE inicio>=?${ws} GROUP BY dia ORDER BY dia`, ...arg),
@@ -152,7 +188,8 @@ async function dados(env, url) {
   ]);
   const ap = {};
   for (const r of aparelhos) { const k = aparelho(r.ua); ap[k] = (ap[k] || 0) + 1; }
-  return { dias, site, porDia, total: total[0], paginas, paises, origens, aparelhos: ap, recentes, online: online[0].n, porHora };
+  return { dias, site, gadget, porDia, total: total[0], paginas, paises, origens, aparelhos: ap, recentes, online: online[0].n, porHora,
+    gadgets, acoes, itens, evDia, evRec };
 }
 function aparelho(ua) {
   ua = ua || '';
@@ -207,6 +244,11 @@ svg text{fill:var(--mut);font-size:10px}.tip{position:fixed;pointer-events:none;
 <div class="card t"><h2>Páginas mais vistas</h2><div class="sc" id="tPag"></div></div>
 <div class="card t"><h2>Países</h2><div class="sc" id="tPais"></div></div>
 <div class="card t"><h2>De onde vieram</h2><div class="sc" id="tRef"></div></div>
+<div class="card w"><h2>Gadgets: uso por dia <select id="gad" style="margin-left:10px;font-size:12px;padding:3px 6px"><option value="">todos os gadgets</option></select></h2><div id="gEv"></div><div class="leg" id="legEv"></div></div>
+<div class="card t"><h2>Gadgets</h2><div class="sc" id="tGad"></div></div>
+<div class="card t"><h2>O que fizeram</h2><div class="sc" id="tAc"></div></div>
+<div class="card t"><h2>Mais usados (músicas, jogos, buscas…)</h2><div class="sc" id="tIt"></div></div>
+<div class="card w"><h2>Últimas ações nos gadgets</h2><div class="sc" id="tEv"></div></div>
 <div class="card w"><h2>Últimas visitas</h2><div class="sc" id="tRec"></div></div>
 </main><div class="tip" id="tip"></div>
 <script>
@@ -220,7 +262,7 @@ function dias(n){const out=[];const d=new Date();for(let i=n-1;i>=0;i--){const x
 function grafDia(rows,n){
   const m={};rows.forEach(r=>m[r.dia]=r);const ds=dias(Math.max(n,1));
   const W=Math.max(600,$('gDia').clientWidth),H=220,P=34,bw=(W-P*2)/ds.length;
-  const mx=Math.max(1,...ds.map(d=>(m[d]||{}).vistas||0));const mt=Math.max(1,...ds.map(d=>((m[d]||{}).tempo||0)/60000));
+  const mx=Math.max(4,...ds.map(d=>(m[d]||{}).vistas||0));const mt=Math.max(1,...ds.map(d=>((m[d]||{}).tempo||0)/60000));
   let s='<svg width="'+W+'" height="'+H+'">';
   for(let i=0;i<=4;i++){const y=H-P-(H-P*2)*i/4;s+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+y+'" y2="'+y+'" stroke="#2c2a44"/><text x="'+(P-4)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(mx*i/4)+'</text>'}
   let lp='',lt='';
@@ -237,12 +279,33 @@ function grafHora(rows){const m={};rows.forEach(r=>m[r.hora]=r.n);const W=Math.m
   $('gHora').innerHTML=s+'</svg>';$('gHora').querySelectorAll('rect').forEach(r=>{r.onmousemove=e=>tip(e,r.dataset.t);r.onmouseleave=e=>tip(e,'')})}
 function tabela(el,cab,linhas){$(el).innerHTML='<table><tr>'+cab.map(c=>'<th>'+c+'</th>').join('')+'</tr>'+linhas.map(l=>'<tr>'+l.join('')+'</tr>').join('')+'</table>'}
 function barras(el,obj){const e=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const mx=Math.max(1,...e.map(x=>x[1]));tabela(el,['',''],e.map(([k,v])=>['<td>'+esc(k)+'<div class="bar" style="width:'+(100*v/mx)+'%"></div></td>','<td class="n">'+num(v)+'</td>']))}
+const COR=['#7c5cff','#3ad0ff','#35e08a','#ffb347','#ff6b9a','#c38bff','#66e0d0','#e6e65c','#ff8a5c','#8ab4ff','#b0b0b0'];
+const GNOME={player:'🎵 Chiptune Player',estante:'🎮 Estante',feed:'📰 Feed',arquivo:'🗂 Arquivo',filtragem:'🏷 Filtragem',busca:'🔎 Busca',studio:'🎹 Studio',tracker:'🎛 Tracker',menu:'📱 Menu (celular)',blog:'Blog (outros)'};
+const gn=g=>GNOME[g]||g;
+function grafEv(rows,n){
+  const ds=dias(Math.max(n,1)),gs=[...new Set(rows.map(r=>r.gadget))];const m={};rows.forEach(r=>{(m[r.dia]=m[r.dia]||{})[r.gadget]=r.n});
+  const W=Math.max(600,$('gEv').clientWidth),H=200,P=34,bw=(W-P*2)/ds.length;
+  const mx=Math.max(4,...ds.map(d=>gs.reduce((a,g)=>a+((m[d]||{})[g]||0),0)));
+  let s='<svg width="'+W+'" height="'+H+'">';
+  for(let i=0;i<=4;i++){const y=H-P-(H-P*2)*i/4;s+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+y+'" y2="'+y+'" stroke="#2c2a44"/><text x="'+(P-4)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(mx*i/4)+'</text>'}
+  ds.forEach((d,i)=>{let y=H-P;const x=P+i*bw;gs.forEach((g,k)=>{const v=(m[d]||{})[g]||0;if(!v)return;const hh=(H-P*2)*v/mx;y-=hh;
+    s+='<rect x="'+(x+bw*0.15)+'" y="'+y+'" width="'+Math.max(1,bw*0.7)+'" height="'+hh+'" fill="'+COR[k%COR.length]+'" data-t="'+esc(d.split('-').reverse().join('/')+'<br>'+gn(g)+': '+v)+'"/>'});
+    if(ds.length<=31||i%Math.ceil(ds.length/20)===0)s+='<text x="'+(x+bw/2)+'" y="'+(H-P+14)+'" text-anchor="middle">'+d.slice(8)+'/'+d.slice(5,7)+'</text>'});
+  $('gEv').innerHTML=s+'</svg>';$('legEv').innerHTML=gs.map((g,k)=>'<span><i style="background:'+COR[k%COR.length]+'"></i>'+esc(gn(g))+'</span>').join('');
+  $('gEv').querySelectorAll('rect').forEach(r=>{r.onmousemove=e=>tip(e,r.dataset.t);r.onmouseleave=e=>tip(e,'')});
+}
 function dur(r){return r.dur>0?tempo(r.dur):'<span style="color:var(--mut)">–</span>'}
 async function carregar(){
-  const r=await fetch('/api/dados?dias='+$('dias').value+'&site='+$('site').value+'&tz='+TZ,{credentials:'same-origin'});
+  const r=await fetch('/api/dados?dias='+$('dias').value+'&site='+$('site').value+'&gadget='+encodeURIComponent($('gad').value)+'&tz='+TZ,{credentials:'same-origin'});
   if(r.status===401){location.reload();return}const d=await r.json();
   $('kv').textContent=num(d.total.vistas);$('kp').textContent=num(d.total.pessoas);$('ks').textContent=num(d.total.sessoes);$('kt').textContent=tempo(d.total.tempo);
   $('onl').textContent='● '+d.online+' online agora';
+  const gsel=$('gad'),gv=gsel.value;gsel.innerHTML='<option value="">todos os gadgets</option>'+d.gadgets.map(x=>'<option value="'+esc(x.gadget)+'">'+esc(gn(x.gadget))+'</option>').join('');gsel.value=gv;
+  grafEv(d.evDia,d.dias);
+  tabela('tGad',['Gadget','Ações','Pessoas','Visitas'],d.gadgets.map(x=>['<td>'+esc(gn(x.gadget))+'</td>','<td class="n">'+num(x.n)+'</td>','<td class="n">'+num(x.pessoas)+'</td>','<td class="n">'+num(x.visitas)+'</td>']));
+  tabela('tAc',['Gadget','Ação','Vezes','Pessoas'],d.acoes.map(x=>['<td>'+esc(gn(x.gadget))+'</td>','<td>'+esc(x.acao)+'</td>','<td class="n">'+num(x.n)+'</td>','<td class="n">'+num(x.pessoas)+'</td>']));
+  tabela('tIt',['Gadget · ação','Item','Vezes'],d.itens.map(x=>['<td>'+esc(gn(x.gadget))+'<br><span style="color:var(--mut)">'+esc(x.acao)+'</span></td>','<td>'+esc(x.detalhe)+'</td>','<td class="n">'+num(x.n)+'</td>']));
+  tabela('tEv',['Quando','Gadget','Ação','Item','IP','Local'],d.evRec.map(x=>['<td class="n">'+new Date(x.quando).toLocaleString('pt-BR')+'</td>','<td>'+esc(gn(x.gadget))+'</td>','<td>'+esc(x.acao)+'</td>','<td>'+esc(x.detalhe)+'</td>','<td>'+esc(x.ip)+'</td>','<td>'+flag(x.pais)+' '+esc([x.cidade,x.pais].filter(Boolean).join(', '))+'</td>']));
   grafDia(d.porDia,d.dias);grafHora(d.porHora);barras('tAp',d.aparelhos);
   tabela('tPag',['Página','Vistas','Tempo'],d.paginas.map(p=>['<td>'+(p.site==='studio'?'🎹 ':'')+esc(decodeURIComponent(p.pagina||'/'))+'</td>','<td class="n">'+num(p.n)+'</td>','<td class="n">'+tempo(p.tempo)+'</td>']));
   tabela('tPais',['País','Vistas','Pessoas'],d.paises.map(p=>['<td>'+flag(p.pais)+' '+esc(p.pais||'?')+'</td>','<td class="n">'+num(p.n)+'</td>','<td class="n">'+num(p.pessoas)+'</td>']));
@@ -253,5 +316,5 @@ async function carregar(){
     '<td>'+flag(v.pais)+' '+esc([v.cidade,v.regiao,v.pais].filter(Boolean).join(', '))+'</td>','<td>'+esc(v.provedor)+'</td>',
     '<td title="'+esc(v.ua)+'">'+esc((v.ua||'').match(/Android|iPhone|iPad|Windows|Mac OS|Linux/)?.[0]||'?')+(v.tela?' · '+esc(v.tela):'')+'</td>','<td class="n">'+dur(v)+'</td>']}));
 }
-$('atu').onclick=carregar;$('site').onchange=carregar;$('dias').onchange=carregar;carregar();setInterval(carregar,60000);
+$('atu').onclick=carregar;$('site').onchange=carregar;$('gad').onchange=carregar;$('dias').onchange=carregar;carregar();setInterval(carregar,60000);
 </script></body></html>`;

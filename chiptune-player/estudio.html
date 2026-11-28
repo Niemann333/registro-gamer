@@ -7459,6 +7459,7 @@ var RGMIDI = (function () {
 
   function selectSong(path, name) {
     if (cur.path === path) { mtab('timbres'); return; }
+    try { window.rgEv = window.rgEv || function (g, a, d) { (window.rgEvQ = window.rgEvQ || []).push([g, a, d]); }; window.rgEv('studio', 'abrir música', (String(path).indexOf('local:') === 0 ? '[local] ' : '') + String(name || path).replace(/\.[^.]+$/, '') + ' \u2014 ' + String(path).split('/').slice(-2, -1)[0]); } catch (x) {}
     stopMusic();
     if (ED.k >= 0 && ED.k < MINE0) { ED.k = -1; ED.t = null; $('stage').classList.remove('editing'); $('ed').hidden = true; }
     cur.path = path; cur.name = name; cur.res = null; cur.sel = -1; cur.trackSel = 0; cur.trackSub = 0; cur.trackPicked = false;

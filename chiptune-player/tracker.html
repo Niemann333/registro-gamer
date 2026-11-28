@@ -168,6 +168,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   }
   // põe o arquivo na pasta do Tracker (só na memória, enquanto a página estiver aberta) e abre no Furnace
   function openBytes(name, u8, delay) {
+    try { window.rgEv = window.rgEv || function (g, a, d) { (window.rgEvQ = window.rgEvQ || []).push([g, a, d]); }; window.rgEv('tracker', 'abrir', name); } catch (x) {}
     var safe = name.replace(/[\/\\]/g, '_');
     var path = HOME + '/' + folderFor(safe) + '/' + safe;
     importing[path] = 1;
@@ -267,6 +268,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
     });
   }
   function chipToFur(u8, name, delay, rel, trk) {
+    try { window.rgEv = window.rgEv || function (g, a, d) { (window.rgEvQ = window.rgEvQ || []).push([g, a, d]); }; window.rgEv('tracker', 'importar chiptune', name); } catch (x) {}
     if (!window.RGVGM || !window.RGFUR) { notify(T('Conversor não carregou.','The converter did not load.')); return; }
     notify(T('🎛 Convertendo ','🎛 Converting ') + name + T(' para o Furnace…',' to Furnace…'));
     parseChip(u8, name, rel || '', trk == null ? -1 : trk).then(function (r) {
@@ -279,6 +281,7 @@ canvas#canvas{position:fixed;left:0;top:var(--barH);width:100vw;height:calc(100v
   // nome antigo (ainda chamado por outras partes)
   function vgmToFur(u8, name, delay) { chipToFur(u8, name, delay, '', -1); }
   function openFiles(list, fhs) {
+    try { window.rgEv = window.rgEv || function (g, a, d) { (window.rgEvQ = window.rgEvQ || []).push([g, a, d]); }; Array.prototype.forEach.call(list, function (f) { window.rgEv('tracker', 'abrir local', f.name); }); } catch (x) {}
     if (!ready) { alert(T('Espere o Tracker terminar de carregar.','Wait for the Tracker to finish loading.')); return; }
     Array.prototype.forEach.call(list, function (f, i) {
       f.arrayBuffer().then(function (ab) {
