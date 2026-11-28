@@ -278,5 +278,5 @@ rg-rip.js: `tools/rip-src/` (gme + aopsf + vio2sf + VBA/playgsf com ganchos).
 - Falta: arpejo/altura por operador.
 
 ## Aviso de privacidade (2026-11-28)
-- `chiptune-player/privacidade.html` (PT/EN): o que o contador guarda, 400 dias, Cloudflare, terceiros, direitos da LGPD. Botão "não contar minhas visitas" (`rgNoStats`); `rg-stats.js` respeita isso e o Global Privacy Control / Do Not Track. `rg-optout.html` faz o mesmo aberto direto (endereço das ferramentas).
+- `chiptune-player/privacidade.html` (PT/EN): o que o contador guarda, 400 dias, Cloudflare, terceiros, direitos da LGPD. Só avisa: não há opção de deixar de ser contado (pedido do usuário: o contador existe para ver a movimentação do blog).
 - Página do Blogger: `tools/blog/pagina-privacidade.html` (moldura com altura automática). Mobile: link "🔒 Aviso de privacidade" no fim da aba Blog.

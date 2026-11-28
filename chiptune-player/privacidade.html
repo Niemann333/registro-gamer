@@ -6,8 +6,7 @@
 <title>Aviso de privacidade · Registro Gamer</title>
 <style>
 /* Aviso de privacidade do Registro Gamer. Aparece na página "Privacidade" do blog (numa moldura),
-   no gadget Mobile e pode ser aberto direto. O botão "não contar minhas visitas" guarda a escolha aqui
-   (lucniemann.github.io) e avisa o blog (rg-stats.js guarda lá também). */
+   no gadget Mobile e pode ser aberto direto. */
 *{box-sizing:border-box}
 body{margin:0;background:#050a05;color:#c8ffbe;font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
 .w{max-width:760px;margin:0 auto;padding:20px 18px 40px}
@@ -20,12 +19,8 @@ b,strong{color:#c8ffbe}
 a{color:#39ff14}
 .sub{color:#4f874f;font-size:13px;margin:0 0 14px}
 .top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.lang button,.box button{font:inherit;font-size:13px;background:#0e260e;color:#c8ffbe;border:1px solid #1e501e;border-radius:8px;padding:5px 12px;cursor:pointer}
+.lang button{font:inherit;font-size:13px;background:#0e260e;color:#c8ffbe;border:1px solid #1e501e;border-radius:8px;padding:5px 12px;cursor:pointer}
 .lang button.on{background:#1f8a10;border-color:#1f8a10;color:#fff}
-.box{border:1px solid #1e501e;background:#081208;border-radius:12px;padding:14px;margin:16px 0}
-.box .st{margin:0 0 10px}
-.box button.pri{background:#1f8a10;border-color:#1f8a10;color:#fff}
-.box button{margin:0 8px 6px 0}
 table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
 td,th{border:1px solid #163a16;padding:6px 8px;text-align:left;vertical-align:top}
 th{color:#c8ffbe;background:#0a1a0a}
@@ -70,16 +65,7 @@ ferramentas é registrada num contador próprio. Ele guarda:</p>
 autor do blog vê (num painel protegido por senha). Os registros são <b>apagados sozinhos depois de 400 dias</b>.</p>
 <p>O contador roda num serviço da <b>Cloudflare</b> (Workers e banco de dados D1), que guarda esses dados em nome do blog
 e pode processá-los fora do Brasil.</p>
-<p>Base legal: <b>legítimo interesse</b> (art. 7º, IX da LGPD) — entender o uso do blog e das ferramentas e melhorá-los —
-com a opção de recusar a qualquer momento, logo abaixo.</p>
-
-<h2>Não quero ser contado</h2>
-<div class="box">
-  <p class="st" id="st-pt"></p>
-  <button class="pri" data-off="1">Não contar minhas visitas</button><button data-off="0">Pode contar</button>
-</div>
-<p>A escolha fica guardada <b>neste navegador</b> (no blog e nas ferramentas). Se o seu navegador envia o sinal
-<b>Global Privacy Control</b> ou <b>Do Not Track</b>, nada é contado, mesmo sem apertar o botão.</p>
+<p>Base legal: <b>legítimo interesse</b> (art. 7º, IX da LGPD) — entender o uso do blog e das ferramentas e melhorá-los.</p>
 
 <h2>Arquivos que você abre</h2>
 <p>Músicas, módulos e projetos que você abre do seu aparelho no Chiptune Player, no Chiptune Studio, no Tracker ou no
@@ -89,7 +75,7 @@ nenhum servidor e não fica guardado. Só o nome do arquivo entra no contador de
 <h2>O que fica guardado no seu navegador</h2>
 <p>Os gadgets não criam cookies. No armazenamento local do navegador ficam só preferências: idioma (PT/EN), skin,
 ajustes de volume por música, painéis abertos ou fechados, a lista de nomes das pastas e arquivos que você adicionou ao
-player (os arquivos em si não) e a escolha de não ser contado. Você pode apagar tudo limpando os dados do site no
+player (os arquivos em si não). Você pode apagar tudo limpando os dados do site no
 navegador.</p>
 
 <h2>Serviços de terceiros</h2>
@@ -136,15 +122,7 @@ blog's author sees it (in a password-protected panel). Records are <b>deleted au
 <p>The counter runs on <b>Cloudflare</b> (Workers and the D1 database), which stores this data on the blog's behalf and
 may process it outside Brazil.</p>
 <p>Legal basis: <b>legitimate interest</b> (LGPD art. 7, IX) — understanding how the blog and tools are used and
-improving them — with the option to opt out at any time, right below.</p>
-
-<h2>I don't want to be counted</h2>
-<div class="box">
-  <p class="st" id="st-en"></p>
-  <button class="pri" data-off="1">Do not count my visits</button><button data-off="0">Count again</button>
-</div>
-<p>The choice is kept <b>in this browser</b> (on the blog and on the tools). If your browser sends the
-<b>Global Privacy Control</b> or <b>Do Not Track</b> signal, nothing is counted, even without pressing the button.</p>
+improving them.</p>
 
 <h2>Files you open</h2>
 <p>Songs, modules and projects you open from your device in Chiptune Player, Chiptune Studio, the Tracker or the
@@ -154,7 +132,7 @@ server and is not stored. Only the file name goes into the usage counter (see ab
 <h2>What is kept in your browser</h2>
 <p>The gadgets create no cookies. The browser's local storage only keeps preferences: language (PT/EN), skin, volume
 adjustments per song, open or closed panels, the list of names of the folders and files you added to the player (not
-the files themselves) and the choice not to be counted. You can erase all of it by clearing the site's data in your
+the files themselves). You can erase all of it by clearing the site's data in your
 browser.</p>
 
 <h2>Third-party services</h2>
@@ -190,29 +168,10 @@ comment); you will get an answer within 15 days. You can also file a complaint w
   // a página do blog (ou o gadget) manda o idioma
   window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-lang' && /^(pt|en)$/.test(e.data.lang)) lang(e.data.lang); });
 
-  var gpc = false;
-  try { gpc = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1'; } catch (e) {}
-  function get() { try { return localStorage.getItem('rgNoStats') === '1'; } catch (e) { return false; } }
-  function set(v) { try { if (v) localStorage.setItem('rgNoStats', '1'); else localStorage.removeItem('rgNoStats'); } catch (e) {} }
-  function show() {
-    var off = get();
-    document.getElementById('st-pt').innerHTML = gpc ? 'Seu navegador pede para não ser rastreado (Global Privacy Control / Do Not Track): <b>nada é contado</b>.'
-      : off ? '<b>Suas visitas não são contadas</b> neste navegador.' : 'Suas visitas são contadas, como descrito acima.';
-    document.getElementById('st-en').innerHTML = gpc ? 'Your browser asks not to be tracked (Global Privacy Control / Do Not Track): <b>nothing is counted</b>.'
-      : off ? '<b>Your visits are not counted</b> in this browser.' : 'Your visits are counted, as described above.';
-  }
-  document.querySelectorAll('.box button').forEach(function (b) {
-    b.onclick = function () {
-      var off = b.getAttribute('data-off') === '1';
-      set(off); show();
-      // o blog (outro endereço) guarda a escolha do lado dele também (rg-stats.js)
-      try { if (window.parent !== window) window.parent.postMessage({ type: 'rg-nostats', off: off }, '*'); } catch (e) {}
-    };
-  });
   // altura para a moldura da página do blog
   function altura() { try { if (window.parent !== window) window.parent.postMessage({ type: 'rg-privacy-h', h: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
   window.addEventListener('resize', altura);
-  lang(L); show();
+  lang(L);
   setTimeout(altura, 300);
 })();
 </script>
