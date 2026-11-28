@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-skin-default="studio">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chiptune → Áudio · Registro Gamer</title>
+<meta name="theme-color" content="#0c0a14">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="rg-skins.js?v=1"></script>
+<style>
+/* Chiptune → Áudio: converte chiptunes e módulos em MP3, WAV, OGG, FLAC, Opus e AIFF, no próprio navegador.
+   O som sai do mesmo motor do Chiptune Player (player.html, numa moldura escondida); nada vai para servidor. */
+:root{--bg:#0c0a14;--bg2:#13101f;--bg3:#1b1730;--line:#2c2547;--line2:#3d3363;--tx:#e9e4ff;--tx2:#a99fd0;--tx3:#6f6699;--ac:#a855f7;--ac2:#c084fc;--acd:#3b1d63;--ok:#39d353;--err:#ff5470}
+html[data-skin=registro]{--bg:#050a05;--bg2:#081208;--bg3:#0e260e;--line:#163a16;--line2:#1e501e;--tx:#c8ffbe;--tx2:#7fc87a;--tx3:#4f874f;--ac:#1f8a10;--ac2:#39ff14;--acd:#0d2e0a}
+html[data-skin=furnace]{--bg:#141414;--bg2:#1e1e1e;--bg3:#2a2a2a;--line:#3a3a46;--line2:#4a4a58;--tx:#fff;--tx2:#b4b4c0;--tx3:#7a7a86;--ac:#1087fa;--ac2:#4296fa;--acd:#10325a}
+html[data-skin=famitracker],html[data-skin=openmpt]{--bg:#f0f0f0;--bg2:#fff;--bg3:#e1e1e1;--line:#c8c8c8;--line2:#a0a0a0;--tx:#000;--tx2:#333;--tx3:#6d6d6d;--ac:#0078d7;--ac2:#3399ff;--acd:#cce8ff;--ok:#008000}
+html[data-skin=famitracker]{--ac:#3060a0;--ac2:#5080c0}
+html[data-skin=famitracker] *,html[data-skin=openmpt] *{border-radius:0!important}
+html[data-skin=famitracker] body,html[data-skin=openmpt] body{font-family:"Segoe UI",Tahoma,Arial,sans-serif}
+html[data-skin=furnace] body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 Oxanium,system-ui,sans-serif;min-height:100vh}
+button,select,input{font:inherit;color:inherit}
+.top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--bg2);position:sticky;top:0;z-index:5}
+.top h1{font-size:15px;letter-spacing:.06em;font-weight:700;white-space:nowrap}
+.top .sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ac2)}
+.btn.pri{background:var(--ac);border-color:transparent;color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.wrap{max-width:1050px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1fr 340px;gap:16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{font-size:13px;color:var(--tx2);letter-spacing:.04em;margin-bottom:10px;font-weight:700}
+.drop{border:2px dashed var(--line2);border-radius:10px;padding:22px;text-align:center;color:var(--tx2);cursor:pointer}
+.drop.on{border-color:var(--ac2);background:var(--acd)}
+.drop b{color:var(--tx)}
+.list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.it{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.it .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .nm small{display:block;color:var(--tx3);font-size:11.5px}
+.it .st{font-size:12px;color:var(--tx2);white-space:nowrap}
+.it .st.ok{color:var(--ok)}.it .st.err{color:var(--err)}
+.it .bar{grid-column:1/-1;height:4px;background:var(--bg3);border-radius:3px;overflow:hidden;display:none}
+.it .bar i{display:block;height:100%;width:0;background:var(--ac2)}
+.it.work .bar{display:block}
+.it .x{border:0;background:none;cursor:pointer;color:var(--tx3);font-size:15px;padding:0 4px}
+.sub{width:56px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);text-align:center}
+.row{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:8px;margin:7px 0}
+.row label{color:var(--tx2);font-size:13px}
+.row select,.row input[type=number]{width:100%;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;background:var(--bg)}
+.chk{display:flex;align-items:center;gap:7px;margin:8px 0;font-size:13px;color:var(--tx2);cursor:pointer}
+.hint{font-size:12px;color:var(--tx3);margin-top:6px}
+.hid{display:none!important}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.empty{color:var(--tx3);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🔊 CHIPTUNE → ÁUDIO</h1>
+  <span class="sp"></span>
+  <select class="btn" id="skinSel" title="Skin"></select>
+  <button class="btn" id="bLang">EN</button>
+  <button class="btn" id="bClose" title="Fechar">✕</button>
+</div>
+<div class="wrap">
+  <div>
+    <div class="card">
+      <h2 data-t="ARQUIVOS|FILES"></h2>
+      <div class="drop" id="drop"><b data-t="Escolha ou solte aqui os arquivos|Choose or drop the files here"></b><br>
+        <span data-t="Chiptunes (VGM, NSF, SPC, GBS, SID, PSF, GSF, 2SF, KSS, SAP, HES, AY...) e módulos (FUR, DMF, FTM, MOD, XM, IT, S3M, VGE, BTM...). Junto com PSF/GSF/2SF, inclua o arquivo _lib.|Chiptunes (VGM, NSF, SPC, GBS, SID, PSF, GSF, 2SF, KSS, SAP, HES, AY...) and modules (FUR, DMF, FTM, MOD, XM, IT, S3M, VGE, BTM...). With PSF/GSF/2SF, include the _lib file."></span></div>
+      <input type="file" id="fin" multiple hidden>
+      <div class="list" id="list"></div>
+      <div class="empty" id="empty" data-t="Nenhum arquivo ainda.|No files yet."></div>
+      <div class="actions">
+        <button class="btn pri" id="bGo" disabled data-t="▶ Converter|▶ Convert"></button>
+        <button class="btn" id="bZip" disabled data-t="⬇ Baixar tudo (.zip)|⬇ Download all (.zip)"></button>
+        <button class="btn" id="bClear" data-t="Limpar|Clear"></button>
+      </div>
+      <p class="hint" data-t="Tudo acontece no seu navegador: os arquivos não são enviados para lugar nenhum e nada fica guardado.|Everything happens in your browser: files are not uploaded anywhere and nothing is stored."></p>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <h2 data-t="FORMATO|FORMAT"></h2>
+      <div class="row"><label data-t="Formato|Format"></label><select id="fmt">
+        <option value="mp3">MP3</option><option value="wav">WAV</option><option value="ogg">OGG Vorbis</option>
+        <option value="flac">FLAC</option><option value="opus">Opus</option><option value="aiff">AIFF</option></select></div>
+      <div class="row" data-f="mp3"><label data-t="Modo|Mode"></label><select id="mp3mode"><option value="cbr" data-t="Taxa fixa (CBR)|Constant (CBR)"></option><option value="vbr" data-t="Taxa variável (VBR)|Variable (VBR)"></option></select></div>
+      <div class="row" data-f="mp3cbr"><label data-t="Bitrate|Bitrate"></label><select id="mp3br">
+        <option>64</option><option>96</option><option>128</option><option>160</option><option selected>192</option><option>224</option><option>256</option><option>320</option></select></div>
+      <div class="row" data-f="mp3vbr"><label data-t="Qualidade VBR|VBR quality"></label><select id="mp3q">
+        <option value="0">V0 (~245 kbps)</option><option value="2" selected>V2 (~190 kbps)</option><option value="4">V4 (~165 kbps)</option><option value="6">V6 (~115 kbps)</option><option value="8">V8 (~85 kbps)</option></select></div>
+      <div class="row" data-f="ogg"><label data-t="Qualidade|Quality"></label><select id="oggq">
+        <option value="2">2 (~96 kbps)</option><option value="4">4 (~128 kbps)</option><option value="6" selected>6 (~192 kbps)</option><option value="8">8 (~256 kbps)</option><option value="10">10 (~500 kbps)</option></select></div>
+      <div class="row" data-f="opus"><label data-t="Bitrate|Bitrate"></label><select id="opusbr">
+        <option>64</option><option>96</option><option selected>128</option><option>160</option><option>192</option><option>256</option></select></div>
+      <div class="row" data-f="flac"><label data-t="Compressão|Compression"></label><select id="flacl">
+        <option value="0">0 (rápida)</option><option value="5" selected>5</option><option value="8">8 (menor)</option></select></div>
+      <div class="row" data-f="bits"><label data-t="Bits|Bits"></label><select id="bits">
+        <option value="16" selected>16</option><option value="24">24</option><option value="32" data-f="wav32">32 float</option></select></div>
+      <div class="row" data-f="rate"><label data-t="Frequência|Sample rate"></label><select id="rate">
+        <option value="22050">22.050 Hz</option><option value="32000">32.000 Hz</option><option value="44100" selected>44.100 Hz</option><option value="48000">48.000 Hz</option><option value="96000" data-f="hi">96.000 Hz</option></select></div>
+      <div class="row"><label data-t="Canais|Channels"></label><select id="ch"><option value="2" data-t="Estéreo|Stereo"></option><option value="1" data-t="Mono|Mono"></option></select></div>
+      <p class="hint hid" id="opusNote" data-t="Opus sempre usa 48 kHz. Precisa de um navegador com WebCodecs (Chrome, Edge, Firefox recentes).|Opus always uses 48 kHz. Needs a browser with WebCodecs (recent Chrome, Edge, Firefox)."></p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2 data-t="DURAÇÃO E VOLUME|LENGTH AND VOLUME"></h2>
+      <div class="row"><label data-t="Voltas do loop|Loop count"></label><select id="loops"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="row"><label data-t="Fade no fim|Fade out"></label><select id="fade"><option value="0" data-t="Sem fade|No fade"></option><option value="3000">3 s</option><option value="5000" selected>5 s</option><option value="8000">8 s</option><option value="10000">10 s</option></select></div>
+      <div class="row"><label data-t="Limite|Limit"></label><select id="maxm"><option value="5">5 min</option><option value="10" selected>10 min</option><option value="20">20 min</option><option value="40">40 min</option></select></div>
+      <label class="chk"><input type="checkbox" id="norm" checked><span data-t="Normalizar (pico em −1 dB)|Normalize (peak at −1 dB)"></span></label>
+      <label class="chk"><input type="checkbox" id="allSubs"><span data-t="Todas as subfaixas de cada arquivo|All subtracks of each file"></span></label>
+      <p class="hint" data-t="Músicas com loop tocam a introdução e as voltas escolhidas e terminam com o fade. Músicas sem loop vão até o fim.|Looping songs play the intro plus the chosen loops and end with the fade. Non-looping songs play to the end."></p>
+    </div>
+  </div>
+</div>
+<iframe id="pf" src="player.html?v=21" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var LANG = 'pt';
+  try { LANG = localStorage.getItem('rgLang') || (/^pt/i.test(navigator.language || 'pt') ? 'pt' : 'en'); } catch (e) {}
+  var q = new URLSearchParams(location.search);
+  if (/^(pt|en)$/.test(q.get('lang') || '')) LANG = q.get('lang');
+  function T(pt, en) { return LANG === 'en' ? en : pt; }
+  function applyLang() {
+    document.documentElement.lang = LANG === 'en' ? 'en' : 'pt-BR';
+    document.querySelectorAll('[data-t]').forEach(function (el) { var p = el.getAttribute('data-t').split('|'); el.textContent = LANG === 'en' ? p[1] : p[0]; });
+    $('bLang').textContent = LANG === 'en' ? 'PT' : 'EN';
+    rgSkins.fill($('skinSel'));
+    renderList();
+  }
+  $('bLang').onclick = function () { LANG = LANG === 'en' ? 'pt' : 'en'; try { localStorage.setItem('rgLang', LANG); } catch (e) {} applyLang(); };
+  $('skinSel').onchange = function () { rgSkins.set(this.value); };
+  rgSkins.on(function (id) { $('skinSel').value = id; });
+  var EMBED = window.parent !== window;
+  $('bClose').onclick = function () {
+    if (EMBED) { try { window.parent.postMessage({ type: 'rg-audio-close' }, '*'); } catch (e) {} return; }
+    if (history.length > 1) history.back(); else location.href = 'estudio.html';
+  };
+
+  // ───────── lista de arquivos ─────────
+  var LOCAL = 'https://rg-local.invalid/';
+  var LIB = /\.(psflib|psf2lib|gsflib|2sflib|usflib|snsflib|ncsflib)$/i;
+  var items = [], libs = [], seq = 0;
+  function base(n) { return String(n).split('/').pop().replace(/\.[^.]+$/, ''); }
+  function addFiles(fs) {
+    var ps = Array.prototype.map.call(fs, function (f) {
+      return f.arrayBuffer().then(function (buf) {
+        if (LIB.test(f.name)) { libs.push({ name: f.name, buf: buf }); return; }
+        items.push({ id: ++seq, name: f.name, buf: buf, sub: 0, state: '', out: [] });
+      });
+    });
+    Promise.all(ps).then(renderList);
+  }
+  // abre direto do acervo: audio.html?f=Chiptunes/.../arquivo.vgz
+  var qf = q.get('f');
+  if (qf) items.push({ id: ++seq, name: qf.split('/').pop(), url: '../' + qf.split('/').map(encodeURIComponent).join('/'), sub: parseInt(q.get('sub') || '0', 10) || 0, state: '', out: [] });
+
+  function renderList() {
+    var L = $('list');
+    L.innerHTML = '';
+    $('empty').style.display = items.length ? 'none' : '';
+    items.forEach(function (it) {
+      var d = document.createElement('div');
+      d.className = 'it' + (it.state === 'work' ? ' work' : '');
+      var stTxt = it.state === 'work' ? (it.msg || T('convertendo…', 'converting…')) : it.state === 'ok' ? T('✔ pronto', '✔ done') : it.state === 'err' ? '⚠ ' + (it.msg || T('erro', 'error')) : '';
+      d.innerHTML = '<div class="nm"></div><span class="st ' + (it.state === 'ok' ? 'ok' : it.state === 'err' ? 'err' : '') + '"></span>' +
+        '<span><span style="font-size:12px;color:var(--tx3)">' + T('faixa', 'track') + '</span> <input class="sub" type="number" min="1" value="' + (it.sub + 1) + '"> <button class="x" title="' + T('Tirar', 'Remove') + '">✕</button></span>' +
+        '<div class="bar"><i style="width:' + Math.round((it.pct || 0) * 100) + '%"></i></div>';
+      d.querySelector('.nm').textContent = it.name;
+      if (it.out.length) {
+        var sm = document.createElement('small');
+        it.out.forEach(function (o, k) {
+          var a = document.createElement('a'); a.href = o.url; a.download = o.name; a.textContent = '⬇ ' + o.name + ' (' + (o.size / 1048576).toFixed(1) + ' MB)';
+          a.style.color = 'var(--ac2)'; if (k) sm.appendChild(document.createTextNode(' · ')); sm.appendChild(a);
+        });
+        d.querySelector('.nm').appendChild(sm);
+      }
+      d.querySelector('.st').textContent = stTxt;
+      d.querySelector('.sub').onchange = function () { it.sub = Math.max(0, (parseInt(this.value, 10) || 1) - 1); };
+      d.querySelector('.x').onclick = function () { items = items.filter(function (x) { return x !== it; }); renderList(); };
+      it.el = d;
+      L.appendChild(d);
+    });
+    $('bGo').disabled = busy || !items.length;
+    $('bZip').disabled = busy || !items.some(function (it) { return it.out.length; });
+  }
+  function progress(it) {
+    if (!it.el) return;
+    var i = it.el.querySelector('.bar i'); if (i) i.style.width = Math.round((it.pct || 0) * 100) + '%';
+    var s = it.el.querySelector('.st'); if (s) s.textContent = it.msg || '';
+  }
+  $('drop').onclick = function () { $('fin').click(); };
+  $('fin').onchange = function () { addFiles(this.files); this.value = ''; };
+  ['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); $('drop').classList.add('on'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'drop' || e.target === document.documentElement) $('drop').classList.remove('on'); }); });
+  document.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  $('bClear').onclick = function () { items.forEach(function (it) { it.out.forEach(function (o) { URL.revokeObjectURL(o.url); }); }); items = []; libs = []; renderList(); };
+
+  // ───────── opções visíveis conforme o formato ─────────
+  function showOpts() {
+    var f = $('fmt').value, mode = $('mp3mode').value;
+    document.querySelectorAll('[data-f]').forEach(function (el) {
+      var k = el.getAttribute('data-f'), on = true;
+      if (k === 'mp3') on = f === 'mp3';
+      else if (k === 'mp3cbr') on = f === 'mp3' && mode === 'cbr';
+      else if (k === 'mp3vbr') on = f === 'mp3' && mode === 'vbr';
+      else if (k === 'ogg') on = f === 'ogg';
+      else if (k === 'opus') on = f === 'opus';
+      else if (k === 'flac') on = f === 'flac';
+      else if (k === 'bits') on = f === 'wav' || f === 'flac' || f === 'aiff';
+      else if (k === 'rate') on = f !== 'opus';
+      else if (k === 'wav32') { on = f === 'wav'; el.disabled = !on; if (!on && $('bits').value === '32') $('bits').value = '24'; return; }
+      else if (k === 'hi') { on = f !== 'mp3' && f !== 'ogg'; el.disabled = !on; if (!on && $('rate').value === '96000') $('rate').value = '48000'; return; }
+      el.classList.toggle('hid', !on);
+    });
+    $('opusNote').classList.toggle('hid', f !== 'opus');
+  }
+  $('fmt').onchange = $('mp3mode').onchange = showOpts;
+
+  // ───────── o motor (player.html escondido) ─────────
+  var pf = $('pf'), pfReady = false, pfQueue = [], pending = {};
+  window.addEventListener('message', function (e) {
+    if (e.source !== pf.contentWindow || !e.data) return;
+    var d = e.data;
+    if (d.type === 'ready') { pfReady = true; pfQueue.splice(0).forEach(function (m) { pf.contentWindow.postMessage(m, '*'); }); }
+    else if (d.type === 'render-progress' && pending[d.id]) pending[d.id].prog(d);
+    else if (d.type === 'render-done' && pending[d.id]) { var p = pending[d.id]; delete pending[d.id]; p.ok(d); }
+    else if (d.type === 'render-error' && pending[d.id]) { var p2 = pending[d.id]; delete pending[d.id]; p2.no(d); }
+  });
+  function toPlayer(m) { if (pfReady) pf.contentWindow.postMessage(m, '*'); else pfQueue.push(m); }
+  var rid = 0;
+  function render(it, sub, prog) {
+    return new Promise(function (ok, no) {
+      var id = ++rid;
+      pending[id] = { ok: ok, no: no, prog: prog };
+      var m = { type: 'render', id: id, sub: sub, loops: +$('loops').value, fadeMs: +$('fade').value, maxMs: +$('maxm').value * 60000 };
+      if (it.buf) { m.url = LOCAL + encodeURIComponent(it.name); m.files = [{ name: it.name, buf: it.buf.slice(0) }].concat(libs.map(function (l) { return { name: l.name, buf: l.buf.slice(0) }; })); }
+      else m.url = it.url;
+      toPlayer(m);
+    });
+  }
+
+  // ───────── processamento: taxa, canais, volume ─────────
+  function resample(l, r, sr, to) {
+    if (sr === to) return Promise.resolve([l, r]);
+    var n = Math.max(1, Math.round(l.length * to / sr));
+    var oc = new OfflineAudioContext(2, n, to);
+    var b = oc.createBuffer(2, l.length, sr);
+    b.copyToChannel(l, 0); b.copyToChannel(r, 1);
+    var s = oc.createBufferSource(); s.buffer = b; s.connect(oc.destination); s.start();
+    return oc.startRendering().then(function (out) { return [out.getChannelData(0).slice(), out.getChannelData(1).slice()]; });
+  }
+  function finish(l, r, mono, norm) {
+    var n = l.length, peak = 0, i;
+    if (mono) { var m = new Float32Array(n); for (i = 0; i < n; i++) m[i] = (l[i] + r[i]) * 0.5; l = m; r = null; }
+    for (i = 0; i < n; i++) { var a = Math.abs(l[i]); if (a > peak) peak = a; if (r) { a = Math.abs(r[i]); if (a > peak) peak = a; } }
+    var g = norm && peak > 1e-6 ? 0.891 / peak : (peak > 1 ? 1 / peak : 1);
+    if (g !== 1) for (i = 0; i < n; i++) { l[i] *= g; if (r) r[i] *= g; }
+    return r ? [l, r] : [l];
+  }
+
+  // ───────── codificadores ─────────
+  function wavBytes(chs, sr, bits) {
+    var n = chs[0].length, nc = chs.length, bps = bits / 8, fl = bits === 32;
+    var dl = n * nc * bps, buf = new ArrayBuffer(44 + dl), v = new DataView(buf), o = 44;
+    function str(p, s) { for (var i = 0; i < s.length; i++) v.setUint8(p + i, s.charCodeAt(i)); }
+    str(0, 'RIFF'); v.setUint32(4, 36 + dl, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, fl ? 3 : 1, true); v.setUint16(22, nc, true); v.setUint32(24, sr, true); v.setUint32(28, sr * nc * bps, true);
+    v.setUint16(32, nc * bps, true); v.setUint16(34, bits, true); str(36, 'data'); v.setUint32(40, dl, true);
+    for (var i = 0; i < n; i++) for (var c = 0; c < nc; c++) {
+      var x = Math.max(-1, Math.min(1, chs[c][i]));
+      if (fl) { v.setFloat32(o, x, true); o += 4; }
+      else if (bits === 16) { v.setInt16(o, Math.round(x * 32767), true); o += 2; }
+      else { var y = Math.round(x * 8388607); v.setUint8(o, y & 255); v.setUint8(o + 1, (y >> 8) & 255); v.setUint8(o + 2, (y >> 16) & 255); o += 3; }
+    }
+    return new Uint8Array(buf);
+  }
+  function aiffBytes(chs, sr, bits) {
+    var n = chs[0].length, nc = chs.length, bps = bits / 8, dl = n * nc * bps;
+    var buf = new ArrayBuffer(54 + dl), v = new DataView(buf), o = 54;
+    function str(p, s) { for (var i = 0; i < s.length; i++) v.setUint8(p + i, s.charCodeAt(i)); }
+    str(0, 'FORM'); v.setUint32(4, 46 + dl); str(8, 'AIFF'); str(12, 'COMM'); v.setUint32(16, 18);
+    v.setUint16(20, nc); v.setUint32(22, n); v.setUint16(26, bits);
+    // taxa em ponto flutuante de 80 bits
+    var e = Math.floor(Math.log2(sr)), m = sr / Math.pow(2, e);
+    v.setUint16(28, 16383 + e); var hi = Math.floor(m * 2147483648); v.setUint32(30, hi); v.setUint32(34, Math.round((m * 2147483648 - hi) * 4294967296));
+    str(38, 'SSND'); v.setUint32(42, 8 + dl); v.setUint32(46, 0); v.setUint32(50, 0);
+    for (var i = 0; i < n; i++) for (var c = 0; c < nc; c++) {
+      var x = Math.max(-1, Math.min(1, chs[c][i]));
+      if (bits === 16) { v.setInt16(o, Math.round(x * 32767)); o += 2; }
+      else { var y = Math.round(x * 8388607); v.setUint8(o, (y >> 16) & 255); v.setUint8(o + 1, (y >> 8) & 255); v.setUint8(o + 2, y & 255); o += 3; }
+    }
+    return new Uint8Array(buf);
+  }
+  function concat(parts) {
+    var n = 0; parts.forEach(function (p) { n += p.length; });
+    var out = new Uint8Array(n), o = 0; parts.forEach(function (p) { out.set(p, o); o += p.length; });
+    return out;
+  }
+  function wmeEncode(mime, wasm, cfg, chs) {
+    return WasmMediaEncoder.createEncoder(mime, 'enc/' + wasm).then(function (enc) {
+      enc.configure(cfg);
+      var parts = [], n = chs[0].length, B = 8192;
+      for (var i = 0; i < n; i += B) {
+        var blk = chs.map(function (c) { return c.subarray(i, Math.min(n, i + B)); });
+        var out = enc.encode(blk); if (out.length) parts.push(out.slice());
+      }
+      var fin = enc.finalize(); if (fin.length) parts.push(fin.slice());
+      return concat(parts);
+    });
+  }
+  var flacP = null;
+  function loadFlac() {
+    if (!flacP) flacP = new Promise(function (ok, no) {
+      window.FLAC_SCRIPT_LOCATION = 'enc/';
+      var s = document.createElement('script'); s.src = 'enc/libflac.min.wasm.js';
+      s.onload = function () { if (Flac.isReady()) ok(Flac); else Flac.on('ready', function () { ok(Flac); }); };
+      s.onerror = function () { flacP = null; no(new Error('FLAC')); };
+      document.head.appendChild(s);
+    });
+    return flacP;
+  }
+  function flacEncode(chs, sr, bits, level) {
+    return loadFlac().then(function (F) {
+      var nc = chs.length, n = chs[0].length, parts = [];
+      var enc = F.create_libflac_encoder(sr, nc, bits, level, n, false, 0);
+      if (!enc) throw new Error('FLAC');
+      var st = F.init_encoder_stream(enc, function (data) { parts.push(data.slice ? data.slice() : new Uint8Array(data)); }, function () {});
+      if (st !== 0) throw new Error('FLAC init ' + st);
+      var scale = bits === 24 ? 8388607 : 32767, B = 4096;
+      for (var i = 0; i < n; i += B) {
+        var m = Math.min(B, n - i), buf = new Int32Array(m * nc);
+        for (var k = 0; k < m; k++) for (var c = 0; c < nc; c++) buf[k * nc + c] = Math.round(Math.max(-1, Math.min(1, chs[c][i + k])) * scale);
+        F.FLAC__stream_encoder_process_interleaved(enc, buf, m);
+      }
+      F.FLAC__stream_encoder_finish(enc);
+      F.FLAC__stream_encoder_delete(enc);
+      return concat(parts);
+    });
+  }
+  // Opus pelo WebCodecs do navegador, dentro de um arquivo Ogg montado aqui
+  var CRC = (function () { var t = new Uint32Array(256); for (var i = 0; i < 256; i++) { var r = i << 24; for (var k = 0; k < 8; k++) r = (r & 0x80000000) ? ((r << 1) ^ 0x04c11db7) : (r << 1); t[i] = r >>> 0; } return t; })();
+  function oggPage(serial, seq, granule, flags, packets) {
+    var segs = [];
+    packets.forEach(function (p) { var n = p.length; while (n >= 255) { segs.push(255); n -= 255; } segs.push(n); });
+    var body = concat(packets), h = new Uint8Array(27 + segs.length), v = new DataView(h.buffer);
+    h.set([79, 103, 103, 83], 0); h[4] = 0; h[5] = flags;
+    v.setUint32(6, granule % 4294967296, true); v.setUint32(10, Math.floor(granule / 4294967296), true);
+    v.setUint32(14, serial, true); v.setUint32(18, seq, true); v.setUint32(22, 0, true); h[26] = segs.length; h.set(segs, 27);
+    var page = concat([h, body]), crc = 0;
+    for (var i = 0; i < page.length; i++) crc = ((crc << 8) ^ CRC[((crc >>> 24) ^ page[i]) & 255]) >>> 0;
+    new DataView(page.buffer).setUint32(22, crc, true);
+    return page;
+  }
+  function opusEncode(chs, kbps) {
+    if (!window.AudioEncoder) return Promise.reject(new Error(T('este navegador não codifica Opus (sem WebCodecs)', 'this browser cannot encode Opus (no WebCodecs)')));
+    var nc = chs.length, n = chs[0].length, SR = 48000, pkts = [];
+    return new Promise(function (ok, no) {
+      var enc = new AudioEncoder({ output: function (chunk) { var b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); pkts.push({ b: b, dur: Math.round((chunk.duration || 20000) * SR / 1e6) }); }, error: no });
+      enc.configure({ codec: 'opus', sampleRate: SR, numberOfChannels: nc, bitrate: kbps * 1000 });
+      var B = 4800;
+      for (var i = 0; i < n; i += B) {
+        var m = Math.min(B, n - i), pl = new Float32Array(m * nc);
+        for (var c = 0; c < nc; c++) pl.set(chs[c].subarray(i, i + m), c * m);
+        enc.encode(new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: m, numberOfChannels: nc, timestamp: Math.round(i * 1e6 / SR), data: pl }));
+      }
+      enc.flush().then(function () { enc.close(); ok(); }, no);
+    }).then(function () {
+      var serial = (Math.random() * 4294967295) >>> 0, pre = 312, pages = [], sq = 0;
+      var head = new Uint8Array(19), hv = new DataView(head.buffer);
+      head.set([79, 112, 117, 115, 72, 101, 97, 100], 0); head[8] = 1; head[9] = nc; hv.setUint16(10, pre, true); hv.setUint32(12, 48000, true); hv.setUint16(16, 0, true); head[18] = 0;
+      var vendor = 'Registro Gamer', tags = new Uint8Array(8 + 4 + vendor.length + 4), tv = new DataView(tags.buffer);
+      tags.set([79, 112, 117, 115, 84, 97, 103, 115], 0); tv.setUint32(8, vendor.length, true);
+      for (var i = 0; i < vendor.length; i++) tags[12 + i] = vendor.charCodeAt(i);
+      tv.setUint32(12 + vendor.length, 0, true);
+      pages.push(oggPage(serial, sq++, 0, 2, [head]));
+      pages.push(oggPage(serial, sq++, 0, 0, [tags]));
+      var gran = pre, cur = [], curLen = 0;
+      pkts.forEach(function (p, k) {
+        gran += p.dur; cur.push(p.b); curLen += p.b.length;
+        var last = k === pkts.length - 1;
+        if (cur.length >= 50 || curLen > 30000 || last) {
+          pages.push(oggPage(serial, sq++, Math.min(gran, n + pre), last ? 4 : 0, cur)); cur = []; curLen = 0;
+        }
+      });
+      return concat(pages);
+    });
+  }
+
+  // ───────── zip (sem compressão: áudio já é comprimido) ─────────
+  var ZCRC = (function () { var t = new Uint32Array(256); for (var i = 0; i < 256; i++) { var c = i; for (var k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; } return t; })();
+  function zcrc(b) { var c = 0xffffffff; for (var i = 0; i < b.length; i++) c = ZCRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  function makeZip(files) {
+    var parts = [], central = [], off = 0, enc = new TextEncoder();
+    files.forEach(function (f) {
+      var nm = enc.encode(f.name), crc = zcrc(f.data), h = new Uint8Array(30 + nm.length), v = new DataView(h.buffer);
+      v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
+      v.setUint32(14, crc, true); v.setUint32(18, f.data.length, true); v.setUint32(22, f.data.length, true); v.setUint16(26, nm.length, true); h.set(nm, 30);
+      var c = new Uint8Array(46 + nm.length), cv = new DataView(c.buffer);
+      cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true);
+      cv.setUint32(16, crc, true); cv.setUint32(20, f.data.length, true); cv.setUint32(24, f.data.length, true); cv.setUint16(28, nm.length, true);
+      cv.setUint32(42, off, true); c.set(nm, 46);
+      parts.push(h, f.data); central.push(c); off += h.length + f.data.length;
+    });
+    var cd = concat(central), e = new Uint8Array(22), ev = new DataView(e.buffer);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+    ev.setUint32(12, cd.length, true); ev.setUint32(16, off, true);
+    return new Blob(parts.concat([cd, e]), { type: 'application/zip' });
+  }
+
+  // ───────── converter ─────────
+  var busy = false;
+  var MIME = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', opus: 'audio/ogg', aiff: 'audio/aiff' };
+  function encodeOne(chs, sr) {
+    var f = $('fmt').value, bits = +$('bits').value;
+    if (f === 'wav') return Promise.resolve(wavBytes(chs, sr, bits));
+    if (f === 'aiff') return Promise.resolve(aiffBytes(chs, sr, Math.min(24, bits)));
+    if (f === 'flac') return flacEncode(chs, sr, Math.min(24, bits), +$('flacl').value);
+    if (f === 'mp3') {
+      var cfg = { sampleRate: sr, channels: chs.length };
+      if ($('mp3mode').value === 'vbr') cfg.vbrQuality = +$('mp3q').value; else cfg.bitrate = +$('mp3br').value;
+      return wmeEncode('audio/mpeg', 'mp3.wasm', cfg, chs);
+    }
+    if (f === 'ogg') return wmeEncode('audio/ogg', 'ogg.wasm', { sampleRate: sr, channels: chs.length, vbrQuality: +$('oggq').value }, chs);
+    if (f === 'opus') return opusEncode(chs, +$('opusbr').value);
+    return Promise.reject(new Error('?'));
+  }
+  function convertItem(it) {
+    it.state = 'work'; it.pct = 0; it.msg = T('tocando…', 'rendering…'); it.out.forEach(function (o) { URL.revokeObjectURL(o.url); }); it.out = [];
+    renderList();
+    var f = $('fmt').value, rate = f === 'opus' ? 48000 : +$('rate').value, mono = $('ch').value === '1', norm = $('norm').checked;
+    var subs = [it.sub], all = $('allSubs').checked;
+    function doSub(k) {
+      var sub = subs[k];
+      return render(it, sub, function (p) { it.pct = p.total > 0 ? Math.min(0.95, p.done / p.total) : 0; it.msg = T('tocando ', 'rendering ') + Math.round(p.done) + ' s' + (subs.length > 1 ? ' · ' + T('faixa ', 'track ') + (sub + 1) + '/' + subs.length : ''); progress(it); })
+        .then(function (d) {
+          if (all && k === 0 && d.numSubtunes > 1) { subs = []; for (var s2 = 0; s2 < d.numSubtunes; s2++) subs.push(s2); }
+          it.msg = T('codificando…', 'encoding…'); progress(it);
+          return resample(new Float32Array(d.l), new Float32Array(d.r), d.sr, rate).then(function (lr) {
+            return encodeOne(finish(lr[0], lr[1], mono, norm), rate);
+          }).then(function (bytes) {
+            var nm = base(it.name) + (subs.length > 1 || sub > 0 ? ' - ' + T('faixa ', 'track ') + String(sub + 1).padStart(2, '0') : '') + '.' + f;
+            var blob = new Blob([bytes], { type: MIME[f] });
+            it.out.push({ name: nm, url: URL.createObjectURL(blob), size: bytes.length, data: bytes });
+            renderList();
+            if (k + 1 < subs.length) return doSub(k + 1);
+          });
+        });
+    }
+    try { window.rgEv && window.rgEv('audio', 'converter ' + f, it.name); } catch (e) {}
+    return doSub(0).then(function () {
+      it.state = 'ok'; it.msg = ''; it.pct = 1;
+      // um arquivo só: baixa direto
+      if (items.length === 1 && it.out.length === 1) { var a = document.createElement('a'); a.href = it.out[0].url; a.download = it.out[0].name; document.body.appendChild(a); a.click(); a.remove(); }
+    }, function (e) {
+      it.state = 'err'; it.msg = e && e.known === 'opl4' ? T('OPL4: precisa dos sons da Yamaha (direitos autorais)', 'OPL4: needs the Yamaha sound ROM (copyright)') : String(e && (e.msg || e.message) || e);
+    }).then(renderList);
+  }
+  $('bGo').onclick = function () {
+    if (busy) return;
+    busy = true; renderList();
+    var list = items.slice();
+    (function next(i) {
+      if (i >= list.length) { busy = false; renderList(); return; }
+      convertItem(list[i]).then(function () { next(i + 1); });
+    })(0);
+  };
+  $('bZip').onclick = function () {
+    var fs = [];
+    items.forEach(function (it) { it.out.forEach(function (o) { fs.push({ name: o.name, data: o.data }); }); });
+    if (!fs.length) return;
+    var a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(fs)); a.download = 'chiptune-audio.zip'; document.body.appendChild(a); a.click(); a.remove();
+  };
+  // a página que abriu o conversor (Studio) manda a música escolhida
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!EMBED || e.source !== window.parent || !d || d.type !== 'rg-audio-add') return;
+    (d.libs || []).forEach(function (l) { if (!libs.some(function (x) { return x.name === l.name; })) libs.push(l); });
+    var dup = items.some(function (it) { return it.name === d.name && it.sub === (d.sub || 0); });
+    if (!dup) items.push({ id: ++seq, name: d.name, buf: d.buf, url: d.url, sub: d.sub || 0, state: '', out: [] });
+    renderList();
+  });
+  if (EMBED) try { window.parent.postMessage({ type: 'rg-audio-ready' }, '*'); } catch (e) {}
+  showOpts(); applyLang();
+  try { window.rgEv = window.rgEv || function (g, a, d) { (window.rgEvQ = window.rgEvQ || []).push([g, a, d]); }; window.rgEv('audio', 'abrir conversor', ''); } catch (e) {}
+})();
+</script>
+<script src="enc/WasmMediaEncoder.min.js"></script>
+<script src="rg-stats.js" data-site="studio" async></script>
+</body>
+</html>

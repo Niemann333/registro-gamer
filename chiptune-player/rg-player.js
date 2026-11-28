@@ -1416,6 +1416,16 @@
           cur.engine.setVoiceMask(d.mask);
         }
         break;
+      case 'render':
+        if (d.files) addLocalFiles(d.files);
+        renderTrack(d.url, d).then(function (res) {
+          send({ type: 'render-done', id: d.id, l: res.l.buffer, r: res.r.buffer, sr: res.sr, numSubtunes: res.numSubtunes, title: res.title, durations: res.durations });
+        }).catch(function (err) {
+          if (err === 'stale') return;
+          var emsg = String(err && err.message || err);
+          send({ type: 'render-error', id: d.id, msg: emsg, known: /yrw801/i.test(emsg) ? 'opl4' : '' });
+        });
+        break;
       case 'mediainfo':
         if ('mediaSession' in navigator) {
           try {
@@ -1513,6 +1523,92 @@
         step();
       });
     }).catch(function (e) { return { erro: String(e && e.message || e) }; });
+  }
+
+  // ───────────────────────── Chiptune → Áudio ─────────────────────────
+  // Toca a faixa "no silêncio", o mais rápido possível, com o MESMO motor do player, e devolve o som
+  // (Float32, estéreo, na taxa do player). Duração como no player: introdução + N voltas do loop + fade,
+  // ou até a música terminar. opts: loops, fadeMs (fade do fim), maxMs (limite), sub (subfaixa).
+  function renderTrack(url, opts) {
+    var token = ++loadToken;
+    stopCurrent();
+    ensureCtx();
+    var sub = opts.sub || 0, loops = Math.max(1, opts.loops || 1);
+    var lmP = loadLoopMap(), engine, t;
+    return openEngine(url, sub, function () { return token !== loadToken; }).then(function (e) {
+      engine = e; return lmP;
+    }).then(function () {
+      if (token !== loadToken) throw 'stale';
+      if (engine.kind === 'ring' && sub && engine.numSubtunes() > 1) return Promise.resolve(engine.playSubtune(sub));
+    }).then(function () {
+      // mesma conta de duração do player (applyDuration usa "cur"; aqui só emprestado, sem tocar)
+      t = newTrackState(engine, url, loops);
+      t.overrideMs = opts.durMs > 0 ? opts.durMs : 0;
+      t.loopInfo = loopInfoFor(url, loopSubOf(engine, sub));
+      var keep = cur; cur = t; applyDuration(); cur = keep;
+      if (opts.fadeMs != null && opts.fadeMs >= 0) t.fadeMs = opts.fadeMs;
+      if (engine.cls === 'MIDIPlayer') return new Promise(function (ok) { setTimeout(ok, 5000); });   // espera o banco de sons
+    }).then(function () {
+      var maxMs = opts.maxMs || 20 * 60000;
+      var plan = t.ownDuration && t.durMs > 0 ? t.durMs + (t.fadeMs || 0) : (t.durMs > 0 ? t.durMs : maxMs);
+      var total = Math.ceil(Math.min(maxMs, plan) / 1000 * SR);
+      var cap = Math.ceil(maxMs / 1000 * SR);
+      var parts = [], done = 0, clockMs = 0, fading = false, fadeStart = 0, heard = false, silentMs = 0, lastSent = 0;
+      return new Promise(function (resolve, reject) {
+        function step() {
+          if (token !== loadToken) return reject('stale');
+          var end = false;
+          for (var k = 0; k < 24 && !end; k++) {
+            var l = new Float32Array(CHUNK), r = new Float32Array(CHUNK), res;
+            try { res = engine.render(l, r, CHUNK); } catch (x) { console.error(x); res = { ended: true }; }
+            clockMs += CHUNK / SR * 1000;
+            var pos = t.ownDuration ? clockMs : engine.posMs();
+            if (t.ownDuration && t.durMs > 0 && !fading && pos >= t.durMs) { fading = true; fadeStart = pos; }
+            if (fading) {
+              var fm = Math.max(1, t.fadeMs || 0);
+              var g0 = 1 - (pos - fadeStart) / fm, g1 = 1 - (pos + CHUNK / SR * 1000 - fadeStart) / fm;
+              for (var i = 0; i < CHUNK; i++) { var gg = g0 + (g1 - g0) * i / CHUNK; gg = gg < 0 ? 0 : gg; l[i] *= gg; r[i] *= gg; }
+              if (g1 <= 0) end = true;
+            }
+            var sq = 0;
+            for (var j = 0; j < CHUNK; j += 4) sq += l[j] * l[j] + r[j] * r[j];
+            if (Math.sqrt(sq / (CHUNK / 2)) < 0.0008) silentMs += CHUNK / SR * 1000; else { heard = true; silentMs = 0; }
+            parts.push([l, r]);
+            done += CHUNK;
+            if (res && res.ended) end = true;
+            if (!fading && !engine.noSilenceEnd && heard && silentMs >= SILENCE_END_MS) end = true;
+            if (!heard && done > SR * 20) end = true;
+            if (done >= cap) end = true;
+            if (!t.ownDuration && done >= total) end = true;
+          }
+          var now = Date.now();
+          if (now - lastSent > 200 || end) { lastSent = now; send({ type: 'render-progress', id: opts.id, done: done / SR, total: total / SR }); }
+          if (!end) return setTimeout(step, 0);
+          try { engine.stop(); } catch (x) {}
+          // tira o silêncio do fim (o que sobrou depois da música acabar)
+          var n = parts.length * CHUNK, cut = n;
+          if (!fading) {
+            var lim = 0.0004;
+            outer: for (var pi = parts.length - 1; pi >= 0; pi--) {
+              var L = parts[pi][0], R = parts[pi][1];
+              for (var q = CHUNK - 1; q >= 0; q--) { if (Math.abs(L[q]) > lim || Math.abs(R[q]) > lim) { cut = pi * CHUNK + q + 1; break outer; } }
+              cut = pi * CHUNK;
+            }
+            cut = Math.min(n, cut + Math.round(SR * 0.5));
+          }
+          var outL = new Float32Array(cut), outR = new Float32Array(cut);
+          for (var p2 = 0, o = 0; p2 < parts.length && o < cut; p2++) {
+            var m = Math.min(CHUNK, cut - o);
+            outL.set(m === CHUNK ? parts[p2][0] : parts[p2][0].subarray(0, m), o);
+            outR.set(m === CHUNK ? parts[p2][1] : parts[p2][1].subarray(0, m), o);
+            o += m;
+          }
+          resolve({ l: outL, r: outR, sr: SR, numSubtunes: engine.numSubtunes ? engine.numSubtunes() : 1,
+            title: engine.title ? engine.title() : '', durations: engine.durations ? engine.durations() : null });
+        }
+        step();
+      });
+    });
   }
 
   // Diagnóstico (console): RG.state()

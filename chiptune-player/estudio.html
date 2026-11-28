@@ -453,6 +453,7 @@ html[data-skin=famitracker]{--ac:#3060a0;--ac2:#5080c0;--acd:#c8d8f0}
           <label class="vol">🔊<input type="range" id="mVol" min="0" max="1.5" step="0.05" value="0.8"></label>
           <button class="btn" id="bMidi" title="Converter esta música para MIDI e baixar" data-en-title="Convert this song to MIDI and download it">⬇ MIDI</button>
           <button class="btn" id="bFur" title="Converter esta música num projeto do Furnace (.fur) com os timbres exatos do chip" data-en-title="Convert this song into a Furnace project (.fur) with the chip's exact sounds">⬇ Furnace</button>
+          <button class="btn" id="bAudio" title="Converter esta música em MP3, WAV, OGG, FLAC, Opus ou AIFF" data-en-title="Convert this song to MP3, WAV, OGG, FLAC, Opus or AIFF">⬇ Áudio</button>
         </div>
         <div class="chans" id="chans"><span class="lbl">Canais da música aparecem ao dar play · toque para mutar, toque duplo para solo</span></div>
         <div class="roll" id="roll" hidden>
@@ -520,7 +521,7 @@ html[data-skin=famitracker]{--ac:#3060a0;--ac2:#5080c0;--acd:#c8d8f0}
 <div class="toast" id="toast"></div>
 
 <div class="dropzone" id="dropzone" data-en="Drop the song to open it in Chiptune Studio">Solte a música para abrir no Chiptune Studio</div>
-<iframe id="pf" src="player.html?v=20" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
+<iframe id="pf" src="player.html?v=21" allow="autoplay" style="position:absolute;width:1px;height:1px;left:-9999px;border:0" title="player"></iframe>
 
 <script type="text/plain" id="synthSrc">// ===== Sintetizador do Estúdio (roda no AudioWorklet) =====
 // FM de 4 operadores no estilo OPN/OPM (YM2612, YM2151...) e PSG (pulso, triângulo, onda, ruído).
@@ -7417,6 +7418,32 @@ var RGMIDI = (function () {
   }
   function midiChecks() { return Array.prototype.slice.call($('mdList').querySelectorAll('input[type=checkbox]')); }
   $('bMidi').onclick = openMidi;
+  // ⬇ Áudio: abre o conversor Chiptune → Áudio (audio.html) numa camada, já com a música escolhida
+  var audioOv = null, audioFr = null, audioReady = false, audioQ = [];
+  function audioSend(m) { if (audioReady) audioFr.contentWindow.postMessage(m, '*'); else audioQ.push(m); }
+  window.addEventListener('message', function (e) {
+    if (!audioFr || e.source !== audioFr.contentWindow || !e.data) return;
+    if (e.data.type === 'rg-audio-ready') { audioReady = true; audioQ.splice(0).forEach(function (m) { audioFr.contentWindow.postMessage(m, '*'); }); }
+    else if (e.data.type === 'rg-audio-close') audioOv.style.display = 'none';
+  });
+  $('bAudio').onclick = function () {
+    if (!cur.path) return;
+    if (!audioOv) {
+      audioOv = document.createElement('div');
+      audioOv.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;padding:3vh 3vw';
+      audioFr = document.createElement('iframe');
+      audioFr.src = 'audio.html?v=1&lang=' + rgI18n.lang; audioFr.allow = 'autoplay';
+      audioFr.style.cssText = 'flex:1;border:1px solid #333;border-radius:10px;background:#0c0a14';
+      audioOv.appendChild(audioFr); document.body.appendChild(audioOv);
+      audioOv.addEventListener('click', function (e) { if (e.target === audioOv) audioOv.style.display = 'none'; });
+    }
+    audioOv.style.display = 'flex';
+    if (isLocal(cur.path)) {
+      var lf = local[cur.path], libs = [];
+      Object.keys(local).forEach(function (k) { if (local[k].lib) libs.push({ name: local[k].name, buf: local[k].file.slice(0) }); });
+      audioSend({ type: 'rg-audio-add', name: lf.name, buf: lf.file.slice(0), libs: libs, sub: cur.trackSub || 0 });
+    } else audioSend({ type: 'rg-audio-add', name: cur.name || cur.path.split('/').pop(), url: RAW + cur.path.split('/').map(encodeURIComponent).join('/'), sub: cur.trackSub || 0 });
+  };
   $('mdX').onclick = function () { $('midiDlg').classList.remove('show'); };
   $('midiDlg').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('show'); });
   $('mdAll').onclick = function () { midiChecks().forEach(function (c) { c.checked = true; }); };

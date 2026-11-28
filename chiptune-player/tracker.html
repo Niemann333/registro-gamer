@@ -74,9 +74,9 @@ html[data-skin=famitracker] .drop,html[data-skin=openmpt] .drop{background:rgba(
 html[data-skin=famitracker] #load,html[data-skin=openmpt] #load{background:#f0f0f0}
 @media (max-width:760px){.note,.logo span{display:none}}
 /* celular: barra enxuta (o Furnace fica no modo celular dele) */
-@media (max-width:560px){.pill,#bMidi{display:none}.btn{padding:5px 9px}.bar{gap:6px}.btn .lbl{display:none}}
+@media (max-width:560px){.pill,#bMidi,#bAudio{display:none}.btn{padding:5px 9px}.bar{gap:6px}.btn .lbl{display:none}}
 /* celular deitado: barra baixa e só o essencial (sobra altura para os padrões) */
-@media (max-height:500px) and (pointer:coarse){:root{--barH:36px}.pill,#bMidi,.note,.logo span{display:none}.btn{padding:4px 10px;font-size:12px}.logo i{width:24px;height:24px}}
+@media (max-height:500px) and (pointer:coarse){:root{--barH:36px}.pill,#bMidi,#bAudio,.note,.logo span{display:none}.btn{padding:4px 10px;font-size:12px}.logo i{width:24px;height:24px}}
 </style>
 <script>
 /* Registro Gamer — idioma do blog (PT | EN). O mesmo bloco vai em todos os gadgets: o primeiro que carregar cria. */
@@ -133,6 +133,7 @@ html[data-skin=famitracker] #load,html[data-skin=openmpt] #load{background:#f0f0
   <button class="btn pri" id="bOpen" title="Abrir um projeto do seu aparelho: Furnace (.fur), DefleMask (.dmf), módulos (MOD, XM, S3M, IT, FTM…), instrumentos, wavetables ou samples" data-en-title="Open a project from your device: Furnace (.fur), DefleMask (.dmf), modules (MOD, XM, S3M, IT, FTM…), instruments, wavetables or samples">📂 <span class="lbl" data-en="Open project">Abrir projeto</span></button>
   <button class="btn" id="bImp" title="Importar um chiptune e transformar em projeto (por enquanto VGM de Mega Drive e Master System; os outros formatos convertem pelo Chiptune Studio). É uma conversão: pode não sair 100% igual ao original" data-en-title="Import a chiptune and turn it into a project (for now Mega Drive and Master System VGM; other formats convert in Chiptune Studio). It is a conversion: it may not come out 100% like the original">⤵ <span class="lbl" data-en="Import Chiptune">Importar Chiptune</span></button>
   <button class="btn" id="bMidi" title="Converter um chiptune (arquivo VGM do aparelho) em MIDI. Para a música aberta: Arquivo → Exportar → VGM, depois 🎼 MIDI" data-en-title="Convert a chiptune (VGM file from your device) to MIDI. For the open song: File → Export → VGM, then 🎼 MIDI">🎼 Chiptune → MIDI</button>
+  <button class="btn" id="bAudio" title="Converter chiptunes e módulos em MP3, WAV, OGG, FLAC, Opus ou AIFF (no navegador, sem passar pelo Furnace)" data-en-title="Convert chiptunes and modules to MP3, WAV, OGG, FLAC, Opus or AIFF (in the browser, without Furnace)">🔊 Chiptune → Áudio</button>
   <span class="pill" id="midiPill" title="Teclado MIDI"><span class="dot" id="midiDot"></span><span id="midiTxt">MIDI…</span></span>
   <span class="note" id="note" data-en="In the File menu (open/save): Chiptune collection, Files on this device and your computer folders.">No menu Arquivo (abrir/salvar): Acervo Chiptunes, Arquivos do aparelho e as pastas do seu computador.</span>
   <div class="sp"></div>
@@ -175,7 +176,7 @@ html[data-skin=famitracker] #load,html[data-skin=openmpt] #load{background:#f0f0
   var T = window.rgT;
 
   // versão do programa: muda a cada atualização, para o navegador não ficar com o Tracker antigo guardado
-  var RG_VER = window.RG_VER = '20261128a';
+  var RG_VER = window.RG_VER = '20261128b';
   window.Module = {
     locateFile: function (p) { return p + '?v=' + RG_VER; },
     canvas: $('canvas'),
@@ -670,6 +671,21 @@ html[data-skin=famitracker] #load,html[data-skin=openmpt] #load{background:#f0f0
   window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-lang' && e.source === window.parent) rgI18n.set(e.data.lang); });
   rgI18n.on(function () { midiUI(); });
   $('tX').onclick = function () { $('toast').classList.remove('show'); };
+  // ── Chiptune → Áudio: conversor separado (motor do Chiptune Player) numa camada por cima do Tracker ──
+  $('bAudio').onclick = function () {
+    var ov = document.getElementById('audioOv');
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'audioOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;padding:3vh 3vw';
+      var fr = document.createElement('iframe');
+      fr.src = 'audio.html?v=1&lang=' + rgI18n.lang; fr.allow = 'autoplay';
+      fr.style.cssText = 'flex:1;border:1px solid #333;border-radius:10px;background:#0c0a14';
+      ov.appendChild(fr); document.body.appendChild(ov);
+      ov.addEventListener('click', function (e) { if (e.target === ov) ov.style.display = 'none'; });
+    }
+    ov.style.display = 'flex';
+  };
+  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'rg-audio-close') { var ov = document.getElementById('audioOv'); if (ov) ov.style.display = 'none'; } });
 
   // ── celular: o Tracker abre deitado (paisagem), em tela cheia, no primeiro toque ──
   // (o navegador só deixa travar a orientação em tela cheia e depois de um toque; no iPhone não dá: aparece uma dica)

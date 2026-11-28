@@ -260,3 +260,10 @@ Pedido: "dois formatos a mais para entrar no tracker: BTM (BambooTracker) e VGE 
 
 Fontes dos importadores do Studio: `tools/vgm-timbres.js`, `vgm-fur.js`, `fmt-import.js`, `sid-rip.js`, `estudio.src.html`, `build.py`;
 rg-rip.js: `tools/rip-src/` (gme + aopsf + vio2sf + VBA/playgsf com ganchos).
+
+## Chiptune → Áudio (conversor, 2026-11-28)
+- `chiptune-player/audio.html`: converte chiptunes e módulos em MP3 (CBR 64–320 / VBR V0–V8), WAV (16/24/32 float), OGG Vorbis (q2–q10), FLAC (0/5/8, 16/24 bits), Opus (WebCodecs + Ogg próprio) e AIFF. Frequência 22–96 kHz, estéreo/mono, voltas do loop, fade, limite, normalizar (−1 dB), todas as subfaixas, vários arquivos de uma vez, .zip.
+- O som vem do motor do Chiptune Player (`rg-player.js`, comando `render`: toca a faixa sem som, o mais rápido possível, com a mesma duração/loop/fade do player). Não passa pelo Tracker.
+- Codificadores em `chiptune-player/enc/` (wasm-media-encoders e libflac.js, MIT).
+- Botão "🔊 Chiptune → Áudio" na barra do Tracker; "⬇ Áudio" no Studio (já com a música escolhida, inclusive arquivo local).
+- Testado: NSF, FUR, VGZ em todos os formatos (ffprobe confere taxa, bits, duração e pico −1 dB).
